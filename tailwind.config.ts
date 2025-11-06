@@ -47,6 +47,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        dimension: {
+          cognitive: "hsl(var(--dimension-cognitive))",
+          emotional: "hsl(var(--dimension-emotional))",
+          social: "hsl(var(--dimension-social))",
+          creative: "hsl(var(--dimension-creative))",
+          behavioral: "hsl(var(--dimension-behavioral))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
