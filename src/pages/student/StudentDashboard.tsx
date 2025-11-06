@@ -20,12 +20,24 @@ interface Assignment {
   };
 }
 
+interface Classroom {
+  id: string;
+  name: string;
+  subject: string;
+  classrooms: {
+    invite_code: string;
+  };
+}
+
 const StudentDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [inviteCode, setInviteCode] = useState("");
   const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [scores, setScores] = useState({
     cognitive: 2.5,
     emotional: 2.5,
@@ -51,20 +63,33 @@ const StudentDashboard = () => {
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (snapshot?.scores) {
         setScores(snapshot.scores as any);
       }
 
-      // Fetch assignments
+      // Fetch enrollments and classrooms
       const { data: enrollments } = await supabase
         .from('enrollments')
-        .select('classroom_id')
+        .select('classroom_id, classrooms(id, name, subject, invite_code)')
         .eq('student_id', user?.id);
 
       if (enrollments && enrollments.length > 0) {
         const classroomIds = enrollments.map(e => e.classroom_id);
+        
+        // Set classrooms list
+        const classroomsList = enrollments.map(e => ({
+          id: e.classroom_id,
+          name: e.classrooms.name,
+          subject: e.classrooms.subject,
+          classrooms: {
+            invite_code: e.classrooms.invite_code
+          }
+        }));
+        setClassrooms(classroomsList);
+
+        // Fetch assignments
         const { data: assignmentsData } = await supabase
           .from('assignments')
           .select('*, classrooms(name)')
@@ -73,8 +98,12 @@ const StudentDashboard = () => {
           .order('due_at', { ascending: true });
 
         setAssignments(assignmentsData || []);
+      } else {
+        setClassrooms([]);
+        setAssignments([]);
       }
     } catch (error: any) {
+      console.error("Error loading data:", error);
       toast.error("Error loading data");
     } finally {
       setLoading(false);
@@ -82,34 +111,70 @@ const StudentDashboard = () => {
   };
 
   const joinClassroom = async () => {
-    if (!user || !inviteCode) return;
+    if (!user || !inviteCode.trim()) {
+      toast.error("Please enter an invite code");
+      return;
+    }
 
+    setJoining(true);
     try {
-      const { data: classroom } = await supabase
+      const trimmedCode = inviteCode.trim().toUpperCase();
+      
+      // Check if classroom exists
+      const { data: classroom, error: classroomError } = await supabase
         .from('classrooms')
-        .select('id')
-        .eq('invite_code', inviteCode.toUpperCase())
-        .single();
+        .select('id, name')
+        .eq('invite_code', trimmedCode)
+        .maybeSingle();
 
-      if (!classroom) {
-        toast.error("Invalid invite code");
+      if (classroomError) {
+        console.error("Error finding classroom:", classroomError);
+        toast.error("Error checking invite code");
         return;
       }
 
-      const { error } = await supabase
+      if (!classroom) {
+        toast.error("Invalid invite code. Please check and try again.");
+        return;
+      }
+
+      // Check if already enrolled
+      const { data: existingEnrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('classroom_id', classroom.id)
+        .eq('student_id', user.id)
+        .maybeSingle();
+
+      if (existingEnrollment) {
+        toast.error("You're already enrolled in this classroom");
+        setDialogOpen(false);
+        return;
+      }
+
+      // Create enrollment
+      const { error: enrollError } = await supabase
         .from('enrollments')
         .insert({
           classroom_id: classroom.id,
           student_id: user.id
         });
 
-      if (error) throw error;
+      if (enrollError) {
+        console.error("Error enrolling:", enrollError);
+        toast.error("Error joining classroom");
+        return;
+      }
 
-      toast.success("Joined classroom!");
+      toast.success(`Successfully joined ${classroom.name}!`);
       setInviteCode("");
-      fetchData();
+      setDialogOpen(false);
+      await fetchData();
     } catch (error: any) {
-      toast.error("Error joining classroom");
+      console.error("Unexpected error joining classroom:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -127,64 +192,98 @@ const StudentDashboard = () => {
 
       <main className="container py-8">
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">My Assignments</h2>
-                <p className="text-muted-foreground">Complete your tasks and track progress</p>
-              </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Join Class
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Join a Classroom</DialogTitle>
-                    <DialogDescription>Enter the invite code provided by your teacher</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="code">Invite Code</Label>
-                      <Input
-                        id="code"
-                        placeholder="ABC123"
-                        value={inviteCode}
-                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      />
+          <div className="lg:col-span-2 space-y-6">
+            {/* My Classes Section */}
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">My Classes</h2>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Join Class
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Join a Classroom</DialogTitle>
+                      <DialogDescription>Enter the invite code provided by your teacher</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="code">Invite Code</Label>
+                        <Input
+                          id="code"
+                          placeholder="ABC123"
+                          value={inviteCode}
+                          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                          maxLength={6}
+                        />
+                      </div>
+                      <Button onClick={joinClassroom} className="w-full" disabled={joining}>
+                        {joining ? "Joining..." : "Join Classroom"}
+                      </Button>
                     </div>
-                    <Button onClick={joinClassroom} className="w-full">Join Classroom</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : classrooms.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
+                    <p className="text-muted-foreground mb-4">Join a classroom to get started</p>
+                    <Button onClick={() => setDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Join Class
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {classrooms.map((classroom) => (
+                    <Card key={classroom.id} className="hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <CardTitle>{classroom.name}</CardTitle>
+                        <CardDescription>{classroom.subject}</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {loading ? (
-              <div className="text-center py-12 text-muted-foreground">Loading...</div>
-            ) : assignments.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No assignments yet</h3>
-                  <p className="text-muted-foreground">Join a classroom to see assignments</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {assignments.map((assignment) => (
-                  <Card key={assignment.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <CardTitle>{assignment.title}</CardTitle>
-                      <CardDescription>
-                        {assignment.classrooms.name} • Due: {new Date(assignment.due_at).toLocaleDateString()}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            )}
+            {/* Assignments Section */}
+            <div>
+              <h2 className="text-2xl font-bold mb-4">My Assignments</h2>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : assignments.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No assignments yet</h3>
+                    <p className="text-muted-foreground">Your assignments will appear here</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {assignments.map((assignment) => (
+                    <Card key={assignment.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardHeader>
+                        <CardTitle>{assignment.title}</CardTitle>
+                        <CardDescription>
+                          {assignment.classrooms.name} • Due: {new Date(assignment.due_at).toLocaleDateString()}
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
