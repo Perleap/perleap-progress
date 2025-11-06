@@ -367,11 +367,11 @@ const ClassroomDetail = () => {
                   <p className="text-muted-foreground text-center py-8">No students enrolled yet</p>
                 ) : (
                   <div className="space-y-3">
-                    {students.map((enrollment) => (
+                    {students.filter(enrollment => enrollment.student_profiles?.full_name).map((enrollment) => (
                       <div key={enrollment.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                           <p className="font-medium">
-                            {enrollment.student_profiles?.full_name || 'Student'}
+                            {enrollment.student_profiles?.full_name}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Joined: {new Date(enrollment.created_at).toLocaleDateString()}

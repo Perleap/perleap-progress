@@ -38,13 +38,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [scores, setScores] = useState({
-    cognitive: 2.5,
-    emotional: 2.5,
-    social: 2.5,
-    creative: 2.5,
-    behavioral: 2.5
-  });
+  const [scores, setScores] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
@@ -298,17 +292,32 @@ const StudentDashboard = () => {
           </div>
 
           <div>
-            <FiveDChartCard scores={scores} title="My Growth Profile" />
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Your Strengths</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  You're showing great progress in {Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]} skills. Keep up the excellent work!
-                </p>
-              </CardContent>
-            </Card>
+            {scores ? (
+              <>
+                <FiveDChartCard scores={scores} title="My Growth Profile" />
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle>Your Strengths</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      You're showing great progress in {Object.entries(scores).sort((a: any, b: any) => b[1] - a[1])[0][0]} skills. Keep up the excellent work!
+                    </p>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Growth Profile</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Your growth profile will appear here once you complete assignments
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
