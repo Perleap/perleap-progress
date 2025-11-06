@@ -24,6 +24,9 @@ interface Assignment {
   };
   classrooms: {
     name: string;
+    teacher_profiles: {
+      full_name: string;
+    } | null;
   };
 }
 
@@ -58,10 +61,19 @@ const AssignmentDetail = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch assignment
+      // Fetch assignment with teacher info
       const { data: assignmentData, error: assignError } = await supabase
         .from('assignments')
-        .select('*, classrooms(name)')
+        .select(`
+          *,
+          classrooms (
+            name,
+            teacher_id,
+            teacher_profiles:teacher_id (
+              full_name
+            )
+          )
+        `)
         .eq('id', id)
         .maybeSingle();
 
@@ -194,6 +206,8 @@ const AssignmentDetail = () => {
           {!feedback && submission && (
             <AssignmentChatInterface
               assignmentId={assignment.id}
+              assignmentTitle={assignment.title}
+              teacherName={assignment.classrooms.teacher_profiles?.full_name || 'Teacher'}
               assignmentInstructions={assignment.instructions}
               submissionId={submission.id}
               onComplete={handleActivityComplete}

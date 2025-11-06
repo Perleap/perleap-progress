@@ -15,13 +15,17 @@ interface Message {
 
 interface AssignmentChatInterfaceProps {
   assignmentId: string;
+  assignmentTitle: string;
+  teacherName: string;
   assignmentInstructions: string;
   submissionId: string;
   onComplete: () => void;
 }
 
 export function AssignmentChatInterface({ 
-  assignmentId, 
+  assignmentId,
+  assignmentTitle,
+  teacherName,
   assignmentInstructions, 
   submissionId,
   onComplete 
@@ -124,7 +128,7 @@ export function AssignmentChatInterface({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI Learning Activity - Agent Perleap</CardTitle>
+        <CardTitle>{teacherName} - {assignmentTitle}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <ScrollArea className="h-[400px] pr-4" ref={scrollRef}>
