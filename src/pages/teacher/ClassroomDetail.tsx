@@ -359,11 +359,11 @@ const ClassroomDetail = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Students ({students.length})
+                  Students ({students.filter(s => s.student_profiles?.full_name).length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {students.length === 0 ? (
+                {students.filter(s => s.student_profiles?.full_name).length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No students enrolled yet</p>
                 ) : (
                   <div className="space-y-3">
