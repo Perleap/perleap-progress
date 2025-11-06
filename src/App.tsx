@@ -12,6 +12,8 @@ import StudentOnboarding from "./pages/onboarding/StudentOnboarding";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import ClassroomDetail from "./pages/teacher/ClassroomDetail";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentClassroomDetail from "./pages/student/StudentClassroomDetail";
+import AssignmentDetail from "./pages/student/AssignmentDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/classroom/:id" element={<StudentClassroomDetail />} />
+            <Route path="/student/assignment/:id" element={<AssignmentDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

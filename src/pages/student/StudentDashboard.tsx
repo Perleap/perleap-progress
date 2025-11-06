@@ -248,7 +248,11 @@ const StudentDashboard = () => {
               ) : (
                 <div className="grid md:grid-cols-2 gap-4">
                   {classrooms.map((classroom) => (
-                    <Card key={classroom.id} className="hover:shadow-lg transition-shadow">
+                    <Card 
+                      key={classroom.id} 
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/student/classroom/${classroom.id}`)}
+                    >
                       <CardHeader>
                         <CardTitle>{classroom.name}</CardTitle>
                         <CardDescription>{classroom.subject}</CardDescription>
@@ -275,7 +279,11 @@ const StudentDashboard = () => {
               ) : (
                 <div className="space-y-4">
                   {assignments.map((assignment) => (
-                    <Card key={assignment.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card 
+                      key={assignment.id} 
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                    >
                       <CardHeader>
                         <CardTitle>{assignment.title}</CardTitle>
                         <CardDescription>
