@@ -86,7 +86,6 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Check if user has profile
       const userRole = data.user.user_metadata.role;
       
       if (userRole === 'teacher') {
@@ -124,16 +123,18 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <GraduationCap className="h-8 w-8 text-accent" />
+          <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+            <GraduationCap className="h-6 w-6 text-primary-foreground" />
+          </div>
           <span className="text-2xl font-bold">PerLeap</span>
         </div>
 
-        <Card>
+        <Card className="border-2 shadow-lg">
           <CardHeader>
-            <CardTitle>Welcome</CardTitle>
+            <CardTitle className="text-2xl">Welcome</CardTitle>
             <CardDescription>Sign in or create an account to get started</CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,6 +155,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="rounded-2xl"
                     />
                   </div>
                   <div className="space-y-2">
@@ -164,6 +166,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className="rounded-2xl"
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -182,15 +185,19 @@ const Auth = () => {
                         type="button"
                         variant={role === "teacher" ? "default" : "outline"}
                         onClick={() => setRole("teacher")}
+                        className="h-20 flex flex-col items-center justify-center gap-2"
                       >
-                        Teacher
+                        <span className="text-2xl">👨‍🏫</span>
+                        <span>Teacher</span>
                       </Button>
                       <Button
                         type="button"
                         variant={role === "student" ? "default" : "outline"}
                         onClick={() => setRole("student")}
+                        className="h-20 flex flex-col items-center justify-center gap-2"
                       >
-                        Student
+                        <span className="text-2xl">👨‍🎓</span>
+                        <span>Student</span>
                       </Button>
                     </div>
                   </div>
@@ -203,6 +210,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="rounded-2xl"
                     />
                   </div>
                   <div className="space-y-2">
@@ -213,6 +221,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className="rounded-2xl"
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !role}>

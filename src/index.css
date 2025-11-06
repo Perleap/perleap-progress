@@ -8,47 +8,47 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Clean white background */
-    --background: 0 0% 100%;
-    /* Deep navy/charcoal for text */
-    --foreground: 214 32% 12%;
+    /* Warm cream background like Grovia */
+    --background: 40 20% 97%;
+    /* Black text */
+    --foreground: 0 0% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 214 32% 12%;
+    --card-foreground: 0 0% 5%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 214 32% 12%;
+    --popover-foreground: 0 0% 5%;
 
-    /* Deep navy for primary elements */
-    --primary: 214 32% 12%;
+    /* Black for primary elements */
+    --primary: 0 0% 5%;
     --primary-foreground: 0 0% 100%;
 
-    /* Light grey for subtle backgrounds */
-    --secondary: 210 17% 98%;
-    --secondary-foreground: 214 32% 12%;
+    /* Light cream for subtle backgrounds */
+    --secondary: 40 20% 95%;
+    --secondary-foreground: 0 0% 5%;
 
-    --muted: 210 17% 98%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 40 15% 92%;
+    --muted-foreground: 0 0% 45%;
 
-    /* Vibrant teal accent */
-    --accent: 175 84% 40%;
-    --accent-foreground: 0 0% 100%;
+    /* Soft yellow accent like Grovia */
+    --accent: 48 96% 80%;
+    --accent-foreground: 0 0% 5%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 175 84% 40%;
+    --border: 40 15% 88%;
+    --input: 0 0% 100%;
+    --ring: 0 0% 5%;
 
-    --radius: 0.75rem;
+    --radius: 1.5rem;
 
-    /* 5D Dimension colors */
-    --dimension-cognitive: 45 93% 58%;
-    --dimension-emotional: 0 0% 95%;
-    --dimension-social: 210 100% 50%;
-    --dimension-creative: 0 72% 51%;
-    --dimension-behavioral: 142 71% 45%;
+    /* Soft pastel 5D Dimension colors */
+    --dimension-cognitive: 48 96% 80%;
+    --dimension-emotional: 340 75% 85%;
+    --dimension-social: 195 85% 80%;
+    --dimension-creative: 280 70% 85%;
+    --dimension-behavioral: 160 60% 80%;
 
     --sidebar-background: 0 0% 98%;
 
@@ -68,39 +68,39 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 214 32% 12%;
+    --background: 0 0% 8%;
     --foreground: 0 0% 98%;
 
-    --card: 217 33% 17%;
+    --card: 0 0% 12%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 217 33% 17%;
+    --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 0 0% 98%;
-    --primary-foreground: 214 32% 12%;
+    --primary-foreground: 0 0% 8%;
 
-    --secondary: 217 33% 22%;
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 217 33% 22%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 175 84% 40%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 48 96% 80%;
+    --accent-foreground: 0 0% 8%;
 
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 175 84% 40%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 98%;
 
-    --dimension-cognitive: 45 93% 58%;
-    --dimension-emotional: 0 0% 85%;
-    --dimension-social: 210 100% 60%;
-    --dimension-creative: 0 72% 55%;
-    --dimension-behavioral: 142 71% 50%;
+    --dimension-cognitive: 48 96% 70%;
+    --dimension-emotional: 340 75% 75%;
+    --dimension-social: 195 85% 70%;
+    --dimension-creative: 280 70% 75%;
+    --dimension-behavioral: 160 60% 70%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -118,6 +118,6 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter antialiased;
   }
 }
