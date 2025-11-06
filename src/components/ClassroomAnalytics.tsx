@@ -34,6 +34,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   const [students, setStudents] = useState<StudentData[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
+  const [selectedStudent, setSelectedStudent] = useState<string>("all");
   const [classAverage, setClassAverage] = useState<{
     cognitive: number;
     emotional: number;
@@ -44,7 +45,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [classroomId, selectedAssignment]);
+  }, [classroomId, selectedAssignment, selectedStudent]);
 
   const fetchAnalytics = async () => {
     try {
@@ -109,21 +110,29 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
       setStudents(processedStudents);
 
-      const validScores = processedStudents.filter(s => s.latestScores);
-      if (validScores.length > 0) {
-        const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
-        validScores.forEach(s => {
-          if (s.latestScores) {
-            Object.keys(totals).forEach(key => {
-              totals[key as keyof typeof totals] += s.latestScores![key as keyof typeof totals];
-            });
-          }
-        });
-        const avg = Object.keys(totals).reduce((acc, key) => ({
-          ...acc,
-          [key]: totals[key as keyof typeof totals] / validScores.length
-        }), {} as typeof totals);
-        setClassAverage(avg);
+      // Calculate class average or individual student scores based on filter
+      if (selectedStudent !== "all") {
+        const student = processedStudents.find(s => s.id === selectedStudent);
+        setClassAverage(student?.latestScores || null);
+      } else {
+        const validScores = processedStudents.filter(s => s.latestScores);
+        if (validScores.length > 0) {
+          const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+          validScores.forEach(s => {
+            if (s.latestScores) {
+              Object.keys(totals).forEach(key => {
+                totals[key as keyof typeof totals] += s.latestScores![key as keyof typeof totals];
+              });
+            }
+          });
+          const avg = Object.keys(totals).reduce((acc, key) => ({
+            ...acc,
+            [key]: totals[key as keyof typeof totals] / validScores.length
+          }), {} as typeof totals);
+          setClassAverage(avg);
+        } else {
+          setClassAverage(null);
+        }
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -136,22 +145,43 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex-1">
-          <label className="text-sm font-medium">Filter by Assignment</label>
-          <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Assignments</SelectItem>
-              {assignments.map(a => (
-                <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Analytics Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Filter by Student</label>
+              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Whole Class Average</SelectItem>
+                  {students.filter(s => s.latestScores).map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.fullName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Filter by Assignment</label>
+              <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Assignments</SelectItem>
+                  {assignments.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total Students</CardTitle></CardHeader>
@@ -165,21 +195,34 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
       </div>
 
       {classAverage && (
-        <Card><CardHeader><CardTitle>Class Average - 5D Profile</CardTitle></CardHeader>
-          <CardContent><FiveDChart scores={classAverage} /></CardContent></Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {selectedStudent === "all" ? "Class Average - 5D Profile" : `${students.find(s => s.id === selectedStudent)?.fullName} - 5D Profile`}
+            </CardTitle>
+            <CardDescription>
+              {selectedStudent === "all" 
+                ? "Average scores across all students with data"
+                : "Individual student performance profile"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent><FiveDChart scores={classAverage} /></CardContent>
+        </Card>
       )}
 
-      <Card><CardHeader><CardTitle>Student Profiles</CardTitle></CardHeader>
-        <CardContent><div className="grid gap-4">
-          {students.filter(s => s.latestScores).map(s => (
+      {selectedStudent === "all" && (
+        <Card><CardHeader><CardTitle>Individual Student Profiles</CardTitle></CardHeader>
+          <CardContent><div className="grid gap-4">
+            {students.filter(s => s.latestScores).map(s => (
             <Card key={s.id}><CardHeader><div className="flex justify-between"><CardTitle className="text-lg">{s.fullName}</CardTitle>
               <Badge variant="secondary">{s.feedbackCount} submissions</Badge></div></CardHeader>
               <CardContent><FiveDChart scores={s.latestScores!} /></CardContent></Card>
           ))}
-          {students.filter(s => s.latestScores).length === 0 && (
-            <p className="text-center text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
-          )}
-        </div></CardContent></Card>
+            {students.filter(s => s.latestScores).length === 0 && (
+              <p className="text-center text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
+            )}
+          </div></CardContent></Card>
+      )}
     </div>
   );
 }

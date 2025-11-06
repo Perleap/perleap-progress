@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Eye } from "lucide-react";
+import { FileText, Eye, Filter } from "lucide-react";
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -20,30 +21,65 @@ interface SubmissionWithDetails {
   has_feedback: boolean;
 }
 
+interface Student {
+  id: string;
+  name: string;
+}
+
+interface Assignment {
+  id: string;
+  title: string;
+}
+
 export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<SubmissionWithDetails[]>([]);
+  const [filteredSubmissions, setFilteredSubmissions] = useState<SubmissionWithDetails[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<string>("all");
+  const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSubmissions();
   }, [classroomId]);
 
+  useEffect(() => {
+    applyFilters();
+  }, [submissions, selectedStudent, selectedAssignment]);
+
+  const applyFilters = () => {
+    let filtered = [...submissions];
+    
+    if (selectedStudent !== "all") {
+      filtered = filtered.filter(s => s.student_id === selectedStudent);
+    }
+    
+    if (selectedAssignment !== "all") {
+      filtered = filtered.filter(s => s.assignment_id === selectedAssignment);
+    }
+    
+    setFilteredSubmissions(filtered);
+  };
+
   const fetchSubmissions = async () => {
     try {
       // Get all assignments in this classroom
-      const { data: assignments } = await supabase
+      const { data: assignData } = await supabase
         .from('assignments')
-        .select('id')
+        .select('id, title')
         .eq('classroom_id', classroomId);
 
-      if (!assignments || assignments.length === 0) {
+      if (!assignData || assignData.length === 0) {
         setSubmissions([]);
+        setAssignments([]);
         setLoading(false);
         return;
       }
 
-      const assignmentIds = assignments.map(a => a.id);
+      setAssignments(assignData);
+      const assignmentIds = assignData.map(a => a.id);
 
       // Get all submissions for these assignments
       const { data: submissionsData } = await supabase
@@ -89,6 +125,12 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       }
 
       setSubmissions(enrichedSubmissions);
+
+      // Get unique students
+      const uniqueStudents = Array.from(
+        new Map(enrichedSubmissions.map(s => [s.student_id, { id: s.student_id, name: s.student_name }])).values()
+      );
+      setStudents(uniqueStudents);
     } catch (error) {
       console.error('Error fetching submissions:', error);
     } finally {
@@ -116,7 +158,59 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   return (
     <div className="space-y-4">
-      {submissions.map((submission) => (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filter Submissions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Student</label>
+              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Students</SelectItem>
+                  {students.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Assignment</label>
+              <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Assignments</SelectItem>
+                  {assignments.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {filteredSubmissions.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No submissions match filters</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your filters
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        filteredSubmissions.map((submission) => (
         <Card key={submission.id}>
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -146,7 +240,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
             </p>
           </CardContent>
         </Card>
-      ))}
+        ))
+      )}
     </div>
   );
 }

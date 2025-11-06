@@ -13,6 +13,7 @@ import { CreateAssignmentDialog } from "@/components/CreateAssignmentDialog";
 import { EditAssignmentDialog } from "@/components/EditAssignmentDialog";
 import { ClassroomAnalytics } from "@/components/ClassroomAnalytics";
 import { SubmissionsTab } from "@/components/SubmissionsTab";
+import { RegenerateScoresButton } from "@/components/RegenerateScoresButton";
 
 interface Classroom {
   id: string;
@@ -409,9 +410,15 @@ const ClassroomDetail = () => {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="h-6 w-6" />
-              <h2 className="text-2xl font-bold">Analytics</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-6 w-6" />
+                <h2 className="text-2xl font-bold">Analytics</h2>
+              </div>
+              <RegenerateScoresButton 
+                classroomId={id!} 
+                onComplete={fetchClassroom}
+              />
             </div>
             <ClassroomAnalytics classroomId={id!} />
           </TabsContent>

@@ -1,1 +1,10 @@
 project_id = "hcdgfmjlxevxxbberyhn"
+
+[functions.perleap-chat]
+verify_jwt = false
+
+[functions.generate-feedback]
+verify_jwt = false
+
+[functions.regenerate-scores]
+verify_jwt = false
