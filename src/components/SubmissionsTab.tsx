@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Filter } from "lucide-react";
+import { FileText, Filter, Download, Search } from "lucide-react";
 import { SubmissionCard } from "./SubmissionCard";
+import { toast } from "sonner";
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -38,6 +41,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>("all");
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   useEffect(() => {
     applyFilters();
-  }, [submissions, selectedStudent, selectedAssignment]);
+  }, [submissions, selectedStudent, selectedAssignment, searchQuery]);
 
   const applyFilters = () => {
     let filtered = [...submissions];
@@ -58,8 +62,57 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     if (selectedAssignment !== "all") {
       filtered = filtered.filter(s => s.assignment_id === selectedAssignment);
     }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => {
+        // Search in conversation context
+        const conversationText = s.conversation_context
+          ?.map((msg: any) => msg.content)
+          .join(' ')
+          .toLowerCase() || '';
+        
+        // Search in teacher feedback
+        const feedbackText = s.teacher_feedback?.toLowerCase() || '';
+        
+        // Search in student name and assignment title
+        const metaText = `${s.student_name} ${s.assignment_title}`.toLowerCase();
+        
+        return conversationText.includes(query) || 
+               feedbackText.includes(query) || 
+               metaText.includes(query);
+      });
+    }
     
     setFilteredSubmissions(filtered);
+  };
+
+  const handleBulkExport = () => {
+    if (submissions.length === 0) {
+      toast.error("No submissions to export");
+      return;
+    }
+
+    const report = submissions.map(sub => ({
+      student: sub.student_name,
+      assignment: sub.assignment_title,
+      submitted_at: new Date(sub.submitted_at).toLocaleString(),
+      conversation: sub.conversation_context || [],
+      teacher_feedback: sub.teacher_feedback || 'No feedback',
+      has_feedback: sub.has_feedback
+    }));
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `submissions-report-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success("Report exported successfully");
   };
 
   const fetchSubmissions = async () => {
@@ -161,40 +214,64 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filter Submissions
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filter & Search Submissions
+            </CardTitle>
+            <Button 
+              onClick={handleBulkExport} 
+              disabled={submissions.length === 0}
+              size="sm"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export All
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Student</label>
-              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Students</SelectItem>
-                  {students.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-2 block">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search in conversations, feedback, names..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Assignment</label>
-              <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Assignments</SelectItem>
-                  {assignments.map(a => (
-                    <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Student</label>
+                <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Students</SelectItem>
+                    {students.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Assignment</label>
+                <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Assignments</SelectItem>
+                    {assignments.map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardContent>

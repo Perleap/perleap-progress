@@ -5,9 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, MessageSquare, FileText } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { FiveDChart } from "@/components/FiveDChart";
 
 interface Submission {
   id: string;
@@ -29,14 +28,6 @@ interface Feedback {
   conversation_context: any;
 }
 
-interface Scores {
-  cognitive: number;
-  emotional: number;
-  social: number;
-  creative: number;
-  behavioral: number;
-}
-
 const SubmissionDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -44,7 +35,6 @@ const SubmissionDetail = () => {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [studentName, setStudentName] = useState<string>('');
-  const [scores, setScores] = useState<Scores | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -100,20 +90,6 @@ const SubmissionDetail = () => {
       if (feedbackData) {
         setFeedback(feedbackData);
       }
-
-      // Fetch latest 5D scores from assignment completion (not onboarding)
-      const { data: scoresData } = await supabase
-        .from('five_d_snapshots')
-        .select('scores')
-        .eq('user_id', submissionData.student_id)
-        .eq('source', 'assignment')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (scoresData?.scores) {
-        setScores(scoresData.scores as any);
-      }
     } catch (error: any) {
       console.error("Error loading submission:", error);
       toast.error("Error loading submission");
@@ -154,23 +130,6 @@ const SubmissionDetail = () => {
 
       <main className="container py-8 max-w-5xl">
         <div className="space-y-6">
-          {scores && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  5D Learning Profile
-                </CardTitle>
-                <CardDescription>
-                  Assessment from this assignment activity
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FiveDChart scores={scores} />
-              </CardContent>
-            </Card>
-          )}
-
           {feedback && (
             <>
               <Card>
