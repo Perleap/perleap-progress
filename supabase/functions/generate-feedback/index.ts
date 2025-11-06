@@ -121,21 +121,25 @@ Return ONLY a JSON object with scores (0-10):
     if (scoresResponse.ok) {
       const scoresData = await scoresResponse.json();
       const scoresText = scoresData.choices[0].message.content;
+      console.log('Raw AI scores response:', scoresText);
       try {
         const parsed = JSON.parse(scoresText.replace(/```json\n?|\n?```/g, '').trim());
         scores = parsed;
+        console.log('Parsed scores:', scores);
       } catch (e) {
-        console.error('Failed to parse scores:', e);
+        console.error('Failed to parse scores:', e, 'Raw text:', scoresText);
       }
+    } else {
+      console.error('Scores API call failed:', scoresResponse.status);
     }
 
-    // Save 5D snapshot
+    // Save 5D snapshot with 'assignment' source (valid enum value)
     const { error: snapshotError } = await supabase
       .from('five_d_snapshots')
       .insert({
         user_id: studentId,
         scores,
-        source: 'assignment_completion'
+        source: 'assignment'
       });
 
     if (snapshotError) {

@@ -101,11 +101,12 @@ const SubmissionDetail = () => {
         setFeedback(feedbackData);
       }
 
-      // Fetch latest 5D scores
+      // Fetch latest 5D scores from assignment completion (not onboarding)
       const { data: scoresData } = await supabase
         .from('five_d_snapshots')
         .select('scores')
         .eq('user_id', submissionData.student_id)
+        .eq('source', 'assignment')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
