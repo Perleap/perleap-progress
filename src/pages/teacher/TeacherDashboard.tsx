@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Plus, Users, BookOpen, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { CreateClassroomDialog } from "@/components/CreateClassroomDialog";
 
 interface Classroom {
   id: string;
@@ -20,6 +21,7 @@ const TeacherDashboard = () => {
   const navigate = useNavigate();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -45,27 +47,9 @@ const TeacherDashboard = () => {
     }
   };
 
-  const createClassroom = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('classrooms')
-        .insert({
-          teacher_id: user.id,
-          name: "New Classroom",
-          subject: "General"
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success("Classroom created!");
-      navigate(`/teacher/classroom/${data.id}`);
-    } catch (error: any) {
-      toast.error("Error creating classroom");
-    }
+  const handleClassroomCreated = (classroomId: string) => {
+    fetchClassrooms();
+    navigate(`/teacher/classroom/${classroomId}`);
   };
 
   return (
@@ -87,7 +71,7 @@ const TeacherDashboard = () => {
               <h2 className="text-3xl font-bold mb-2">My Classrooms</h2>
               <p className="text-muted-foreground">Manage your classes and track student progress</p>
             </div>
-            <Button onClick={createClassroom}>
+            <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create Classroom
             </Button>
@@ -101,7 +85,7 @@ const TeacherDashboard = () => {
                 <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No classrooms yet</h3>
                 <p className="text-muted-foreground mb-4">Create your first classroom to get started</p>
-                <Button onClick={createClassroom}>
+                <Button onClick={() => setDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Classroom
                 </Button>
@@ -127,6 +111,12 @@ const TeacherDashboard = () => {
           )}
         </div>
       </main>
+
+      <CreateClassroomDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={handleClassroomCreated}
+      />
     </div>
   );
 };

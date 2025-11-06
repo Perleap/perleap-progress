@@ -10,6 +10,7 @@ import AuthCallback from "./pages/AuthCallback";
 import TeacherOnboarding from "./pages/onboarding/TeacherOnboarding";
 import StudentOnboarding from "./pages/onboarding/StudentOnboarding";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import ClassroomDetail from "./pages/teacher/ClassroomDetail";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/onboarding/teacher" element={<TeacherOnboarding />} />
             <Route path="/onboarding/student" element={<StudentOnboarding />} />
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+            <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
