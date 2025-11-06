@@ -64,16 +64,7 @@ const AssignmentDetail = () => {
       // Fetch assignment with teacher info
       const { data: assignmentData, error: assignError } = await supabase
         .from('assignments')
-        .select(`
-          *,
-          classrooms (
-            name,
-            teacher_id,
-            teacher_profiles:teacher_id (
-              full_name
-            )
-          )
-        `)
+        .select('*, classrooms(name, teacher_id)')
         .eq('id', id)
         .maybeSingle();
 
@@ -85,7 +76,27 @@ const AssignmentDetail = () => {
         return;
       }
 
-      setAssignment(assignmentData as any);
+      // Fetch teacher profile separately
+      let teacherName = 'Teacher';
+      if (assignmentData.classrooms?.teacher_id) {
+        const { data: teacherProfile } = await supabase
+          .from('teacher_profiles')
+          .select('full_name')
+          .eq('user_id', assignmentData.classrooms.teacher_id)
+          .maybeSingle();
+        
+        if (teacherProfile?.full_name) {
+          teacherName = teacherProfile.full_name;
+        }
+      }
+
+      setAssignment({
+        ...assignmentData,
+        classrooms: {
+          ...assignmentData.classrooms,
+          teacher_profiles: { full_name: teacherName }
+        }
+      } as any);
 
       // Check for existing submission
       const { data: submissionData } = await supabase
