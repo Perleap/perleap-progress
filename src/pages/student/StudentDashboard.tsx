@@ -8,7 +8,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
-import { FiveDChartCard } from "@/components/FiveDChart";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Assignment {
@@ -38,7 +37,6 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [scores, setScores] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
@@ -50,19 +48,6 @@ const StudentDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch latest 5D snapshot
-      const { data: snapshot } = await supabase
-        .from('five_d_snapshots')
-        .select('scores')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (snapshot?.scores) {
-        setScores(snapshot.scores as any);
-      }
-
       // Fetch enrollments and classrooms
       const { data: enrollments } = await supabase
         .from('enrollments')
@@ -188,8 +173,7 @@ const StudentDashboard = () => {
       </header>
 
       <main className="container py-8">
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
             {/* My Classes Section */}
             <div>
               <div className="flex justify-between items-center mb-4">
@@ -289,36 +273,6 @@ const StudentDashboard = () => {
                 </div>
               )}
             </div>
-          </div>
-
-          <div>
-            {scores ? (
-              <>
-                <FiveDChartCard scores={scores} title="My Growth Profile" />
-                <Card className="mt-6">
-                  <CardHeader>
-                    <CardTitle>Your Strengths</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      You're showing great progress in {Object.entries(scores).sort((a: any, b: any) => b[1] - a[1])[0][0]} skills. Keep up the excellent work!
-                    </p>
-                  </CardContent>
-                </Card>
-              </>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Growth Profile</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    Your growth profile will appear here once you complete assignments
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
         </div>
       </main>
     </div>

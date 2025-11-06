@@ -78,10 +78,12 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           .eq('user_id', enroll.student_id)
           .single();
 
+        // Only get scores that are NOT from onboarding (to exclude baseline 2.5 scores)
         const { data: scoresData } = await supabase
           .from('five_d_snapshots')
-          .select('scores')
+          .select('scores, source')
           .eq('user_id', enroll.student_id)
+          .neq('source', 'onboarding')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -169,12 +171,14 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
       <Card><CardHeader><CardTitle>Student Profiles</CardTitle></CardHeader>
         <CardContent><div className="grid gap-4">
-          {students.map(s => (
+          {students.filter(s => s.latestScores).map(s => (
             <Card key={s.id}><CardHeader><div className="flex justify-between"><CardTitle className="text-lg">{s.fullName}</CardTitle>
               <Badge variant="secondary">{s.feedbackCount} submissions</Badge></div></CardHeader>
-              <CardContent>{s.latestScores ? <FiveDChart scores={s.latestScores} /> : <p className="text-sm text-muted-foreground">No data</p>}</CardContent></Card>
+              <CardContent><FiveDChart scores={s.latestScores!} /></CardContent></Card>
           ))}
-          {students.length === 0 && <p className="text-center text-muted-foreground">No students enrolled</p>}
+          {students.filter(s => s.latestScores).length === 0 && (
+            <p className="text-center text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
+          )}
         </div></CardContent></Card>
     </div>
   );
