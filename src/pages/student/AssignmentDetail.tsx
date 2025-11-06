@@ -236,7 +236,12 @@ const AssignmentDetail = () => {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="font-semibold mb-2">Feedback for You</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{feedback.student_feedback}</p>
+                  <div className="text-muted-foreground whitespace-pre-wrap prose prose-sm max-w-none">
+                    {feedback.student_feedback
+                      ?.replace(/\*\*/g, '')
+                      ?.replace(/\/\//g, '')
+                      ?.trim()}
+                  </div>
                 </div>
               </CardContent>
             </Card>

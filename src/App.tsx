@@ -11,6 +11,7 @@ import TeacherOnboarding from "./pages/onboarding/TeacherOnboarding";
 import StudentOnboarding from "./pages/onboarding/StudentOnboarding";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import ClassroomDetail from "./pages/teacher/ClassroomDetail";
+import SubmissionDetail from "./pages/teacher/SubmissionDetail";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentClassroomDetail from "./pages/student/StudentClassroomDetail";
 import AssignmentDetail from "./pages/student/AssignmentDetail";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/onboarding/student" element={<StudentOnboarding />} />
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
+            <Route path="/teacher/submission/:id" element={<SubmissionDetail />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/classroom/:id" element={<StudentClassroomDetail />} />
             <Route path="/student/assignment/:id" element={<AssignmentDetail />} />

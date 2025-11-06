@@ -33,51 +33,19 @@ serve(async (req) => {
     }
 
     // Prepare feedback generation prompt
-    const systemPrompt = `# You are Agent "Perleap". You are a pedagogical assistant expert in the Quantum Education Doctrine. It is a practical educational model inspired by Quantum mechanics where students are seen as a quantum wave-particle represented by a Student Wave Function (SWF).
+    // Generate feedback
+    const feedbackPrompt = `You are a pedagogical assistant analyzing a student's learning conversation. Provide growth-oriented, empowering feedback.
 
-## The Student Wave Function (SWF): it consists of 2 Tables of parameters.
+**Context:** The following is the complete conversation between ${studentName} and an educational agent during an assignment activity.
 
-**1. The Soft Related Abilities**
-Are a set of five dimensions that span the entire spectrum of human soft abilities.
-
-**2. The Content Related Abilities (CRA)**
-Are specific, content-related, and technical skills or sets of knowledge that pertain to a particular domain, subject, or field.
-
----
-
-Here is a general example for a Student Wave Function of a student:
-
-**Soft Table:**
-| Dimension (Color) | Developmental Stage Number (D) | Motivational Level Number (M) | Leap Probability Number (L) | Mindset Phase Number (P) | Overall Context (C) |
-|-------------------|-------------------------------|-------------------------------|----------------------------|----------------------------|--------------------|
-| Cognitive (White) | [1-100: Development Level] | [1-100: Motivation Level] | [1-100%: Leap Probability] | [Up/Down: Current Mindset] | [Short textual description of overall state in this dimension] |
-| ... | ... | ... | ... | ... | ... |
-
-**Content Table:**
-| Area/Domain | K/S Component | Current Level (CL) | Actionable Challenges (AC) |
-|-------------|---------------|--------------------|----------------------------|
-| [Domain 1: Specific Area of Content] | [Component 1.1: Specific Knowledge or Skill] | [X% - Brief description of proficiency level] | [Challenge or task related to Component 1.1] |
-| ... | ... | ... | ... |
-
----
-
-**Operator: Feedback**
-
-This Operator observes a given context of interactions and returns feedback that is growth-oriented, empowering, and non-judgmental.
-
-If the interaction in the given context involves the student, return feedback to the student, and if relevant to the teacher, then return feedback to the teacher.
-
-**Example output:**
-** Feedback for [name of student] **
-[insert Feedback for the Student]
+Return feedback in this format:
+** Feedback for ${studentName} **
+[Your feedback here]
 **End of Feedback**
 
-** Feedback for [name of Teacher] **
-[insert Feedback for the Teacher]
-**End of Feedback**
-
-**Context:**
-The following is the complete conversation between the student and the educational agent during this assignment activity.`;
+** Feedback for ${teacherName} **
+[Your feedback here]
+**End of Feedback**`;
 
     const conversationText = conversation.messages
       .map((msg: any) => `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`)
@@ -89,7 +57,7 @@ The following is the complete conversation between the student and the education
     }
 
     // Call Lovable AI for feedback generation
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const feedbackResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -98,20 +66,20 @@ The following is the complete conversation between the student and the education
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: feedbackPrompt },
           { role: 'user', content: conversationText }
         ],
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+    if (!feedbackResponse.ok) {
+      const errorText = await feedbackResponse.text();
+      console.error('AI API error:', feedbackResponse.status, errorText);
+      throw new Error(`AI API error: ${feedbackResponse.status}`);
     }
 
-    const data = await response.json();
-    const feedbackText = data.choices[0].message.content;
+    const feedbackData = await feedbackResponse.json();
+    const feedbackText = feedbackData.choices[0].message.content;
 
     // Parse feedback for student and teacher
     const studentFeedbackMatch = feedbackText.match(/\*\* Feedback for .*? \*\*([\s\S]*?)\*\*End of Feedback\*\*/);
@@ -119,6 +87,60 @@ The following is the complete conversation between the student and the education
 
     const studentFeedback = studentFeedbackMatch ? studentFeedbackMatch[1].trim() : feedbackText;
     const teacherFeedback = teacherFeedbackMatch ? teacherFeedbackMatch[1].trim() : null;
+
+    // Generate 5D analysis using Activity operator
+    const activityPrompt = `You are analyzing a student's learning conversation to assess their 5D development across five dimensions.
+
+Analyze ${studentName}'s conversation and rate them on a scale of 0-10 for each dimension:
+
+**Cognitive (White):** Analytical thinking, problem-solving, understanding of concepts, critical reasoning
+**Emotional (Red):** Self-awareness, emotional regulation, resilience, growth mindset
+**Social (Blue):** Communication skills, collaboration, perspective-taking, empathy
+**Creative (Yellow):** Innovation, original thinking, curiosity, exploration
+**Behavioral (Green):** Task completion, persistence, self-direction, responsibility
+
+Return ONLY a JSON object with scores (0-10):
+{"cognitive": X, "emotional": X, "social": X, "creative": X, "behavioral": X}`;
+
+    const scoresResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: activityPrompt },
+          { role: 'user', content: conversationText }
+        ],
+      }),
+    });
+
+    let scores = { cognitive: 5, emotional: 5, social: 5, creative: 5, behavioral: 5 };
+    if (scoresResponse.ok) {
+      const scoresData = await scoresResponse.json();
+      const scoresText = scoresData.choices[0].message.content;
+      try {
+        const parsed = JSON.parse(scoresText.replace(/```json\n?|\n?```/g, '').trim());
+        scores = parsed;
+      } catch (e) {
+        console.error('Failed to parse scores:', e);
+      }
+    }
+
+    // Save 5D snapshot
+    const { error: snapshotError } = await supabase
+      .from('five_d_snapshots')
+      .insert({
+        user_id: studentId,
+        scores,
+        source: 'assignment_completion'
+      });
+
+    if (snapshotError) {
+      console.error('Error saving snapshot:', snapshotError);
+    }
 
     // Save feedback
     const { error: feedbackError } = await supabase

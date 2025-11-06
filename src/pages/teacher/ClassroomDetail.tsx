@@ -6,12 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Users, BookOpen, Calendar, Plus, Edit, BarChart3, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, BookOpen, Calendar, Plus, Edit, BarChart3, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { EditClassroomDialog } from "@/components/EditClassroomDialog";
 import { CreateAssignmentDialog } from "@/components/CreateAssignmentDialog";
 import { EditAssignmentDialog } from "@/components/EditAssignmentDialog";
 import { ClassroomAnalytics } from "@/components/ClassroomAnalytics";
+import { SubmissionsTab } from "@/components/SubmissionsTab";
 
 interface Classroom {
   id: string;
@@ -186,10 +187,11 @@ const ClassroomDetail = () => {
 
       <main className="container py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-4">
+          <TabsList className="grid w-full max-w-md grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
             <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -396,6 +398,14 @@ const ClassroomDetail = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="submissions" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Student Submissions</h2>
+              <p className="text-muted-foreground">View completed assignments and feedback</p>
+            </div>
+            <SubmissionsTab classroomId={id!} />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
