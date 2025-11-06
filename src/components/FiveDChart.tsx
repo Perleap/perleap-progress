@@ -30,13 +30,13 @@ export const FiveDChart = ({ scores, showLabels = true }: FiveDChartProps) => {
                 <span className="text-sm font-medium">{label}</span>
                 <p className="text-xs text-muted-foreground">{description}</p>
               </div>
-              <span className="text-sm font-bold">{scores[key].toFixed(1)}/5</span>
+              <span className="text-sm font-bold">{scores[key].toFixed(1)}/10</span>
             </div>
           )}
           <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
             <div
               className={`h-full ${color} transition-all duration-500 ease-out rounded-full`}
-              style={{ width: `${(scores[key] / 5) * 100}%` }}
+              style={{ width: `${(scores[key] / 10) * 100}%` }}
             />
           </div>
         </div>

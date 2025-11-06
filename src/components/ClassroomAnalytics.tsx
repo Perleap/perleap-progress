@@ -222,19 +222,60 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         </Card>
       )}
 
-      {selectedStudent === "all" && (
-        <Card><CardHeader><CardTitle>Individual Student Profiles</CardTitle></CardHeader>
-          <CardContent><div className="grid gap-4">
-            {students.filter(s => s.latestScores).map(s => (
+      <Card><CardHeader><CardTitle>Student Profiles</CardTitle><CardDescription>Individual student progress and feedback analytics</CardDescription></CardHeader>
+        <CardContent><div className="grid gap-4">
+          {students.filter(s => s.latestScores).map(s => (
             <Card key={s.id}><CardHeader><div className="flex justify-between"><CardTitle className="text-lg">{s.fullName}</CardTitle>
               <Badge variant="secondary">{s.feedbackCount} submissions</Badge></div></CardHeader>
               <CardContent><FiveDChart scores={s.latestScores!} /></CardContent></Card>
           ))}
-            {students.filter(s => s.latestScores).length === 0 && (
-              <p className="text-center text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
+          {students.filter(s => s.latestScores).length === 0 && (
+            <p className="text-center text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
+          )}
+        </div></CardContent></Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Class Performance Summary</CardTitle>
+          <CardDescription>Overall statistics and completion rates</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Active Students</p>
+                <p className="text-2xl font-bold">{students.filter(s => s.feedbackCount > 0).length} / {studentCount}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Average Submissions per Student</p>
+                <p className="text-2xl font-bold">
+                  {studentCount > 0 ? (students.reduce((sum, s) => sum + s.feedbackCount, 0) / studentCount).toFixed(1) : 0}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Class Engagement Rate</p>
+                <p className="text-2xl font-bold">
+                  {studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%
+                </p>
+              </div>
+            </div>
+            
+            {students.filter(s => s.latestScores).length > 0 && (
+              <div className="pt-4 border-t">
+                <h4 className="font-semibold mb-3">Average 5D Scores</h4>
+                <div className="grid gap-2 md:grid-cols-5">
+                  {Object.entries(classAverage || {}).map(([dimension, score]) => (
+                    <div key={dimension} className="text-center p-3 bg-muted rounded-lg">
+                      <p className="text-xs text-muted-foreground capitalize mb-1">{dimension}</p>
+                      <p className="text-xl font-bold">{score.toFixed(1)}/10</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </div></CardContent></Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
