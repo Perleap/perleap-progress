@@ -468,9 +468,11 @@ const TeacherOnboarding = () => {
             />
           </div>
         </CardHeader>
-        <CardContent className="px-6">
-          <div className="max-h-[60vh] overflow-y-auto pr-2">
-            {renderStep()}
+        <CardContent>
+          <div className="max-h-[60vh] overflow-y-auto -mr-6 pr-6">
+            <div className="mr-2">
+              {renderStep()}
+            </div>
           </div>
 
           <div className="flex gap-4 mt-6">
