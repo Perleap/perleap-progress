@@ -364,10 +364,8 @@ const StudentOnboarding = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="max-h-[60vh] overflow-y-auto -mr-6 pr-6">
-            <div className="mr-2">
-              {renderStep()}
-            </div>
+          <div className="max-h-[60vh] overflow-y-auto px-1">
+            {renderStep()}
           </div>
 
           <div className="flex gap-4 mt-6">
