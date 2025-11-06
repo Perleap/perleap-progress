@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import TeacherOnboarding from "./pages/onboarding/TeacherOnboarding";
 import StudentOnboarding from "./pages/onboarding/StudentOnboarding";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
@@ -24,6 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/onboarding/teacher" element={<TeacherOnboarding />} />
             <Route path="/onboarding/student" element={<StudentOnboarding />} />
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />

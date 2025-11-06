@@ -131,36 +131,54 @@ export type Database = {
       }
       classrooms: {
         Row: {
+          course_duration: string | null
+          course_outline: string | null
+          course_title: string | null
           created_at: string
           end_date: string | null
           goals: string | null
           id: string
           invite_code: string
+          key_challenges: Json | null
+          learning_outcomes: Json | null
           name: string
+          resources: string | null
           start_date: string | null
           subject: string | null
           teacher_id: string
           updated_at: string
         }
         Insert: {
+          course_duration?: string | null
+          course_outline?: string | null
+          course_title?: string | null
           created_at?: string
           end_date?: string | null
           goals?: string | null
           id?: string
           invite_code?: string
+          key_challenges?: Json | null
+          learning_outcomes?: Json | null
           name: string
+          resources?: string | null
           start_date?: string | null
           subject?: string | null
           teacher_id: string
           updated_at?: string
         }
         Update: {
+          course_duration?: string | null
+          course_outline?: string | null
+          course_title?: string | null
           created_at?: string
           end_date?: string | null
           goals?: string | null
           id?: string
           invite_code?: string
+          key_challenges?: Json | null
+          learning_outcomes?: Json | null
           name?: string
+          resources?: string | null
           start_date?: string | null
           subject?: string | null
           teacher_id?: string
@@ -226,26 +244,59 @@ export type Database = {
       }
       student_profiles: {
         Row: {
+          additional_notes: string | null
           created_at: string
+          feedback_preferences: string | null
+          full_name: string | null
+          help_preferences: string | null
           id: string
+          learning_goal: string | null
+          learning_methods: string | null
           mentor_tone_ref: string | null
+          motivation_factors: string | null
           preferences_quiz: Json | null
+          scheduled_vs_flexible: string | null
+          solo_vs_group: string | null
+          special_needs: string | null
+          teacher_preferences: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          additional_notes?: string | null
           created_at?: string
+          feedback_preferences?: string | null
+          full_name?: string | null
+          help_preferences?: string | null
           id?: string
+          learning_goal?: string | null
+          learning_methods?: string | null
           mentor_tone_ref?: string | null
+          motivation_factors?: string | null
           preferences_quiz?: Json | null
+          scheduled_vs_flexible?: string | null
+          solo_vs_group?: string | null
+          special_needs?: string | null
+          teacher_preferences?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          additional_notes?: string | null
           created_at?: string
+          feedback_preferences?: string | null
+          full_name?: string | null
+          help_preferences?: string | null
           id?: string
+          learning_goal?: string | null
+          learning_methods?: string | null
           mentor_tone_ref?: string | null
+          motivation_factors?: string | null
           preferences_quiz?: Json | null
+          scheduled_vs_flexible?: string | null
+          solo_vs_group?: string | null
+          special_needs?: string | null
+          teacher_preferences?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -288,36 +339,120 @@ export type Database = {
       }
       teacher_profiles: {
         Row: {
+          challenging_question_response: string | null
           created_at: string
+          difficult_concept_example: string | null
+          discussion_timing: string | null
+          disruptive_student_response: string | null
+          educational_values: string | null
+          encouragement_phrases: string | null
+          full_name: string | null
+          hard_work_feedback_example: string | null
           id: string
+          lesson_ending: string | null
+          lesson_start_approach: string | null
+          lesson_structure: string | null
+          mistake_response: string | null
+          misunderstanding_feedback_example: string | null
+          no_understanding_response: string | null
+          phone_number: string | null
+          phrases_to_avoid: string | null
+          question_types: string | null
+          sample_explanation: string | null
+          skills_to_develop: string | null
+          specialization_1: string | null
+          specialization_2: string | null
+          strongest_qualities: string | null
+          student_age_range: string | null
+          student_education_level: string | null
+          student_objectives: string | null
           student_types: string | null
           style_notes: string | null
           subjects: string[] | null
+          teaching_examples: string | null
           teaching_goals: string | null
+          typical_student_count: string | null
           updated_at: string
           user_id: string
+          workplace: string | null
           years_experience: number | null
         }
         Insert: {
+          challenging_question_response?: string | null
           created_at?: string
+          difficult_concept_example?: string | null
+          discussion_timing?: string | null
+          disruptive_student_response?: string | null
+          educational_values?: string | null
+          encouragement_phrases?: string | null
+          full_name?: string | null
+          hard_work_feedback_example?: string | null
           id?: string
+          lesson_ending?: string | null
+          lesson_start_approach?: string | null
+          lesson_structure?: string | null
+          mistake_response?: string | null
+          misunderstanding_feedback_example?: string | null
+          no_understanding_response?: string | null
+          phone_number?: string | null
+          phrases_to_avoid?: string | null
+          question_types?: string | null
+          sample_explanation?: string | null
+          skills_to_develop?: string | null
+          specialization_1?: string | null
+          specialization_2?: string | null
+          strongest_qualities?: string | null
+          student_age_range?: string | null
+          student_education_level?: string | null
+          student_objectives?: string | null
           student_types?: string | null
           style_notes?: string | null
           subjects?: string[] | null
+          teaching_examples?: string | null
           teaching_goals?: string | null
+          typical_student_count?: string | null
           updated_at?: string
           user_id: string
+          workplace?: string | null
           years_experience?: number | null
         }
         Update: {
+          challenging_question_response?: string | null
           created_at?: string
+          difficult_concept_example?: string | null
+          discussion_timing?: string | null
+          disruptive_student_response?: string | null
+          educational_values?: string | null
+          encouragement_phrases?: string | null
+          full_name?: string | null
+          hard_work_feedback_example?: string | null
           id?: string
+          lesson_ending?: string | null
+          lesson_start_approach?: string | null
+          lesson_structure?: string | null
+          mistake_response?: string | null
+          misunderstanding_feedback_example?: string | null
+          no_understanding_response?: string | null
+          phone_number?: string | null
+          phrases_to_avoid?: string | null
+          question_types?: string | null
+          sample_explanation?: string | null
+          skills_to_develop?: string | null
+          specialization_1?: string | null
+          specialization_2?: string | null
+          strongest_qualities?: string | null
+          student_age_range?: string | null
+          student_education_level?: string | null
+          student_objectives?: string | null
           student_types?: string | null
           style_notes?: string | null
           subjects?: string[] | null
+          teaching_examples?: string | null
           teaching_goals?: string | null
+          typical_student_count?: string | null
           updated_at?: string
           user_id?: string
+          workplace?: string | null
           years_experience?: number | null
         }
         Relationships: []
