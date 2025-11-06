@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, BookOpen, TrendingUp, Award } from "lucide-react";
-import { FiveDChartCard } from "./FiveDChart";
+import { FiveDChart } from "./FiveDChart";
+import { Badge } from "@/components/ui/badge";
 
 interface ClassroomAnalyticsProps {
   classroomId: string;
@@ -10,14 +11,20 @@ interface ClassroomAnalyticsProps {
 
 interface StudentData {
   id: string;
-  full_name: string;
-  latest_scores: {
+  fullName: string;
+  latestScores: {
     cognitive: number;
     emotional: number;
     social: number;
     creative: number;
     behavioral: number;
   } | null;
+  feedbackCount: number;
+}
+
+interface Assignment {
+  id: string;
+  title: string;
 }
 
 export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
@@ -25,91 +32,96 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   const [studentCount, setStudentCount] = useState(0);
   const [assignmentCount, setAssignmentCount] = useState(0);
   const [students, setStudents] = useState<StudentData[]>([]);
-  const [classAverage, setClassAverage] = useState({
-    cognitive: 0,
-    emotional: 0,
-    social: 0,
-    creative: 0,
-    behavioral: 0,
-  });
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
+  const [classAverage, setClassAverage] = useState<{
+    cognitive: number;
+    emotional: number;
+    social: number;
+    creative: number;
+    behavioral: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [classroomId]);
+  }, [classroomId, selectedAssignment]);
 
   const fetchAnalytics = async () => {
     try {
-      // Fetch student count and enrollments
+      const { data: enrollData, count: enrollCount } = await supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('classroom_id', classroomId);
+
+      setStudentCount(enrollCount || 0);
+
+      const { data: assignData, error: assignError } = await supabase
+        .from('assignments')
+        .select('id, title')
+        .eq('classroom_id', classroomId);
+
+      if (!assignError && assignData) {
+        setAssignmentCount(assignData.length);
+        setAssignments(assignData);
+      }
+
       const { data: enrollments } = await supabase
         .from('enrollments')
         .select('student_id')
         .eq('classroom_id', classroomId);
 
-      setStudentCount(enrollments?.length || 0);
-
-      // Fetch assignment count
-      const { data: assignments } = await supabase
-        .from('assignments')
-        .select('id')
-        .eq('classroom_id', classroomId);
-
-      setAssignmentCount(assignments?.length || 0);
-
-      // Fetch student profiles and latest scores
-      if (enrollments && enrollments.length > 0) {
-        const studentIds = enrollments.map(e => e.student_id);
-        
-        const { data: profiles } = await supabase
+      const processedStudents: StudentData[] = [];
+      for (const enroll of enrollments || []) {
+        const { data: profile } = await supabase
           .from('student_profiles')
-          .select('user_id, full_name')
-          .in('user_id', studentIds);
+          .select('full_name')
+          .eq('user_id', enroll.student_id)
+          .single();
 
-        // Fetch latest 5D scores for each student
-        const studentsWithScores = await Promise.all(
-          (profiles || []).map(async (profile) => {
-            const { data: snapshot } = await supabase
-              .from('five_d_snapshots')
-              .select('scores')
-              .eq('user_id', profile.user_id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+        const { data: scoresData } = await supabase
+          .from('five_d_snapshots')
+          .select('scores')
+          .eq('user_id', enroll.student_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-            return {
-              id: profile.user_id,
-              full_name: profile.full_name || 'Student',
-              latest_scores: snapshot?.scores as any || null,
-            };
-          })
-        );
+        let feedbackQuery = supabase
+          .from('assignment_feedback')
+          .select('id', { count: 'exact', head: true })
+          .eq('student_id', enroll.student_id);
 
-        setStudents(studentsWithScores);
-
-        // Calculate class average
-        const validScores = studentsWithScores.filter(s => s.latest_scores);
-        if (validScores.length > 0) {
-          const avg = {
-            cognitive: 0,
-            emotional: 0,
-            social: 0,
-            creative: 0,
-            behavioral: 0,
-          };
-
-          validScores.forEach(student => {
-            if (student.latest_scores) {
-              Object.keys(avg).forEach(key => {
-                avg[key as keyof typeof avg] += student.latest_scores[key as keyof typeof student.latest_scores];
-              });
-            }
-          });
-
-          Object.keys(avg).forEach(key => {
-            avg[key as keyof typeof avg] = avg[key as keyof typeof avg] / validScores.length;
-          });
-
-          setClassAverage(avg);
+        if (selectedAssignment !== 'all') {
+          feedbackQuery = feedbackQuery.eq('assignment_id', selectedAssignment);
         }
+
+        const { count: feedbackCount } = await feedbackQuery;
+
+        processedStudents.push({
+          id: enroll.student_id,
+          fullName: profile?.full_name || 'Unknown',
+          latestScores: scoresData?.scores as any || null,
+          feedbackCount: feedbackCount || 0
+        });
+      }
+
+      setStudents(processedStudents);
+
+      const validScores = processedStudents.filter(s => s.latestScores);
+      if (validScores.length > 0) {
+        const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+        validScores.forEach(s => {
+          if (s.latestScores) {
+            Object.keys(totals).forEach(key => {
+              totals[key as keyof typeof totals] += s.latestScores![key as keyof typeof totals];
+            });
+          }
+        });
+        const avg = Object.keys(totals).reduce((acc, key) => ({
+          ...acc,
+          [key]: totals[key as keyof typeof totals] / validScores.length
+        }), {} as typeof totals);
+        setClassAverage(avg);
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -118,102 +130,52 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
     }
   };
 
-  if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading analytics...</div>;
-  }
+  if (loading) return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Students</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <span className="text-3xl font-bold">{studentCount}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Assignments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-muted-foreground" />
-              <span className="text-3xl font-bold">{assignmentCount}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Engagement Rate</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-muted-foreground" />
-              <span className="text-3xl font-bold">85%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Completion Rate</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-muted-foreground" />
-              <span className="text-3xl font-bold">78%</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex-1">
+          <label className="text-sm font-medium">Filter by Assignment</label>
+          <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assignments</SelectItem>
+              {assignments.map(a => (
+                <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Class Average - 5D Profile</CardTitle>
-          <CardDescription>Average scores across all enrolled students</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FiveDChartCard scores={classAverage} title="" />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total Students</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{studentCount}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Assignments</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{assignmentCount}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total Submissions</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{students.reduce((s, st) => s + st.feedbackCount, 0)}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Completion Rate</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%</div></CardContent></Card>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Growth Profiles</CardTitle>
-          <CardDescription>Individual 5D scores for each student</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {students.map((student) => (
-              <div key={student.id} className="border-b pb-4 last:border-0">
-                <h4 className="font-semibold mb-3">{student.full_name}</h4>
-                {student.latest_scores ? (
-                  <div className="grid grid-cols-5 gap-2 text-sm">
-                    {Object.entries(student.latest_scores).map(([key, value]) => (
-                      <div key={key} className="text-center">
-                        <div className="font-medium capitalize text-xs text-muted-foreground mb-1">{key}</div>
-                        <div className="font-bold">{value.toFixed(1)}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No data yet</p>
-                )}
-              </div>
-            ))}
-            {students.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No students enrolled yet</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {classAverage && (
+        <Card><CardHeader><CardTitle>Class Average - 5D Profile</CardTitle></CardHeader>
+          <CardContent><FiveDChart scores={classAverage} /></CardContent></Card>
+      )}
+
+      <Card><CardHeader><CardTitle>Student Profiles</CardTitle></CardHeader>
+        <CardContent><div className="grid gap-4">
+          {students.map(s => (
+            <Card key={s.id}><CardHeader><div className="flex justify-between"><CardTitle className="text-lg">{s.fullName}</CardTitle>
+              <Badge variant="secondary">{s.feedbackCount} submissions</Badge></div></CardHeader>
+              <CardContent>{s.latestScores ? <FiveDChart scores={s.latestScores} /> : <p className="text-sm text-muted-foreground">No data</p>}</CardContent></Card>
+          ))}
+          {students.length === 0 && <p className="text-center text-muted-foreground">No students enrolled</p>}
+        </div></CardContent></Card>
     </div>
   );
 }

@@ -2,13 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Calendar, FileText, Send } from "lucide-react";
+import { ArrowLeft, Calendar, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { AssignmentChatInterface } from "@/components/AssignmentChatInterface";
 
 interface Assignment {
   id: string;
@@ -34,15 +33,20 @@ interface Submission {
   submitted_at: string;
 }
 
+interface Feedback {
+  student_feedback: string;
+  teacher_feedback: string;
+  created_at: string;
+}
+
 const AssignmentDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
-  const [textBody, setTextBody] = useState("");
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -81,7 +85,31 @@ const AssignmentDetail = () => {
 
       if (submissionData) {
         setSubmission(submissionData);
-        setTextBody(submissionData.text_body || "");
+        
+        // Check for feedback
+        const { data: feedbackData } = await supabase
+          .from('assignment_feedback')
+          .select('*')
+          .eq('submission_id', submissionData.id)
+          .maybeSingle();
+        
+        if (feedbackData) {
+          setFeedback(feedbackData);
+        }
+      } else {
+        // Create initial submission for this assignment
+        const { data: newSubmission, error: subError } = await supabase
+          .from('submissions')
+          .insert({
+            assignment_id: id!,
+            student_id: user!.id,
+            text_body: ''
+          })
+          .select()
+          .single();
+
+        if (subError) throw subError;
+        setSubmission(newSubmission);
       }
     } catch (error: any) {
       console.error("Error loading assignment:", error);
@@ -92,47 +120,8 @@ const AssignmentDetail = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!textBody.trim()) {
-      toast.error("Please enter your submission");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      if (submission) {
-        // Update existing submission
-        const { error } = await supabase
-          .from('submissions')
-          .update({
-            text_body: textBody,
-            submitted_at: new Date().toISOString()
-          })
-          .eq('id', submission.id);
-
-        if (error) throw error;
-        toast.success("Submission updated successfully!");
-      } else {
-        // Create new submission
-        const { error } = await supabase
-          .from('submissions')
-          .insert({
-            assignment_id: id!,
-            student_id: user!.id,
-            text_body: textBody
-          });
-
-        if (error) throw error;
-        toast.success("Assignment submitted successfully!");
-      }
-
-      await fetchData();
-    } catch (error: any) {
-      console.error("Error submitting assignment:", error);
-      toast.error("Error submitting assignment. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
+  const handleActivityComplete = () => {
+    fetchData();
   };
 
   if (loading) {
@@ -202,40 +191,31 @@ const AssignmentDetail = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Submission</CardTitle>
-              <CardDescription>
-                {submission 
-                  ? `Last submitted: ${new Date(submission.submitted_at).toLocaleString()}` 
-                  : "Submit your work below"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="submission">Your Answer</Label>
-                <Textarea
-                  id="submission"
-                  placeholder="Type your answer here..."
-                  rows={10}
-                  value={textBody}
-                  onChange={(e) => setTextBody(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
+          {!feedback && submission && (
+            <AssignmentChatInterface
+              assignmentId={assignment.id}
+              assignmentInstructions={assignment.instructions}
+              submissionId={submission.id}
+              onComplete={handleActivityComplete}
+            />
+          )}
 
-              <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-                {submitting ? (
-                  "Submitting..."
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    {submission ? "Update Submission" : "Submit Assignment"}
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+          {feedback && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Feedback</CardTitle>
+                <CardDescription>
+                  Completed on {new Date(feedback.created_at).toLocaleString()}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Feedback for You</h3>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{feedback.student_feedback}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>
