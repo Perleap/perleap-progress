@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Eye, Filter } from "lucide-react";
+import { FileText, Filter } from "lucide-react";
+import { SubmissionCard } from "./SubmissionCard";
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -19,6 +17,7 @@ interface SubmissionWithDetails {
   student_name: string;
   assignment_title: string;
   has_feedback: boolean;
+  teacher_feedback?: string;
 }
 
 interface Student {
@@ -32,7 +31,6 @@ interface Assignment {
 }
 
 export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
-  const navigate = useNavigate();
   const [submissions, setSubmissions] = useState<SubmissionWithDetails[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<SubmissionWithDetails[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -112,7 +110,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
         const { data: feedback } = await supabase
           .from('assignment_feedback')
-          .select('id')
+          .select('teacher_feedback')
           .eq('submission_id', sub.id)
           .maybeSingle();
 
@@ -120,7 +118,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
           ...sub,
           student_name: student?.full_name || 'Unknown',
           assignment_title: assignment?.title || 'Unknown Assignment',
-          has_feedback: !!feedback
+          has_feedback: !!feedback,
+          teacher_feedback: feedback?.teacher_feedback || undefined
         });
       }
 
@@ -211,35 +210,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
         </Card>
       ) : (
         filteredSubmissions.map((submission) => (
-        <Card key={submission.id}>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-lg">{submission.student_name}</CardTitle>
-                <CardDescription>
-                  {submission.assignment_title}
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={submission.has_feedback ? 'default' : 'secondary'}>
-                  {submission.has_feedback ? 'Completed' : 'In Progress'}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(`/teacher/submission/${submission.id}`)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Submitted: {new Date(submission.submitted_at).toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
+          <SubmissionCard key={submission.id} submission={submission} />
         ))
       )}
     </div>

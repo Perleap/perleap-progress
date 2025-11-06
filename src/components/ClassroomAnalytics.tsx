@@ -27,11 +27,17 @@ interface Assignment {
   title: string;
 }
 
+interface AllStudentsInfo {
+  id: string;
+  name: string;
+}
+
 export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   const [loading, setLoading] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
   const [assignmentCount, setAssignmentCount] = useState(0);
   const [students, setStudents] = useState<StudentData[]>([]);
+  const [allStudents, setAllStudents] = useState<AllStudentsInfo[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
   const [selectedStudent, setSelectedStudent] = useState<string>("all");
@@ -72,12 +78,17 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         .eq('classroom_id', classroomId);
 
       const processedStudents: StudentData[] = [];
+      const allStudentsData: Array<{id: string, name: string}> = [];
+      
       for (const enroll of enrollments || []) {
         const { data: profile } = await supabase
           .from('student_profiles')
           .select('full_name')
           .eq('user_id', enroll.student_id)
           .single();
+
+        const fullName = profile?.full_name || 'Unknown';
+        allStudentsData.push({ id: enroll.student_id, name: fullName });
 
         // Only get scores that are NOT from onboarding (to exclude baseline 2.5 scores)
         const { data: scoresData } = await supabase
@@ -102,13 +113,14 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
         processedStudents.push({
           id: enroll.student_id,
-          fullName: profile?.full_name || 'Unknown',
+          fullName,
           latestScores: scoresData?.scores as any || null,
           feedbackCount: feedbackCount || 0
         });
       }
 
       setStudents(processedStudents);
+      setAllStudents(allStudentsData);
 
       // Calculate class average or individual student scores based on filter
       if (selectedStudent !== "all") {
@@ -158,9 +170,9 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Whole Class Average</SelectItem>
-                  {students.filter(s => s.latestScores).map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.fullName}</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  {allStudents.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -198,7 +210,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         <Card>
           <CardHeader>
             <CardTitle>
-              {selectedStudent === "all" ? "Class Average - 5D Profile" : `${students.find(s => s.id === selectedStudent)?.fullName} - 5D Profile`}
+              {selectedStudent === "all" ? "Class Average - 5D Profile" : `${allStudents.find(s => s.id === selectedStudent)?.name} - 5D Profile`}
             </CardTitle>
             <CardDescription>
               {selectedStudent === "all" 
