@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,6 +44,15 @@ export function EditAssignmentDialog({
     assignment.due_at ? new Date(assignment.due_at).toISOString().slice(0, 16) : ""
   );
   const [loading, setLoading] = useState(false);
+
+  // Update state when assignment changes
+  useEffect(() => {
+    setTitle(assignment.title);
+    setInstructions(assignment.instructions);
+    setType(assignment.type);
+    setStatus(assignment.status);
+    setDueDate(assignment.due_at ? new Date(assignment.due_at).toISOString().slice(0, 16) : "");
+  }, [assignment]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
