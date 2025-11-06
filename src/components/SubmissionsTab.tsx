@@ -18,6 +18,7 @@ interface SubmissionWithDetails {
   assignment_title: string;
   has_feedback: boolean;
   teacher_feedback?: string;
+  conversation_context?: any[];
 }
 
 interface Student {
@@ -110,7 +111,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
         const { data: feedback } = await supabase
           .from('assignment_feedback')
-          .select('teacher_feedback')
+          .select('teacher_feedback, conversation_context')
           .eq('submission_id', sub.id)
           .maybeSingle();
 
@@ -119,7 +120,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
           student_name: student?.full_name || 'Unknown',
           assignment_title: assignment?.title || 'Unknown Assignment',
           has_feedback: !!feedback,
-          teacher_feedback: feedback?.teacher_feedback || undefined
+          teacher_feedback: feedback?.teacher_feedback || undefined,
+          conversation_context: Array.isArray(feedback?.conversation_context) ? feedback.conversation_context : []
         });
       }
 
