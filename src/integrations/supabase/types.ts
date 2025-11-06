@@ -79,6 +79,99 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_conversations: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          messages: Json
+          student_id: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          student_id: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          student_id?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_conversations_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_conversations_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_feedback: {
+        Row: {
+          assignment_id: string
+          conversation_context: Json | null
+          created_at: string
+          id: string
+          student_feedback: string | null
+          student_id: string
+          submission_id: string
+          teacher_feedback: string | null
+        }
+        Insert: {
+          assignment_id: string
+          conversation_context?: Json | null
+          created_at?: string
+          id?: string
+          student_feedback?: string | null
+          student_id: string
+          submission_id: string
+          teacher_feedback?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          conversation_context?: Json | null
+          created_at?: string
+          id?: string
+          student_feedback?: string | null
+          student_id?: string
+          submission_id?: string
+          teacher_feedback?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_feedback_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_feedback_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           classroom_id: string
