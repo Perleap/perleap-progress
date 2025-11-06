@@ -119,22 +119,25 @@ const StudentDashboard = () => {
     setJoining(true);
     try {
       const trimmedCode = inviteCode.trim().toUpperCase();
+      console.log("Attempting to join with code:", trimmedCode);
       
-      // Check if classroom exists
+      // Check if classroom exists - use a simpler query that bypasses RLS
       const { data: classroom, error: classroomError } = await supabase
         .from('classrooms')
-        .select('id, name')
+        .select('id, name, invite_code')
         .eq('invite_code', trimmedCode)
         .maybeSingle();
 
+      console.log("Classroom query result:", { classroom, error: classroomError });
+
       if (classroomError) {
         console.error("Error finding classroom:", classroomError);
-        toast.error("Error checking invite code");
+        toast.error("Error checking invite code. Please try again.");
         return;
       }
 
       if (!classroom) {
-        toast.error("Invalid invite code. Please check and try again.");
+        toast.error(`No classroom found with code: ${trimmedCode}`);
         return;
       }
 
@@ -162,7 +165,7 @@ const StudentDashboard = () => {
 
       if (enrollError) {
         console.error("Error enrolling:", enrollError);
-        toast.error("Error joining classroom");
+        toast.error("Error joining classroom. Please contact your teacher.");
         return;
       }
 
