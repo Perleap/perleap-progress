@@ -10,6 +10,7 @@ import { ArrowLeft, Users, BookOpen, Calendar, Plus, Edit, BarChart3, Trash2 } f
 import { toast } from "sonner";
 import { EditClassroomDialog } from "@/components/EditClassroomDialog";
 import { CreateAssignmentDialog } from "@/components/CreateAssignmentDialog";
+import { EditAssignmentDialog } from "@/components/EditAssignmentDialog";
 import { ClassroomAnalytics } from "@/components/ClassroomAnalytics";
 
 interface Classroom {
@@ -54,6 +55,8 @@ const ClassroomDetail = () => {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [editAssignmentDialogOpen, setEditAssignmentDialogOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -331,6 +334,16 @@ const ClassroomDetail = () => {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => {
+                              setSelectedAssignment(assignment);
+                              setEditAssignmentDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => deleteAssignment(assignment.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -408,6 +421,15 @@ const ClassroomDetail = () => {
         classroomId={id!}
         onSuccess={fetchAssignments}
       />
+
+      {selectedAssignment && (
+        <EditAssignmentDialog
+          open={editAssignmentDialogOpen}
+          onOpenChange={setEditAssignmentDialogOpen}
+          assignment={selectedAssignment}
+          onSuccess={fetchAssignments}
+        />
+      )}
     </div>
   );
 };
