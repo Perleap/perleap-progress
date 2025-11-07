@@ -175,31 +175,33 @@ const ClassroomDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container flex h-16 items-center gap-4">
+        <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/teacher/dashboard')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{classroom.name}</h1>
-            <p className="text-sm text-muted-foreground">{classroom.subject}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg md:text-2xl font-bold truncate">{classroom.name}</h1>
+            <p className="text-xs md:text-sm text-muted-foreground truncate">{classroom.subject}</p>
           </div>
         </div>
       </header>
 
-      <main className="container py-8">
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="assignments">Assignments</TabsTrigger>
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+      <main className="container py-4 md:py-8 px-4">
+        <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
+          <div className="overflow-x-auto pb-2 -mx-4 px-4">
+            <TabsList className="inline-flex w-full min-w-max md:w-auto">
+              <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="assignments" className="text-xs md:text-sm">Assignments</TabsTrigger>
+              <TabsTrigger value="students" className="text-xs md:text-sm">Students</TabsTrigger>
+              <TabsTrigger value="submissions" className="text-xs md:text-sm">Submissions</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs md:text-sm">Analytics</TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Classroom Overview</h2>
-              <Button onClick={() => setEditDialogOpen(true)}>
+          <TabsContent value="overview" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h2 className="text-xl md:text-2xl font-bold">Classroom Overview</h2>
+              <Button onClick={() => setEditDialogOpen(true)} size="sm" className="w-full sm:w-auto">
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Information
               </Button>
@@ -293,13 +295,13 @@ const ClassroomDetail = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="assignments" className="space-y-6">
-            <div className="flex justify-between items-center">
+          <TabsContent value="assignments" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
-                <h2 className="text-2xl font-bold">Assignments</h2>
-                <p className="text-muted-foreground">Create and manage assignments</p>
+                <h2 className="text-xl md:text-2xl font-bold">Assignments</h2>
+                <p className="text-sm text-muted-foreground">Create and manage assignments</p>
               </div>
-              <Button onClick={() => setAssignmentDialogOpen(true)}>
+              <Button onClick={() => setAssignmentDialogOpen(true)} size="sm" className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Assignment
               </Button>
@@ -363,12 +365,10 @@ const ClassroomDetail = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="students" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold">Enrolled Students</h2>
-                <p className="text-muted-foreground">View and manage your students</p>
-              </div>
+          <TabsContent value="students" className="space-y-4 md:space-y-6">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold">Enrolled Students</h2>
+              <p className="text-sm text-muted-foreground">View and manage your students</p>
             </div>
 
             <Card>
@@ -401,19 +401,19 @@ const ClassroomDetail = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="submissions" className="space-y-6">
+          <TabsContent value="submissions" className="space-y-4 md:space-y-6">
             <div>
-              <h2 className="text-2xl font-bold">Student Submissions</h2>
-              <p className="text-muted-foreground">View completed assignments and feedback</p>
+              <h2 className="text-xl md:text-2xl font-bold">Student Submissions</h2>
+              <p className="text-sm text-muted-foreground">View completed assignments and feedback</p>
             </div>
             <SubmissionsTab classroomId={id!} />
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
+          <TabsContent value="analytics" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-6 w-6" />
-                <h2 className="text-2xl font-bold">Analytics</h2>
+                <BarChart3 className="h-5 w-5 md:h-6 md:w-6" />
+                <h2 className="text-xl md:text-2xl font-bold">Analytics</h2>
               </div>
               <RegenerateScoresButton 
                 classroomId={id!} 

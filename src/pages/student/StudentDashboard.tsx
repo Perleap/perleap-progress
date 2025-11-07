@@ -163,24 +163,24 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container flex h-16 items-center justify-between">
-          <h1 className="text-2xl font-bold">Student Dashboard</h1>
-          <Button variant="outline" onClick={signOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
+        <div className="container flex h-14 md:h-16 items-center justify-between px-4">
+          <h1 className="text-lg md:text-2xl font-bold">Student Dashboard</h1>
+          <Button variant="outline" size="sm" onClick={signOut}>
+            <LogOut className="mr-0 md:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Sign Out</span>
           </Button>
         </div>
       </header>
 
-      <main className="container py-8">
+      <main className="container py-4 md:py-8 px-4">
         <div className="space-y-6">
             {/* My Classes Section */}
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">My Classes</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h2 className="text-xl md:text-2xl font-bold">My Classes</h2>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button size="sm" className="w-full sm:w-auto">
                       <Plus className="mr-2 h-4 w-4" />
                       Join Class
                     </Button>
@@ -224,7 +224,7 @@ const StudentDashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {classrooms.map((classroom) => (
                     <Card 
                       key={classroom.id} 
@@ -232,8 +232,8 @@ const StudentDashboard = () => {
                       onClick={() => navigate(`/student/classroom/${classroom.id}`)}
                     >
                       <CardHeader>
-                        <CardTitle>{classroom.name}</CardTitle>
-                        <CardDescription>{classroom.subject}</CardDescription>
+                        <CardTitle className="text-base md:text-lg">{classroom.name}</CardTitle>
+                        <CardDescription className="text-sm">{classroom.subject}</CardDescription>
                       </CardHeader>
                     </Card>
                   ))}
@@ -243,7 +243,7 @@ const StudentDashboard = () => {
 
             {/* Assignments Section */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">My Assignments</h2>
+              <h2 className="text-xl md:text-2xl font-bold mb-4">My Assignments</h2>
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : assignments.length === 0 ? (

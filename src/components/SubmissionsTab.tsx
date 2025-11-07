@@ -214,15 +214,16 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Filter className="h-4 w-4 md:h-5 md:w-5" />
               Filter & Search Submissions
             </CardTitle>
             <Button 
               onClick={handleBulkExport} 
               disabled={submissions.length === 0}
               size="sm"
+              className="w-full sm:w-auto"
             >
               <Download className="h-4 w-4 mr-2" />
               Export All
@@ -239,15 +240,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   placeholder="Search in conversations, feedback, names..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 text-sm"
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium mb-2 block">Student</label>
                 <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -261,7 +262,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
               <div>
                 <label className="text-sm font-medium mb-2 block">Assignment</label>
                 <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

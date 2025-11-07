@@ -156,13 +156,13 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   if (loading) return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Analytics Filters</CardTitle>
+          <CardTitle className="text-base md:text-lg">Analytics Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="text-sm font-medium mb-2 block">Filter by Student</label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
@@ -195,24 +195,24 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total Students</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{studentCount}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Assignments</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{assignmentCount}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Total Submissions</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{students.reduce((s, st) => s + st.feedbackCount, 0)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Completion Rate</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%</div></CardContent></Card>
+      <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Total Students</CardTitle></CardHeader>
+          <CardContent><div className="text-xl md:text-2xl font-bold">{studentCount}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Assignments</CardTitle></CardHeader>
+          <CardContent><div className="text-xl md:text-2xl font-bold">{assignmentCount}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Total Submissions</CardTitle></CardHeader>
+          <CardContent><div className="text-xl md:text-2xl font-bold">{students.reduce((s, st) => s + st.feedbackCount, 0)}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Completion Rate</CardTitle></CardHeader>
+          <CardContent><div className="text-xl md:text-2xl font-bold">{studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%</div></CardContent></Card>
       </div>
 
       {classAverage && (
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="text-base md:text-lg">
               {selectedStudent === "all" ? "Class Average - 5D Profile" : `${allStudents.find(s => s.id === selectedStudent)?.name} - 5D Profile`}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               {selectedStudent === "all" 
                 ? "Average scores across all students with data"
                 : "Individual student performance profile"}
@@ -222,39 +222,39 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         </Card>
       )}
 
-      <Card><CardHeader><CardTitle>Student Profiles</CardTitle><CardDescription>Individual student progress and feedback analytics</CardDescription></CardHeader>
+      <Card><CardHeader><CardTitle className="text-base md:text-lg">Student Profiles</CardTitle><CardDescription className="text-sm">Individual student progress and feedback analytics</CardDescription></CardHeader>
         <CardContent><div className="grid gap-4">
           {students.filter(s => s.latestScores).map(s => (
-            <Card key={s.id}><CardHeader><div className="flex justify-between"><CardTitle className="text-lg">{s.fullName}</CardTitle>
-              <Badge variant="secondary">{s.feedbackCount} submissions</Badge></div></CardHeader>
+            <Card key={s.id}><CardHeader><div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"><CardTitle className="text-base md:text-lg">{s.fullName}</CardTitle>
+              <Badge variant="secondary" className="text-xs">{s.feedbackCount} submissions</Badge></div></CardHeader>
               <CardContent><FiveDChart scores={s.latestScores!} /></CardContent></Card>
           ))}
           {students.filter(s => s.latestScores).length === 0 && (
-            <p className="text-center text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
+            <p className="text-center text-sm text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
           )}
         </div></CardContent></Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Class Performance Summary</CardTitle>
-          <CardDescription>Overall statistics and completion rates</CardDescription>
+          <CardTitle className="text-base md:text-lg">Class Performance Summary</CardTitle>
+          <CardDescription className="text-sm">Overall statistics and completion rates</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Active Students</p>
-                <p className="text-2xl font-bold">{students.filter(s => s.feedbackCount > 0).length} / {studentCount}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Active Students</p>
+                <p className="text-xl md:text-2xl font-bold">{students.filter(s => s.feedbackCount > 0).length} / {studentCount}</p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Average Submissions per Student</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">Average Submissions per Student</p>
+                <p className="text-xl md:text-2xl font-bold">
                   {studentCount > 0 ? (students.reduce((sum, s) => sum + s.feedbackCount, 0) / studentCount).toFixed(1) : 0}
                 </p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Class Engagement Rate</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">Class Engagement Rate</p>
+                <p className="text-xl md:text-2xl font-bold">
                   {studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%
                 </p>
               </div>
@@ -262,12 +262,12 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
             
             {students.filter(s => s.latestScores).length > 0 && (
               <div className="pt-4 border-t">
-                <h4 className="font-semibold mb-3">Average 5D Scores</h4>
-                <div className="grid gap-2 md:grid-cols-5">
+                <h4 className="text-sm md:text-base font-semibold mb-3">Average 5D Scores</h4>
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                   {Object.entries(classAverage || {}).map(([dimension, score]) => (
-                    <div key={dimension} className="text-center p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground capitalize mb-1">{dimension}</p>
-                      <p className="text-xl font-bold">{score.toFixed(1)}/10</p>
+                    <div key={dimension} className="text-center p-2 md:p-3 bg-muted rounded-lg">
+                      <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">{dimension}</p>
+                      <p className="text-base md:text-xl font-bold">{score.toFixed(1)}/10</p>
                     </div>
                   ))}
                 </div>

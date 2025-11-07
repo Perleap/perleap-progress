@@ -55,23 +55,23 @@ const TeacherDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container flex h-16 items-center justify-between">
-          <h1 className="text-2xl font-bold">Teacher Dashboard</h1>
-          <Button variant="outline" onClick={signOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
+        <div className="container flex h-14 md:h-16 items-center justify-between px-4">
+          <h1 className="text-lg md:text-2xl font-bold">Teacher Dashboard</h1>
+          <Button variant="outline" size="sm" onClick={signOut}>
+            <LogOut className="mr-0 md:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Sign Out</span>
           </Button>
         </div>
       </header>
 
-      <main className="container py-8">
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
+      <main className="container py-4 md:py-8 px-4">
+        <div className="mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6">
             <div>
-              <h2 className="text-3xl font-bold mb-2">My Classrooms</h2>
-              <p className="text-muted-foreground">Manage your classes and track student progress</p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">My Classrooms</h2>
+              <p className="text-sm md:text-base text-muted-foreground">Manage your classes and track student progress</p>
             </div>
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button onClick={() => setDialogOpen(true)} size="sm" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Create Classroom
             </Button>
@@ -92,16 +92,16 @@ const TeacherDashboard = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {classrooms.map((classroom) => (
                 <Card key={classroom.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}>
                   <CardHeader>
-                    <CardTitle>{classroom.name}</CardTitle>
-                    <CardDescription>{classroom.subject}</CardDescription>
+                    <CardTitle className="text-base md:text-lg">{classroom.name}</CardTitle>
+                    <CardDescription className="text-sm">{classroom.subject}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                      <Users className="h-3 w-3 md:h-4 md:w-4" />
                       <span>Invite code: {classroom.invite_code}</span>
                     </div>
                   </CardContent>

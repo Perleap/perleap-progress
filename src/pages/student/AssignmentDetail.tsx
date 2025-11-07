@@ -164,18 +164,18 @@ const AssignmentDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container flex h-16 items-center gap-4">
+        <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{assignment.title}</h1>
-            <p className="text-sm text-muted-foreground">{assignment.classrooms.name}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg md:text-2xl font-bold truncate">{assignment.title}</h1>
+            <p className="text-xs md:text-sm text-muted-foreground truncate">{assignment.classrooms.name}</p>
           </div>
         </div>
       </header>
 
-      <main className="container py-8 max-w-4xl">
+      <main className="container py-4 md:py-8 px-4 max-w-4xl">
         <div className="space-y-6">
           <Card>
             <CardHeader>

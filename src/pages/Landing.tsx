@@ -7,46 +7,42 @@ const Landing = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="container flex h-20 items-center justify-between">
+        <div className="container flex h-16 md:h-20 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
               <GraduationCap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold">PerLeap</span>
+            <span className="text-lg md:text-xl font-semibold">PerLeap</span>
           </div>
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
-            <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
-            <a href="#about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">About</a>
-          </nav>
           <Link to="/auth">
-            <Button className="font-medium">
-              Contact us
-              <ArrowRight className="h-4 w-4" />
+            <Button size="sm" className="font-medium">
+              <span className="hidden sm:inline">Contact us</span>
+              <span className="sm:hidden">Contact</span>
+              <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </Link>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="container pt-32 pb-20 md:pt-40 md:pb-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className="container pt-24 pb-12 md:pt-32 md:pb-20 lg:pt-40 lg:pb-32 px-4">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="max-w-2xl">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-4 md:mb-6 leading-[1.1]">
               Strategy and growth for modern teams
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
+            <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed">
               PerLeap partners with educators to streamline teaching, elevate student performance, and build a foundation for lasting success through AI-powered insights.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Link to="/auth">
-                <Button size="lg" className="font-medium">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+              <Link to="/auth" className="w-full sm:w-auto">
+                <Button size="lg" className="font-medium w-full sm:w-auto">
                   Get started
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
-              <Link to="/auth">
-                <Button size="lg" variant="outline" className="font-medium">
+              <Link to="/auth" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="font-medium w-full sm:w-auto">
                   Contact us
                 </Button>
               </Link>
@@ -123,10 +119,10 @@ const Landing = () => {
         </div>
 
         {/* Logo Strip */}
-        <div className="mt-20 pt-12 border-t border-border/50">
-          <div className="flex items-center gap-8 overflow-hidden">
+        <div className="mt-12 md:mt-20 pt-8 md:pt-12 border-t border-border/50">
+          <div className="flex items-center gap-6 md:gap-8 overflow-x-auto pb-2">
             {["NovaTech", "VitaHealth", "NaviAI", "Lumora", "TeachPro", "EduFlow"].map((logo, i) => (
-              <div key={i} className="text-muted-foreground/40 font-semibold text-lg whitespace-nowrap">
+              <div key={i} className="text-muted-foreground/40 font-semibold text-sm md:text-lg whitespace-nowrap">
                 {logo}
               </div>
             ))}
@@ -135,16 +131,16 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="container py-20 md:py-32">
+      <section id="features" className="container py-12 md:py-20 lg:py-32 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Everything you need to succeed</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <div className="text-center mb-10 md:mb-16">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">Everything you need to succeed</h2>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
               Comprehensive tools designed to transform teaching and learning experiences
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
             <div className="bg-card rounded-3xl p-8 border border-border hover:shadow-lg transition-all">
               <div className="w-12 h-12 rounded-2xl bg-dimension-cognitive/40 flex items-center justify-center mb-6">
                 <Brain className="h-6 w-6 text-foreground" />
@@ -209,45 +205,45 @@ const Landing = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="container py-20 md:py-32 bg-secondary rounded-3xl my-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-12 text-center">
+      <section className="container py-12 md:py-20 lg:py-32 bg-secondary rounded-2xl md:rounded-3xl my-12 md:my-20 mx-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid sm:grid-cols-3 gap-8 md:gap-12 text-center">
             <div>
-              <div className="text-5xl md:text-6xl font-bold mb-3">95%</div>
-              <p className="text-muted-foreground text-lg">Teacher Satisfaction</p>
+              <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">95%</div>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">Teacher Satisfaction</p>
             </div>
             <div>
-              <div className="text-5xl md:text-6xl font-bold mb-3">10K+</div>
-              <p className="text-muted-foreground text-lg">Students Empowered</p>
+              <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">10K+</div>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">Students Empowered</p>
             </div>
             <div>
-              <div className="text-5xl md:text-6xl font-bold mb-3">5D</div>
-              <p className="text-muted-foreground text-lg">Growth Dimensions</p>
+              <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">5D</div>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">Growth Dimensions</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="container py-20 md:py-32">
+      <section className="container py-12 md:py-20 lg:py-32 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to transform education?</h2>
-          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">Ready to transform education?</h2>
+          <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed px-4">
             Join thousands of educators building the future of learning with AI-powered insights.
           </p>
           <Link to="/auth">
             <Button size="lg" className="font-medium">
               Get started today
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-12 mt-20">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-8">
+      <footer className="border-t border-border py-8 md:py-12 mt-12 md:mt-20">
+        <div className="container px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
