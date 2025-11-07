@@ -90,15 +90,29 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         const fullName = profile?.full_name || 'Unknown';
         allStudentsData.push({ id: enroll.student_id, name: fullName });
 
-        // Only get scores that are NOT from onboarding (to exclude baseline 2.5 scores)
-        const { data: scoresData } = await supabase
+        // Get ALL scores that are NOT from onboarding (to calculate average)
+        const { data: allScoresData } = await supabase
           .from('five_d_snapshots')
           .select('scores, source')
           .eq('user_id', enroll.student_id)
           .neq('source', 'onboarding')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
+
+        // Calculate average scores across all submissions
+        let averageScores = null;
+        if (allScoresData && allScoresData.length > 0) {
+          const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+          allScoresData.forEach(snapshot => {
+            const scores = snapshot.scores as any;
+            Object.keys(totals).forEach(key => {
+              totals[key as keyof typeof totals] += scores[key] || 0;
+            });
+          });
+          averageScores = Object.keys(totals).reduce((acc, key) => ({
+            ...acc,
+            [key]: totals[key as keyof typeof totals] / allScoresData.length
+          }), {} as typeof totals);
+        }
 
         let feedbackQuery = supabase
           .from('assignment_feedback')
@@ -114,7 +128,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         processedStudents.push({
           id: enroll.student_id,
           fullName,
-          latestScores: scoresData?.scores as any || null,
+          latestScores: averageScores,
           feedbackCount: feedbackCount || 0
         });
       }
