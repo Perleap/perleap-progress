@@ -90,28 +90,76 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         const fullName = profile?.full_name || 'Unknown';
         allStudentsData.push({ id: enroll.student_id, name: fullName });
 
-        // Get ALL scores that are NOT from onboarding (to calculate average)
-        const { data: allScoresData } = await supabase
-          .from('five_d_snapshots')
-          .select('scores, source')
-          .eq('user_id', enroll.student_id)
-          .neq('source', 'onboarding')
-          .order('created_at', { ascending: false });
-
-        // Calculate average scores across all submissions
+        // Get scores based on assignment filter
         let averageScores = null;
-        if (allScoresData && allScoresData.length > 0) {
-          const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
-          allScoresData.forEach(snapshot => {
-            const scores = snapshot.scores as any;
-            Object.keys(totals).forEach(key => {
-              totals[key as keyof typeof totals] += scores[key] || 0;
+        
+        if (selectedAssignment !== 'all') {
+          // For specific assignment: get feedback for this assignment to find relevant snapshots
+          const { data: feedbackData } = await supabase
+            .from('assignment_feedback')
+            .select('created_at')
+            .eq('student_id', enroll.student_id)
+            .eq('assignment_id', selectedAssignment)
+            .order('created_at', { ascending: false });
+
+          if (feedbackData && feedbackData.length > 0) {
+            const snapshotsForAssignment = [];
+            
+            // For each feedback, find the snapshot created around that time
+            for (const feedback of feedbackData) {
+              const feedbackTime = new Date(feedback.created_at).getTime();
+              
+              const { data: snapshot } = await supabase
+                .from('five_d_snapshots')
+                .select('scores, created_at')
+                .eq('user_id', enroll.student_id)
+                .neq('source', 'onboarding')
+                .gte('created_at', new Date(feedbackTime - 60000).toISOString()) // 1 minute before
+                .lte('created_at', new Date(feedbackTime + 60000).toISOString()) // 1 minute after
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              if (snapshot) {
+                snapshotsForAssignment.push(snapshot.scores);
+              }
+            }
+
+            if (snapshotsForAssignment.length > 0) {
+              const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+              snapshotsForAssignment.forEach(scores => {
+                Object.keys(totals).forEach(key => {
+                  totals[key as keyof typeof totals] += (scores as any)[key] || 0;
+                });
+              });
+              averageScores = Object.keys(totals).reduce((acc, key) => ({
+                ...acc,
+                [key]: totals[key as keyof typeof totals] / snapshotsForAssignment.length
+              }), {} as typeof totals);
+            }
+          }
+        } else {
+          // For all assignments: get all scores
+          const { data: allScoresData } = await supabase
+            .from('five_d_snapshots')
+            .select('scores')
+            .eq('user_id', enroll.student_id)
+            .neq('source', 'onboarding')
+            .order('created_at', { ascending: false });
+
+          if (allScoresData && allScoresData.length > 0) {
+            const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+            allScoresData.forEach(snapshot => {
+              const scores = snapshot.scores as any;
+              Object.keys(totals).forEach(key => {
+                totals[key as keyof typeof totals] += scores[key] || 0;
+              });
             });
-          });
-          averageScores = Object.keys(totals).reduce((acc, key) => ({
-            ...acc,
-            [key]: totals[key as keyof typeof totals] / allScoresData.length
-          }), {} as typeof totals);
+            averageScores = Object.keys(totals).reduce((acc, key) => ({
+              ...acc,
+              [key]: totals[key as keyof typeof totals] / allScoresData.length
+            }), {} as typeof totals);
+          }
         }
 
         let feedbackQuery = supabase
