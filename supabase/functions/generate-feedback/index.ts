@@ -166,13 +166,14 @@ Return ONLY a JSON object with scores (0-10):
       console.error('Scores API call failed:', scoresResponse.status);
     }
 
-    // Save 5D snapshot with 'assignment' source (valid enum value)
+    // Save 5D snapshot with 'assignment' source and link to submission
     const { error: snapshotError } = await supabase
       .from('five_d_snapshots')
       .insert({
         user_id: studentId,
         scores,
-        source: 'assignment'
+        source: 'assignment',
+        submission_id: submissionId
       });
 
     if (snapshotError) {

@@ -315,6 +315,7 @@ export type Database = {
           id: string
           scores: Json
           source: Database["public"]["Enums"]["snapshot_source"]
+          submission_id: string | null
           user_id: string
         }
         Insert: {
@@ -323,6 +324,7 @@ export type Database = {
           id?: string
           scores?: Json
           source: Database["public"]["Enums"]["snapshot_source"]
+          submission_id?: string | null
           user_id: string
         }
         Update: {
@@ -331,9 +333,18 @@ export type Database = {
           id?: string
           scores?: Json
           source?: Database["public"]["Enums"]["snapshot_source"]
+          submission_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "five_d_snapshots_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles: {
         Row: {

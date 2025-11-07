@@ -90,51 +90,37 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         const fullName = profile?.full_name || 'Unknown';
         allStudentsData.push({ id: enroll.student_id, name: fullName });
 
-        // Get scores based on assignment filter
+        // Get scores based on assignment filter using submission_id link
         let averageScores = null;
         
         if (selectedAssignment !== 'all') {
-          // For specific assignment: get feedback for this assignment to find relevant snapshots
-          const { data: feedbackData } = await supabase
-            .from('assignment_feedback')
-            .select('created_at')
+          // For specific assignment: get submissions then their snapshots
+          const { data: submissions } = await supabase
+            .from('submissions')
+            .select('id')
             .eq('student_id', enroll.student_id)
-            .eq('assignment_id', selectedAssignment)
-            .order('created_at', { ascending: false });
+            .eq('assignment_id', selectedAssignment);
 
-          if (feedbackData && feedbackData.length > 0) {
-            const snapshotsForAssignment = [];
+          if (submissions && submissions.length > 0) {
+            const submissionIds = submissions.map(s => s.id);
             
-            // For each feedback, find the snapshot created around that time
-            for (const feedback of feedbackData) {
-              const feedbackTime = new Date(feedback.created_at).getTime();
-              
-              const { data: snapshot } = await supabase
-                .from('five_d_snapshots')
-                .select('scores, created_at')
-                .eq('user_id', enroll.student_id)
-                .neq('source', 'onboarding')
-                .gte('created_at', new Date(feedbackTime - 60000).toISOString()) // 1 minute before
-                .lte('created_at', new Date(feedbackTime + 60000).toISOString()) // 1 minute after
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              
-              if (snapshot) {
-                snapshotsForAssignment.push(snapshot.scores);
-              }
-            }
+            const { data: snapshots } = await supabase
+              .from('five_d_snapshots')
+              .select('scores')
+              .in('submission_id', submissionIds)
+              .neq('source', 'onboarding');
 
-            if (snapshotsForAssignment.length > 0) {
+            if (snapshots && snapshots.length > 0) {
               const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
-              snapshotsForAssignment.forEach(scores => {
+              snapshots.forEach(snapshot => {
+                const scores = snapshot.scores as any;
                 Object.keys(totals).forEach(key => {
-                  totals[key as keyof typeof totals] += (scores as any)[key] || 0;
+                  totals[key as keyof typeof totals] += scores[key] || 0;
                 });
               });
               averageScores = Object.keys(totals).reduce((acc, key) => ({
                 ...acc,
-                [key]: totals[key as keyof typeof totals] / snapshotsForAssignment.length
+                [key]: totals[key as keyof typeof totals] / snapshots.length
               }), {} as typeof totals);
             }
           }
