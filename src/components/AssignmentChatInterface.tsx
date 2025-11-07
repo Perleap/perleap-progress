@@ -103,13 +103,48 @@ export function AssignmentChatInterface({
   const handleComplete = async () => {
     setCompleting(true);
     try {
+      // Fetch student profile for actual name
+      const { data: studentProfile } = await supabase
+        .from('student_profiles')
+        .select('full_name')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+
+      // Fetch assignment to get classroom and teacher info
+      const { data: assignment } = await supabase
+        .from('assignments')
+        .select('classroom_id')
+        .eq('id', assignmentId)
+        .single();
+
+      let actualTeacherName = teacherName || 'Teacher';
+      if (assignment) {
+        const { data: classroom } = await supabase
+          .from('classrooms')
+          .select('teacher_id')
+          .eq('id', assignment.classroom_id)
+          .single();
+
+        if (classroom) {
+          const { data: teacherProfile } = await supabase
+            .from('teacher_profiles')
+            .select('full_name')
+            .eq('user_id', classroom.teacher_id)
+            .maybeSingle();
+          
+          if (teacherProfile?.full_name) {
+            actualTeacherName = teacherProfile.full_name;
+          }
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-feedback', {
         body: {
           submissionId,
           studentId: user!.id,
           assignmentId,
-          studentName: user?.email || 'Student',
-          teacherName: 'Teacher'
+          studentName: studentProfile?.full_name || user?.email || 'Student',
+          teacherName: actualTeacherName
         }
       });
 
