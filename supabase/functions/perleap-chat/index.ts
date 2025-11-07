@@ -23,12 +23,46 @@ serve(async (req) => {
   }
 
   try {
-    const { message, assignmentInstructions, submissionId, studentId, assignmentId, teacherName, isInitialGreeting } = await req.json();
-    console.log('Perleap chat request:', { submissionId, studentId, assignmentId, teacherName, isInitialGreeting });
+    const { message, assignmentInstructions, submissionId, studentId, assignmentId, isInitialGreeting } = await req.json();
+    console.log('Perleap chat request:', { submissionId, studentId, assignmentId, isInitialGreeting });
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch teacher name from database
+    console.log('Fetching teacher name for assignment:', assignmentId);
+    const { data: assignmentData, error: assignmentError } = await supabase
+      .from('assignments')
+      .select('classroom_id, classrooms(teacher_id)')
+      .eq('id', assignmentId)
+      .single();
+
+    if (assignmentError) {
+      console.error('Error fetching assignment:', assignmentError);
+      throw assignmentError;
+    }
+
+    let teacherName = 'your teacher';
+    if (assignmentData?.classrooms?.teacher_id) {
+      const { data: teacherProfile, error: teacherError } = await supabase
+        .from('teacher_profiles')
+        .select('full_name')
+        .eq('user_id', assignmentData.classrooms.teacher_id)
+        .maybeSingle();
+
+      if (teacherError) {
+        console.error('Error fetching teacher profile:', teacherError);
+      }
+
+      if (teacherProfile?.full_name) {
+        teacherName = teacherProfile.full_name;
+        console.log('Found teacher name:', teacherName);
+      } else {
+        console.log('No teacher profile found, using default');
+      }
+    }
+    console.log('Using teacher name:', teacherName);
 
     // Get or create conversation - handle multiple conversations by getting the most recent
     let { data: conversations, error: convError } = await supabase
@@ -55,7 +89,7 @@ serve(async (req) => {
     // Prepare system prompt
     const teacherNameText = teacherName ? teacherName : 'your teacher';
     const greetingInstruction = isInitialGreeting 
-      ? `You must start your response with: "Hello I'm ${teacherNameText}'s perleap" and then continue with your warm greeting.`
+      ? `You must start your response with: "Hello I'm ${teacherNameText}'s perleap" and then continue with your warm greeting. DO NOT use emojis.`
       : '';
     
     const systemPrompt = `You are a warm, encouraging educational assistant helping a student complete their assignment.
@@ -67,6 +101,7 @@ Your approach:
 - Celebrate insights and progress
 - Be patient, supportive, and adaptive to their pace
 - Help them build confidence in their own thinking
+- DO NOT use emojis or special characters in your responses
 
 Keep the pedagogical framework in mind but don't make it explicit. Focus on the learning journey, not assessment.
 
@@ -75,7 +110,7 @@ ${assignmentInstructions}
 
 ${greetingInstruction}
 
-${isInitialGreeting ? 'After introducing yourself, warmly acknowledge the assignment topic and ask the student how they would like to begin or what their initial thoughts are.' : ''}`;
+${isInitialGreeting ? 'After introducing yourself, warmly acknowledge the assignment topic and ask the student how they would like to begin or what their initial thoughts are. Remember: NO emojis.' : ''}`;
 
     // Get OpenAI configuration
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');

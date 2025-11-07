@@ -132,7 +132,7 @@ const SubmissionDetail = () => {
         <div className="space-y-6">
           {feedback && (
             <>
-              <Card className="border-primary/50 shadow-sm">
+              <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-primary">Pedagogical Insights for You</CardTitle>
                   <CardDescription>

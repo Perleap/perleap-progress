@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -42,9 +42,7 @@ const ContactUs = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="container flex h-16 md:h-20 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/perleap_logo.png" alt="PerLeap" className="h-10 w-10" />
             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
           </Link>
           <div className="flex items-center gap-4">

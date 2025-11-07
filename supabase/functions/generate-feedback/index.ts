@@ -23,12 +23,61 @@ serve(async (req) => {
   }
 
   try {
-    const { submissionId, studentId, assignmentId, studentName, teacherName } = await req.json();
+    const { submissionId, studentId, assignmentId } = await req.json();
     console.log('Generate feedback request:', { submissionId, studentId, assignmentId });
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch student name from database
+    console.log('Fetching student name for user:', studentId);
+    const { data: studentProfile, error: studentError } = await supabase
+      .from('student_profiles')
+      .select('full_name')
+      .eq('user_id', studentId)
+      .maybeSingle();
+
+    if (studentError) {
+      console.error('Error fetching student profile:', studentError);
+    }
+
+    const studentName = studentProfile?.full_name || 'the student';
+    console.log('Using student name:', studentName);
+
+    // Fetch teacher name from database
+    console.log('Fetching teacher name for assignment:', assignmentId);
+    const { data: assignmentData, error: assignmentError } = await supabase
+      .from('assignments')
+      .select('classroom_id, classrooms(teacher_id)')
+      .eq('id', assignmentId)
+      .single();
+
+    if (assignmentError) {
+      console.error('Error fetching assignment:', assignmentError);
+      throw assignmentError;
+    }
+
+    let teacherName = 'the teacher';
+    if (assignmentData?.classrooms?.teacher_id) {
+      const { data: teacherProfile, error: teacherError } = await supabase
+        .from('teacher_profiles')
+        .select('full_name')
+        .eq('user_id', assignmentData.classrooms.teacher_id)
+        .maybeSingle();
+
+      if (teacherError) {
+        console.error('Error fetching teacher profile:', teacherError);
+      }
+
+      if (teacherProfile?.full_name) {
+        teacherName = teacherProfile.full_name;
+        console.log('Found teacher name:', teacherName);
+      } else {
+        console.log('No teacher profile found, using default');
+      }
+    }
+    console.log('Using teacher name:', teacherName);
 
     // Get conversation context - get the most recent one if multiple exist
     const { data: conversations, error: convError } = await supabase
@@ -100,6 +149,7 @@ You must generate TWO separate feedbacks based on the conversation:
 - Inspire them to continue learning
 - Focus on building confidence
 - Keep the pedagogical framework in mind but don't make it explicit
+- DO NOT use emojis or special characters
 
 **2. Feedback for ${teacherName} (the teacher):**
 - Professional pedagogical insights about ${studentName}'s performance
@@ -110,16 +160,36 @@ You must generate TWO separate feedbacks based on the conversation:
 - Actionable recommendations for personalized instruction
 - Note any misconceptions or gaps in understanding
 - Reference the Quantum Education Doctrine framework where appropriate
+- DO NOT use emojis or special characters
 
-**IMPORTANT: You MUST follow this exact format:**
+**CRITICAL REQUIREMENT - YOU MUST GENERATE BOTH FEEDBACKS:**
 
-** Feedback for ${studentName} **
-[Write encouraging, student-facing feedback here - 2-3 paragraphs]
-**End of Feedback**
+You MUST generate EXACTLY TWO separate feedback sections. Do NOT skip the teacher feedback!
+Follow the format EXACTLY as shown below with the special markers.
 
-** Feedback for ${teacherName} **
-[Write professional, teacher-facing insights and recommendations here - 2-3 paragraphs]
-**End of Feedback**
+**Required Output Format (FOLLOW EXACTLY - DO NOT DEVIATE):**
+
+===STUDENT_FEEDBACK_START===
+[Write 2-3 paragraphs of encouraging, student-facing feedback for ${studentName} here. Focus on their growth, insights, and progress. DO NOT include the student's name in the feedback text itself.]
+===STUDENT_FEEDBACK_END===
+
+===TEACHER_FEEDBACK_START===
+[Write 2-3 paragraphs of professional, teacher-facing pedagogical insights for ${teacherName} here. Analyze what the student did well, what they struggled with, and provide specific recommendations. Reference the Quantum Education Doctrine framework where appropriate. DO NOT include the teacher's name in the feedback text itself.]
+===TEACHER_FEEDBACK_END===
+
+**EXAMPLE FORMAT:**
+
+===STUDENT_FEEDBACK_START===
+Great job on exploring this topic! You showed curiosity and asked thoughtful questions. Your engagement with the material demonstrates a growing understanding of the concepts.
+===STUDENT_FEEDBACK_END===
+
+===TEACHER_FEEDBACK_START===
+This student demonstrated strong analytical thinking but struggled with applying concepts to real-world scenarios. I recommend providing more concrete examples and hands-on practice. Their learning style appears to be visual, so diagrams and demonstrations would be beneficial.
+===TEACHER_FEEDBACK_END===
+
+IMPORTANT: Use EXACTLY these markers: ===STUDENT_FEEDBACK_START===, ===STUDENT_FEEDBACK_END===, ===TEACHER_FEEDBACK_START===, ===TEACHER_FEEDBACK_END===
+
+---
 
 **Context:**
 The following is the complete conversation between ${studentName} and the educational agent during this assignment activity.`;
@@ -158,7 +228,7 @@ The following is the complete conversation between ${studentName} and the educat
           { role: 'system', content: feedbackPrompt },
           { role: 'user', content: conversationText }
         ],
-        temperature: 0.7,
+        temperature: 0.4,  // Lower temperature for more consistent format following
         max_tokens: 3000,
       }),
     });
@@ -186,42 +256,102 @@ The following is the complete conversation between ${studentName} and the educat
     }
 
     console.log('Feedback generated successfully, parsing...');
-    console.log('Raw feedback text (first 500 chars):', feedbackText.substring(0, 500));
+    console.log('Raw feedback text (first 1000 chars):', feedbackText.substring(0, 1000));
     
-    // Parse feedback for student and teacher
-    // Match the first feedback block (student)
-    const studentFeedbackMatch = feedbackText.match(/\*\* Feedback for .*? \*\*([\s\S]*?)\*\*End of Feedback\*\*/);
-    
-    // Match the second feedback block (teacher) - more flexible pattern
-    // This will match any second feedback block after the first one
-    const allFeedbackBlocks = feedbackText.match(/\*\* Feedback for .*? \*\*([\s\S]*?)\*\*End of Feedback\*\*/g);
+    // Clean up the text first - remove emojis and extra whitespace
+    const cleanedText = feedbackText.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
     
     let studentFeedback = '';
-    let teacherFeedback = null;
+    let teacherFeedback: string | null = null;
     
-    if (allFeedbackBlocks && allFeedbackBlocks.length >= 2) {
-      // Extract content from first block (student)
-      const studentMatch = allFeedbackBlocks[0].match(/\*\* Feedback for .*? \*\*([\s\S]*?)\*\*End of Feedback\*\*/);
-      studentFeedback = studentMatch ? studentMatch[1].trim() : feedbackText;
+    // Parse using the new distinctive markers
+    const studentStartMarker = '===STUDENT_FEEDBACK_START===';
+    const studentEndMarker = '===STUDENT_FEEDBACK_END===';
+    const teacherStartMarker = '===TEACHER_FEEDBACK_START===';
+    const teacherEndMarker = '===TEACHER_FEEDBACK_END===';
+    
+    const studentStart = cleanedText.indexOf(studentStartMarker);
+    const studentEnd = cleanedText.indexOf(studentEndMarker);
+    const teacherStart = cleanedText.indexOf(teacherStartMarker);
+    const teacherEnd = cleanedText.indexOf(teacherEndMarker);
+    
+    if (studentStart !== -1 && studentEnd !== -1 && teacherStart !== -1 && teacherEnd !== -1) {
+      // Extract student feedback
+      studentFeedback = cleanedText
+        .substring(studentStart + studentStartMarker.length, studentEnd)
+        .trim();
       
-      // Extract content from second block (teacher)
-      const teacherMatch = allFeedbackBlocks[1].match(/\*\* Feedback for .*? \*\*([\s\S]*?)\*\*End of Feedback\*\*/);
-      teacherFeedback = teacherMatch ? teacherMatch[1].trim() : null;
-    } else if (studentFeedbackMatch) {
-      // Only one block found, use it as student feedback
-      studentFeedback = studentFeedbackMatch[1].trim();
-      console.log('Warning: Only one feedback block found, expected two');
+      // Extract teacher feedback
+      teacherFeedback = cleanedText
+        .substring(teacherStart + teacherStartMarker.length, teacherEnd)
+        .trim();
+      
+      console.log('Successfully parsed both feedbacks using new markers');
     } else {
-      // No proper format, use entire text as student feedback
-      studentFeedback = feedbackText;
-      console.log('Warning: Could not parse feedback format, using raw text');
+      // Fallback: Try old format markers for backward compatibility
+      console.log('New markers not found, trying old format markers...');
+      console.log('Marker positions:', { studentStart, studentEnd, teacherStart, teacherEnd });
+      
+      // Try multiple regex patterns to match old AI output formats
+      const patterns = [
+        // Pattern 1: With ** markers
+        /\*\*\s*Feedback for\s+([^\*]+?)\s*\*\*\s*([\s\S]*?)\s*\*\*\s*End of Feedback\s*\*\*/gi,
+        // Pattern 2: Without ** markers  
+        /Feedback for\s+([^\n]+?)\s*\n([\s\S]*?)End of Feedback/gi,
+        // Pattern 3: More flexible - just look for the name patterns
+        /Feedback for\s+(.+?)\s+([\s\S]*?)\s+End of Feedback/gi
+      ];
+      
+      let matches: RegExpMatchArray[] = [];
+      
+      for (const pattern of patterns) {
+        const found = Array.from(cleanedText.matchAll(pattern)) as RegExpMatchArray[];
+        if (found.length >= 2) {
+          matches = found;
+          console.log(`Successfully matched with pattern: ${pattern}`);
+          break;
+        }
+      }
+      
+      if (matches.length >= 2) {
+        // Extract student feedback (first match)
+        studentFeedback = matches[0][2]?.trim() || '';
+        // Extract teacher feedback (second match)
+        teacherFeedback = matches[1][2]?.trim() || null;
+        
+        console.log('Successfully parsed both feedbacks using regex patterns');
+      } else {
+        // Ultra-fallback: Split by "End of Feedback" and try to extract
+        console.log('Trying ultra-fallback parsing by splitting on "End of Feedback"...');
+        const parts = cleanedText.split(/End of Feedback/i);
+        
+        if (parts.length >= 3) {
+          // First part should contain student feedback
+          const studentPart = parts[0];
+          // Remove the "Feedback for [Name]" header
+          studentFeedback = studentPart.replace(/^.*?Feedback for\s+[^\n]+?\s*/i, '').trim();
+          
+          // Second part should contain teacher feedback
+          const teacherPart = parts[1];
+          // Remove the "Feedback for [Name]" header
+          teacherFeedback = teacherPart.replace(/^.*?Feedback for\s+[^\n]+?\s*/i, '').trim();
+          
+          console.log('Successfully parsed using ultra-fallback split method');
+        } else {
+          console.log('Warning: Could not parse feedback format properly. Parts found:', parts.length);
+          console.log('Full cleaned text:', cleanedText);
+          studentFeedback = cleanedText;
+        }
+      }
     }
     
     console.log('Parsed student feedback length:', studentFeedback.length);
     console.log('Parsed teacher feedback:', teacherFeedback ? `Yes (${teacherFeedback.length} chars)` : 'No');
-    
-    if (!teacherFeedback) {
-      console.error('Teacher feedback not found! Full feedback text:', feedbackText);
+    console.log('Student feedback preview:', studentFeedback.substring(0, 200));
+    if (teacherFeedback) {
+      console.log('Teacher feedback preview:', teacherFeedback.substring(0, 200));
+    } else {
+      console.error('Teacher feedback not found! Full cleaned text:', cleanedText);
     }
 
     // Generate 5D analysis using Activity operator

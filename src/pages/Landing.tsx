@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { GraduationCap, ArrowRight, Sparkles, Brain, Users2, Target, TrendingUp, Shield } from "lucide-react";
+import { ArrowRight, Sparkles, Brain, Users2, Target, TrendingUp, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Landing = () => {
@@ -8,12 +8,10 @@ const Landing = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="container flex h-16 md:h-20 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
-            </div>
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/perleap_logo.png" alt="PerLeap" className="h-8 w-8 rounded" />
             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-2 md:gap-4">
             <Link to="/about">
               <Button size="sm" variant="ghost" className="font-medium hidden md:inline-flex">
@@ -47,21 +45,22 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="container pt-24 pb-12 md:pt-32 md:pb-20 lg:pt-40 lg:pb-32 px-4">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
-          <div className="max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-4 md:mb-6 leading-[1.1]">
-              Strategy and growth for modern teams
+          <div className="max-w-3xl">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 leading-tight -ml-1">
+              <div>Where every teacher's step</div>
+              <div>becomes a student's leap</div>
             </h1>
             <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed">
-              PerLeap partners with educators to streamline teaching, elevate student performance, and build a foundation for lasting success through AI-powered insights.
+              At Perleap, we empower teachers to create intelligent, personalized AI assistants-built to reflect their voice, goals, and style in every classroom
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-              <Link to="/auth" className="w-full sm:w-auto">
+              <Link to="/register" className="w-full sm:w-auto">
                 <Button size="lg" className="font-medium w-full sm:w-auto">
                   Get started
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
-              <Link to="/auth" className="w-full sm:w-auto">
+              <Link to="/contact" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="font-medium w-full sm:w-auto">
                   Contact us
                 </Button>
@@ -251,7 +250,7 @@ const Landing = () => {
           <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed px-4">
             Join thousands of educators building the future of learning with AI-powered insights.
           </p>
-          <Link to="/auth">
+          <Link to="/register">
             <Button size="lg" className="font-medium">
               Get started today
               <ArrowRight className="h-4 w-4 ml-2" />
@@ -266,9 +265,7 @@ const Landing = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                  <GraduationCap className="h-4 w-4 text-primary-foreground" />
-                </div>
+                <img src="/perleap_logo.png" alt="PerLeap" className="h-5 w-5 rounded-sm" />
                 <span className="font-semibold">PerLeap</span>
               </div>
               <p className="text-sm text-muted-foreground">

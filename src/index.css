@@ -30,8 +30,8 @@ All colors MUST be HSL.
     --muted: 40 15% 92%;
     --muted-foreground: 0 0% 45%;
 
-    /* Soft yellow accent like Grovia */
-    --accent: 48 96% 80%;
+    /* Light blue accent for hover states - #E8F6FF */
+    --accent: 203 100% 95%;
     --accent-foreground: 0 0% 5%;
 
     --destructive: 0 72% 51%;
@@ -86,8 +86,8 @@ All colors MUST be HSL.
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 48 96% 80%;
-    --accent-foreground: 0 0% 8%;
+    --accent: 203 100% 25%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 98%;

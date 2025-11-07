@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Check, Info, GraduationCap, ArrowLeft } from "lucide-react";
+import { Check, Info, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
@@ -104,14 +104,12 @@ const Pricing = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="container flex h-16 md:h-20 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg md:text-xl font-semibold">PerLeap</span>
-          </Link>
+       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+         <div className="container flex h-16 md:h-20 items-center justify-between px-4">
+           <Link to="/" className="flex items-center gap-2">
+             <img src="/perleap_logo.png" alt="PerLeap" className="h-10 w-10" />
+             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
+           </Link>
           <div className="flex items-center gap-2 md:gap-4">
             <Link to="/about">
               <Button size="sm" variant="ghost" className="font-medium hidden md:inline-flex">

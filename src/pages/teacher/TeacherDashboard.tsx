@@ -89,7 +89,7 @@ const TeacherDashboard = () => {
             {/* Notifications Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="relative">
+                <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
                   <Bell className="h-4 w-4" />
                   {notificationCount > 0 && (
                     <Badge 
@@ -130,25 +130,24 @@ const TeacherDashboard = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Sign Out Button */}
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+
             {/* Profile Avatar */}
             <Button
               variant="ghost"
               size="sm"
-              className="relative h-10 w-10 rounded-full p-0"
+              className="relative h-12 w-12 rounded-full p-0"
               onClick={() => navigate('/teacher/settings')}
             >
-              <Avatar className="h-10 w-10 cursor-pointer">
+              <Avatar className="h-12 w-12 cursor-pointer">
                 {profile.avatar_url ? (
                   <AvatarImage src={profile.avatar_url} alt="Profile" />
                 ) : null}
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
-            </Button>
-
-            {/* Sign Out Button */}
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="mr-0 md:mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>

@@ -226,7 +226,7 @@ const AssignmentDetail = () => {
           )}
 
           {feedback && (
-            <Card className="border-primary/50 shadow-sm">
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-primary">🎉 Your Feedback</CardTitle>
                 <CardDescription>
