@@ -12,9 +12,14 @@ import StudentOnboarding from "./pages/onboarding/StudentOnboarding";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import ClassroomDetail from "./pages/teacher/ClassroomDetail";
 import SubmissionDetail from "./pages/teacher/SubmissionDetail";
+import TeacherSettings from "./pages/teacher/TeacherSettings";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentClassroomDetail from "./pages/student/StudentClassroomDetail";
 import AssignmentDetail from "./pages/student/AssignmentDetail";
+import StudentSettings from "./pages/student/StudentSettings";
+import Pricing from "./pages/Pricing";
+import ContactUs from "./pages/ContactUs";
+import AboutUs from "./pages/AboutUs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,15 +34,22 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/register" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/about" element={<AboutUs />} />
             <Route path="/onboarding/teacher" element={<TeacherOnboarding />} />
             <Route path="/onboarding/student" element={<StudentOnboarding />} />
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/teacher/classroom/:id" element={<ClassroomDetail />} />
             <Route path="/teacher/submission/:id" element={<SubmissionDetail />} />
+            <Route path="/teacher/settings" element={<TeacherSettings />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/classroom/:id" element={<StudentClassroomDetail />} />
             <Route path="/student/assignment/:id" element={<AssignmentDetail />} />
+            <Route path="/student/settings" element={<StudentSettings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

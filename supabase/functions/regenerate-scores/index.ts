@@ -1,3 +1,13 @@
+/**
+ * Regenerate Scores - OpenAI Integration
+ * 
+ * Required Environment Variables:
+ * - OPENAI_API_KEY: Your OpenAI API key
+ * - OPENAI_MODEL (optional): Model to use (default: gpt-4-turbo-preview)
+ * - SUPABASE_URL: Supabase project URL
+ * - SUPABASE_SERVICE_ROLE_KEY: Supabase service role key
+ */
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
@@ -20,17 +30,25 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get conversation context
-    const { data: conversation, error: convError } = await supabase
+    // Get conversation context - get the most recent one if multiple exist
+    const { data: conversations, error: convError } = await supabase
       .from('assignment_conversations')
       .select('*, submissions!inner(student_id)')
       .eq('submission_id', submissionId)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
     if (convError) {
       console.error('Error fetching conversation:', convError);
       throw convError;
     }
+
+    if (!conversations || conversations.length === 0) {
+      console.error('No conversation found for submission:', submissionId);
+      throw new Error('No conversation found for this submission.');
+    }
+
+    const conversation = conversations[0];
 
     const conversationText = conversation.messages
       .map((msg: any) => `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`)
@@ -49,23 +67,30 @@ Analyze the conversation and rate them on a scale of 0-10 for each dimension:
 Return ONLY a JSON object with scores (0-10):
 {"cognitive": X, "emotional": X, "social": X, "creative": X, "behavioral": X}`;
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    // Get OpenAI configuration
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const scoresResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Get model from environment or use default
+    const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') || 'gpt-4-turbo-preview';
+
+    // Call OpenAI for 5D scores analysis
+    const scoresResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: OPENAI_MODEL,
         messages: [
           { role: 'system', content: activityPrompt },
           { role: 'user', content: conversationText }
         ],
+        temperature: 0.5,
+        max_tokens: 500,
       }),
     });
 
@@ -74,6 +99,12 @@ Return ONLY a JSON object with scores (0-10):
       const scoresData = await scoresResponse.json();
       const scoresText = scoresData.choices[0].message.content;
       console.log('Raw AI scores response:', scoresText);
+      
+      // Log token usage for monitoring
+      if (scoresData.usage) {
+        console.log('OpenAI token usage (scores):', scoresData.usage);
+      }
+      
       try {
         const parsed = JSON.parse(scoresText.replace(/```json\n?|\n?```/g, '').trim());
         scores = parsed;
@@ -82,7 +113,8 @@ Return ONLY a JSON object with scores (0-10):
         console.error('Failed to parse scores:', e, 'Raw text:', scoresText);
       }
     } else {
-      console.error('Scores API call failed:', scoresResponse.status);
+      const errorText = await scoresResponse.text();
+      console.error('OpenAI API error (scores):', scoresResponse.status, errorText);
     }
 
     // Save 5D snapshot

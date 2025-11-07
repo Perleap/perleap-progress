@@ -3,12 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, BookOpen } from "lucide-react";
+import { LogOut, Plus, BookOpen, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Assignment {
   id: string;
@@ -37,6 +45,12 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [notificationCount] = useState(3); // Mock notification count
+  const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null }>({
+    first_name: "",
+    last_name: "",
+    avatar_url: null,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -48,6 +62,17 @@ const StudentDashboard = () => {
 
   const fetchData = async () => {
     try {
+      // Fetch student profile for avatar
+      const { data: profileData } = await supabase
+        .from('student_profiles')
+        .select('first_name, last_name, avatar_url')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+
       // Fetch enrollments and classrooms
       const { data: enrollments } = await supabase
         .from('enrollments')
@@ -160,15 +185,73 @@ const StudentDashboard = () => {
     }
   };
 
+  const getInitials = () => {
+    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'S';
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
           <h1 className="text-lg md:text-2xl font-bold">Student Dashboard</h1>
-          <Button variant="outline" size="sm" onClick={signOut}>
-            <LogOut className="mr-0 md:mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Notifications Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Bell className="h-4 w-4" />
+                  {notificationCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {notificationCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="p-2">
+                  <h3 className="font-semibold mb-2">Notifications</h3>
+                  <div className="space-y-2">
+                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
+                      <p className="font-medium">New assignment posted</p>
+                      <p className="text-xs text-muted-foreground">Math - Chapter 5 Quiz</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
+                      <p className="font-medium">Feedback received</p>
+                      <p className="text-xs text-muted-foreground">Your essay has been graded</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
+                      <p className="font-medium">Upcoming deadline</p>
+                      <p className="text-xs text-muted-foreground">Science project due tomorrow</p>
+                    </div>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Profile Avatar */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative h-10 w-10 rounded-full p-0"
+              onClick={() => navigate('/student/settings')}
+            >
+              <Avatar className="h-10 w-10 cursor-pointer">
+                {profile.avatar_url ? (
+                  <AvatarImage src={profile.avatar_url} alt="Profile" />
+                ) : null}
+                <AvatarFallback>{getInitials()}</AvatarFallback>
+              </Avatar>
+            </Button>
+
+            {/* Sign Out Button */}
+            <Button variant="outline" size="sm" onClick={signOut}>
+              <LogOut className="mr-0 md:mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </div>
         </div>
       </header>
 

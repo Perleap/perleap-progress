@@ -62,21 +62,6 @@ const StudentOnboarding = () => {
 
       if (profileError) throw profileError;
 
-      // Create initial 5D snapshot
-      const { error: snapshotError } = await supabase.from('five_d_snapshots').insert({
-        user_id: user.id,
-        source: 'onboarding',
-        scores: {
-          cognitive: 2.5,
-          emotional: 2.5,
-          social: 2.5,
-          creative: 2.5,
-          behavioral: 2.5
-        }
-      });
-
-      if (snapshotError) throw snapshotError;
-
       toast.success("Profile created successfully!");
       navigate('/student/dashboard');
     } catch (error: any) {

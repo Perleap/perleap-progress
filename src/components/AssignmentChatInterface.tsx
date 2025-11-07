@@ -36,9 +36,21 @@ export function AssignmentChatInterface({
   const [loading, setLoading] = useState(false);
   const [completing, setCompleting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    loadConversation();
+    // Reset initialization flag when submissionId changes
+    hasInitialized.current = false;
+    
+    // Prevent double initialization from React Strict Mode
+    const initializeConversation = async () => {
+      if (!hasInitialized.current) {
+        hasInitialized.current = true;
+        await loadConversation();
+      }
+    };
+    
+    initializeConversation();
   }, [submissionId]);
 
   useEffect(() => {
@@ -57,15 +69,45 @@ export function AssignmentChatInterface({
 
       if (error && error.code !== 'PGRST116') throw error;
       
-      if (data?.messages && Array.isArray(data.messages)) {
+      if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+        // Load existing conversation from database
         setMessages(data.messages as unknown as Message[]);
       } else {
-        // Start conversation with AI greeting
-        await sendMessage("Hello, I'm ready to start the activity.", true);
+        // No conversation exists, generate initial AI greeting
+        await initializeConversation();
       }
     } catch (error) {
       console.error('Error loading conversation:', error);
       toast.error('Error loading conversation');
+    }
+  };
+
+  const initializeConversation = async () => {
+    setLoading(true);
+    try {
+      // Request an initial greeting from the AI without a user message
+      const { data, error } = await supabase.functions.invoke('perleap-chat', {
+        body: {
+          message: "[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]",
+          assignmentInstructions,
+          submissionId,
+          studentId: user!.id,
+          assignmentId,
+          teacherName,
+          isInitialGreeting: true
+        }
+      });
+
+      if (error) throw error;
+
+      // Only add the AI greeting, no user message
+      const aiMessage: Message = { role: 'assistant', content: data.message };
+      setMessages([aiMessage]);
+    } catch (error: any) {
+      console.error('Error initializing conversation:', error);
+      toast.error('Error starting conversation');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,7 +126,8 @@ export function AssignmentChatInterface({
           assignmentInstructions,
           submissionId,
           studentId: user!.id,
-          assignmentId
+          assignmentId,
+          teacherName
         }
       });
 

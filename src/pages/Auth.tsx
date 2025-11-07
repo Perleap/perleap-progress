@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { z } from "zod";
@@ -14,11 +14,22 @@ const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"teacher" | "student" | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("signin");
   const navigate = useNavigate();
+
+  // Set the active tab based on the route
+  useEffect(() => {
+    if (location.pathname === "/register") {
+      setActiveTab("signup");
+    } else if (location.pathname === "/login") {
+      setActiveTab("signin");
+    }
+  }, [location.pathname]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,7 +170,7 @@ const Auth = () => {
             <CardDescription>Sign in or create an account to get started</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>

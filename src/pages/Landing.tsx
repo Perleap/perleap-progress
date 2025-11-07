@@ -14,13 +14,33 @@ const Landing = () => {
             </div>
             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
           </div>
-          <Link to="/auth">
-            <Button size="sm" className="font-medium">
-              <span className="hidden sm:inline">Contact us</span>
-              <span className="sm:hidden">Contact</span>
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link to="/about">
+              <Button size="sm" variant="ghost" className="font-medium hidden md:inline-flex">
+                About
+              </Button>
+            </Link>
+            <Link to="/pricing">
+              <Button size="sm" variant="ghost" className="font-medium hidden sm:inline-flex">
+                Pricing
+              </Button>
+            </Link>
+            <Link to="/contact">
+              <Button size="sm" variant="ghost" className="font-medium hidden sm:inline-flex">
+                Contact
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button size="sm" variant="ghost" className="font-medium">
+                Log In
+              </Button>
+            </Link>
+            <Link to="/register">
+              <Button size="sm" className="font-medium">
+                Register
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -258,15 +278,15 @@ const Landing = () => {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
+                <li><Link to="/about" className="hover:text-foreground transition-colors">About</Link></li>
+                <li><Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
               </ul>
             </div>
             <div>

@@ -226,22 +226,19 @@ const AssignmentDetail = () => {
           )}
 
           {feedback && (
-            <Card>
+            <Card className="border-primary/50 shadow-sm">
               <CardHeader>
-                <CardTitle>Your Feedback</CardTitle>
+                <CardTitle className="text-primary">🎉 Your Feedback</CardTitle>
                 <CardDescription>
                   Completed on {new Date(feedback.created_at).toLocaleString()}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Feedback for You</h3>
-                  <div className="text-muted-foreground whitespace-pre-wrap prose prose-sm max-w-none">
-                    {feedback.student_feedback
-                      ?.replace(/\*\*/g, '')
-                      ?.replace(/\/\//g, '')
-                      ?.trim()}
-                  </div>
+              <CardContent>
+                <div className="prose prose-sm max-w-none">
+                  {feedback.student_feedback
+                    ?.replace(/\*\*/g, '')
+                    ?.replace(/\/\//g, '')
+                    ?.trim()}
                 </div>
               </CardContent>
             </Card>

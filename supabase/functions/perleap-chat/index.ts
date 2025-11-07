@@ -1,3 +1,13 @@
+/**
+ * Perleap Chat - OpenAI Integration
+ * 
+ * Required Environment Variables:
+ * - OPENAI_API_KEY: Your OpenAI API key
+ * - OPENAI_MODEL (optional): Model to use (default: gpt-4-turbo-preview)
+ * - SUPABASE_URL: Supabase project URL
+ * - SUPABASE_SERVICE_ROLE_KEY: Supabase service role key
+ */
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
@@ -13,32 +23,42 @@ serve(async (req) => {
   }
 
   try {
-    const { message, assignmentInstructions, submissionId, studentId, assignmentId } = await req.json();
-    console.log('Perleap chat request:', { submissionId, studentId, assignmentId });
+    const { message, assignmentInstructions, submissionId, studentId, assignmentId, teacherName, isInitialGreeting } = await req.json();
+    console.log('Perleap chat request:', { submissionId, studentId, assignmentId, teacherName, isInitialGreeting });
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get or create conversation
-    let { data: conversation, error: convError } = await supabase
+    // Get or create conversation - handle multiple conversations by getting the most recent
+    let { data: conversations, error: convError } = await supabase
       .from('assignment_conversations')
       .select('*')
       .eq('submission_id', submissionId)
-      .maybeSingle();
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    if (convError && convError.code !== 'PGRST116') {
+    if (convError) {
       console.error('Error fetching conversation:', convError);
       throw convError;
     }
 
+    let conversation = conversations && conversations.length > 0 ? conversations[0] : null;
     let messages = conversation?.messages || [];
 
-    // Add user message to conversation
-    messages.push({ role: 'user', content: message });
+    // For initial greeting, don't add the system message to history
+    // For regular messages, add user message to conversation
+    if (!isInitialGreeting) {
+      messages.push({ role: 'user', content: message });
+    }
 
     // Prepare system prompt
-    const systemPrompt = `You are a warm, encouraging educational assistant helping a student complete their assignment. Start the conversation naturally by acknowledging the task and asking how they'd like to begin or what their initial thoughts are.
+    const teacherNameText = teacherName ? teacherName : 'your teacher';
+    const greetingInstruction = isInitialGreeting 
+      ? `You must start your response with: "Hello I'm ${teacherNameText}'s perleap" and then continue with your warm greeting.`
+      : '';
+    
+    const systemPrompt = `You are a warm, encouraging educational assistant helping a student complete their assignment.
 
 Your approach:
 - Guide them through the assignment step-by-step in a conversational way
@@ -53,37 +73,64 @@ Keep the pedagogical framework in mind but don't make it explicit. Focus on the 
 **Assignment Instructions:**
 ${assignmentInstructions}
 
-Begin by warmly greeting the student and helping them get started with the assignment in a natural, conversational way.`;
+${greetingInstruction}
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+${isInitialGreeting ? 'After introducing yourself, warmly acknowledge the assignment topic and ask the student how they would like to begin or what their initial thoughts are.' : ''}`;
+
+    // Get OpenAI configuration
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY not configured');
     }
 
-    // Call Lovable AI
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Get model from environment or use default
+    const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') || 'gpt-4-turbo-preview';
+
+    // Prepare messages for OpenAI
+    // For initial greeting, include the trigger message for OpenAI but it's not in history
+    const openAIMessages = isInitialGreeting 
+      ? [{ role: 'user', content: message }]
+      : [...messages];
+
+    // Call OpenAI API
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: OPENAI_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
-          ...messages
+          ...openAIMessages
         ],
+        temperature: 0.7,
+        max_tokens: 2000,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+      console.error('OpenAI API error:', response.status, errorText);
+      
+      // Parse OpenAI error for better error messages
+      try {
+        const errorData = JSON.parse(errorText);
+        const errorMessage = errorData.error?.message || errorText;
+        throw new Error(`OpenAI API error (${response.status}): ${errorMessage}`);
+      } catch {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
     }
 
     const data = await response.json();
     const aiMessage = data.choices[0].message.content;
+
+    // Log token usage for monitoring
+    if (data.usage) {
+      console.log('OpenAI token usage:', data.usage);
+    }
 
     // Add AI response to messages
     messages.push({ role: 'assistant', content: aiMessage });

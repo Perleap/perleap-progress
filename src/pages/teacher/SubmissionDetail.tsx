@@ -132,6 +132,40 @@ const SubmissionDetail = () => {
         <div className="space-y-6">
           {feedback && (
             <>
+              <Card className="border-primary/50 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-primary">Pedagogical Insights for You</CardTitle>
+                  <CardDescription>
+                    AI-generated analysis and recommendations based on {studentName}'s learning conversation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none">
+                    {feedback.teacher_feedback
+                      ?.replace(/\*\*/g, '')
+                      ?.replace(/\/\//g, '')
+                      ?.trim() || 'No teacher feedback generated'}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Feedback Given to Student</CardTitle>
+                  <CardDescription>
+                    What {studentName} saw after completing the assignment
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none text-muted-foreground">
+                    {feedback.student_feedback
+                      ?.replace(/\*\*/g, '')
+                      ?.replace(/\/\//g, '')
+                      ?.trim()}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -161,40 +195,6 @@ const SubmissionDetail = () => {
                         </div>
                       </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Feedback for Teacher</CardTitle>
-                  <CardDescription>
-                    AI-generated insights about {studentName}'s learning
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none text-muted-foreground">
-                    {feedback.teacher_feedback
-                      ?.replace(/\*\*/g, '')
-                      ?.replace(/\/\//g, '')
-                      ?.trim() || 'No teacher feedback generated'}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Feedback Given to Student</CardTitle>
-                  <CardDescription>
-                    What {studentName} saw after completing the assignment
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none text-muted-foreground">
-                    {feedback.student_feedback
-                      ?.replace(/\*\*/g, '')
-                      ?.replace(/\/\//g, '')
-                      ?.trim()}
                   </div>
                 </CardContent>
               </Card>

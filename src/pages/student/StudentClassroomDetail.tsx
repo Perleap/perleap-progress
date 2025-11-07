@@ -39,13 +39,13 @@ const StudentClassroomDetail = () => {
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [scores, setScores] = useState({
-    cognitive: 2.5,
-    emotional: 2.5,
-    social: 2.5,
-    creative: 2.5,
-    behavioral: 2.5
-  });
+  const [scores, setScores] = useState<{
+    cognitive: number;
+    emotional: number;
+    social: number;
+    creative: number;
+    behavioral: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -97,6 +97,8 @@ const StudentClassroomDetail = () => {
 
       if (snapshot?.scores) {
         setScores(snapshot.scores as any);
+      } else {
+        setScores(null);
       }
     } catch (error: any) {
       console.error("Error loading classroom:", error);
@@ -249,7 +251,20 @@ const StudentClassroomDetail = () => {
           </div>
 
           <div>
-            <FiveDChartCard scores={scores} title="My Progress in this Class" />
+            {scores ? (
+              <FiveDChartCard scores={scores} title="My Progress in this Class" />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Progress in this Class</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <p className="text-center text-muted-foreground">
+                    Your 5D growth profile will appear here once you complete and submit your first assignment.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
