@@ -21,6 +21,7 @@ export const saveFiveDSnapshot = async (
   scores: FiveDScores,
   source: 'onboarding' | 'assignment',
   submissionId: string | null = null,
+  classroomId: string | null = null,
 ): Promise<{ data: FiveDSnapshot | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -31,6 +32,7 @@ export const saveFiveDSnapshot = async (
           scores,
           source,
           submission_id: submissionId,
+          classroom_id: classroomId,
         },
       ])
       .select()
@@ -52,6 +54,7 @@ export const saveFiveDSnapshot = async (
 export const getLatestScores = async (
   userId: string,
   excludeOnboarding = true,
+  classroomId: string | null = null,
 ): Promise<{ data: FiveDScores | null; error: ApiError | null }> => {
   try {
     let query = supabase
@@ -63,6 +66,10 @@ export const getLatestScores = async (
 
     if (excludeOnboarding) {
       query = query.neq('source', SNAPSHOT_SOURCES.ONBOARDING);
+    }
+
+    if (classroomId) {
+      query = query.eq('classroom_id', classroomId);
     }
 
     const { data, error } = await query.maybeSingle();
@@ -83,6 +90,7 @@ export const getLatestScores = async (
 export const getUserSnapshots = async (
   userId: string,
   excludeOnboarding = true,
+  classroomId: string | null = null,
 ): Promise<{ data: FiveDSnapshot[] | null; error: ApiError | null }> => {
   try {
     let query = supabase
@@ -93,6 +101,10 @@ export const getUserSnapshots = async (
 
     if (excludeOnboarding) {
       query = query.neq('source', SNAPSHOT_SOURCES.ONBOARDING);
+    }
+
+    if (classroomId) {
+      query = query.eq('classroom_id', classroomId);
     }
 
     const { data, error } = await query;
@@ -199,8 +211,8 @@ export const getClassroomAnalytics = async (
 
       const fullName = profile?.full_name || 'Unknown';
 
-      // Get scores based on filters
-      const { data: snapshots } = await getUserSnapshots(enrollment.student_id, true);
+      // Get scores for this classroom
+      const { data: snapshots } = await getUserSnapshots(enrollment.student_id, true, classroomId);
 
       let averageScores: FiveDScores | null = null;
       if (snapshots && snapshots.length > 0) {

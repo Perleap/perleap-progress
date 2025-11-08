@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
 
 interface Classroom {
   id: string;
@@ -29,11 +30,12 @@ const TeacherDashboard = () => {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [notificationCount] = useState(5); // Mock notification count
-  const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null }>({
-    first_name: "",
-    last_name: "",
-    avatar_url: null,
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [profile, setProfile] = useState<{ full_name: string; avatar_url?: string }>({
+    full_name: "",
+    avatar_url: "",
   });
 
   useEffect(() => {
@@ -46,14 +48,16 @@ const TeacherDashboard = () => {
 
   const fetchClassrooms = async () => {
     try {
-      // Fetch teacher profile for avatar
-      const { data: profileData } = await supabase
+      // Fetch teacher profile
+      const { data: profileData, error: profileError} = await supabase
         .from('teacher_profiles')
-        .select('first_name, last_name, avatar_url')
+        .select('full_name, avatar_url')
         .eq('user_id', user?.id)
         .single();
 
-      if (profileData) {
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+      } else if (profileData) {
         setProfile(profileData);
       }
 
@@ -64,7 +68,15 @@ const TeacherDashboard = () => {
 
       if (error) throw error;
       setClassrooms(data || []);
+
+      // Fetch notifications
+      if (user?.id) {
+        const notifs = await getUnreadNotifications(user.id);
+        setNotifications(notifs);
+        setUnreadCount(notifs.length);
+      }
     } catch (error: any) {
+      console.error("Error in fetchClassrooms:", error);
       toast.error("Error loading classrooms");
     } finally {
       setLoading(false);
@@ -77,55 +89,88 @@ const TeacherDashboard = () => {
   };
 
   const getInitials = () => {
-    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'T';
+    if (!profile.full_name) return 'T';
+    const names = profile.full_name.split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return names[0][0].toUpperCase();
   };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
-          <h1 className="text-lg md:text-2xl font-bold">Teacher Dashboard</h1>
+          <h1 className="text-lg md:text-2xl font-bold">
+            {!loading && profile.full_name ? `Welcome ${profile.full_name.split(' ')[0]} to your dashboard` : 'Teacher Dashboard'}
+          </h1>
           <div className="flex items-center gap-2">
             {/* Notifications Dropdown */}
-            <DropdownMenu>
+            <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
                   <Bell className="h-4 w-4" />
-                  {notificationCount > 0 && (
+                  {unreadCount > 0 && (
                     <Badge 
                       variant="destructive" 
                       className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                     >
-                      {notificationCount}
+                      {unreadCount}
                     </Badge>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
                 <div className="p-2">
-                  <h3 className="font-semibold mb-2">Notifications</h3>
-                  <div className="space-y-2">
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">New submission</p>
-                      <p className="text-xs text-muted-foreground">John Doe submitted Math Assignment</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">Student question</p>
-                      <p className="text-xs text-muted-foreground">Sarah asked about Chapter 5</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">Grading reminder</p>
-                      <p className="text-xs text-muted-foreground">3 assignments need grading</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">New student enrolled</p>
-                      <p className="text-xs text-muted-foreground">Michael joined Biology 101</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">Assignment deadline</p>
-                      <p className="text-xs text-muted-foreground">Chemistry quiz closes tomorrow</p>
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={async () => {
+                          if (user?.id) {
+                            await markAllAsRead(user.id);
+                            setNotifications([]);
+                            setUnreadCount(0);
+                            toast.success("All notifications marked as read");
+                          }
+                        }}
+                      >
+                        Mark all read
+                      </Button>
+                    )}
                   </div>
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      No new notifications
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
+                          onClick={async () => {
+                            await markAsRead(notification.id);
+                            setNotifications(prev => prev.filter(n => n.id !== notification.id));
+                            setUnreadCount(prev => Math.max(0, prev - 1));
+                            setNotificationDropdownOpen(false);
+                            if (notification.link) {
+                              navigate(notification.link);
+                            }
+                          }}
+                        >
+                          <p className="font-medium">{notification.title}</p>
+                          <p className="text-xs text-muted-foreground">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(notification.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -143,9 +188,9 @@ const TeacherDashboard = () => {
               onClick={() => navigate('/teacher/settings')}
             >
               <Avatar className="h-12 w-12 cursor-pointer">
-                {profile.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt="Profile" />
-                ) : null}
+                {profile.avatar_url && (
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                )}
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
             </Button>

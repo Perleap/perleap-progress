@@ -131,8 +131,36 @@ const AssignmentDetail = () => {
           .select()
           .single();
 
-        if (subError) throw subError;
-        setSubmission(newSubmission);
+        if (subError) {
+          // If duplicate key error (submission already exists), fetch it instead
+          if (subError.code === '23505') {
+            const { data: existingSubmission } = await supabase
+              .from('submissions')
+              .select('*')
+              .eq('assignment_id', id)
+              .eq('student_id', user?.id)
+              .single();
+            
+            if (existingSubmission) {
+              setSubmission(existingSubmission);
+              
+              // Check for feedback on the existing submission
+              const { data: feedbackData } = await supabase
+                .from('assignment_feedback')
+                .select('*')
+                .eq('submission_id', existingSubmission.id)
+                .maybeSingle();
+              
+              if (feedbackData) {
+                setFeedback(feedbackData);
+              }
+            }
+          } else {
+            throw subError;
+          }
+        } else {
+          setSubmission(newSubmission);
+        }
       }
     } catch (error: any) {
       console.error("Error loading assignment:", error);

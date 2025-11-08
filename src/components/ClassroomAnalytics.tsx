@@ -108,6 +108,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               .from('five_d_snapshots')
               .select('scores')
               .in('submission_id', submissionIds)
+              .eq('classroom_id', classroomId)
               .neq('source', 'onboarding');
 
             if (snapshots && snapshots.length > 0) {
@@ -125,11 +126,12 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
             }
           }
         } else {
-          // For all assignments: get all scores
+          // For all assignments: get all scores for this classroom
           const { data: allScoresData } = await supabase
             .from('five_d_snapshots')
             .select('scores')
             .eq('user_id', enroll.student_id)
+            .eq('classroom_id', classroomId)
             .neq('source', 'onboarding')
             .order('created_at', { ascending: false });
 

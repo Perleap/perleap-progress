@@ -119,6 +119,7 @@ export interface FiveDSnapshot {
   scores: FiveDScores;
   source: 'onboarding' | 'assignment';
   submission_id: string | null;
+  classroom_id: string | null;
   created_at: string;
 }
 

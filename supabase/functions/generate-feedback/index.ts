@@ -101,12 +101,22 @@ serve(async (req) => {
     const scores = parseScores(scoresText);
     logInfo('5D scores generated', scores);
 
+    // Get classroom_id from the assignment
+    const { data: assignmentInfo } = await supabase
+      .from('assignments')
+      .select('classroom_id')
+      .eq('id', assignmentId)
+      .single();
+
+    const classroomId = assignmentInfo?.classroom_id;
+
     // Save 5D snapshot
     const { error: snapshotError } = await supabase.from('five_d_snapshots').insert({
       user_id: studentId,
       scores,
       source: 'assignment',
       submission_id: submissionId,
+      classroom_id: classroomId,
     });
 
     if (snapshotError) {
@@ -131,6 +141,60 @@ serve(async (req) => {
     }
 
     logInfo('Feedback saved successfully');
+
+    // Create notifications for both student and teacher
+    try {
+      // Get assignment details
+      const { data: assignmentData } = await supabase
+        .from('assignments')
+        .select('title, classroom_id, classrooms(teacher_id)')
+        .eq('id', assignmentId)
+        .single();
+
+      if (assignmentData) {
+        const assignmentTitle = assignmentData.title;
+        const teacherId = assignmentData.classrooms?.teacher_id;
+
+        // Notify student about feedback received
+        await supabase.from('notifications').insert({
+          user_id: studentId,
+          type: 'feedback_received',
+          title: 'Feedback Received',
+          message: `Your feedback for "${assignmentTitle}" is ready`,
+          link: `/student/assignment/${assignmentId}`,
+          metadata: {
+            assignment_id: assignmentId,
+            assignment_title: assignmentTitle,
+            submission_id: submissionId,
+          },
+          is_read: false,
+        });
+
+        // Notify teacher about student completing activity
+        if (teacherId) {
+          await supabase.from('notifications').insert({
+            user_id: teacherId,
+            type: 'student_completed_activity',
+            title: 'Activity Completed',
+            message: `${studentName} completed "${assignmentTitle}"`,
+            link: `/teacher/submission/${submissionId}`,
+            metadata: {
+              assignment_id: assignmentId,
+              assignment_title: assignmentTitle,
+              student_id: studentId,
+              student_name: studentName,
+              submission_id: submissionId,
+            },
+            is_read: false,
+          });
+        }
+
+        logInfo('Notifications created for feedback');
+      }
+    } catch (notifError) {
+      // Don't fail the feedback generation if notifications fail
+      logError('Error creating feedback notifications', notifError);
+    }
 
     return new Response(
       JSON.stringify({

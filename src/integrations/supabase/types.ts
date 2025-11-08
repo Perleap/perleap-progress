@@ -310,6 +310,7 @@ export type Database = {
       }
       five_d_snapshots: {
         Row: {
+          classroom_id: string | null
           created_at: string
           delta: Json | null
           id: string
@@ -319,6 +320,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          classroom_id?: string | null
           created_at?: string
           delta?: Json | null
           id?: string
@@ -328,6 +330,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          classroom_id?: string | null
           created_at?: string
           delta?: Json | null
           id?: string
@@ -337,6 +340,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "five_d_snapshots_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "five_d_snapshots_submission_id_fkey"
             columns: ["submission_id"]

@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { createNotification, getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
 
 interface Assignment {
   id: string;
@@ -24,6 +25,11 @@ interface Assignment {
   due_at: string;
   classrooms: {
     name: string;
+    teacher_id: string;
+    teacher_profiles?: {
+      full_name: string;
+      avatar_url?: string;
+    };
   };
 }
 
@@ -45,11 +51,12 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [notificationCount] = useState(3); // Mock notification count
-  const [profile, setProfile] = useState<{ first_name: string; last_name: string; avatar_url: string | null }>({
-    first_name: "",
-    last_name: "",
-    avatar_url: null,
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [profile, setProfile] = useState<{ full_name: string; avatar_url?: string }>({
+    full_name: "",
+    avatar_url: "",
   });
 
   useEffect(() => {
@@ -62,14 +69,16 @@ const StudentDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch student profile for avatar
-      const { data: profileData } = await supabase
+      // Fetch student profile
+      const { data: profileData, error: profileError } = await supabase
         .from('student_profiles')
-        .select('first_name, last_name, avatar_url')
+        .select('full_name, avatar_url')
         .eq('user_id', user?.id)
         .single();
 
-      if (profileData) {
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+      } else if (profileData) {
         setProfile(profileData);
       }
 
@@ -93,18 +102,45 @@ const StudentDashboard = () => {
         }));
         setClassrooms(classroomsList);
 
-        // Fetch assignments
+        // Fetch assignments with teacher info
         const { data: assignmentsData } = await supabase
           .from('assignments')
-          .select('*, classrooms(name)')
+          .select('*, classrooms(name, teacher_id)')
           .in('classroom_id', classroomIds)
           .eq('status', 'published')
           .order('due_at', { ascending: true });
 
-        setAssignments(assignmentsData || []);
+        // Fetch teacher profiles
+        if (assignmentsData && assignmentsData.length > 0) {
+          const teacherIds = [...new Set(assignmentsData.map(a => a.classrooms.teacher_id))];
+          const { data: teacherProfiles } = await supabase
+            .from('teacher_profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', teacherIds);
+
+          // Combine data
+          const assignmentsWithTeachers = assignmentsData.map(assignment => ({
+            ...assignment,
+            classrooms: {
+              ...assignment.classrooms,
+              teacher_profiles: teacherProfiles?.find(t => t.user_id === assignment.classrooms.teacher_id)
+            }
+          }));
+
+          setAssignments(assignmentsWithTeachers);
+        } else {
+          setAssignments([]);
+        }
       } else {
         setClassrooms([]);
         setAssignments([]);
+      }
+
+      // Fetch notifications
+      if (user?.id) {
+        const notifs = await getUnreadNotifications(user.id);
+        setNotifications(notifs);
+        setUnreadCount(notifs.length);
       }
     } catch (error: any) {
       console.error("Error loading data:", error);
@@ -123,7 +159,6 @@ const StudentDashboard = () => {
     setJoining(true);
     try {
       const trimmedCode = inviteCode.trim().toUpperCase();
-      console.log("Attempting to join with code:", trimmedCode);
       
       // Check if classroom exists - use a simpler query that bypasses RLS
       const { data: classroom, error: classroomError } = await supabase
@@ -131,8 +166,6 @@ const StudentDashboard = () => {
         .select('id, name, invite_code')
         .eq('invite_code', trimmedCode)
         .maybeSingle();
-
-      console.log("Classroom query result:", { classroom, error: classroomError });
 
       if (classroomError) {
         console.error("Error finding classroom:", classroomError);
@@ -173,6 +206,56 @@ const StudentDashboard = () => {
         return;
       }
 
+      // Get student name for notification
+      const { data: studentProfile } = await supabase
+        .from('student_profiles')
+        .select('full_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const studentName = studentProfile?.full_name || user.email || 'A student';
+
+      // Notify the teacher about new enrollment
+      try {
+        const { data: classroomData } = await supabase
+          .from('classrooms')
+          .select('teacher_id')
+          .eq('id', classroom.id)
+          .single();
+
+        if (classroomData?.teacher_id) {
+          await createNotification(
+            classroomData.teacher_id,
+            'student_enrolled',
+            'New Student Enrolled',
+            `${studentName} joined ${classroom.name}`,
+            `/teacher/classroom/${classroom.id}`,
+            {
+              classroom_id: classroom.id,
+              student_id: user.id,
+              student_name: studentName,
+              classroom_name: classroom.name,
+            }
+          );
+        }
+
+        // Notify the student about successful enrollment
+        await createNotification(
+          user.id,
+          'enrolled_in_classroom',
+          'Successfully Enrolled',
+          `You've joined ${classroom.name}`,
+          `/student/classroom/${classroom.id}`,
+          {
+            classroom_id: classroom.id,
+            classroom_name: classroom.name,
+          }
+        );
+      } catch (notifError) {
+        // Don't fail enrollment if notifications fail
+        console.error('Error creating enrollment notifications:', notifError);
+      }
+
       toast.success(`Successfully joined ${classroom.name}!`);
       setInviteCode("");
       setDialogOpen(false);
@@ -186,47 +269,88 @@ const StudentDashboard = () => {
   };
 
   const getInitials = () => {
-    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'S';
+    if (!profile.full_name) return 'S';
+    const names = profile.full_name.split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return names[0][0].toUpperCase();
   };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
-          <h1 className="text-lg md:text-2xl font-bold">Student Dashboard</h1>
+          <h1 className="text-lg md:text-2xl font-bold">
+            {!loading && profile.full_name ? `Welcome ${profile.full_name.split(' ')[0]} to your dashboard` : 'Student Dashboard'}
+          </h1>
           <div className="flex items-center gap-2">
             {/* Notifications Dropdown */}
-            <DropdownMenu>
+            <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
                   <Bell className="h-4 w-4" />
-                  {notificationCount > 0 && (
+                  {unreadCount > 0 && (
                     <Badge 
                       variant="destructive" 
                       className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                     >
-                      {notificationCount}
+                      {unreadCount}
                     </Badge>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
                 <div className="p-2">
-                  <h3 className="font-semibold mb-2">Notifications</h3>
-                  <div className="space-y-2">
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">New assignment posted</p>
-                      <p className="text-xs text-muted-foreground">Math - Chapter 5 Quiz</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">Feedback received</p>
-                      <p className="text-xs text-muted-foreground">Your essay has been graded</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-accent/50 text-sm">
-                      <p className="font-medium">Upcoming deadline</p>
-                      <p className="text-xs text-muted-foreground">Science project due tomorrow</p>
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={async () => {
+                          if (user?.id) {
+                            await markAllAsRead(user.id);
+                            setNotifications([]);
+                            setUnreadCount(0);
+                            toast.success("All notifications marked as read");
+                          }
+                        }}
+                      >
+                        Mark all read
+                      </Button>
+                    )}
                   </div>
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      No new notifications
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
+                          onClick={async () => {
+                            await markAsRead(notification.id);
+                            setNotifications(prev => prev.filter(n => n.id !== notification.id));
+                            setUnreadCount(prev => Math.max(0, prev - 1));
+                            setNotificationDropdownOpen(false);
+                            if (notification.link) {
+                              navigate(notification.link);
+                            }
+                          }}
+                        >
+                          <p className="font-medium">{notification.title}</p>
+                          <p className="text-xs text-muted-foreground">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(notification.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -244,9 +368,9 @@ const StudentDashboard = () => {
               onClick={() => navigate('/student/settings')}
             >
               <Avatar className="h-12 w-12 cursor-pointer">
-                {profile.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt="Profile" />
-                ) : null}
+                {profile.avatar_url && (
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                )}
                 <AvatarFallback>{getInitials()}</AvatarFallback>
               </Avatar>
             </Button>
@@ -337,21 +461,43 @@ const StudentDashboard = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-4">
-                  {assignments.map((assignment) => (
-                    <Card 
-                      key={assignment.id} 
-                      className="hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                    >
-                      <CardHeader>
-                        <CardTitle>{assignment.title}</CardTitle>
-                        <CardDescription>
-                          {assignment.classrooms.name} • Due: {new Date(assignment.due_at).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                  ))}
+                <div className="space-y-3">
+                  {assignments.map((assignment) => {
+                    const teacherInitials = assignment.classrooms.teacher_profiles?.full_name
+                      ?.split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase() || 'T';
+                    
+                    return (
+                      <Card 
+                        key={assignment.id} 
+                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                      >
+                        <CardHeader className="p-4 pb-3">
+                          <CardTitle className="text-base mb-1">{assignment.title}</CardTitle>
+                          <CardDescription className="text-sm mb-2">
+                            {assignment.classrooms.name} • Due: {new Date(assignment.due_at).toLocaleDateString()}
+                          </CardDescription>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Avatar className="h-6 w-6">
+                              {assignment.classrooms.teacher_profiles?.avatar_url && (
+                                <AvatarImage 
+                                  src={assignment.classrooms.teacher_profiles.avatar_url} 
+                                  alt={assignment.classrooms.teacher_profiles.full_name || 'Teacher'} 
+                                />
+                              )}
+                              <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground">
+                              {assignment.classrooms.teacher_profiles?.full_name || 'Teacher'}
+                            </span>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>

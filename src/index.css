@@ -121,3 +121,58 @@ All colors MUST be HSL.
     @apply bg-background text-foreground font-inter antialiased;
   }
 }
+
+/* Calendar custom styles */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #3b82f6;
+  --rdp-background-color: #3b82f6;
+}
+
+.rdp-day_selected {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+.rdp-day_selected:hover {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.rdp-day_today {
+  font-weight: 600 !important;
+  background-color: transparent !important;
+}
+
+.rdp-head_cell {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.05em;
+}
+
+.rdp-caption_label {
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+.rdp-head_row {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.rdp-day {
+  height: 40px;
+  width: 40px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.rdp-day:hover:not(.rdp-day_selected) {
+  background-color: transparent !important;
+}

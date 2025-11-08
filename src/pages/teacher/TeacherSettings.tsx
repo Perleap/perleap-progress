@@ -13,10 +13,7 @@ import { ArrowLeft, User, Bell, Loader2, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 interface TeacherProfile {
-  first_name: string;
-  last_name: string;
-  school_name: string;
-  subject_specialization: string;
+  full_name: string;
   avatar_url: string | null;
 }
 
@@ -36,10 +33,7 @@ const TeacherSettings = () => {
   const [uploading, setUploading] = useState(false);
   
   const [profile, setProfile] = useState<TeacherProfile>({
-    first_name: "",
-    last_name: "",
-    school_name: "",
-    subject_specialization: "",
+    full_name: "",
     avatar_url: null,
   });
   
@@ -63,7 +57,7 @@ const TeacherSettings = () => {
       // Fetch teacher profile
       const { data: profileData, error: profileError } = await supabase
         .from('teacher_profiles')
-        .select('first_name, last_name, school_name, subject_specialization, avatar_url')
+        .select('full_name, avatar_url')
         .eq('user_id', user?.id)
         .single();
 
@@ -71,10 +65,7 @@ const TeacherSettings = () => {
       
       if (profileData) {
         setProfile({
-          first_name: profileData.first_name || "",
-          last_name: profileData.last_name || "",
-          school_name: profileData.school_name || "",
-          subject_specialization: profileData.subject_specialization || "",
+          full_name: profileData.full_name || "",
           avatar_url: profileData.avatar_url || null,
         });
       }
@@ -117,27 +108,19 @@ const TeacherSettings = () => {
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from("user-avatars")
+        .from("teacher-avatars")
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
         console.error("Upload error:", uploadError);
-        // If bucket doesn't exist, store as data URL in localStorage
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          setProfile({ ...profile, avatar_url: dataUrl });
-          localStorage.setItem(`avatar_${user.id}`, dataUrl);
-          toast.success("Photo uploaded successfully!");
-        };
-        reader.readAsDataURL(file);
+        toast.error("Failed to upload photo");
         setUploading(false);
         return;
       }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from("user-avatars")
+        .from("teacher-avatars")
         .getPublicUrl(filePath);
 
       // Update profile with avatar URL
@@ -166,10 +149,7 @@ const TeacherSettings = () => {
       const { error } = await supabase
         .from('teacher_profiles')
         .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          school_name: profile.school_name,
-          subject_specialization: profile.subject_specialization,
+          full_name: profile.full_name,
           avatar_url: profile.avatar_url,
         })
         .eq('user_id', user.id);
@@ -191,7 +171,8 @@ const TeacherSettings = () => {
   };
 
   const getInitials = () => {
-    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase() || 'T';
+    if (!profile.full_name) return 'T';
+    return profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (loading) {
@@ -264,50 +245,19 @@ const TeacherSettings = () => {
                     />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{profile.first_name} {profile.last_name}</p>
+                    <p className="text-sm font-medium">{profile.full_name || 'No name set'}</p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">Click camera to upload photo</p>
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={profile.first_name}
-                      onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                      placeholder="Jane"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={profile.last_name}
-                      onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                      placeholder="Smith"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="schoolName">School Name</Label>
+                  <Label htmlFor="fullName">Full Name</Label>
                   <Input
-                    id="schoolName"
-                    value={profile.school_name}
-                    onChange={(e) => setProfile({ ...profile, school_name: e.target.value })}
-                    placeholder="Lincoln High School"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject Specialization</Label>
-                  <Input
-                    id="subject"
-                    value={profile.subject_specialization}
-                    onChange={(e) => setProfile({ ...profile, subject_specialization: e.target.value })}
-                    placeholder="Mathematics, Science, etc."
+                    id="fullName"
+                    value={profile.full_name}
+                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                    placeholder="Jane Smith"
                   />
                 </div>
 

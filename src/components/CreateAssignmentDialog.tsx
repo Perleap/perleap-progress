@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { createBulkNotifications } from "@/lib/notificationService";
 
 interface CreateAssignmentDialogProps {
   open: boolean;
@@ -24,7 +25,7 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
     instructions: "",
     type: "text_essay",
     due_at: "",
-    status: "draft",
+    status: "published",
     target_dimensions: {
       cognitive: false,
       emotional: false,
@@ -40,7 +41,7 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      const { data: assignment, error } = await supabase
         .from('assignments')
         .insert([{
           classroom_id: classroomId,
@@ -51,9 +52,44 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
           status: formData.status as any,
           target_dimensions: formData.target_dimensions as any,
           personalization_flag: formData.personalization_flag,
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // If assignment is published, notify all enrolled students
+      if (assignment && formData.status === 'published') {
+        try {
+          // Fetch all students enrolled in this classroom
+          const { data: enrollments, error: enrollError } = await supabase
+            .from('enrollments')
+            .select('student_id')
+            .eq('classroom_id', classroomId);
+
+          if (!enrollError && enrollments && enrollments.length > 0) {
+            // Create notifications for all enrolled students
+            const notifications = enrollments.map(enrollment => ({
+              userId: enrollment.student_id,
+              type: 'assignment_created' as const,
+              title: 'New Assignment Posted',
+              message: `${formData.title} has been assigned`,
+              link: `/student/assignment/${assignment.id}`,
+              metadata: {
+                assignment_id: assignment.id,
+                classroom_id: classroomId,
+                assignment_title: formData.title,
+                due_at: formData.due_at || null,
+              },
+            }));
+
+            await createBulkNotifications(notifications);
+          }
+        } catch (notifError) {
+          // Don't fail the assignment creation if notifications fail
+          console.error('Error creating assignment notifications:', notifError);
+        }
+      }
 
       toast.success("Assignment created successfully!");
       onSuccess();
@@ -63,7 +99,7 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
         instructions: "",
         type: "text_essay",
         due_at: "",
-        status: "draft",
+        status: "published",
         target_dimensions: {
           cognitive: false,
           emotional: false,

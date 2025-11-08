@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createBulkNotifications } from "@/lib/notificationService";
 
 interface Assignment {
   id: string;
@@ -21,6 +22,7 @@ interface Assignment {
   type: string;
   status: string;
   due_at: string | null;
+  classroom_id?: string;
 }
 
 interface EditAssignmentDialogProps {
@@ -59,6 +61,9 @@ export function EditAssignmentDialog({
     setLoading(true);
 
     try {
+      // Check if status is changing from draft to published
+      const wasPublished = assignment.status === 'draft' && status === 'published';
+
       const { error } = await supabase
         .from("assignments")
         .update({
@@ -71,6 +76,52 @@ export function EditAssignmentDialog({
         .eq("id", assignment.id);
 
       if (error) throw error;
+
+      // If assignment was just published, notify all enrolled students
+      if (wasPublished) {
+        try {
+          // Get classroom_id if not already provided
+          let classroomId = assignment.classroom_id;
+          if (!classroomId) {
+            const { data: assignmentData } = await supabase
+              .from('assignments')
+              .select('classroom_id')
+              .eq('id', assignment.id)
+              .single();
+            classroomId = assignmentData?.classroom_id;
+          }
+
+          if (classroomId) {
+            // Fetch all students enrolled in this classroom
+            const { data: enrollments, error: enrollError } = await supabase
+              .from('enrollments')
+              .select('student_id')
+              .eq('classroom_id', classroomId);
+
+            if (!enrollError && enrollments && enrollments.length > 0) {
+              // Create notifications for all enrolled students
+              const notifications = enrollments.map(enrollment => ({
+                userId: enrollment.student_id,
+                type: 'assignment_created' as const,
+                title: 'New Assignment Posted',
+                message: `${title} has been assigned`,
+                link: `/student/assignment/${assignment.id}`,
+                metadata: {
+                  assignment_id: assignment.id,
+                  classroom_id: classroomId,
+                  assignment_title: title,
+                  due_at: dueDate || null,
+                },
+              }));
+
+              await createBulkNotifications(notifications);
+            }
+          }
+        } catch (notifError) {
+          // Don't fail the assignment update if notifications fail
+          console.error('Error creating assignment notifications:', notifError);
+        }
+      }
 
       toast.success("Assignment updated successfully");
       onOpenChange(false);

@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Upload } from "lucide-react";
 
 const TeacherOnboarding = () => {
   const { user } = useAuth();
@@ -16,6 +17,8 @@ const TeacherOnboarding = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 5;
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
 
   const [formData, setFormData] = useState({
     // Part 1: Personal Information
@@ -67,14 +70,53 @@ const TeacherOnboarding = () => {
     challengingQuestionResponse: "",
   });
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size should be less than 5MB");
+        return;
+      }
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
+      let avatarUrl = "";
+
+      // Upload avatar if provided
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('teacher-avatars')
+          .upload(fileName, avatarFile);
+
+        if (uploadError) {
+          console.error("Avatar upload error:", uploadError);
+          toast.error("Failed to upload avatar");
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('teacher-avatars')
+            .getPublicUrl(fileName);
+          avatarUrl = publicUrl;
+        }
+      }
+
       const { error } = await supabase.from('teacher_profiles').insert({
         user_id: user.id,
         full_name: formData.fullName,
+        avatar_url: avatarUrl || null,
         phone_number: formData.phoneNumber,
         specialization_1: formData.specialization1,
         specialization_2: formData.specialization2,
@@ -133,6 +175,40 @@ const TeacherOnboarding = () => {
                 required
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label>Profile Picture (Optional)</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  {avatarPreview ? (
+                    <AvatarImage src={avatarPreview} alt="Preview" />
+                  ) : (
+                    <AvatarFallback>
+                      {formData.fullName ? formData.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'T'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="flex-1">
+                  <Input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                  <Label htmlFor="avatar" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
+                      <Upload className="h-4 w-4" />
+                      <span className="text-sm">Upload Photo</span>
+                    </div>
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    PNG, JPG up to 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="phoneNumber">Phone Number</Label>
               <Input

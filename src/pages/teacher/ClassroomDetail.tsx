@@ -4,6 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Users, BookOpen, Calendar, Plus, Edit, BarChart3, Trash2, FileText } from "lucide-react";
@@ -42,8 +53,11 @@ interface Assignment {
 interface EnrolledStudent {
   id: string;
   created_at: string;
+  student_id: string;
   student_profiles: {
     full_name: string;
+    avatar_url?: string;
+    user_id: string;
   } | null;
 }
 
@@ -59,6 +73,8 @@ const ClassroomDetail = () => {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [editAssignmentDialogOpen, setEditAssignmentDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -127,15 +143,20 @@ const ClassroomDetail = () => {
 
       // Fetch student profiles separately
       const studentIds = enrollments.map(e => e.student_id);
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from('student_profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, avatar_url')
         .in('user_id', studentIds);
+
+      if (profileError) {
+        console.error("Error loading student profiles:", profileError);
+      }
 
       // Combine the data
       const studentsWithProfiles = enrollments.map(enrollment => ({
         id: enrollment.id,
         created_at: enrollment.created_at,
+        student_id: enrollment.student_id,
         student_profiles: profiles?.find(p => p.user_id === enrollment.student_id) || null,
       }));
 
@@ -159,6 +180,28 @@ const ClassroomDetail = () => {
       fetchAssignments();
     } catch (error: any) {
       toast.error("Error deleting assignment");
+    }
+  };
+
+  const deleteClassroom = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('classrooms')
+        .delete()
+        .eq('id', id)
+        .eq('teacher_id', user?.id);
+
+      if (error) throw error;
+
+      toast.success("Classroom deleted successfully");
+      navigate('/teacher/dashboard');
+    } catch (error: any) {
+      console.error("Error deleting classroom:", error);
+      toast.error(error.message || "Error deleting classroom");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -201,10 +244,21 @@ const ClassroomDetail = () => {
           <TabsContent value="overview" className="space-y-4 md:space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h2 className="text-xl md:text-2xl font-bold">Classroom Overview</h2>
-              <Button onClick={() => setEditDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Information
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button onClick={() => setEditDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Information
+                </Button>
+                <Button 
+                  onClick={() => setDeleteDialogOpen(true)} 
+                  size="sm" 
+                  variant="destructive" 
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Classroom
+                </Button>
+              </div>
             </div>
 
             <Card>
@@ -375,26 +429,43 @@ const ClassroomDetail = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Students ({students.filter(s => s.student_profiles?.full_name).length})
+                  Students ({students.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {students.filter(s => s.student_profiles?.full_name).length === 0 ? (
+                {students.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No students enrolled yet</p>
                 ) : (
-                  <div className="space-y-3">
-                    {students.filter(enrollment => enrollment.student_profiles?.full_name).map((enrollment) => (
-                      <div key={enrollment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">
-                            {enrollment.student_profiles?.full_name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Joined: {new Date(enrollment.created_at).toLocaleDateString()}
-                          </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {students.map((enrollment) => {
+                      const hasName = enrollment.student_profiles?.full_name;
+                      const displayName = hasName ? enrollment.student_profiles.full_name : 'Student (Onboarding Incomplete)';
+                      const initials = hasName
+                        ? enrollment.student_profiles.full_name.split(' ').map(n => n[0]).join('').toUpperCase()
+                        : 'S';
+                      
+                      return (
+                        <div key={enrollment.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                          <Avatar className="h-10 w-10">
+                            {enrollment.student_profiles?.avatar_url && (
+                              <AvatarImage 
+                                src={enrollment.student_profiles.avatar_url} 
+                                alt={displayName}
+                              />
+                            )}
+                            <AvatarFallback>{initials}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium truncate ${!hasName ? 'text-muted-foreground italic' : ''}`}>
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Joined: {new Date(enrollment.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -447,6 +518,38 @@ const ClassroomDetail = () => {
           onSuccess={fetchAssignments}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this classroom?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>This action cannot be undone. This will permanently delete:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li><strong>{assignments.length}</strong> assignment{assignments.length !== 1 ? 's' : ''}</li>
+                  <li><strong>{students.length}</strong> enrolled student{students.length !== 1 ? 's' : ''}</li>
+                  <li>All submissions and feedback</li>
+                  <li>All analytics data</li>
+                </ul>
+                <p className="font-semibold text-destructive mt-4">
+                  Classroom: {classroom?.name}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteClassroom}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete Classroom"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

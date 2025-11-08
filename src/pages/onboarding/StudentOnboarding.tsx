@@ -5,11 +5,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Upload } from "lucide-react";
 
 const StudentOnboarding = () => {
   const { user } = useAuth();
@@ -17,6 +18,8 @@ const StudentOnboarding = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 6;
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -32,15 +35,54 @@ const StudentOnboarding = () => {
     additionalNotes: "",
   });
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size should be less than 5MB");
+        return;
+      }
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleComplete = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
+      let avatarUrl = "";
+
+      // Upload avatar if provided
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError, data } = await supabase.storage
+          .from('student-avatars')
+          .upload(fileName, avatarFile);
+
+        if (uploadError) {
+          console.error("Avatar upload error:", uploadError);
+          toast.error("Failed to upload avatar");
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('student-avatars')
+            .getPublicUrl(fileName);
+          avatarUrl = publicUrl;
+        }
+      }
+
       // Create student profile
       const { error: profileError } = await supabase.from('student_profiles').insert({
         user_id: user.id,
         full_name: formData.fullName,
+        avatar_url: avatarUrl || null,
         learning_methods: formData.learningMethods,
         solo_vs_group: formData.soloVsGroup,
         scheduled_vs_flexible: formData.scheduledVsFlexible,
@@ -84,6 +126,39 @@ const StudentOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
               />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Profile Picture (Optional)</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  {avatarPreview ? (
+                    <AvatarImage src={avatarPreview} alt="Preview" />
+                  ) : (
+                    <AvatarFallback>
+                      {formData.fullName ? formData.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'S'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="flex-1">
+                  <Input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                  <Label htmlFor="avatar" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
+                      <Upload className="h-4 w-4" />
+                      <span className="text-sm">Upload Photo</span>
+                    </div>
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    PNG, JPG up to 5MB
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="space-y-4 mt-6">
               <Label>What kinds of activities or methods help you learn best?</Label>

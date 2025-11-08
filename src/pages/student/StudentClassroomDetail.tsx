@@ -86,11 +86,12 @@ const StudentClassroomDetail = () => {
       if (assignError) throw assignError;
       setAssignments(assignmentsData || []);
 
-      // Fetch latest 5D snapshot
+      // Fetch latest 5D snapshot for this classroom
       const { data: snapshot } = await supabase
         .from('five_d_snapshots')
         .select('scores')
         .eq('user_id', user?.id)
+        .eq('classroom_id', id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
