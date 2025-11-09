@@ -453,120 +453,51 @@ export type Database = {
       }
       teacher_profiles: {
         Row: {
-          challenging_question_response: string | null
+          avatar_url: string | null
           created_at: string
-          difficult_concept_example: string | null
-          discussion_timing: string | null
-          disruptive_student_response: string | null
-          educational_values: string | null
-          encouragement_phrases: string | null
           full_name: string | null
-          hard_work_feedback_example: string | null
           id: string
-          lesson_ending: string | null
-          lesson_start_approach: string | null
-          lesson_structure: string | null
-          mistake_response: string | null
-          misunderstanding_feedback_example: string | null
-          no_understanding_response: string | null
           phone_number: string | null
-          phrases_to_avoid: string | null
-          question_types: string | null
           sample_explanation: string | null
-          skills_to_develop: string | null
-          specialization_1: string | null
-          specialization_2: string | null
-          strongest_qualities: string | null
-          student_age_range: string | null
           student_education_level: string | null
-          student_objectives: string | null
-          student_types: string | null
           style_notes: string | null
           subjects: string[] | null
           teaching_examples: string | null
           teaching_goals: string | null
-          typical_student_count: string | null
           updated_at: string
           user_id: string
-          workplace: string | null
           years_experience: number | null
         }
         Insert: {
-          challenging_question_response?: string | null
+          avatar_url?: string | null
           created_at?: string
-          difficult_concept_example?: string | null
-          discussion_timing?: string | null
-          disruptive_student_response?: string | null
-          educational_values?: string | null
-          encouragement_phrases?: string | null
           full_name?: string | null
-          hard_work_feedback_example?: string | null
           id?: string
-          lesson_ending?: string | null
-          lesson_start_approach?: string | null
-          lesson_structure?: string | null
-          mistake_response?: string | null
-          misunderstanding_feedback_example?: string | null
-          no_understanding_response?: string | null
           phone_number?: string | null
-          phrases_to_avoid?: string | null
-          question_types?: string | null
           sample_explanation?: string | null
-          skills_to_develop?: string | null
-          specialization_1?: string | null
-          specialization_2?: string | null
-          strongest_qualities?: string | null
-          student_age_range?: string | null
           student_education_level?: string | null
-          student_objectives?: string | null
-          student_types?: string | null
           style_notes?: string | null
           subjects?: string[] | null
           teaching_examples?: string | null
           teaching_goals?: string | null
-          typical_student_count?: string | null
           updated_at?: string
           user_id: string
-          workplace?: string | null
           years_experience?: number | null
         }
         Update: {
-          challenging_question_response?: string | null
+          avatar_url?: string | null
           created_at?: string
-          difficult_concept_example?: string | null
-          discussion_timing?: string | null
-          disruptive_student_response?: string | null
-          educational_values?: string | null
-          encouragement_phrases?: string | null
           full_name?: string | null
-          hard_work_feedback_example?: string | null
           id?: string
-          lesson_ending?: string | null
-          lesson_start_approach?: string | null
-          lesson_structure?: string | null
-          mistake_response?: string | null
-          misunderstanding_feedback_example?: string | null
-          no_understanding_response?: string | null
           phone_number?: string | null
-          phrases_to_avoid?: string | null
-          question_types?: string | null
           sample_explanation?: string | null
-          skills_to_develop?: string | null
-          specialization_1?: string | null
-          specialization_2?: string | null
-          strongest_qualities?: string | null
-          student_age_range?: string | null
           student_education_level?: string | null
-          student_objectives?: string | null
-          student_types?: string | null
           style_notes?: string | null
           subjects?: string[] | null
           teaching_examples?: string | null
           teaching_goals?: string | null
-          typical_student_count?: string | null
           updated_at?: string
           user_id?: string
-          workplace?: string | null
           years_experience?: number | null
         }
         Relationships: []

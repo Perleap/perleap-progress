@@ -103,7 +103,6 @@ const ClassroomDetail = () => {
       await fetchAssignments();
       await fetchStudents();
     } catch (error: any) {
-      console.error("Error loading classroom:", error);
       toast.error("Error loading classroom");
       navigate('/teacher/dashboard');
     } finally {
@@ -122,7 +121,7 @@ const ClassroomDetail = () => {
       if (error) throw error;
       setAssignments(data || []);
     } catch (error: any) {
-      console.error("Error loading assignments:", error);
+      // Silent fail - assignments will be empty
     }
   };
 
@@ -148,9 +147,7 @@ const ClassroomDetail = () => {
         .select('user_id, full_name, avatar_url')
         .in('user_id', studentIds);
 
-      if (profileError) {
-        console.error("Error loading student profiles:", profileError);
-      }
+      // Continue even if some profiles fail to load
 
       // Combine the data
       const studentsWithProfiles = enrollments.map(enrollment => ({
@@ -162,7 +159,7 @@ const ClassroomDetail = () => {
 
       setStudents(studentsWithProfiles);
     } catch (error: any) {
-      console.error("Error loading students:", error);
+      // Silent fail - students will be empty
     }
   };
 
@@ -197,7 +194,6 @@ const ClassroomDetail = () => {
       toast.success("Classroom deleted successfully");
       navigate('/teacher/dashboard');
     } catch (error: any) {
-      console.error("Error deleting classroom:", error);
       toast.error(error.message || "Error deleting classroom");
     } finally {
       setIsDeleting(false);
@@ -401,7 +397,7 @@ const ClassroomDetail = () => {
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="destructive"
                             size="sm"
                             onClick={() => deleteAssignment(assignment.id)}
                           >

@@ -61,7 +61,6 @@ export const useConversation = ({
         await initializeConversation();
       }
     } catch (err) {
-      console.error('Error loading conversation:', err);
       toast.error('Error loading conversation');
     } finally {
       setLoading(false);
@@ -96,7 +95,6 @@ export const useConversation = ({
         setMessages([aiMessage]);
       }
     } catch (err) {
-      console.error('Error initializing conversation:', err);
       toast.error('Error starting conversation');
     } finally {
       setSending(false);
@@ -136,7 +134,6 @@ export const useConversation = ({
         setMessages((prev) => [...prev, aiMessage]);
       }
     } catch (err) {
-      console.error('Error sending message:', err);
       toast.error('Error sending message');
     } finally {
       setSending(false);

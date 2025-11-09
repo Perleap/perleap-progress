@@ -68,7 +68,6 @@ export function EditClassroomDialog({ open, onOpenChange, classroom, onSuccess }
       onOpenChange(false);
     } catch (error: any) {
       toast.error("Error updating classroom");
-      console.error(error);
     } finally {
       setLoading(false);
     }

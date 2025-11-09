@@ -19,7 +19,6 @@ const AuthCallback = () => {
         // Check for pending role from localStorage (Google OAuth)
         const pendingRole = localStorage.getItem('pending_role');
         
-        // Update user metadata if role is pending
         if (pendingRole && !user.user_metadata.role) {
           await supabase.auth.updateUser({
             data: { role: pendingRole }
@@ -29,36 +28,32 @@ const AuthCallback = () => {
 
         const userRole = user.user_metadata.role || pendingRole;
 
-        if (userRole === 'teacher') {
+        // Check if there's a saved redirect path
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+          return;
+        }
+
+        // Redirect based on role and profile completion
+        if (userRole === 'teacher' || userRole === 'student') {
+          const tableName = `${userRole}_profiles`;
           const { data: profile } = await supabase
-            .from('teacher_profiles')
+            .from(tableName)
             .select('id')
             .eq('user_id', user.id)
             .single();
           
-          if (!profile) {
-            navigate('/onboarding/teacher');
-          } else {
-            navigate('/teacher/dashboard');
-          }
-        } else if (userRole === 'student') {
-          const { data: profile } = await supabase
-            .from('student_profiles')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
+          const destination = profile 
+            ? `/${userRole}/dashboard` 
+            : `/onboarding/${userRole}`;
           
-          if (!profile) {
-            navigate('/onboarding/student');
-          } else {
-            navigate('/student/dashboard');
-          }
+          navigate(destination);
         } else {
-          // No role set, redirect to auth to select role
           navigate('/auth');
         }
       } catch (error) {
-        console.error('Auth callback error:', error);
         navigate('/auth');
       }
     };

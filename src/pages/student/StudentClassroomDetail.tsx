@@ -102,7 +102,6 @@ const StudentClassroomDetail = () => {
         setScores(null);
       }
     } catch (error: any) {
-      console.error("Error loading classroom:", error);
       toast.error("Error loading classroom details");
       navigate('/student/dashboard');
     } finally {

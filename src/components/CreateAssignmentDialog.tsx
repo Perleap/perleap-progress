@@ -87,7 +87,6 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
           }
         } catch (notifError) {
           // Don't fail the assignment creation if notifications fail
-          console.error('Error creating assignment notifications:', notifError);
         }
       }
 
@@ -111,7 +110,6 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
       });
     } catch (error: any) {
       toast.error("Error creating assignment");
-      console.error(error);
     } finally {
       setLoading(false);
     }

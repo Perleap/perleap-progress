@@ -76,9 +76,7 @@ const StudentDashboard = () => {
         .eq('user_id', user?.id)
         .single();
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-      } else if (profileData) {
+      if (!profileError && profileData) {
         setProfile(profileData);
       }
 
@@ -143,7 +141,6 @@ const StudentDashboard = () => {
         setUnreadCount(notifs.length);
       }
     } catch (error: any) {
-      console.error("Error loading data:", error);
       toast.error("Error loading data");
     } finally {
       setLoading(false);
@@ -168,7 +165,6 @@ const StudentDashboard = () => {
         .maybeSingle();
 
       if (classroomError) {
-        console.error("Error finding classroom:", classroomError);
         toast.error("Error checking invite code. Please try again.");
         return;
       }
@@ -201,7 +197,6 @@ const StudentDashboard = () => {
         });
 
       if (enrollError) {
-        console.error("Error enrolling:", enrollError);
         toast.error("Error joining classroom. Please contact your teacher.");
         return;
       }
@@ -252,8 +247,6 @@ const StudentDashboard = () => {
           }
         );
       } catch (notifError) {
-        // Don't fail enrollment if notifications fail
-        console.error('Error creating enrollment notifications:', notifError);
       }
 
       toast.success(`Successfully joined ${classroom.name}!`);
@@ -261,7 +254,6 @@ const StudentDashboard = () => {
       setDialogOpen(false);
       await fetchData();
     } catch (error: any) {
-      console.error("Unexpected error joining classroom:", error);
       toast.error("An unexpected error occurred");
     } finally {
       setJoining(false);

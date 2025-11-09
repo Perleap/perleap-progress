@@ -52,7 +52,10 @@ const StudentOnboarding = () => {
   };
 
   const handleComplete = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("User not authenticated. Please sign in again.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -63,23 +66,22 @@ const StudentOnboarding = () => {
         const fileExt = avatarFile.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('student-avatars')
           .upload(fileName, avatarFile);
 
-        if (uploadError) {
-          console.error("Avatar upload error:", uploadError);
-          toast.error("Failed to upload avatar");
-        } else {
+        if (!uploadError) {
           const { data: { publicUrl } } = supabase.storage
             .from('student-avatars')
             .getPublicUrl(fileName);
           avatarUrl = publicUrl;
+        } else {
+          toast.error("Failed to upload avatar. Continuing without avatar.");
         }
       }
 
-      // Create student profile
-      const { error: profileError } = await supabase.from('student_profiles').insert({
+      // Create student profile with preferences
+      const { error } = await supabase.from('student_profiles').insert({
         user_id: user.id,
         full_name: formData.fullName,
         avatar_url: avatarUrl || null,
@@ -102,12 +104,17 @@ const StudentOnboarding = () => {
         mentor_tone_ref: "supportive"
       });
 
-      if (profileError) throw profileError;
+      if (error) throw error;
 
       toast.success("Profile created successfully!");
       navigate('/student/dashboard');
     } catch (error: any) {
-      toast.error(error.message || "Error creating profile");
+      if (error.code === '23505') {
+        toast.error("A profile already exists for this account. Redirecting to dashboard...");
+        setTimeout(() => navigate('/student/dashboard'), 2000);
+      } else {
+        toast.error(error.message || "Error creating profile. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

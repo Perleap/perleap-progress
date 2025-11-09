@@ -50,14 +50,10 @@ export async function createNotification(
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creating notification:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data as unknown as Notification;
   } catch (error) {
-    console.error('Failed to create notification:', error);
     throw error;
   }
 }
@@ -92,14 +88,10 @@ export async function createBulkNotifications(
       )
       .select();
 
-    if (error) {
-      console.error('Error creating bulk notifications:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data as unknown as Notification[];
   } catch (error) {
-    console.error('Failed to create bulk notifications:', error);
     throw error;
   }
 }
@@ -117,14 +109,10 @@ export async function getUnreadNotifications(userId: string) {
       .eq('is_read', false)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching unread notifications:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data as unknown as Notification[];
   } catch (error) {
-    console.error('Failed to fetch unread notifications:', error);
     return [];
   }
 }
@@ -141,14 +129,10 @@ export async function getAllNotifications(userId: string, limit: number = 50) {
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) {
-      console.error('Error fetching notifications:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data as unknown as Notification[];
   } catch (error) {
-    console.error('Failed to fetch notifications:', error);
     return [];
   }
 }
@@ -164,14 +148,10 @@ export async function getUnreadCount(userId: string): Promise<number> {
       .eq('user_id', userId)
       .eq('is_read', false);
 
-    if (error) {
-      console.error('Error fetching unread count:', error);
-      return 0;
-    }
+    if (error) return 0;
 
     return count || 0;
   } catch (error) {
-    console.error('Failed to fetch unread count:', error);
     return 0;
   }
 }
@@ -186,14 +166,10 @@ export async function markAsRead(notificationId: string) {
       .update({ is_read: true })
       .eq('id', notificationId);
 
-    if (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return true;
   } catch (error) {
-    console.error('Failed to mark notification as read:', error);
     return false;
   }
 }
@@ -209,14 +185,10 @@ export async function markAllAsRead(userId: string) {
       .eq('user_id', userId)
       .eq('is_read', false);
 
-    if (error) {
-      console.error('Error marking all notifications as read:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return true;
   } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
     return false;
   }
 }
@@ -237,14 +209,10 @@ export async function deleteOldNotifications(userId: string, daysOld: number = 3
       .eq('is_read', true)
       .lt('created_at', cutoffDate.toISOString());
 
-    if (error) {
-      console.error('Error deleting old notifications:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return true;
   } catch (error) {
-    console.error('Failed to delete old notifications:', error);
     return false;
   }
 }

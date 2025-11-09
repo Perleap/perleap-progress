@@ -55,9 +55,7 @@ const TeacherDashboard = () => {
         .eq('user_id', user?.id)
         .single();
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-      } else if (profileData) {
+      if (!profileError && profileData) {
         setProfile(profileData);
       }
 
@@ -76,7 +74,6 @@ const TeacherDashboard = () => {
         setUnreadCount(notifs.length);
       }
     } catch (error: any) {
-      console.error("Error in fetchClassrooms:", error);
       toast.error("Error loading classrooms");
     } finally {
       setLoading(false);

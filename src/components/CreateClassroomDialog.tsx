@@ -95,7 +95,6 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
       });
       setPdfFile(null);
     } catch (error: any) {
-      console.error("Error creating classroom:", error);
       toast.error(error.message || "Error creating classroom");
     } finally {
       setLoading(false);

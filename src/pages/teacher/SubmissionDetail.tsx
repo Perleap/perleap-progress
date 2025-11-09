@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { WellbeingAlertCard } from "@/components/WellbeingAlertCard";
+import type { StudentAlert } from "@/types/alerts";
 
 interface Submission {
   id: string;
@@ -36,6 +38,7 @@ const SubmissionDetail = () => {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [studentName, setStudentName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [alerts, setAlerts] = useState<StudentAlert[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -90,8 +93,18 @@ const SubmissionDetail = () => {
       if (feedbackData) {
         setFeedback(feedbackData);
       }
+
+      // Fetch wellbeing alerts
+      const { data: alertsData } = await supabase
+        .from('student_alerts')
+        .select('*')
+        .eq('submission_id', id)
+        .order('created_at', { ascending: false });
+
+      if (alertsData) {
+        setAlerts(alertsData);
+      }
     } catch (error: any) {
-      console.error("Error loading submission:", error);
       toast.error("Error loading submission");
       navigate(-1);
     } finally {
@@ -130,6 +143,15 @@ const SubmissionDetail = () => {
 
       <main className="container py-8 max-w-5xl">
         <div className="space-y-6">
+          {/* Wellbeing Alerts - Show prominently at top */}
+          {alerts.length > 0 && (
+            <WellbeingAlertCard 
+              alerts={alerts} 
+              studentName={studentName}
+              onAcknowledge={fetchData}
+            />
+          )}
+
           {feedback && (
             <>
               <Card className="shadow-sm">
@@ -174,27 +196,57 @@ const SubmissionDetail = () => {
                   </CardTitle>
                   <CardDescription>
                     Complete conversation between {studentName} and Perleap
+                    {alerts.length > 0 && (
+                      <span className="text-red-600 font-semibold ml-2">
+                        • Concerning messages are highlighted in red
+                      </span>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {Array.isArray(feedback.conversation_context) && feedback.conversation_context.map((msg: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className={`p-4 rounded-lg ${
-                          msg.role === 'user'
-                            ? 'bg-primary/10 ml-8'
-                            : 'bg-muted mr-8'
-                        }`}
-                      >
-                        <div className="font-semibold mb-1 text-sm">
-                          {msg.role === 'user' ? studentName : 'Perleap'}
+                    {Array.isArray(feedback.conversation_context) && feedback.conversation_context.map((msg: any, idx: number) => {
+                      // Check if this message triggered any alerts
+                      const triggeredAlerts = alerts.flatMap(alert => 
+                        alert.triggered_messages.filter(tm => tm.message_index === idx)
+                      );
+                      const isConcerning = triggeredAlerts.length > 0;
+                      
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-lg relative ${
+                            isConcerning 
+                              ? 'bg-red-50 border-2 border-red-400 ml-8'
+                              : msg.role === 'user'
+                                ? 'bg-primary/10 ml-8'
+                                : 'bg-muted mr-8'
+                          }`}
+                        >
+                          {isConcerning && (
+                            <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
+                              <AlertTriangle className="h-4 w-4" />
+                            </div>
+                          )}
+                          <div className="font-semibold mb-1 text-sm flex items-center gap-2">
+                            {msg.role === 'user' ? studentName : 'Perleap'}
+                            {isConcerning && (
+                              <Badge variant="destructive" className="text-xs">
+                                Concerning
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap">
+                            {msg.content}
+                          </div>
+                          {isConcerning && triggeredAlerts.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-red-300 text-xs text-red-700">
+                              <strong>Why flagged:</strong> {triggeredAlerts[0].reason}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-sm whitespace-pre-wrap">
-                          {msg.content}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

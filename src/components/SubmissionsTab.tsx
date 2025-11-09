@@ -186,7 +186,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       );
       setStudents(uniqueStudents);
     } catch (error) {
-      console.error('Error fetching submissions:', error);
+      toast.error('Error loading submissions');
     } finally {
       setLoading(false);
     }

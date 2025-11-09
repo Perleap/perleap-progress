@@ -40,12 +40,5 @@ export const safeQuery = async <T>(
   }
 };
 
-/**
- * Log API errors for debugging
- */
-export const logApiError = (context: string, error: ApiError): void => {
-  console.error(`[API Error - ${context}]`, error);
-};
-
 export { supabase };
 

@@ -197,8 +197,8 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         }
       }
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-    } finally {
+      toast.error('Error loading analytics');
+    } finally{
       setLoading(false);
     }
   };

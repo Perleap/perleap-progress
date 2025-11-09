@@ -9,18 +9,42 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
   const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"teacher" | "student" | null>(null);
   const [activeTab, setActiveTab] = useState<string>("signin");
   const navigate = useNavigate();
+
+  // Check if user is already authenticated and redirect
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Check if there's a saved redirect path
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+        return;
+      }
+
+      // Otherwise, redirect to appropriate dashboard based on role
+      const userRole = user.user_metadata?.role;
+      if (userRole === 'teacher') {
+        navigate('/teacher/dashboard');
+      } else if (userRole === 'student') {
+        navigate('/student/dashboard');
+      }
+    }
+  }, [user, authLoading, navigate]);
 
   // Set the active tab based on the route
   useEffect(() => {
@@ -55,16 +79,19 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            role: role
-          }
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { role }
         }
       });
 
       if (error) throw error;
 
-      if (data.user) {
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        toast.success("Account created! Please check your email to confirm your account.", {
+          duration: 8000
+        });
+      } else if (data.user && data.session) {
         toast.success("Account created successfully!");
         navigate(`/onboarding/${role}`);
       }
@@ -118,35 +145,31 @@ const Auth = () => {
 
       if (error) throw error;
 
-      const userRole = data.user.user_metadata.role;
-      
-      if (userRole === 'teacher') {
-        const { data: profile } = await supabase
-          .from('teacher_profiles')
-          .select('id')
-          .eq('user_id', data.user.id)
-          .single();
-        
-        if (!profile) {
-          navigate('/onboarding/teacher');
-        } else {
-          navigate('/teacher/dashboard');
-        }
-      } else if (userRole === 'student') {
-        const { data: profile } = await supabase
-          .from('student_profiles')
-          .select('id')
-          .eq('user_id', data.user.id)
-          .single();
-        
-        if (!profile) {
-          navigate('/onboarding/student');
-        } else {
-          navigate('/student/dashboard');
-        }
+      toast.success("Signed in successfully!");
+
+      // Check for saved redirect path
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+        return;
       }
 
-      toast.success("Signed in successfully!");
+      // Redirect based on role and profile status
+      const userRole = data.user.user_metadata.role;
+      const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+      const dashboardPath = `/${userRole}/dashboard`;
+      const onboardingPath = `/onboarding/${userRole}`;
+      
+      if (userRole === 'teacher' || userRole === 'student') {
+        const { data: profile } = await supabase
+          .from(profileTable)
+          .select('id')
+          .eq('user_id', data.user.id)
+          .single();
+        
+        navigate(profile ? dashboardPath : onboardingPath);
+      }
     } catch (error: any) {
       toast.error(error.message || "Error signing in");
     } finally {

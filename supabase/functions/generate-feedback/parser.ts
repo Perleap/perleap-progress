@@ -11,10 +11,22 @@ interface ParsedFeedback {
 }
 
 /**
- * Clean feedback text (remove emojis and extra whitespace)
+ * Clean feedback text (remove emojis, framework terminology, and extra whitespace)
  */
 const cleanFeedbackText = (text: string): string => {
-  return text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+  let cleaned = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, ''); // Remove emojis
+  
+  // Remove references to Quantum Education Doctrine and Student Wave Function
+  cleaned = cleaned.replace(/Quantum Education Doctrine/gi, '');
+  cleaned = cleaned.replace(/Student Wave Function/gi, '');
+  cleaned = cleaned.replace(/\bSWF\b/g, ''); // Remove SWF acronym (whole word only)
+  
+  // Clean up any resulting double spaces or awkward punctuation
+  cleaned = cleaned.replace(/\s+/g, ' '); // Multiple spaces to single space
+  cleaned = cleaned.replace(/\s+([.,;:!?])/g, '$1'); // Remove space before punctuation
+  cleaned = cleaned.replace(/([.,;:!?])\s*([.,;:!?])/g, '$1$2'); // Remove duplicate punctuation
+  
+  return cleaned.trim();
 };
 
 /**

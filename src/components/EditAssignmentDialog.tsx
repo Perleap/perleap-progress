@@ -119,7 +119,6 @@ export function EditAssignmentDialog({
           }
         } catch (notifError) {
           // Don't fail the assignment update if notifications fail
-          console.error('Error creating assignment notifications:', notifError);
         }
       }
 
@@ -127,7 +126,6 @@ export function EditAssignmentDialog({
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      console.error("Error updating assignment:", error);
       toast.error("Failed to update assignment");
     } finally {
       setLoading(false);

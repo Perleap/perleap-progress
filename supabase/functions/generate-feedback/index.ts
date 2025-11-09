@@ -73,13 +73,27 @@ serve(async (req) => {
       feedbackPrompt,
       [{ role: 'user', content: conversationText }],
       0.4,
-      3000,
+      1200, // Reduced from 3000 to enforce shorter, more concise feedback
     );
 
     logInfo('Feedback generated, parsing...');
 
     // Parse feedback
-    const { studentFeedback, teacherFeedback } = parseFeedback(feedbackText);
+    let { studentFeedback, teacherFeedback } = parseFeedback(feedbackText);
+
+    // Additional safety clean: Remove any framework terminology that might have slipped through
+    const removeFrameworkTerms = (text: string): string => {
+      if (!text) return text;
+      let cleaned = text;
+      cleaned = cleaned.replace(/Quantum Education Doctrine/gi, '');
+      cleaned = cleaned.replace(/Student Wave Function/gi, '');
+      cleaned = cleaned.replace(/\bSWF\b/g, '');
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      return cleaned;
+    };
+
+    studentFeedback = removeFrameworkTerms(studentFeedback);
+    teacherFeedback = teacherFeedback ? removeFrameworkTerms(teacherFeedback) : null;
 
     logInfo(
       `Parsed feedback: student=${studentFeedback.length} chars, teacher=${teacherFeedback ? teacherFeedback.length : 0} chars`,
@@ -140,7 +154,108 @@ serve(async (req) => {
       throw feedbackError;
     }
 
-    logInfo('Feedback saved successfully');
+    // Analyze student wellbeing for concerning signs
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const wellbeingUrl = `${supabaseUrl}/functions/v1/analyze-student-wellbeing`;
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      
+      const wellbeingResponse = await fetch(wellbeingUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          studentName,
+          conversationMessages: conversation.messages,
+        }),
+      });
+
+      if (wellbeingResponse.ok) {
+        const wellbeingAnalysis = await wellbeingResponse.json();
+
+        // If concerns detected, save alerts and notify teacher
+        if (wellbeingAnalysis.alert_level !== 'none' && wellbeingAnalysis.alert_types.length > 0) {
+          logWarn('Wellbeing concerns detected', {
+            level: wellbeingAnalysis.alert_level,
+            types: wellbeingAnalysis.alert_types,
+          });
+
+          // Save alerts (one per alert type)
+          const alertInserts = wellbeingAnalysis.alert_types.map(alertType => ({
+            submission_id: submissionId,
+            student_id: studentId,
+            assignment_id: assignmentId,
+            alert_level: wellbeingAnalysis.alert_level,
+            alert_type: alertType,
+            triggered_messages: wellbeingAnalysis.triggered_messages,
+            ai_analysis: wellbeingAnalysis.analysis,
+          }));
+
+          const { error: alertError } = await supabase.from('student_alerts').insert(alertInserts);
+
+          if (alertError) {
+            logError('Error saving wellbeing alerts', alertError);
+          }
+
+          // Get assignment details for notifications and email
+          const { data: assignmentData } = await supabase
+            .from('assignments')
+            .select('title, classroom_id, classrooms(teacher_id)')
+            .eq('id', assignmentId)
+            .single();
+
+          if (assignmentData) {
+            const teacherId = assignmentData.classrooms?.teacher_id;
+            const assignmentTitle = assignmentData.title;
+
+            if (teacherId) {
+              // Create urgent notification for teacher
+              const notifTitle = wellbeingAnalysis.alert_level === 'critical'
+                ? '🚨 CRITICAL Student Wellbeing Alert'
+                : '⚠️ Student Wellbeing Alert';
+              
+              await supabase.from('notifications').insert({
+                user_id: teacherId,
+                type: `student_alert_${wellbeingAnalysis.alert_level}`,
+                title: notifTitle,
+                message: `${studentName} showed concerning signs in "${assignmentTitle}". Please review immediately.`,
+                link: `/teacher/submission/${submissionId}`,
+                metadata: {
+                  assignment_id: assignmentId,
+                  assignment_title: assignmentTitle,
+                  student_id: studentId,
+                  student_name: studentName,
+                  submission_id: submissionId,
+                  alert_level: wellbeingAnalysis.alert_level,
+                  alert_types: wellbeingAnalysis.alert_types,
+                },
+                is_read: false,
+              });
+
+              // Send email notification
+              try {
+                const { sendAlertEmail } = await import('../analyze-student-wellbeing/email.ts');
+                await sendAlertEmail(
+                  teacherId,
+                  studentName,
+                  assignmentTitle,
+                  wellbeingAnalysis.alert_level,
+                  wellbeingAnalysis.analysis,
+                  submissionId,
+                );
+              } catch (emailError) {
+                logError('Error sending alert email', emailError);
+              }
+            }
+          }
+        }
+      }
+    } catch (wellbeingError) {
+      // Don't fail feedback generation if wellbeing analysis fails
+      logError('Wellbeing analysis error', wellbeingError);
+    }
 
     // Create notifications for both student and teacher
     try {

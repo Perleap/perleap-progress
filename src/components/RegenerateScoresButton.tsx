@@ -66,13 +66,11 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
           });
 
           if (error) {
-            console.error('Error regenerating scores for submission:', submissionId, error);
             failCount++;
           } else {
             successCount++;
           }
         } catch (e) {
-          console.error('Error calling regenerate function:', e);
           failCount++;
         }
       }
@@ -86,7 +84,6 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         toast.error(`Failed to regenerate ${failCount} profiles`);
       }
     } catch (error) {
-      console.error('Error regenerating scores:', error);
       toast.error("Failed to regenerate scores");
     } finally {
       setLoading(false);

@@ -77,7 +77,6 @@ export function AssignmentChatInterface({
         await initializeConversation();
       }
     } catch (error) {
-      console.error('Error loading conversation:', error);
       toast.error('Error loading conversation');
     }
   };
@@ -103,7 +102,6 @@ export function AssignmentChatInterface({
       const aiMessage: Message = { role: 'assistant', content: data.message };
       setMessages([aiMessage]);
     } catch (error: any) {
-      console.error('Error initializing conversation:', error);
       toast.error('Error starting conversation');
     } finally {
       setLoading(false);
@@ -134,7 +132,6 @@ export function AssignmentChatInterface({
       const aiMessage: Message = { role: 'assistant', content: data.message };
       setMessages(prev => [...prev, aiMessage]);
     } catch (error: any) {
-      console.error('Error sending message:', error);
       toast.error('Error communicating with Perleap agent');
     } finally {
       setLoading(false);
@@ -157,7 +154,6 @@ export function AssignmentChatInterface({
       toast.success('Activity completed! Your feedback has been generated.');
       onComplete();
     } catch (error: any) {
-      console.error('Error completing activity:', error);
       toast.error('Error generating feedback');
     } finally {
       setCompleting(false);

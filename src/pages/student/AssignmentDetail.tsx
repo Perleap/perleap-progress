@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Calendar, FileText } from "lucide-react";
+import { ArrowLeft, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { AssignmentChatInterface } from "@/components/AssignmentChatInterface";
 
@@ -163,7 +163,6 @@ const AssignmentDetail = () => {
         }
       }
     } catch (error: any) {
-      console.error("Error loading assignment:", error);
       toast.error("Error loading assignment");
       navigate('/student/dashboard');
     } finally {
@@ -209,8 +208,7 @@ const AssignmentDetail = () => {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                  <CardTitle>
                     Assignment Details
                   </CardTitle>
                   <CardDescription className="flex items-center gap-2 mt-2">
@@ -256,7 +254,7 @@ const AssignmentDetail = () => {
           {feedback && (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-primary">🎉 Your Feedback</CardTitle>
+                <CardTitle className="text-primary">Your Feedback</CardTitle>
                 <CardDescription>
                   Completed on {new Date(feedback.created_at).toLocaleString()}
                 </CardDescription>
