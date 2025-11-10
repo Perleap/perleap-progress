@@ -9,11 +9,11 @@ export interface Message {
 }
 
 export interface FiveDScores {
-  cognitive: number;
-  emotional: number;
-  social: number;
-  creative: number;
-  behavioral: number;
+  vision: number;
+  values: number;
+  thinking: number;
+  connection: number;
+  action: number;
 }
 
 export interface OpenAIConfig {

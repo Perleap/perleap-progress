@@ -125,20 +125,20 @@ export const getUserSnapshots = async (
 export const calculateAverageScores = (snapshots: FiveDSnapshot[]): FiveDScores => {
   if (snapshots.length === 0) {
     return {
-      cognitive: DEFAULT_SCORE,
-      emotional: DEFAULT_SCORE,
-      social: DEFAULT_SCORE,
-      creative: DEFAULT_SCORE,
-      behavioral: DEFAULT_SCORE,
+      vision: DEFAULT_SCORE,
+      values: DEFAULT_SCORE,
+      thinking: DEFAULT_SCORE,
+      connection: DEFAULT_SCORE,
+      action: DEFAULT_SCORE,
     };
   }
 
   const totals = {
-    cognitive: 0,
-    emotional: 0,
-    social: 0,
-    creative: 0,
-    behavioral: 0,
+    vision: 0,
+    values: 0,
+    thinking: 0,
+    connection: 0,
+    action: 0,
   };
 
   snapshots.forEach((snapshot) => {

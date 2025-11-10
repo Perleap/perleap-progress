@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createNotification, getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
+import { StudentCalendar } from "@/components/StudentCalendar";
 
 interface Assignment {
   id: string;
@@ -37,8 +39,29 @@ interface Classroom {
   id: string;
   name: string;
   subject: string;
+  start_date?: string | null;
+  end_date?: string | null;
   classrooms: {
     invite_code: string;
+  };
+}
+
+interface CalendarClassroom {
+  id: string;
+  name: string;
+  subject: string;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+interface CalendarAssignment {
+  id: string;
+  title: string;
+  due_at: string;
+  type: string;
+  classrooms: {
+    name: string;
+    subject: string;
   };
 }
 
@@ -51,6 +74,7 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'recent' | 'latest' | 'due-date'>('due-date');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
@@ -80,10 +104,10 @@ const StudentDashboard = () => {
         setProfile(profileData);
       }
 
-      // Fetch enrollments and classrooms
+      // Fetch enrollments and classrooms with date ranges
       const { data: enrollments } = await supabase
         .from('enrollments')
-        .select('classroom_id, classrooms(id, name, subject, invite_code)')
+        .select('classroom_id, classrooms(id, name, subject, invite_code, start_date, end_date)')
         .eq('student_id', user?.id);
 
       if (enrollments && enrollments.length > 0) {
@@ -94,6 +118,8 @@ const StudentDashboard = () => {
           id: e.classroom_id,
           name: e.classrooms.name,
           subject: e.classrooms.subject,
+          start_date: e.classrooms.start_date,
+          end_date: e.classrooms.end_date,
           classrooms: {
             invite_code: e.classrooms.invite_code
           }
@@ -103,7 +129,7 @@ const StudentDashboard = () => {
         // Fetch assignments with teacher info
         const { data: assignmentsData } = await supabase
           .from('assignments')
-          .select('*, classrooms(name, teacher_id)')
+          .select('*, classrooms(name, subject, teacher_id)')
           .in('classroom_id', classroomIds)
           .eq('status', 'published')
           .order('due_at', { ascending: true });
@@ -260,6 +286,23 @@ const StudentDashboard = () => {
     }
   };
 
+  const getSortedAssignments = () => {
+    const sorted = [...assignments];
+    switch (sortBy) {
+      case 'recent':
+        // Newest received first (by created_at)
+        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      case 'oldest':
+        // Oldest received first (by created_at)
+        return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      case 'due-date':
+        // Earliest due date first
+        return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
+      default:
+        return sorted;
+    }
+  };
+
   const getInitials = () => {
     if (!profile.full_name) return 'S';
     const names = profile.full_name.split(' ');
@@ -268,6 +311,26 @@ const StudentDashboard = () => {
     }
     return names[0][0].toUpperCase();
   };
+
+  // Transform data for calendar component
+  const calendarClassrooms: CalendarClassroom[] = classrooms.map(c => ({
+    id: c.id,
+    name: c.name,
+    subject: c.subject,
+    start_date: c.start_date || null,
+    end_date: c.end_date || null,
+  }));
+
+  const calendarAssignments: CalendarAssignment[] = assignments.map(a => ({
+    id: a.id,
+    title: a.title,
+    due_at: a.due_at,
+    type: a.type,
+    classrooms: {
+      name: a.classrooms.name,
+      subject: a.classrooms.subject || '',
+    },
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -371,7 +434,8 @@ const StudentDashboard = () => {
       </header>
 
       <main className="container py-4 md:py-8 px-4">
-        <div className="space-y-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
             {/* My Classes Section */}
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -441,7 +505,21 @@ const StudentDashboard = () => {
 
             {/* Assignments Section */}
             <div>
-              <h2 className="text-xl md:text-2xl font-bold mb-4">My Assignments</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h2 className="text-xl md:text-2xl font-bold">My Assignments</h2>
+                {!loading && assignments.length > 0 && (
+                  <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="due-date">Due Date (Earliest)</SelectItem>
+                      <SelectItem value="recent">Recent (Newest)</SelectItem>
+                      <SelectItem value="oldest">Oldest (First Received)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : assignments.length === 0 ? (
@@ -454,7 +532,7 @@ const StudentDashboard = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {assignments.map((assignment) => {
+                  {getSortedAssignments().map((assignment) => {
                     const teacherInitials = assignment.classrooms.teacher_profiles?.full_name
                       ?.split(' ')
                       .map(n => n[0])
@@ -493,6 +571,19 @@ const StudentDashboard = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Calendar Sidebar */}
+          <div className="lg:col-span-1">
+            {user && (
+              <StudentCalendar 
+                studentId={user.id} 
+                assignments={calendarAssignments}
+                classrooms={calendarClassrooms}
+                loading={loading}
+              />
+            )}
+          </div>
         </div>
       </main>
     </div>

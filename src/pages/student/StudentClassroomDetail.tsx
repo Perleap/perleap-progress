@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, BookOpen, Calendar, FileText } from "lucide-react";
@@ -39,12 +40,13 @@ const StudentClassroomDetail = () => {
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'recent' | 'latest' | 'due-date'>('due-date');
   const [scores, setScores] = useState<{
-    cognitive: number;
-    emotional: number;
-    social: number;
-    creative: number;
-    behavioral: number;
+    vision: number;
+    values: number;
+    thinking: number;
+    connection: number;
+    action: number;
   } | null>(null);
 
   useEffect(() => {
@@ -106,6 +108,23 @@ const StudentClassroomDetail = () => {
       navigate('/student/dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getSortedAssignments = () => {
+    const sorted = [...assignments];
+    switch (sortBy) {
+      case 'recent':
+        // Newest received first (by created_at)
+        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      case 'oldest':
+        // Oldest received first (by created_at)
+        return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      case 'due-date':
+        // Earliest due date first
+        return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
+      default:
+        return sorted;
     }
   };
 
@@ -227,7 +246,23 @@ const StudentClassroomDetail = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  assignments.map((assignment) => (
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-sm font-medium text-muted-foreground">
+                        {assignments.length} {assignments.length === 1 ? 'Assignment' : 'Assignments'}
+                      </h3>
+                      <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="due-date">Due Date (Earliest)</SelectItem>
+                          <SelectItem value="recent">Recent (Newest)</SelectItem>
+                          <SelectItem value="oldest">Oldest (First Received)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {getSortedAssignments().map((assignment) => (
                     <Card 
                       key={assignment.id} 
                       className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -244,7 +279,8 @@ const StudentClassroomDetail = () => {
                         <p className="text-sm text-muted-foreground line-clamp-2">{assignment.instructions}</p>
                       </CardContent>
                     </Card>
-                  ))
+                  ))}
+                  </>
                 )}
               </TabsContent>
             </Tabs>

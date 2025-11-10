@@ -1,16 +1,14 @@
 /**
  * Regenerate Scores - OpenAI Integration
- * 
- * Required Environment Variables:
- * - OPENAI_API_KEY: Your OpenAI API key
- * - OPENAI_MODEL (optional): Model to use (default: gpt-4-turbo-preview)
- * - SUPABASE_URL: Supabase project URL
- * - SUPABASE_SERVICE_ROLE_KEY: Supabase service role key
+ * Refactored to use shared utilities and database prompts
  */
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { createSupabaseClient } from '../shared/supabase.ts';
+import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { generateScoresPrompt } from '../_shared/prompts.ts';
+import { logInfo, logError } from '../shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,11 +22,9 @@ serve(async (req) => {
 
   try {
     const { submissionId } = await req.json();
-    console.log('Regenerate scores request:', { submissionId });
+    logInfo('Regenerate scores request', { submissionId });
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createSupabaseClient();
 
     // Get conversation context - get the most recent one if multiple exist
     const { data: conversations, error: convError } = await supabase
@@ -39,104 +35,123 @@ serve(async (req) => {
       .limit(1);
 
     if (convError) {
-      console.error('Error fetching conversation:', convError);
+      logError('Error fetching conversation', convError);
       throw convError;
     }
 
     if (!conversations || conversations.length === 0) {
-      console.error('No conversation found for submission:', submissionId);
       throw new Error('No conversation found for this submission.');
     }
 
     const conversation = conversations[0];
+    const studentId = (conversation.submissions as any).student_id;
+
+    // Get classroom_id from the submission
+    const { data: submissionData } = await supabase
+      .from('submissions')
+      .select('assignment_id')
+      .eq('id', submissionId)
+      .single();
+
+    const { data: assignmentData } = await supabase
+      .from('assignments')
+      .select('classroom_id')
+      .eq('id', submissionData?.assignment_id)
+      .single();
+
+    const classroomId = assignmentData?.classroom_id;
 
     const conversationText = conversation.messages
       .map((msg: any) => `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`)
       .join('\n\n');
 
-    const activityPrompt = `You are analyzing a student's learning conversation to assess their 5D development across five dimensions.
-
-Analyze the conversation and rate them on a scale of 0-10 for each dimension:
-
-**Cognitive (White):** Analytical thinking, problem-solving, understanding of concepts, critical reasoning
-**Emotional (Red):** Self-awareness, emotional regulation, resilience, growth mindset
-**Social (Blue):** Communication skills, collaboration, perspective-taking, empathy
-**Creative (Yellow):** Innovation, original thinking, curiosity, exploration
-**Behavioral (Green):** Task completion, persistence, self-direction, responsibility
-
-Return ONLY a JSON object with scores (0-10):
-{"cognitive": X, "emotional": X, "social": X, "creative": X, "behavioral": X}`;
-
-    // Get OpenAI configuration
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured');
-    }
-
-    // Get model from environment or use default
-    const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') || 'gpt-4-turbo-preview';
-
+    // Generate scores prompt from database
+    const scoresPrompt = await generateScoresPrompt('the student');
+    
     // Call OpenAI for 5D scores analysis
-    const scoresResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: 'system', content: activityPrompt },
-          { role: 'user', content: conversationText }
-        ],
-        temperature: 0.5,
-        max_tokens: 500,
-      }),
-    });
+    const { content: scoresText } = await createChatCompletion(
+      scoresPrompt,
+      [{ role: 'user', content: conversationText }],
+      0.5,
+      500,
+    );
 
-    let scores = { cognitive: 5, emotional: 5, social: 5, creative: 5, behavioral: 5 };
-    if (scoresResponse.ok) {
-      const scoresData = await scoresResponse.json();
-      const scoresText = scoresData.choices[0].message.content;
-      console.log('Raw AI scores response:', scoresText);
-      
-      // Log token usage for monitoring
-      if (scoresData.usage) {
-        console.log('OpenAI token usage (scores):', scoresData.usage);
-      }
-      
-      try {
-        const parsed = JSON.parse(scoresText.replace(/```json\n?|\n?```/g, '').trim());
-        scores = parsed;
-        console.log('Parsed scores:', scores);
-      } catch (e) {
-        console.error('Failed to parse scores:', e, 'Raw text:', scoresText);
-      }
-    } else {
-      const errorText = await scoresResponse.text();
-      console.error('OpenAI API error (scores):', scoresResponse.status, errorText);
+    // Parse scores
+    let scores = { vision: 5, values: 5, thinking: 5, connection: 5, action: 5 };
+    try {
+      scores = JSON.parse(scoresText.replace(/```json\n?|\n?```/g, '').trim());
+    } catch (e) {
+      logError('Failed to parse scores', e);
     }
 
-    // Save 5D snapshot
+    // Generate explanations for scores
+    const explanationsPrompt = `You are an expert educator analyzing a student's learning conversation to provide actionable insights for their teacher.
+
+STUDENT CONVERSATION:
+${conversationText}
+
+SCORES ASSIGNED:
+- Vision: ${scores.vision}/10
+- Values: ${scores.values}/10  
+- Thinking: ${scores.thinking}/10
+- Connection: ${scores.connection}/10
+- Action: ${scores.action}/10
+
+For each dimension, write a specific explanation that:
+1. References concrete examples from the student's actual responses
+2. Explains what they did well or what they struggled with
+3. Provides actionable insight for the teacher
+
+Be specific - quote or paraphrase what the student said. Avoid generic statements.
+
+Return ONLY a JSON object with concise explanations (1-2 sentences each):
+{"vision": "...", "values": "...", "thinking": "...", "connection": "...", "action": "..."}`;
+
+    const { content: explanationsText } = await createChatCompletion(
+      explanationsPrompt,
+      [],
+      0.6,
+      500,
+    );
+
+    let scoreExplanations = null;
+    try {
+      scoreExplanations = JSON.parse(explanationsText.replace(/```json\n?|\n?```/g, '').trim());
+    } catch (e) {
+      logError('Failed to parse score explanations', e);
+    }
+
+    // Delete old snapshot for this submission if exists
+    await supabase
+      .from('five_d_snapshots')
+      .delete()
+      .eq('submission_id', submissionId);
+
+    // Save 5D snapshot with explanations
     const { error: snapshotError } = await supabase
       .from('five_d_snapshots')
       .insert({
-        user_id: (conversation.submissions as any).student_id,
+        user_id: studentId,
         scores,
-        source: 'assignment'
+        score_explanations: scoreExplanations,
+        source: 'assignment',
+        submission_id: submissionId,
+        classroom_id: classroomId,
       });
 
     if (snapshotError) {
-      console.error('Error saving snapshot:', snapshotError);
+      logError('Error saving snapshot', snapshotError);
       throw snapshotError;
     }
 
     return new Response(JSON.stringify({ scores }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
-    console.error('Error in regenerate-scores:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
+  } catch (error) {
+    const errorMessage = handleOpenAIError(error);
+    logError('Error in regenerate-scores', error);
+
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

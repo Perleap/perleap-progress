@@ -5,14 +5,14 @@
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../_shared/openai.ts';
+import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import {
   createSupabaseClient,
   getStudentName,
   getTeacherNameByAssignment,
-} from '../_shared/supabase.ts';
-import { logInfo, logError, logWarn } from '../_shared/logger.ts';
-import { generateFeedbackPrompt, generateScoresPrompt } from './prompts.ts';
+} from '../shared/supabase.ts';
+import { logInfo, logError, logWarn } from '../shared/logger.ts';
+import { generateFeedbackPrompt, generateScoresPrompt } from '../_shared/prompts.ts';
 import { parseFeedback, parseScores } from './parser.ts';
 
 const corsHeaders = {
@@ -27,15 +27,11 @@ serve(async (req) => {
 
   try {
     const { submissionId, studentId, assignmentId } = await req.json();
-    logInfo('Generate feedback request', { submissionId, studentId, assignmentId });
-
     const supabase = createSupabaseClient();
 
     // Fetch student and teacher names
     const studentName = await getStudentName(studentId);
     const teacherName = await getTeacherNameByAssignment(assignmentId);
-
-    logInfo(`Using names: student=${studentName}, teacher=${teacherName}`);
 
     // Get conversation context
     const { data: conversations, error: convError } = await supabase
@@ -52,7 +48,6 @@ serve(async (req) => {
     }
 
     const conversation = conversations[0];
-    logInfo(`Found conversation with ${conversation.messages?.length || 0} messages`);
 
     if (!conversation.messages || conversation.messages.length === 0) {
       throw new Error('No conversation messages found. Please chat with Perleap first.');
@@ -65,18 +60,14 @@ serve(async (req) => {
       )
       .join('\n\n');
 
-    logInfo(`Conversation text length: ${conversationText.length} characters`);
-
     // Generate feedback
-    const feedbackPrompt = generateFeedbackPrompt(studentName, teacherName);
+    const feedbackPrompt = await generateFeedbackPrompt(studentName, teacherName);
     const { content: feedbackText } = await createChatCompletion(
       feedbackPrompt,
       [{ role: 'user', content: conversationText }],
       0.4,
-      1200, // Reduced from 3000 to enforce shorter, more concise feedback
+      1200,
     );
-
-    logInfo('Feedback generated, parsing...');
 
     // Parse feedback
     let { studentFeedback, teacherFeedback } = parseFeedback(feedbackText);
@@ -95,16 +86,12 @@ serve(async (req) => {
     studentFeedback = removeFrameworkTerms(studentFeedback);
     teacherFeedback = teacherFeedback ? removeFrameworkTerms(teacherFeedback) : null;
 
-    logInfo(
-      `Parsed feedback: student=${studentFeedback.length} chars, teacher=${teacherFeedback ? teacherFeedback.length : 0} chars`,
-    );
-
     if (!teacherFeedback) {
       logWarn('Teacher feedback not found in response');
     }
 
     // Generate 5D scores
-    const scoresPrompt = generateScoresPrompt(studentName);
+    const scoresPrompt = await generateScoresPrompt(studentName);
     const { content: scoresText } = await createChatCompletion(
       scoresPrompt,
       [{ role: 'user', content: conversationText }],
@@ -113,21 +100,59 @@ serve(async (req) => {
     );
 
     const scores = parseScores(scoresText);
-    logInfo('5D scores generated', scores);
 
-    // Get classroom_id from the assignment
-    const { data: assignmentInfo } = await supabase
+    // Generate explanations for scores
+    const explanationsPrompt = `You are an expert educator analyzing a student's learning conversation to provide actionable insights for their teacher.
+
+STUDENT CONVERSATION:
+${conversationText}
+
+SCORES ASSIGNED:
+- Vision: ${scores.vision}/10
+- Values: ${scores.values}/10  
+- Thinking: ${scores.thinking}/10
+- Connection: ${scores.connection}/10
+- Action: ${scores.action}/10
+
+For each dimension, write a specific explanation that:
+1. References concrete examples from the student's actual responses
+2. Explains what they did well or what they struggled with
+3. Provides actionable insight for the teacher
+
+Be specific - quote or paraphrase what the student said. Avoid generic statements.
+
+Return ONLY a JSON object with concise explanations (1-2 sentences each):
+{"vision": "...", "values": "...", "thinking": "...", "connection": "...", "action": "..."}`;
+
+    const { content: explanationsText } = await createChatCompletion(
+      explanationsPrompt,
+      [],
+      0.6,
+      500,
+    );
+
+    let scoreExplanations = null;
+    try {
+      const cleaned = explanationsText.replace(/```json\n?|\n?```/g, '').trim();
+      scoreExplanations = JSON.parse(cleaned);
+    } catch (e) {
+      logWarn('Failed to parse score explanations', e);
+    }
+
+    // Get classroom_id and assignment details in one query
+    const { data: assignmentData } = await supabase
       .from('assignments')
-      .select('classroom_id')
+      .select('classroom_id, title, classrooms(teacher_id)')
       .eq('id', assignmentId)
       .single();
 
-    const classroomId = assignmentInfo?.classroom_id;
+    const classroomId = assignmentData?.classroom_id;
 
-    // Save 5D snapshot
+    // Save 5D snapshot with explanations
     const { error: snapshotError } = await supabase.from('five_d_snapshots').insert({
       user_id: studentId,
       scores,
+      score_explanations: scoreExplanations,
       source: 'assignment',
       submission_id: submissionId,
       classroom_id: classroomId,
@@ -135,8 +160,6 @@ serve(async (req) => {
 
     if (snapshotError) {
       logError('Error saving snapshot', snapshotError);
-    } else {
-      logInfo('5D snapshot saved successfully');
     }
 
     // Save feedback
@@ -199,13 +222,7 @@ serve(async (req) => {
             logError('Error saving wellbeing alerts', alertError);
           }
 
-          // Get assignment details for notifications and email
-          const { data: assignmentData } = await supabase
-            .from('assignments')
-            .select('title, classroom_id, classrooms(teacher_id)')
-            .eq('id', assignmentId)
-            .single();
-
+          // Use already fetched assignment data
           if (assignmentData) {
             const teacherId = assignmentData.classrooms?.teacher_id;
             const assignmentTitle = assignmentData.title;
@@ -259,13 +276,6 @@ serve(async (req) => {
 
     // Create notifications for both student and teacher
     try {
-      // Get assignment details
-      const { data: assignmentData } = await supabase
-        .from('assignments')
-        .select('title, classroom_id, classrooms(teacher_id)')
-        .eq('id', assignmentId)
-        .single();
-
       if (assignmentData) {
         const assignmentTitle = assignmentData.title;
         const teacherId = assignmentData.classrooms?.teacher_id;
@@ -303,8 +313,6 @@ serve(async (req) => {
             is_read: false,
           });
         }
-
-        logInfo('Notifications created for feedback');
       }
     } catch (notifError) {
       // Don't fail the feedback generation if notifications fail

@@ -48,6 +48,10 @@ interface Assignment {
   type: string;
   status: string;
   due_at: string;
+  assigned_student_id: string | null;
+  student_profiles?: {
+    full_name: string;
+  } | null;
 }
 
 interface EnrolledStudent {
@@ -114,7 +118,7 @@ const ClassroomDetail = () => {
     try {
       const { data, error } = await supabase
         .from('assignments')
-        .select('*')
+        .select('*, student_profiles:assigned_student_id(full_name)')
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
 
@@ -375,8 +379,15 @@ const ClassroomDetail = () => {
                   <Card key={assignment.id}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>{assignment.title}</CardTitle>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle>{assignment.title}</CardTitle>
+                            {assignment.assigned_student_id && (
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                For: {assignment.student_profiles?.full_name || 'Student'}
+                              </Badge>
+                            )}
+                          </div>
                           <CardDescription className="mt-2">
                             Type: {assignment.type.replace('_', ' ')} • 
                             {assignment.due_at && ` Due: ${new Date(assignment.due_at).toLocaleString()}`}

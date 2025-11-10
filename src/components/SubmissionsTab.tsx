@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,6 @@ interface Assignment {
 
 export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const [submissions, setSubmissions] = useState<SubmissionWithDetails[]>([]);
-  const [filteredSubmissions, setFilteredSubmissions] = useState<SubmissionWithDetails[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>("all");
@@ -48,11 +47,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     fetchSubmissions();
   }, [classroomId]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [submissions, selectedStudent, selectedAssignment, searchQuery]);
-
-  const applyFilters = () => {
+  // Memoize filtered submissions to avoid recalculating on every render
+  const filteredSubmissions = useMemo(() => {
     let filtered = [...submissions];
     
     if (selectedStudent !== "all") {
@@ -84,8 +80,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       });
     }
     
-    setFilteredSubmissions(filtered);
-  };
+    return filtered;
+  }, [submissions, selectedStudent, selectedAssignment, searchQuery]);
 
   const handleBulkExport = () => {
     if (submissions.length === 0) {
@@ -140,43 +136,54 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
         .in('assignment_id', assignmentIds)
         .order('submitted_at', { ascending: false });
 
-      if (!submissionsData) {
+      if (!submissionsData || submissionsData.length === 0) {
         setSubmissions([]);
         setLoading(false);
         return;
       }
 
-      // Fetch student names and assignment titles
-      const enrichedSubmissions: SubmissionWithDetails[] = [];
-      
-      for (const sub of submissionsData) {
-        const { data: student } = await supabase
-          .from('student_profiles')
-          .select('full_name')
-          .eq('user_id', sub.student_id)
-          .single();
+      // Bulk fetch all data to avoid N+1 queries
+      const submissionIds = submissionsData.map(s => s.id);
+      const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
 
-        const { data: assignment } = await supabase
-          .from('assignments')
-          .select('title')
-          .eq('id', sub.assignment_id)
-          .single();
+      // Fetch all student profiles in one query
+      const { data: studentProfiles } = await supabase
+        .from('student_profiles')
+        .select('user_id, full_name')
+        .in('user_id', studentIds);
 
-        const { data: feedback } = await supabase
-          .from('assignment_feedback')
-          .select('teacher_feedback, conversation_context')
-          .eq('submission_id', sub.id)
-          .maybeSingle();
+      // Fetch all feedback in one query
+      const { data: feedbackData } = await supabase
+        .from('assignment_feedback')
+        .select('submission_id, teacher_feedback, conversation_context')
+        .in('submission_id', submissionIds);
 
-        enrichedSubmissions.push({
+      // Create lookup maps for fast access
+      const studentMap = new Map(
+        studentProfiles?.map(s => [s.user_id, s.full_name]) || []
+      );
+
+      const assignmentMap = new Map(
+        assignData.map(a => [a.id, a.title])
+      );
+
+      const feedbackMap = new Map(
+        feedbackData?.map(f => [f.submission_id, f]) || []
+      );
+
+      // Enrich submissions with all data in memory
+      const enrichedSubmissions: SubmissionWithDetails[] = submissionsData.map(sub => {
+        const feedback = feedbackMap.get(sub.id);
+        
+        return {
           ...sub,
-          student_name: student?.full_name || 'Unknown',
-          assignment_title: assignment?.title || 'Unknown Assignment',
+          student_name: studentMap.get(sub.student_id) || 'Unknown',
+          assignment_title: assignmentMap.get(sub.assignment_id) || 'Unknown Assignment',
           has_feedback: !!feedback,
           teacher_feedback: feedback?.teacher_feedback || undefined,
           conversation_context: Array.isArray(feedback?.conversation_context) ? feedback.conversation_context : []
-        });
-      }
+        };
+      });
 
       setSubmissions(enrichedSubmissions);
 

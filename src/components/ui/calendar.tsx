@@ -11,15 +11,17 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      captionLayout="buttons"
       className={cn("p-6", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex justify-between items-center px-2 pb-4",
+        caption: "flex justify-center items-center relative px-2 pb-4",
         caption_label: "text-sm font-bold uppercase tracking-wider",
         nav: "flex items-center space-x-1",
         nav_button: cn(
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-background p-0 opacity-70 hover:opacity-100 border"
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
@@ -33,7 +35,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         ),
         day_range_end: "day-range-end",
         day_selected:
-          "bg-[#3b82f6] text-white hover:bg-[#3b82f6] hover:text-white focus:bg-[#3b82f6] focus:text-white rounded-full",
+          "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full",
         day_today: "bg-transparent text-foreground font-semibold",
         day_outside:
           "text-muted-foreground opacity-50",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { createBulkNotifications } from "@/lib/notificationService";
 
 interface CreateAssignmentDialogProps {
@@ -16,9 +17,24 @@ interface CreateAssignmentDialogProps {
   onOpenChange: (open: boolean) => void;
   classroomId: string;
   onSuccess: () => void;
+  initialData?: {
+    title?: string;
+    instructions?: string;
+    type?: string;
+    due_at?: string;
+    target_dimensions?: {
+      vision: boolean;
+      values: boolean;
+      thinking: boolean;
+      connection: boolean;
+      action: boolean;
+    };
+  };
+  assignedStudentId?: string;
+  studentName?: string;
 }
 
-export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSuccess }: CreateAssignmentDialogProps) {
+export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSuccess, initialData, assignedStudentId, studentName }: CreateAssignmentDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -27,14 +43,35 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
     due_at: "",
     status: "published",
     target_dimensions: {
-      cognitive: false,
-      emotional: false,
-      social: false,
-      creative: false,
-      behavioral: false,
+      vision: false,
+      values: false,
+      thinking: false,
+      connection: false,
+      action: false,
     },
     personalization_flag: false,
   });
+
+  // Update form data when initial data changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || "",
+        instructions: initialData.instructions || "",
+        type: initialData.type || "text_essay",
+        due_at: initialData.due_at || "",
+        status: "published",
+        target_dimensions: initialData.target_dimensions || {
+          vision: false,
+          values: false,
+          thinking: false,
+          connection: false,
+          action: false,
+        },
+        personalization_flag: false,
+      });
+    }
+  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,38 +89,57 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
           status: formData.status as any,
           target_dimensions: formData.target_dimensions as any,
           personalization_flag: formData.personalization_flag,
+          assigned_student_id: assignedStudentId || null,
         }])
         .select()
         .single();
 
       if (error) throw error;
 
-      // If assignment is published, notify all enrolled students
+      // If assignment is published, notify students
       if (assignment && formData.status === 'published') {
         try {
-          // Fetch all students enrolled in this classroom
-          const { data: enrollments, error: enrollError } = await supabase
-            .from('enrollments')
-            .select('student_id')
-            .eq('classroom_id', classroomId);
-
-          if (!enrollError && enrollments && enrollments.length > 0) {
-            // Create notifications for all enrolled students
-            const notifications = enrollments.map(enrollment => ({
-              userId: enrollment.student_id,
+          if (assignedStudentId) {
+            // Notify only the assigned student for student-specific assignments
+            await createBulkNotifications([{
+              userId: assignedStudentId,
               type: 'assignment_created' as const,
-              title: 'New Assignment Posted',
-              message: `${formData.title} has been assigned`,
+              title: 'New Personalized Assignment',
+              message: `A follow-up assignment "${formData.title}" has been created for you`,
               link: `/student/assignment/${assignment.id}`,
               metadata: {
                 assignment_id: assignment.id,
                 classroom_id: classroomId,
                 assignment_title: formData.title,
                 due_at: formData.due_at || null,
+                is_personalized: true,
               },
-            }));
+            }]);
+          } else {
+            // Fetch all students enrolled in this classroom for classroom-wide assignments
+            const { data: enrollments, error: enrollError } = await supabase
+              .from('enrollments')
+              .select('student_id')
+              .eq('classroom_id', classroomId);
 
-            await createBulkNotifications(notifications);
+            if (!enrollError && enrollments && enrollments.length > 0) {
+              // Create notifications for all enrolled students
+              const notifications = enrollments.map(enrollment => ({
+                userId: enrollment.student_id,
+                type: 'assignment_created' as const,
+                title: 'New Assignment Posted',
+                message: `${formData.title} has been assigned`,
+                link: `/student/assignment/${assignment.id}`,
+                metadata: {
+                  assignment_id: assignment.id,
+                  classroom_id: classroomId,
+                  assignment_title: formData.title,
+                  due_at: formData.due_at || null,
+                },
+              }));
+
+              await createBulkNotifications(notifications);
+            }
           }
         } catch (notifError) {
           // Don't fail the assignment creation if notifications fail
@@ -100,11 +156,11 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
         due_at: "",
         status: "published",
         target_dimensions: {
-          cognitive: false,
-          emotional: false,
-          social: false,
-          creative: false,
-          behavioral: false,
+          vision: false,
+          values: false,
+          thinking: false,
+          connection: false,
+          action: false,
         },
         personalization_flag: false,
       });
@@ -119,8 +175,23 @@ export function CreateAssignmentDialog({ open, onOpenChange, classroomId, onSucc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Assignment</DialogTitle>
-          <DialogDescription>Design a new assignment for your students</DialogDescription>
+          <div className="flex items-center gap-2">
+            <DialogTitle>
+              {assignedStudentId ? 'Create Personalized Assignment' : 'Create Assignment'}
+            </DialogTitle>
+            {initialData && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                AI Generated
+              </Badge>
+            )}
+          </div>
+          <DialogDescription>
+            {assignedStudentId 
+              ? `Creating a personalized follow-up assignment for ${studentName}`
+              : 'Design a new assignment for your students'
+            }
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

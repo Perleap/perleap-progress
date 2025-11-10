@@ -15,17 +15,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
+import { TeacherCalendar } from "@/components/TeacherCalendar";
 
 interface Classroom {
   id: string;
   name: string;
   subject: string;
   invite_code: string;
+  start_date?: string | null;
+  end_date?: string | null;
   _count?: { enrollments: number };
 }
 
+interface CalendarClassroom {
+  id: string;
+  name: string;
+  subject: string;
+  start_date: string | null;
+  end_date: string | null;
+}
+
 const TeacherDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,12 +50,15 @@ const TeacherDashboard = () => {
   });
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking user
+    if (authLoading) return;
+    
     if (!user) {
       navigate('/auth');
       return;
     }
     fetchClassrooms();
-  }, [user]);
+  }, [user, authLoading]);
 
   const fetchClassrooms = async () => {
     try {
@@ -61,7 +75,7 @@ const TeacherDashboard = () => {
 
       const { data, error } = await supabase
         .from('classrooms')
-        .select('*')
+        .select('id, name, subject, invite_code, start_date, end_date')
         .eq('teacher_id', user?.id);
 
       if (error) throw error;
@@ -93,6 +107,24 @@ const TeacherDashboard = () => {
     }
     return names[0][0].toUpperCase();
   };
+
+  // Transform data for calendar component
+  const calendarClassrooms: CalendarClassroom[] = classrooms.map(c => ({
+    id: c.id,
+    name: c.name,
+    subject: c.subject,
+    start_date: c.start_date || null,
+    end_date: c.end_date || null,
+  }));
+
+  // Show loading screen while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -196,8 +228,10 @@ const TeacherDashboard = () => {
       </header>
 
       <main className="container py-4 md:py-8 px-4">
-        <div className="mb-6 md:mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <div className="mb-6 md:mb-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">My Classrooms</h2>
               <p className="text-sm md:text-base text-muted-foreground">Manage your classes and track student progress</p>
@@ -240,6 +274,19 @@ const TeacherDashboard = () => {
               ))}
             </div>
           )}
+            </div>
+          </div>
+
+          {/* Calendar Sidebar */}
+          <div className="lg:col-span-1">
+            {user && (
+              <TeacherCalendar 
+                teacherId={user.id} 
+                classrooms={calendarClassrooms}
+                loading={loading}
+              />
+            )}
+          </div>
         </div>
       </main>
 

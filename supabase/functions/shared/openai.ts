@@ -51,11 +51,6 @@ export const createChatCompletion = async (
 
   const data = await response.json();
 
-  // Log token usage for monitoring
-  if (data.usage) {
-    console.log('OpenAI token usage:', data.usage);
-  }
-
   return {
     content: data.choices[0].message.content,
     usage: data.usage,
@@ -80,10 +75,8 @@ const parseOpenAIError = async (status: number, errorText: string): Promise<stri
  */
 export const handleOpenAIError = (error: unknown): string => {
   if (error instanceof Error) {
-    console.error('OpenAI Error:', error.message);
     return error.message;
   }
-  console.error('Unknown OpenAI Error:', error);
   return 'An unexpected error occurred with OpenAI';
 };
 

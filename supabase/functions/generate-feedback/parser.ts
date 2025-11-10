@@ -3,7 +3,7 @@
  * Parse AI-generated feedback into structured format
  */
 
-import { logWarn, logError } from '../_shared/logger.ts';
+import { logWarn, logError } from '../shared/logger.ts';
 
 interface ParsedFeedback {
   studentFeedback: string;
@@ -109,7 +109,7 @@ export const parseScores = (scoresText: string): Record<string, number> => {
     return JSON.parse(cleaned);
   } catch (error) {
     logError('Failed to parse scores', { scoresText, error });
-    return { cognitive: 5, emotional: 5, social: 5, creative: 5, behavioral: 5 };
+    return { vision: 5, values: 5, thinking: 5, connection: 5, action: 5 };
   }
 };
 

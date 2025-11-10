@@ -1,73 +1,136 @@
-# Welcome to your Lovable project
+# Perleap - Educational Platform
 
-## Project info
+An AI-powered educational platform based on the Quantum Education Doctrine, featuring personalized learning experiences and 5D student assessments.
 
-**URL**: https://lovable.dev/projects/83b89548-68c4-4e18-b1ad-d639d4c68f00
+## 📚 Documentation
 
-## How can I edit this code?
+All documentation is organized in the `docs/` folder:
 
-There are several ways of editing your application.
+1. **[Quick Start Guide](./docs/1-QUICK-START.md)** - Start here!
+2. **[Frontend Architecture](./docs/2-FRONTEND-ARCHITECTURE.md)** - How the code is organized
+3. **[Refactoring Summary](./docs/3-REFACTORING-SUMMARY.md)** - What was changed
+4. **[Implementation Complete](./docs/4-IMPLEMENTATION-COMPLETE.md)** - Detailed implementation guide
+5. **[Development Guide](./docs/5-DEVELOPMENT-GUIDE.md)** - How to add features
+6. **[Remaining Work](./docs/6-REMAINING-WORK.md)** - What still needs to be done
 
-**Use Lovable**
+## 🚀 Quick Start
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/83b89548-68c4-4e18-b1ad-d639d4c68f00) and start prompting.
+```bash
+# Install dependencies
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## 🏗️ Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+perleap-progress/
+├── src/
+│   ├── api/              # API client layer
+│   ├── config/           # Constants & routes
+│   ├── services/         # Business logic services
+│   ├── hooks/            # Custom React hooks
+│   ├── types/            # TypeScript definitions
+│   ├── components/       # UI components
+│   └── pages/            # Page components
+├── supabase/
+│   └── functions/        # Edge functions
+├── docs/                 # Documentation
+└── README.md             # This file
+```
 
-**Use GitHub Codespaces**
+## 🛠️ Tech Stack
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI**: Tailwind CSS + Shadcn/UI
+- **Backend**: Supabase (PostgreSQL + Auth + Edge Functions)
+- **AI**: OpenAI GPT-4 Turbo
+- **State**: React Query + Custom Hooks
 
-## What technologies are used for this project?
+## 📖 Key Features
 
-This project is built with:
+- **AI-Powered Conversations**: Interactive learning with OpenAI
+- **5D Student Assessment**: Multi-dimensional student evaluation
+- **Real-Time Feedback**: Instant personalized feedback for students and teachers
+- **Classroom Management**: Complete classroom and assignment management
+- **Analytics Dashboard**: Comprehensive student progress tracking
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔧 Development
 
-## How can I deploy this project?
+### Available Scripts
 
-Simply open [Lovable](https://lovable.dev/projects/83b89548-68c4-4e18-b1ad-d639d4c68f00) and click on Share -> Publish.
+```bash
+npm run dev        # Start development server
+npm run build      # Build for production
+npm run preview    # Preview production build
+npm run lint       # Run ESLint
+```
 
-## Can I connect a custom domain to my Lovable project?
+### Code Style
 
-Yes, you can!
+This project follows the Airbnb JavaScript/React Style Guide with:
+- TypeScript strict mode
+- 2-space indentation
+- 100 character line length
+- Comprehensive type definitions
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+See [Development Guide](./docs/5-DEVELOPMENT-GUIDE.md) for detailed coding standards.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📦 Deployment
+
+### Frontend (Vercel)
+
+```bash
+npm run build
+# Deploy to Vercel
+```
+
+### Edge Functions (Supabase)
+
+```bash
+supabase functions deploy perleap-chat
+supabase functions deploy generate-feedback
+```
+
+## 🔐 Environment Variables
+
+Required environment variables:
+
+```env
+# Supabase
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Edge Functions (set in Supabase dashboard)
+OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=gpt-4-turbo-preview (optional)
+```
+
+## 🧪 Testing (Future)
+
+```bash
+npm run test        # Run unit tests
+npm run test:e2e    # Run end-to-end tests
+npm run test:cover  # Run with coverage
+```
+
+## 📄 License
+
+Proprietary - All rights reserved
+
+## 👥 Team
+
+Perleap Development Team
+
+## 📞 Support
+
+For questions or issues, please refer to the documentation in the `docs/` folder.
+
+---
+
+**Note**: This project has been refactored from MVP to production-ready code. See [Refactoring Summary](./docs/3-REFACTORING-SUMMARY.md) for details.

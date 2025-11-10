@@ -5,9 +5,9 @@
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../_shared/openai.ts';
-import { logInfo, logError } from '../_shared/logger.ts';
-import { generateWellbeingAnalysisPrompt } from './prompts.ts';
+import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { logInfo, logError } from '../shared/logger.ts';
+import { generateWellbeingAnalysisPrompt } from '../_shared/prompts.ts';
 import type { WellbeingAnalysisResult, Message } from './types.ts';
 
 const corsHeaders = {
@@ -63,7 +63,7 @@ serve(async (req) => {
       .join('\n\n');
 
     // Generate analysis prompt
-    const systemPrompt = generateWellbeingAnalysisPrompt(studentName);
+    const systemPrompt = await generateWellbeingAnalysisPrompt(studentName);
 
     // Call OpenAI with temperature set for consistent, focused analysis
     const { content: responseText } = await createChatCompletion(

@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, MessageSquare, AlertTriangle } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { WellbeingAlertCard } from "@/components/WellbeingAlertCard";
+import { StudentAnalytics } from "@/components/StudentAnalytics";
+import { CreateAssignmentDialog } from "@/components/CreateAssignmentDialog";
 import type { StudentAlert } from "@/types/alerts";
 
 interface Submission {
@@ -39,6 +41,9 @@ const SubmissionDetail = () => {
   const [studentName, setStudentName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<StudentAlert[]>([]);
+  const [generatingAssignment, setGeneratingAssignment] = useState(false);
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [generatedAssignmentData, setGeneratedAssignmentData] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
@@ -53,7 +58,7 @@ const SubmissionDetail = () => {
       // Fetch submission with assignment info
       const { data: submissionData, error: subError } = await supabase
         .from('submissions')
-        .select('*, assignments(title, classroom_id, classrooms(name, teacher_id))')
+        .select('*, assignments(title, classroom_id, due_at, classrooms(name, teacher_id))')
         .eq('id', id)
         .single();
 
@@ -112,6 +117,56 @@ const SubmissionDetail = () => {
     }
   };
 
+  const handleGenerateFollowupAssignment = async () => {
+    if (!feedback || !submission) return;
+
+    setGeneratingAssignment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-followup-assignment', {
+        body: {
+          teacherFeedback: feedback.teacher_feedback,
+          studentFeedback: feedback.student_feedback,
+          conversationContext: feedback.conversation_context,
+          originalAssignmentTitle: (submission.assignments as any).title,
+          studentName: studentName,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Calculate default due date: 1 week after original assignment due date
+      let defaultDueDate = '';
+      const originalDueDate = (submission.assignments as any).due_at;
+      if (originalDueDate) {
+        const oneWeekLater = new Date(originalDueDate);
+        oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+        // Format for datetime-local input: YYYY-MM-DDTHH:MM
+        defaultDueDate = oneWeekLater.toISOString().slice(0, 16);
+      }
+
+      // Store the generated data and open the dialog
+      setGeneratedAssignmentData({
+        title: data.title,
+        instructions: data.instructions,
+        type: data.type,
+        target_dimensions: data.target_dimensions,
+        due_at: defaultDueDate,
+      });
+      setAssignmentDialogOpen(true);
+      
+      toast.success("AI-generated assignment ready for review!");
+    } catch (error: any) {
+      console.error('Error generating follow-up assignment:', error);
+      toast.error(error.message || "Failed to generate assignment. Please try again.");
+    } finally {
+      setGeneratingAssignment(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -156,10 +211,31 @@ const SubmissionDetail = () => {
             <>
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-primary">Pedagogical Insights for You</CardTitle>
-                  <CardDescription>
-                    AI-generated analysis and recommendations based on {studentName}'s learning conversation
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-primary">Pedagogical Insights for You</CardTitle>
+                      <CardDescription>
+                        AI-generated analysis and recommendations based on {studentName}'s learning conversation
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      onClick={handleGenerateFollowupAssignment}
+                      disabled={generatingAssignment}
+                      className="flex items-center gap-2"
+                    >
+                      {generatingAssignment ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Generate Follow-up Assignment
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none">
@@ -187,6 +263,12 @@ const SubmissionDetail = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              <StudentAnalytics 
+                studentId={submission.student_id}
+                classroomId={(submission.assignments as any).classroom_id}
+                currentSubmissionId={submission.id}
+              />
 
               <Card>
                 <CardHeader>
@@ -266,6 +348,22 @@ const SubmissionDetail = () => {
           )}
         </div>
       </main>
+
+      {submission && (
+        <CreateAssignmentDialog
+          open={assignmentDialogOpen}
+          onOpenChange={setAssignmentDialogOpen}
+          classroomId={(submission.assignments as any).classroom_id}
+          onSuccess={() => {
+            toast.success("Follow-up assignment created successfully!");
+            setAssignmentDialogOpen(false);
+            setGeneratedAssignmentData(null);
+          }}
+          initialData={generatedAssignmentData}
+          assignedStudentId={submission.student_id}
+          studentName={studentName}
+        />
+      )}
     </div>
   );
 };

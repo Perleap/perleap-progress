@@ -16,11 +16,11 @@ interface Assignment {
   due_at: string;
   type: string;
   target_dimensions: {
-    cognitive: boolean;
-    emotional: boolean;
-    social: boolean;
-    creative: boolean;
-    behavioral: boolean;
+    vision: boolean;
+    values: boolean;
+    thinking: boolean;
+    connection: boolean;
+    action: boolean;
   };
   classrooms: {
     name: string;

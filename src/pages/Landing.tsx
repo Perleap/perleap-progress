@@ -166,7 +166,7 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-semibold mb-3">5D Growth Tracking</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Monitor development across Cognitive, Emotional, Social, Creative, and Behavioral dimensions with precision.
+                Monitor soft skills development across Vision, Values, Thinking, Connection, and Action dimensions with precision.
               </p>
             </div>
 

@@ -1,60 +1,29 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadarChart } from "./RadarChart";
+import type { FiveDScores } from "@/types/models";
 
 interface FiveDChartProps {
-  scores: {
-    cognitive: number;
-    emotional: number;
-    social: number;
-    creative: number;
-    behavioral: number;
-  };
+  scores: FiveDScores;
+  explanations?: Partial<Record<keyof FiveDScores, string>> | null;
   showLabels?: boolean;
 }
 
-const dimensions = [
-  { key: 'cognitive', label: 'Cognitive', color: 'bg-dimension-cognitive', description: 'Critical thinking & problem solving' },
-  { key: 'emotional', label: 'Emotional', color: 'bg-dimension-emotional', description: 'Self-awareness & empathy' },
-  { key: 'social', label: 'Social', color: 'bg-dimension-social', description: 'Collaboration & communication' },
-  { key: 'creative', label: 'Creative', color: 'bg-dimension-creative', description: 'Innovation & expression' },
-  { key: 'behavioral', label: 'Behavioral', color: 'bg-dimension-behavioral', description: 'Discipline & persistence' }
-] as const;
-
-export const FiveDChart = ({ scores, showLabels = true }: FiveDChartProps) => {
-  return (
-    <div className="space-y-4">
-      {dimensions.map(({ key, label, color, description }) => (
-        <div key={key} className="space-y-2">
-          {showLabels && (
-            <div className="flex justify-between items-baseline">
-              <div>
-                <span className="text-sm font-medium">{label}</span>
-                <p className="text-xs text-muted-foreground">{description}</p>
-              </div>
-              <span className="text-sm font-bold">{scores[key].toFixed(1)}/10</span>
-            </div>
-          )}
-          <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
-            <div
-              className={`h-full ${color} transition-all duration-500 ease-out rounded-full`}
-              style={{ width: `${(scores[key] / 10) * 100}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+export const FiveDChart = ({ scores, explanations, showLabels = true }: FiveDChartProps) => {
+  return <RadarChart scores={scores} explanations={explanations} showLabels={showLabels} />;
 };
 
-export const FiveDChartCard = ({ scores, title = "5D Growth Profile" }: FiveDChartProps & { title?: string }) => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>Track development across five key dimensions</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FiveDChart scores={scores} />
-      </CardContent>
-    </Card>
-  );
-};
+export const FiveDChartCard = ({ 
+  scores, 
+  explanations, 
+  title = "5D Soft Skills Profile" 
+}: FiveDChartProps & { title?: string }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>{title}</CardTitle>
+      <CardDescription>Track soft skills development across five key dimensions</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <FiveDChart scores={scores} explanations={explanations} />
+    </CardContent>
+  </Card>
+);

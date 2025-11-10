@@ -38,39 +38,39 @@ export const SNAPSHOT_SOURCES = {
 
 // 5D Learning Dimensions
 export const LEARNING_DIMENSIONS = {
-  COGNITIVE: 'cognitive',
-  EMOTIONAL: 'emotional',
-  SOCIAL: 'social',
-  CREATIVE: 'creative',
-  BEHAVIORAL: 'behavioral',
+  VISION: 'vision',
+  VALUES: 'values',
+  THINKING: 'thinking',
+  CONNECTION: 'connection',
+  ACTION: 'action',
 } as const;
 
 // Dimension Labels and Descriptions
 export const DIMENSION_CONFIG = {
-  cognitive: {
-    label: 'Cognitive (White)',
-    description: 'Analytical thinking, problem-solving, understanding of concepts',
-    color: '#FFFFFF',
+  vision: {
+    label: 'Vision',
+    description: 'Imagining new possibilities and bold ideas; creative, adaptive thinking',
+    color: '#8B5CF6',
   },
-  emotional: {
-    label: 'Emotional (Red)',
-    description: 'Self-awareness, emotional regulation, resilience, growth mindset',
+  values: {
+    label: 'Values',
+    description: 'Guided by ethics and integrity; building trust and understanding limits',
     color: '#EF4444',
   },
-  social: {
-    label: 'Social (Blue)',
-    description: 'Communication skills, collaboration, perspective-taking, empathy',
+  thinking: {
+    label: 'Thinking',
+    description: 'Strong analysis, deep insight, and sound judgment; critical and analytical skills',
     color: '#3B82F6',
   },
-  creative: {
-    label: 'Creative (Yellow)',
-    description: 'Innovation, original thinking, curiosity, exploration',
-    color: '#EAB308',
+  connection: {
+    label: 'Connection',
+    description: 'Empathy, clear communication, and effective collaboration',
+    color: '#10B981',
   },
-  behavioral: {
-    label: 'Behavioral (Green)',
-    description: 'Task completion, persistence, self-direction, responsibility',
-    color: '#22C55E',
+  action: {
+    label: 'Action',
+    description: 'Turning plans into results with focus, determination, and practical skills',
+    color: '#F59E0B',
   },
 } as const;
 

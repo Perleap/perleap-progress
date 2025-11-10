@@ -43,7 +43,6 @@ export const getTeacherNameByAssignment = async (
     .single();
 
   if (assignmentError || !assignmentData) {
-    console.error('Error fetching assignment:', assignmentError);
     return 'your teacher';
   }
 

@@ -228,15 +228,6 @@ export const MyComponent = ({ prop1, prop2 }: MyComponentProps) => {
 };
 ```
 
-## Testing Strategy
-
-(To be implemented)
-
-- Unit tests for services
-- Integration tests for hooks
-- Component tests with React Testing Library
-- E2E tests with Playwright
-
 ## Performance
 
 - React.memo for expensive components

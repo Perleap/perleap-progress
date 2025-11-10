@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,56 +38,27 @@ export function AssignmentChatInterface({
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
 
-  useEffect(() => {
-    // Reset initialization flag when submissionId changes
-    hasInitialized.current = false;
-    
-    // Prevent double initialization from React Strict Mode
-    const initializeConversation = async () => {
-      if (!hasInitialized.current) {
-        hasInitialized.current = true;
-        await loadConversation();
-      }
-    };
-    
-    initializeConversation();
-  }, [submissionId]);
-
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, []);
 
-  const loadConversation = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('assignment_conversations')
-        .select('messages')
-        .eq('submission_id', submissionId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-        // Load existing conversation from database
-        setMessages(data.messages as unknown as Message[]);
-      } else {
-        // No conversation exists, generate initial AI greeting
-        await initializeConversation();
-      }
-    } catch (error) {
-      toast.error('Error loading conversation');
-    }
-  };
-
-  const initializeConversation = async () => {
+  const generateInitialGreeting = useCallback(async () => {
     setLoading(true);
     try {
-      // Request an initial greeting from the AI without a user message
+      const { data: promptData, error: promptError } = await supabase
+        .from('ai_prompts')
+        .select('prompt_template')
+        .eq('prompt_key', 'chat_initial_greeting')
+        .eq('is_active', true)
+        .single();
+
+      if (promptError) throw promptError;
+
       const { data, error } = await supabase.functions.invoke('perleap-chat', {
         body: {
-          message: "[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]",
+          message: promptData.prompt_template,
           assignmentInstructions,
           submissionId,
           studentId: user!.id,
@@ -98,22 +69,55 @@ export function AssignmentChatInterface({
 
       if (error) throw error;
 
-      // Only add the AI greeting, no user message
-      const aiMessage: Message = { role: 'assistant', content: data.message };
-      setMessages([aiMessage]);
-    } catch (error: any) {
+      setMessages([{ role: 'assistant', content: data.message }]);
+    } catch {
       toast.error('Error starting conversation');
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignmentId, assignmentInstructions, submissionId, user]);
 
-  const sendMessage = async (messageText: string = input, isInit = false) => {
-    if (!messageText.trim() && !isInit) return;
+  const loadConversation = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assignment_conversations')
+        .select('messages')
+        .eq('submission_id', submissionId)
+        .maybeSingle();
 
-    const userMessage: Message = { role: 'user', content: messageText };
-    setMessages(prev => [...prev, userMessage]);
-    if (!isInit) setInput("");
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+        setMessages(data.messages as unknown as Message[]);
+      } else {
+        await generateInitialGreeting();
+      }
+    } catch {
+      toast.error('Error loading conversation');
+    }
+  }, [submissionId, generateInitialGreeting]);
+
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      loadConversation();
+    }
+
+    return () => {
+      hasInitialized.current = false;
+    };
+  }, [submissionId, loadConversation]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  const sendMessage = async () => {
+    const messageText = input.trim();
+    if (!messageText) return;
+
+    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
+    setInput("");
     setLoading(true);
 
     try {
@@ -129,9 +133,8 @@ export function AssignmentChatInterface({
 
       if (error) throw error;
 
-      const aiMessage: Message = { role: 'assistant', content: data.message };
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error: any) {
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+    } catch {
       toast.error('Error communicating with Perleap agent');
     } finally {
       setLoading(false);
@@ -141,7 +144,7 @@ export function AssignmentChatInterface({
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-feedback', {
+      const { error } = await supabase.functions.invoke('generate-feedback', {
         body: {
           submissionId,
           studentId: user!.id,
@@ -153,12 +156,15 @@ export function AssignmentChatInterface({
 
       toast.success('Activity completed! Your feedback has been generated.');
       onComplete();
-    } catch (error: any) {
+    } catch {
       toast.error('Error generating feedback');
     } finally {
       setCompleting(false);
     }
   };
+
+  const isDisabled = loading || completing;
+  const canComplete = messages.length >= 2 && !completing;
 
   return (
     <Card>
@@ -168,22 +174,23 @@ export function AssignmentChatInterface({
       <CardContent className="space-y-4">
         <ScrollArea className="h-[400px] pr-4" ref={scrollRef}>
           <div className="space-y-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+            {messages.map((message, index) => {
+              const isUser = message.role === 'user';
+              return (
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
+                  key={index}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div
+                    className={`max-w-[80%] rounded-lg p-3 ${
+                      isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg p-3">
@@ -194,22 +201,36 @@ export function AssignmentChatInterface({
           </div>
         </ScrollArea>
 
-        <div className="flex gap-2">
-          <Input
+        <div className="flex gap-2 items-end">
+          <Textarea
             placeholder="Type your message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !loading && sendMessage()}
-            disabled={loading || completing}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isDisabled && input.trim()) {
+                  sendMessage();
+                }
+              }
+            }}
+            disabled={isDisabled}
+            className="min-h-[60px] max-h-[200px] resize-none"
+            rows={2}
           />
-          <Button onClick={() => sendMessage()} disabled={loading || completing || !input.trim()}>
+          <Button 
+            onClick={sendMessage} 
+            disabled={isDisabled || !input.trim()} 
+            size="icon" 
+            className="h-10 w-10 shrink-0"
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
 
         <Button 
           onClick={handleComplete} 
-          disabled={completing || messages.length < 2} 
+          disabled={!canComplete} 
           className="w-full"
           variant="secondary"
         >

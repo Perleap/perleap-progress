@@ -13,11 +13,11 @@ interface StudentData {
   id: string;
   fullName: string;
   latestScores: {
-    cognitive: number;
-    emotional: number;
-    social: number;
-    creative: number;
-    behavioral: number;
+    vision: number;
+    values: number;
+    thinking: number;
+    connection: number;
+    action: number;
   } | null;
   feedbackCount: number;
 }
@@ -42,11 +42,11 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   const [selectedAssignment, setSelectedAssignment] = useState<string>("all");
   const [selectedStudent, setSelectedStudent] = useState<string>("all");
   const [classAverage, setClassAverage] = useState<{
-    cognitive: number;
-    emotional: number;
-    social: number;
-    creative: number;
-    behavioral: number;
+    vision: number;
+    values: number;
+    thinking: number;
+    connection: number;
+    action: number;
   } | null>(null);
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               .neq('source', 'onboarding');
 
             if (snapshots && snapshots.length > 0) {
-              const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+              const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
               snapshots.forEach(snapshot => {
                 const scores = snapshot.scores as any;
                 Object.keys(totals).forEach(key => {
@@ -136,7 +136,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
             .order('created_at', { ascending: false });
 
           if (allScoresData && allScoresData.length > 0) {
-            const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+            const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
             allScoresData.forEach(snapshot => {
               const scores = snapshot.scores as any;
               Object.keys(totals).forEach(key => {
@@ -179,7 +179,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
       } else {
         const validScores = processedStudents.filter(s => s.latestScores);
         if (validScores.length > 0) {
-          const totals = { cognitive: 0, emotional: 0, social: 0, creative: 0, behavioral: 0 };
+          const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
           validScores.forEach(s => {
             if (s.latestScores) {
               Object.keys(totals).forEach(key => {
@@ -260,29 +260,30 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base md:text-lg">
-              {selectedStudent === "all" ? "Class Average - 5D Profile" : `${allStudents.find(s => s.id === selectedStudent)?.name} - 5D Profile`}
+              {selectedStudent === "all" ? "Class Average - 5D Soft Skills Profile" : `${allStudents.find(s => s.id === selectedStudent)?.name} - 5D Soft Skills Profile`}
             </CardTitle>
             <CardDescription className="text-sm">
               {selectedStudent === "all" 
-                ? "Average scores across all students with data"
-                : "Individual student performance profile"}
+                ? "Average soft skills scores across all students with data"
+                : "Individual student soft skills performance profile"}
             </CardDescription>
           </CardHeader>
-          <CardContent><FiveDChart scores={classAverage} /></CardContent>
+          <CardContent><FiveDChart scores={classAverage} explanations={null} /></CardContent>
         </Card>
       )}
 
-      <Card><CardHeader><CardTitle className="text-base md:text-lg">Student Profiles</CardTitle><CardDescription className="text-sm">Individual student progress and feedback analytics</CardDescription></CardHeader>
-        <CardContent><div className="grid gap-4">
-          {students.filter(s => s.latestScores).map(s => (
-            <Card key={s.id}><CardHeader><div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"><CardTitle className="text-base md:text-lg">{s.fullName}</CardTitle>
-              <Badge variant="secondary" className="text-xs">{s.feedbackCount} submissions</Badge></div></CardHeader>
-              <CardContent><FiveDChart scores={s.latestScores!} /></CardContent></Card>
-          ))}
-          {students.filter(s => s.latestScores).length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">No student progress data yet. Students will appear here after completing assignments.</p>
-          )}
-        </div></CardContent></Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base md:text-lg">Class Insights</CardTitle>
+          <CardDescription className="text-sm">AI-generated insights about class performance</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="mb-2">📊 Coming Soon</p>
+            <p className="text-sm">AI-powered analysis of your class's soft skills development trends and recommendations will appear here.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

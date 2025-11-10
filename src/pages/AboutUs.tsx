@@ -80,7 +80,7 @@ const AboutUs = () => {
                   Founded by educators and technologists who experienced these challenges firsthand, we set out to create a platform that would give teachers their time back while enhancing the quality of feedback and insights they could provide to each student.
                 </p>
                 <p>
-                  Our innovative 5D Growth Tracking system—monitoring Cognitive, Emotional, Social, Creative, and Behavioral development—ensures that we're not just measuring academic performance, but nurturing the whole student. Combined with AI-powered analytics and personalized learning paths, PerLeap is transforming classrooms into dynamic, adaptive learning environments.
+                  Our innovative 5D Soft Skills Tracking system—monitoring Vision, Values, Thinking, Connection, and Action—ensures that we're not just measuring academic performance, but nurturing the whole student. Combined with AI-powered analytics and personalized learning paths, PerLeap is transforming classrooms into dynamic, adaptive learning environments.
                 </p>
                 <p>
                   Today, we're proud to partner with thousands of educators and empower tens of thousands of students around the world. But we're just getting started.

@@ -60,11 +60,11 @@ export interface Assignment {
 }
 
 export interface TargetDimensions {
-  cognitive: boolean;
-  emotional: boolean;
-  social: boolean;
-  creative: boolean;
-  behavioral: boolean;
+  vision: boolean;
+  values: boolean;
+  thinking: boolean;
+  connection: boolean;
+  action: boolean;
 }
 
 export interface Submission {
@@ -106,11 +106,11 @@ export interface AssignmentConversation {
 }
 
 export interface FiveDScores {
-  cognitive: number;
-  emotional: number;
-  social: number;
-  creative: number;
-  behavioral: number;
+  vision: number;
+  values: number;
+  thinking: number;
+  connection: number;
+  action: number;
 }
 
 export interface FiveDSnapshot {
@@ -120,6 +120,13 @@ export interface FiveDSnapshot {
   source: 'onboarding' | 'assignment';
   submission_id: string | null;
   classroom_id: string | null;
+  score_explanations?: {
+    vision?: string;
+    values?: string;
+    thinking?: string;
+    connection?: string;
+    action?: string;
+  } | null;
   created_at: string;
 }
 
