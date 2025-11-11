@@ -100,13 +100,13 @@ const StudentClassroomDetail = () => {
       setAssignments(assignmentsData || []);
 
       // Student analytics removed - only for teachers
-      hasFetchedRef.current = true; // Mark as fetched
     } catch (error) {
       toast.error(t('studentClassroom.errors.loading'));
       navigate('/student/dashboard');
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
+      hasFetchedRef.current = true;
     }
   };
 

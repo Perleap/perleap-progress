@@ -16,7 +16,7 @@ const promptCache = new Map<string, PromptCacheEntry>();
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const sanitizeValue = (value: string | undefined | null) => {
+const sanitizeValue = (value: string | number | boolean | undefined | null) => {
   if (value === undefined || value === null) {
     return '';
   }
@@ -57,7 +57,7 @@ export const getPromptTemplate = async (
   // Try to get the prompt in the requested language (get latest version if multiple exist)
   let { data, error } = await supabase
     .from('ai_prompts')
-    .select('content')
+    .select('prompt_template')
     .eq('prompt_key', promptKey)
     .eq('language', language)
     .eq('is_active', true)
@@ -67,11 +67,11 @@ export const getPromptTemplate = async (
     .maybeSingle();
   
   // If not found in requested language, fallback to English
-  if (!data?.content && language !== 'en') {
+  if (!data?.prompt_template && language !== 'en') {
     logWarn(`Prompt "${promptKey}" not found in language "${language}", falling back to English`);
     const result = await supabase
       .from('ai_prompts')
-      .select('content')
+      .select('prompt_template')
       .eq('prompt_key', promptKey)
       .eq('language', 'en')
       .eq('is_active', true)
@@ -88,12 +88,12 @@ export const getPromptTemplate = async (
     logWarn(`Failed to fetch prompt "${promptKey}" from database`, error);
   }
 
-  if (data?.content) {
+  if (data?.prompt_template) {
     promptCache.set(cacheKey, {
-      content: data.content,
+      content: data.prompt_template,
       expiresAt: now + PROMPT_CACHE_TTL_MS,
     });
-    return data.content;
+    return data.prompt_template;
   }
 
   if (fallback) {
