@@ -95,4 +95,3 @@ export const useStudentAssignments = (): UseAssignmentsResult => {
     refetch: fetchAssignments,
   };
 };
-

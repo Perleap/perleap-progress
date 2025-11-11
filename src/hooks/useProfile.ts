@@ -53,10 +53,7 @@ export const useProfile = (role: 'teacher' | 'student'): UseProfileResult => {
     fetchProfile();
   }, [user?.id, role]);
 
-  const initials = getInitials(
-    profile?.first_name,
-    profile?.last_name,
-  );
+  const initials = getInitials(profile?.first_name, profile?.last_name);
 
   return {
     profile,
@@ -66,4 +63,3 @@ export const useProfile = (role: 'teacher' | 'student'): UseProfileResult => {
     refetch: fetchProfile,
   };
 };
-

@@ -1,5 +1,5 @@
-import { useLocation } from "react-router-dom";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useLocation } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NotFound = () => {
   const location = useLocation();

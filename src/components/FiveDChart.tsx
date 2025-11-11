@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadarChart } from "./RadarChart";
-import type { FiveDScores } from "@/types/models";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadarChart } from './RadarChart';
+import type { FiveDScores } from '@/types/models';
 
 interface FiveDChartProps {
   scores: FiveDScores;
@@ -12,10 +12,10 @@ export const FiveDChart = ({ scores, explanations, showLabels = true }: FiveDCha
   return <RadarChart scores={scores} explanations={explanations} showLabels={showLabels} />;
 };
 
-export const FiveDChartCard = ({ 
-  scores, 
-  explanations, 
-  title = "5D Soft Skills Profile" 
+export const FiveDChartCard = ({
+  scores,
+  explanations,
+  title = '5D Soft Skills Profile',
 }: FiveDChartProps & { title?: string }) => (
   <Card>
     <CardHeader>

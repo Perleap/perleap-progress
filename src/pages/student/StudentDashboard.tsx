@@ -1,28 +1,47 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { LogOut, Plus, BookOpen, Bell } from "lucide-react";
-import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, Plus, BookOpen, Bell } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { createNotification, getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
-import { StudentCalendar } from "@/components/StudentCalendar";
-import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ThemeToggle } from "@/components/ThemeToggle";
+} from '@/components/ui/dropdown-menu';
+import {
+  createNotification,
+  getUnreadNotifications,
+  markAsRead,
+  markAllAsRead,
+  type Notification,
+} from '@/lib/notificationService';
+import { StudentCalendar } from '@/components/StudentCalendar';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface Assignment {
   id: string;
@@ -74,7 +93,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -83,8 +102,8 @@ const StudentDashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [profile, setProfile] = useState<{ full_name: string; avatar_url?: string }>({
-    full_name: "",
-    avatar_url: "",
+    full_name: '',
+    avatar_url: '',
   });
 
   useEffect(() => {
@@ -115,18 +134,18 @@ const StudentDashboard = () => {
         .eq('student_id', user?.id);
 
       if (enrollments && enrollments.length > 0) {
-        const classroomIds = enrollments.map(e => e.classroom_id);
-        
+        const classroomIds = enrollments.map((e) => e.classroom_id);
+
         // Set classrooms list
-        const classroomsList = enrollments.map(e => ({
+        const classroomsList = enrollments.map((e) => ({
           id: e.classroom_id,
           name: e.classrooms.name,
           subject: e.classrooms.subject,
           start_date: e.classrooms.start_date,
           end_date: e.classrooms.end_date,
           classrooms: {
-            invite_code: e.classrooms.invite_code
-          }
+            invite_code: e.classrooms.invite_code,
+          },
         }));
         setClassrooms(classroomsList);
 
@@ -140,19 +159,21 @@ const StudentDashboard = () => {
 
         // Fetch teacher profiles
         if (assignmentsData && assignmentsData.length > 0) {
-          const teacherIds = [...new Set(assignmentsData.map(a => a.classrooms.teacher_id))];
+          const teacherIds = [...new Set(assignmentsData.map((a) => a.classrooms.teacher_id))];
           const { data: teacherProfiles } = await supabase
             .from('teacher_profiles')
             .select('user_id, full_name, avatar_url')
             .in('user_id', teacherIds);
 
           // Combine data
-          const assignmentsWithTeachers = assignmentsData.map(assignment => ({
+          const assignmentsWithTeachers = assignmentsData.map((assignment) => ({
             ...assignment,
             classrooms: {
               ...assignment.classrooms,
-              teacher_profiles: teacherProfiles?.find(t => t.user_id === assignment.classrooms.teacher_id)
-            }
+              teacher_profiles: teacherProfiles?.find(
+                (t) => t.user_id === assignment.classrooms.teacher_id
+              ),
+            },
           }));
 
           setAssignments(assignmentsWithTeachers);
@@ -170,7 +191,8 @@ const StudentDashboard = () => {
         setNotifications(notifs);
         setUnreadCount(notifs.length);
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
       toast.error(t('studentDashboard.errors.loadingData'));
     } finally {
       setLoading(false);
@@ -186,7 +208,7 @@ const StudentDashboard = () => {
     setJoining(true);
     try {
       const trimmedCode = inviteCode.trim().toUpperCase();
-      
+
       // Check if classroom exists - use a simpler query that bypasses RLS
       const { data: classroom, error: classroomError } = await supabase
         .from('classrooms')
@@ -219,12 +241,10 @@ const StudentDashboard = () => {
       }
 
       // Create enrollment
-      const { error: enrollError } = await supabase
-        .from('enrollments')
-        .insert({
-          classroom_id: classroom.id,
-          student_id: user.id
-        });
+      const { error: enrollError } = await supabase.from('enrollments').insert({
+        classroom_id: classroom.id,
+        student_id: user.id,
+      });
 
       if (enrollError) {
         toast.error(t('studentDashboard.errors.joiningClassroom'));
@@ -276,14 +296,14 @@ const StudentDashboard = () => {
             classroom_name: classroom.name,
           }
         );
-      } catch (notifError) {
-      }
+      } catch (notifError) {}
 
       toast.success(t('studentDashboard.success.joinedClassroom', { name: classroom.name }));
-      setInviteCode("");
+      setInviteCode('');
       setDialogOpen(false);
       await fetchData();
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error joining classroom:', error);
       toast.error(t('studentDashboard.errors.unexpected'));
     } finally {
       setJoining(false);
@@ -295,10 +315,14 @@ const StudentDashboard = () => {
     switch (sortBy) {
       case 'recent':
         // Newest received first (by created_at)
-        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return sorted.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       case 'oldest':
         // Oldest received first (by created_at)
-        return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        return sorted.sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       case 'due-date':
         // Earliest due date first
         return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
@@ -317,7 +341,7 @@ const StudentDashboard = () => {
   };
 
   // Transform data for calendar component
-  const calendarClassrooms: CalendarClassroom[] = classrooms.map(c => ({
+  const calendarClassrooms: CalendarClassroom[] = classrooms.map((c) => ({
     id: c.id,
     name: c.name,
     subject: c.subject,
@@ -325,7 +349,7 @@ const StudentDashboard = () => {
     end_date: c.end_date || null,
   }));
 
-  const calendarAssignments: CalendarAssignment[] = assignments.map(a => ({
+  const calendarAssignments: CalendarAssignment[] = assignments.map((a) => ({
     id: a.id,
     title: a.title,
     due_at: a.due_at,
@@ -341,22 +365,27 @@ const StudentDashboard = () => {
       <header className="border-b">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
           <h1 className="text-lg md:text-2xl font-bold">
-            {!loading && profile.full_name ? t('studentDashboard.welcome', { name: profile.full_name.split(' ')[0] }) : t('studentDashboard.title')}
+            {!loading && profile.full_name
+              ? t('studentDashboard.welcome', { name: profile.full_name.split(' ')[0] })
+              : t('studentDashboard.title')}
           </h1>
           <div className="flex items-center gap-2">
             {/* Theme Toggle */}
             <ThemeToggle />
             {/* Language Switcher */}
             <LanguageSwitcher />
-            
+
             {/* Notifications Dropdown */}
-            <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
+            <DropdownMenu
+              open={notificationDropdownOpen}
+              onOpenChange={setNotificationDropdownOpen}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
                   <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
+                    <Badge
+                      variant="destructive"
                       className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                     >
                       {unreadCount}
@@ -398,8 +427,10 @@ const StudentDashboard = () => {
                           className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
                           onClick={async () => {
                             await markAsRead(notification.id);
-                            setNotifications(prev => prev.filter(n => n.id !== notification.id));
-                            setUnreadCount(prev => Math.max(0, prev - 1));
+                            setNotifications((prev) =>
+                              prev.filter((n) => n.id !== notification.id)
+                            );
+                            setUnreadCount((prev) => Math.max(0, prev - 1));
                             setNotificationDropdownOpen(false);
                             if (notification.link) {
                               navigate(notification.link);
@@ -420,7 +451,12 @@ const StudentDashboard = () => {
             </DropdownMenu>
 
             {/* Sign Out Button */}
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={signOut}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={signOut}
+            >
               <LogOut className="h-4 w-4" />
             </Button>
 
@@ -459,11 +495,15 @@ const StudentDashboard = () => {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>{t('studentDashboard.joinClassroom.title')}</DialogTitle>
-                      <DialogDescription>{t('studentDashboard.joinClassroom.description')}</DialogDescription>
+                      <DialogDescription>
+                        {t('studentDashboard.joinClassroom.description')}
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="code">{t('studentDashboard.joinClassroom.inviteCode')}</Label>
+                        <Label htmlFor="code">
+                          {t('studentDashboard.joinClassroom.inviteCode')}
+                        </Label>
                         <Input
                           id="code"
                           placeholder={t('studentDashboard.joinClassroom.placeholder')}
@@ -473,7 +513,9 @@ const StudentDashboard = () => {
                         />
                       </div>
                       <Button onClick={joinClassroom} className="w-full" disabled={joining}>
-                        {joining ? t('studentDashboard.joinClassroom.joining') : t('studentDashboard.joinClassroom.button')}
+                        {joining
+                          ? t('studentDashboard.joinClassroom.joining')
+                          : t('studentDashboard.joinClassroom.button')}
                       </Button>
                     </div>
                   </DialogContent>
@@ -486,8 +528,12 @@ const StudentDashboard = () => {
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">{t('studentDashboard.empty.noClasses')}</h3>
-                    <p className="text-muted-foreground mb-4">{t('studentDashboard.empty.noClassesDescription')}</p>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {t('studentDashboard.empty.noClasses')}
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      {t('studentDashboard.empty.noClassesDescription')}
+                    </p>
                     <Button onClick={() => setDialogOpen(true)}>
                       <Plus className="me-2 h-4 w-4" />
                       {t('studentDashboard.joinClass')}
@@ -497,8 +543,8 @@ const StudentDashboard = () => {
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {classrooms.map((classroom) => (
-                    <Card 
-                      key={classroom.id} 
+                    <Card
+                      key={classroom.id}
                       className="hover:shadow-lg transition-shadow cursor-pointer"
                       onClick={() => navigate(`/student/classroom/${classroom.id}`)}
                     >
@@ -515,16 +561,27 @@ const StudentDashboard = () => {
             {/* Assignments Section */}
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <h2 className="text-xl md:text-2xl font-bold">{t('studentDashboard.myAssignments')}</h2>
+                <h2 className="text-xl md:text-2xl font-bold">
+                  {t('studentDashboard.myAssignments')}
+                </h2>
                 {!loading && assignments.length > 0 && (
-                  <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => setSortBy(value as typeof sortBy)}
+                  >
                     <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder={t('studentDashboard.sortBy')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
-                      <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
-                      <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
+                      <SelectItem value="due-date">
+                        {t('studentDashboard.sortOptions.dueDate')}
+                      </SelectItem>
+                      <SelectItem value="recent">
+                        {t('studentDashboard.sortOptions.recent')}
+                      </SelectItem>
+                      <SelectItem value="oldest">
+                        {t('studentDashboard.sortOptions.oldest')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -535,42 +592,52 @@ const StudentDashboard = () => {
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">{t('studentDashboard.empty.noAssignments')}</h3>
-                    <p className="text-muted-foreground">{t('studentDashboard.empty.noAssignmentsDescription')}</p>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {t('studentDashboard.empty.noAssignments')}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {t('studentDashboard.empty.noAssignmentsDescription')}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-3">
                   {getSortedAssignments().map((assignment) => {
-                    const teacherInitials = assignment.classrooms.teacher_profiles?.full_name
-                      ?.split(' ')
-                      .map(n => n[0])
-                      .join('')
-                      .toUpperCase() || 'T';
-                    
+                    const teacherInitials =
+                      assignment.classrooms.teacher_profiles?.full_name
+                        ?.split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase() || 'T';
+
                     return (
-                      <Card 
-                        key={assignment.id} 
+                      <Card
+                        key={assignment.id}
                         className="hover:shadow-lg transition-shadow cursor-pointer"
                         onClick={() => navigate(`/student/assignment/${assignment.id}`)}
                       >
                         <CardHeader className="p-4 pb-3">
                           <CardTitle className="text-base mb-1">{assignment.title}</CardTitle>
                           <CardDescription className="text-sm mb-2">
-                            {assignment.classrooms.name} • {t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}
+                            {assignment.classrooms.name} • {t('common.due')}:{' '}
+                            {new Date(assignment.due_at).toLocaleDateString()}
                           </CardDescription>
                           <div className="flex items-center gap-2 mt-2">
                             <Avatar className="h-6 w-6">
                               {assignment.classrooms.teacher_profiles?.avatar_url && (
-                                <AvatarImage 
-                                  src={assignment.classrooms.teacher_profiles.avatar_url} 
-                                  alt={assignment.classrooms.teacher_profiles.full_name || t('common.teacher')} 
+                                <AvatarImage
+                                  src={assignment.classrooms.teacher_profiles.avatar_url}
+                                  alt={
+                                    assignment.classrooms.teacher_profiles.full_name ||
+                                    t('common.teacher')
+                                  }
                                 />
                               )}
                               <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
                             </Avatar>
                             <span className="text-xs text-muted-foreground">
-                              {assignment.classrooms.teacher_profiles?.full_name || t('common.teacher')}
+                              {assignment.classrooms.teacher_profiles?.full_name ||
+                                t('common.teacher')}
                             </span>
                           </div>
                         </CardHeader>
@@ -585,8 +652,8 @@ const StudentDashboard = () => {
           {/* Calendar Sidebar */}
           <div className="lg:col-span-1">
             {user && (
-              <StudentCalendar 
-                studentId={user.id} 
+              <StudentCalendar
+                studentId={user.id}
                 assignments={calendarAssignments}
                 classrooms={calendarClassrooms}
                 loading={loading}

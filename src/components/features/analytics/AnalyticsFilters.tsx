@@ -3,7 +3,13 @@
  * Filter selectors for classroom analytics
  */
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Assignment } from '@/types';
 
@@ -71,4 +77,3 @@ export const AnalyticsFilters = ({
     </Card>
   );
 };
-

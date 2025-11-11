@@ -29,4 +29,3 @@ export const ClassAverageChart = ({ scores, title, description }: ClassAverageCh
     </Card>
   );
 };
-

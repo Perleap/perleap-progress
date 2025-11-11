@@ -1,13 +1,13 @@
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Brain, Users2, Target, TrendingUp, Shield } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Sparkles, Brain, Users2, Target, TrendingUp, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Landing = () => {
   const { t } = useTranslation();
-  
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -17,7 +17,7 @@ const Landing = () => {
             <img src="/perleap_logo.png" alt="PerLeap" className="h-8 w-8 rounded" />
             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
           </Link>
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
             <Link to="/about">
               <Button size="sm" variant="ghost" className="font-medium hidden md:inline-flex">
                 {t('landing.nav.about')}
@@ -78,7 +78,7 @@ const Landing = () => {
           {/* Floating UI Cards */}
           <div className="relative hidden lg:block">
             <div className="absolute -top-10 -right-10 w-80 h-96 bg-gradient-to-br from-dimension-cognitive/20 to-dimension-creative/20 rounded-3xl blur-3xl" />
-            
+
             {/* Student Card */}
             <div className="relative bg-card rounded-3xl p-6 shadow-lg border border-border mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -87,32 +87,44 @@ const Landing = () => {
               </div>
               <div className="space-y-3">
                 <div className="bg-dimension-cognitive/40 rounded-2xl p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-dimension-social/60 flex items-center justify-center text-xs font-bold">MJ</div>
+                  <div className="w-10 h-10 rounded-full bg-dimension-social/60 flex items-center justify-center text-xs font-bold">
+                    MJ
+                  </div>
                   <div className="flex-1">
                     <div className="font-medium text-sm">Maggie Johnson</div>
                     <div className="text-xs text-muted-foreground">Oasis Organic Inc.</div>
                   </div>
                   <div className="flex gap-2">
-                    <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center">✏️</div>
-                    <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center">⭐</div>
+                    <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center">
+                      ✏️
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center">
+                      ⭐
+                    </div>
                   </div>
                 </div>
                 <div className="bg-background rounded-2xl p-4 flex items-center gap-3 border border-border/50">
-                  <div className="w-10 h-10 rounded-full bg-dimension-emotional/60 flex items-center justify-center text-xs font-bold">CF</div>
+                  <div className="w-10 h-10 rounded-full bg-dimension-emotional/60 flex items-center justify-center text-xs font-bold">
+                    CF
+                  </div>
                   <div className="flex-1">
                     <div className="font-medium text-sm">Chris Friedly</div>
                     <div className="text-xs text-muted-foreground">Supermarket Villanova</div>
                   </div>
                 </div>
                 <div className="bg-background rounded-2xl p-4 flex items-center gap-3 border border-border/50">
-                  <div className="w-10 h-10 rounded-full bg-dimension-creative/60 flex items-center justify-center text-xs font-bold">GH</div>
+                  <div className="w-10 h-10 rounded-full bg-dimension-creative/60 flex items-center justify-center text-xs font-bold">
+                    GH
+                  </div>
                   <div className="flex-1">
                     <div className="font-medium text-sm">Gael Harry</div>
                     <div className="text-xs text-muted-foreground">New York Finest Fruits</div>
                   </div>
                 </div>
               </div>
-              <button className="mt-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">All customers →</button>
+              <button className="mt-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                All customers →
+              </button>
             </div>
 
             {/* Analytics Card */}
@@ -147,11 +159,16 @@ const Landing = () => {
         {/* Logo Strip */}
         <div className="mt-12 md:mt-20 pt-8 md:pt-12 border-t border-border/50">
           <div className="flex items-center gap-6 md:gap-8 overflow-x-auto pb-2">
-            {["NovaTech", "VitaHealth", "NaviAI", "Lumora", "TeachPro", "EduFlow"].map((logo, i) => (
-              <div key={i} className="text-muted-foreground/40 font-semibold text-sm md:text-lg whitespace-nowrap">
-                {logo}
-              </div>
-            ))}
+            {['NovaTech', 'VitaHealth', 'NaviAI', 'Lumora', 'TeachPro', 'EduFlow'].map(
+              (logo, i) => (
+                <div
+                  key={i}
+                  className="text-muted-foreground/40 font-semibold text-sm md:text-lg whitespace-nowrap"
+                >
+                  {logo}
+                </div>
+              )
+            )}
           </div>
         </div>
       </section>
@@ -160,7 +177,9 @@ const Landing = () => {
       <section id="features" className="container py-12 md:py-20 lg:py-32 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">{t('landing.features.title')}</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">
+              {t('landing.features.title')}
+            </h2>
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
               {t('landing.features.subtitle')}
             </p>
@@ -181,7 +200,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-social/40 flex items-center justify-center mb-6">
                 <Sparkles className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">{t('landing.features.aiPartner.title')}</h3>
+              <h3 className="text-xl font-semibold mb-3">
+                {t('landing.features.aiPartner.title')}
+              </h3>
               <p className="text-muted-foreground leading-relaxed">
                 {t('landing.features.aiPartner.description')}
               </p>
@@ -191,7 +212,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-creative/40 flex items-center justify-center mb-6">
                 <Users2 className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">{t('landing.features.personalized.title')}</h3>
+              <h3 className="text-xl font-semibold mb-3">
+                {t('landing.features.personalized.title')}
+              </h3>
               <p className="text-muted-foreground leading-relaxed">
                 {t('landing.features.personalized.description')}
               </p>
@@ -201,7 +224,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-emotional/40 flex items-center justify-center mb-6">
                 <Target className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">{t('landing.features.assessments.title')}</h3>
+              <h3 className="text-xl font-semibold mb-3">
+                {t('landing.features.assessments.title')}
+              </h3>
               <p className="text-muted-foreground leading-relaxed">
                 {t('landing.features.assessments.description')}
               </p>
@@ -211,7 +236,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-behavioral/40 flex items-center justify-center mb-6">
                 <TrendingUp className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">{t('landing.features.analytics.title')}</h3>
+              <h3 className="text-xl font-semibold mb-3">
+                {t('landing.features.analytics.title')}
+              </h3>
               <p className="text-muted-foreground leading-relaxed">
                 {t('landing.features.analytics.description')}
               </p>
@@ -236,15 +263,21 @@ const Landing = () => {
           <div className="grid sm:grid-cols-3 gap-8 md:gap-12 text-center">
             <div>
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">95%</div>
-              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">{t('landing.stats.satisfaction')}</p>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">
+                {t('landing.stats.satisfaction')}
+              </p>
             </div>
             <div>
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">10K+</div>
-              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">{t('landing.stats.students')}</p>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">
+                {t('landing.stats.students')}
+              </p>
             </div>
             <div>
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">5D</div>
-              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">{t('landing.stats.dimensions')}</p>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">
+                {t('landing.stats.dimensions')}
+              </p>
             </div>
           </div>
         </div>
@@ -253,7 +286,9 @@ const Landing = () => {
       {/* CTA Section */}
       <section className="container py-12 md:py-20 lg:py-32 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">{t('landing.cta.title')}</h2>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">
+            {t('landing.cta.title')}
+          </h2>
           <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed px-4">
             {t('landing.cta.subtitle')}
           </p>
@@ -275,29 +310,51 @@ const Landing = () => {
                 <img src="/perleap_logo.png" alt="PerLeap" className="h-5 w-5 rounded-sm" />
                 <span className="font-semibold">PerLeap</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {t('landing.footer.tagline')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('landing.footer.tagline')}</p>
             </div>
             <div>
               <h4 className="font-semibold mb-4">{t('landing.footer.product')}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground transition-colors">{t('landing.footer.features')}</a></li>
-                <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t('landing.nav.pricing')}</Link></li>
+                <li>
+                  <a href="#features" className="hover:text-foreground transition-colors">
+                    {t('landing.footer.features')}
+                  </a>
+                </li>
+                <li>
+                  <Link to="/pricing" className="hover:text-foreground transition-colors">
+                    {t('landing.nav.pricing')}
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">{t('landing.footer.company')}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/about" className="hover:text-foreground transition-colors">{t('landing.nav.about')}</Link></li>
-                <li><Link to="/contact" className="hover:text-foreground transition-colors">{t('landing.nav.contact')}</Link></li>
+                <li>
+                  <Link to="/about" className="hover:text-foreground transition-colors">
+                    {t('landing.nav.about')}
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/contact" className="hover:text-foreground transition-colors">
+                    {t('landing.nav.contact')}
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">{t('landing.footer.legal')}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.privacy')}</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.terms')}</a></li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    {t('landing.footer.privacy')}
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    {t('landing.footer.terms')}
+                  </a>
+                </li>
               </ul>
             </div>
           </div>

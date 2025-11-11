@@ -1,12 +1,12 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Globe } from "lucide-react";
+} from '@/components/ui/dropdown-menu';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Globe } from 'lucide-react';
 
 export const LanguageSwitcher = () => {
   const { language, setLanguage } = useLanguage();
@@ -38,4 +38,3 @@ export const LanguageSwitcher = () => {
     </DropdownMenu>
   );
 };
-

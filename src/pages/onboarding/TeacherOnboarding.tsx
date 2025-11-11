@@ -1,46 +1,49 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, ArrowLeft, ArrowRight, Upload } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, ArrowLeft, ArrowRight, Upload } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const TeacherOnboarding = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 2;
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
 
   const [formData, setFormData] = useState({
     // Page 1: Essential Profile
-    fullName: "",
-    phoneNumber: "",
-    subjects: "",
-    yearsExperience: "",
-    studentEducationLevel: "",
-    
+    fullName: '',
+    phoneNumber: '',
+    subjects: '',
+    yearsExperience: '',
+    studentEducationLevel: '',
+
     // Page 2: Teaching Voice
-    teachingGoals: "",
-    teachingStyle: "",
-    teachingExample: "",
-    additionalNotes: "",
+    teachingGoals: '',
+    teachingStyle: '',
+    teachingExample: '',
+    additionalNotes: '',
   });
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("File size should be less than 5MB");
+        toast.error(t('teacherOnboarding.errors.fileSize'));
         return;
       }
       setAvatarFile(file);
@@ -54,30 +57,30 @@ const TeacherOnboarding = () => {
 
   const handleSubmit = async () => {
     if (!user) {
-      toast.error("User not authenticated. Please sign in again.");
+      toast.error(t('teacherOnboarding.errors.notAuthenticated'));
       return;
     }
 
     setLoading(true);
     try {
-      let avatarUrl = "";
+      let avatarUrl = '';
 
       // Upload avatar if provided
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('teacher-avatars')
           .upload(fileName, avatarFile);
 
         if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('teacher-avatars')
-            .getPublicUrl(fileName);
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from('teacher-avatars').getPublicUrl(fileName);
           avatarUrl = publicUrl;
         } else {
-          toast.error("Failed to upload avatar. Continuing without avatar.");
+          toast.error(t('teacherOnboarding.errors.uploadAvatar'));
         }
       }
 
@@ -86,7 +89,7 @@ const TeacherOnboarding = () => {
         full_name: formData.fullName,
         avatar_url: avatarUrl || null,
         phone_number: formData.phoneNumber,
-        subjects: formData.subjects.split(',').map(s => s.trim()),
+        subjects: formData.subjects.split(',').map((s) => s.trim()),
         years_experience: parseInt(formData.yearsExperience) || 0,
         student_education_level: formData.studentEducationLevel,
         teaching_goals: formData.teachingGoals,
@@ -97,14 +100,14 @@ const TeacherOnboarding = () => {
 
       if (error) throw error;
 
-      toast.success("Profile created successfully!");
+      toast.success(t('teacherOnboarding.success.profileCreated'));
       navigate('/teacher/dashboard');
-    } catch (error: any) {
+    } catch (error) {
       if (error.code === '23505') {
-        toast.error("A profile already exists for this account. Redirecting to dashboard...");
+        toast.error(t('teacherOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/teacher/dashboard'), 2000);
       } else {
-        toast.error(error.message || "Error creating profile. Please try again.");
+        toast.error(error.message || t('teacherOnboarding.errors.createProfile'));
       }
     } finally {
       setLoading(false);
@@ -117,25 +120,31 @@ const TeacherOnboarding = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name *</Label>
+              <Label htmlFor="fullName">{t('teacherOnboarding.step1.fullName')}</Label>
               <Input
                 id="fullName"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
-                placeholder="John Doe"
+                placeholder={t('teacherOnboarding.step1.fullNamePlaceholder')}
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label>Profile Picture (Optional)</Label>
+              <Label>{t('teacherOnboarding.step1.profilePicture')}</Label>
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
                   {avatarPreview ? (
                     <AvatarImage src={avatarPreview} alt="Preview" />
                   ) : (
                     <AvatarFallback>
-                      {formData.fullName ? formData.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'T'}
+                      {formData.fullName
+                        ? formData.fullName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'T'}
                     </AvatarFallback>
                   )}
                 </Avatar>
@@ -150,43 +159,45 @@ const TeacherOnboarding = () => {
                   <Label htmlFor="avatar" className="cursor-pointer">
                     <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
                       <Upload className="h-4 w-4" />
-                      <span className="text-sm">Upload Photo</span>
+                      <span className="text-sm">{t('teacherOnboarding.step1.uploadPhoto')}</span>
                     </div>
                   </Label>
                   <p className="text-xs text-muted-foreground mt-2">
-                    PNG, JPG up to 5MB
+                    {t('teacherOnboarding.step1.fileSize')}
                   </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Label htmlFor="phoneNumber">{t('teacherOnboarding.step1.phoneNumber')}</Label>
               <Input
                 id="phoneNumber"
                 type="tel"
                 value={formData.phoneNumber}
                 onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                placeholder="+1 (555) 123-4567"
+                placeholder={t('teacherOnboarding.step1.phoneNumberPlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subjects">Subjects You Teach *</Label>
+              <Label htmlFor="subjects">{t('teacherOnboarding.step1.subjects')}</Label>
               <Input
                 id="subjects"
-                placeholder="e.g., Math, Physics, Chemistry"
+                placeholder={t('teacherOnboarding.step1.subjectsPlaceholder')}
                 value={formData.subjects}
                 onChange={(e) => setFormData({ ...formData, subjects: e.target.value })}
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Separate multiple subjects with commas
+                {t('teacherOnboarding.step1.subjectsHelp')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="yearsExperience">Years of Teaching Experience *</Label>
+              <Label htmlFor="yearsExperience">
+                {t('teacherOnboarding.step1.yearsExperience')}
+              </Label>
               <Input
                 id="yearsExperience"
                 type="number"
@@ -194,17 +205,21 @@ const TeacherOnboarding = () => {
                 value={formData.yearsExperience}
                 onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
                 required
-                placeholder="5"
+                placeholder={t('teacherOnboarding.step1.yearsExperiencePlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="studentEducationLevel">Student Level</Label>
+              <Label htmlFor="studentEducationLevel">
+                {t('teacherOnboarding.step1.studentLevel')}
+              </Label>
               <Input
                 id="studentEducationLevel"
-                placeholder="e.g., Middle School, High School, University"
+                placeholder={t('teacherOnboarding.step1.studentLevelPlaceholder')}
                 value={formData.studentEducationLevel}
-                onChange={(e) => setFormData({ ...formData, studentEducationLevel: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, studentEducationLevel: e.target.value })
+                }
               />
             </div>
           </div>
@@ -214,52 +229,60 @@ const TeacherOnboarding = () => {
         return (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="teachingGoals">What are your main teaching goals?</Label>
+              <Label htmlFor="teachingGoals">
+                {t('teacherOnboarding.step2.teachingGoalsQuestion')}
+              </Label>
               <Textarea
                 id="teachingGoals"
-                placeholder="Brief description (1-2 sentences)"
+                placeholder={t('teacherOnboarding.step2.teachingGoalsPlaceholder')}
                 value={formData.teachingGoals}
                 onChange={(e) => setFormData({ ...formData, teachingGoals: e.target.value })}
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                e.g., "Help students develop critical thinking skills and build confidence in problem-solving"
+                {t('teacherOnboarding.step2.teachingGoalsHelp')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="teachingStyle">Describe your teaching style</Label>
+              <Label htmlFor="teachingStyle">
+                {t('teacherOnboarding.step2.teachingStyleQuestion')}
+              </Label>
               <Textarea
                 id="teachingStyle"
-                placeholder="How would you describe your approach to teaching?"
+                placeholder={t('teacherOnboarding.step2.teachingStylePlaceholder')}
                 value={formData.teachingStyle}
                 onChange={(e) => setFormData({ ...formData, teachingStyle: e.target.value })}
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Include your tone, personality, values, and approach (e.g., patient, structured, encourages questions, uses real-world examples)
+                {t('teacherOnboarding.step2.teachingStyleHelp')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="teachingExample">Share a brief teaching example</Label>
+              <Label htmlFor="teachingExample">
+                {t('teacherOnboarding.step2.teachingExampleQuestion')}
+              </Label>
               <Textarea
                 id="teachingExample"
-                placeholder="How do you explain a concept or give feedback to students?"
+                placeholder={t('teacherOnboarding.step2.teachingExamplePlaceholder')}
                 value={formData.teachingExample}
                 onChange={(e) => setFormData({ ...formData, teachingExample: e.target.value })}
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Write a short example that shows your natural teaching voice
+                {t('teacherOnboarding.step2.teachingExampleHelp')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="additionalNotes">Anything else we should know? (Optional)</Label>
+              <Label htmlFor="additionalNotes">
+                {t('teacherOnboarding.step2.additionalNotesQuestion')}
+              </Label>
               <Textarea
                 id="additionalNotes"
-                placeholder="Any specific preferences or additional context..."
+                placeholder={t('teacherOnboarding.step2.additionalNotesPlaceholder')}
                 value={formData.additionalNotes}
                 onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
                 rows={3}
@@ -275,43 +298,49 @@ const TeacherOnboarding = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       <Card className="w-full max-w-3xl">
         <CardHeader>
-          <CardTitle>Teacher Profile Setup</CardTitle>
+          <CardTitle>{t('teacherOnboarding.title')}</CardTitle>
           <CardDescription>
-            Step {step} of {totalSteps}: {step === 1 ? "Essential Information" : "Teaching Style & Approach"}
+            {t('teacherOnboarding.stepOf', { current: step, total: totalSteps })}{' '}
+            {step === 1 ? t('teacherOnboarding.step1Title') : t('teacherOnboarding.step2Title')}
           </CardDescription>
           <div className="w-full bg-secondary rounded-full h-2 mt-4">
-            <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300" 
+            <div
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${(step / totalSteps) * 100}%` }}
             />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="max-h-[60vh] overflow-y-auto px-1">
-            {renderStep()}
-          </div>
+          <div className="max-h-[60vh] overflow-y-auto px-1">{renderStep()}</div>
 
           <div className="flex gap-4 mt-6">
             {step > 1 && (
               <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('teacherOnboarding.back')}
               </Button>
             )}
             {step < totalSteps ? (
               <Button onClick={() => setStep(step + 1)} className="flex-1">
-                Next
+                {t('teacherOnboarding.next')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} className="flex-1" disabled={loading || !formData.fullName || !formData.subjects || !formData.yearsExperience}>
+              <Button
+                onClick={handleSubmit}
+                className="flex-1"
+                disabled={
+                  loading || !formData.fullName || !formData.subjects || !formData.yearsExperience
+                }
+              >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Complete Setup
+                {t('teacherOnboarding.completeSetup')}
               </Button>
             )}
           </div>

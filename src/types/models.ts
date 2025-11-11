@@ -140,4 +140,3 @@ export interface Enrollment {
 export interface EnrolledStudent extends Enrollment {
   student_profiles: StudentProfile | null;
 }
-

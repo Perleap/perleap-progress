@@ -1,8 +1,8 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -10,8 +10,10 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         if (!user) {
           navigate('/auth');
           return;
@@ -19,10 +21,10 @@ const AuthCallback = () => {
 
         // Check for pending role from localStorage (Google OAuth)
         const pendingRole = localStorage.getItem('pending_role');
-        
+
         if (pendingRole && !user.user_metadata.role) {
           await supabase.auth.updateUser({
-            data: { role: pendingRole }
+            data: { role: pendingRole },
           });
           localStorage.removeItem('pending_role');
         }
@@ -45,11 +47,9 @@ const AuthCallback = () => {
             .select('id')
             .eq('user_id', user.id)
             .single();
-          
-          const destination = profile 
-            ? `/${userRole}/dashboard` 
-            : `/onboarding/${userRole}`;
-          
+
+          const destination = profile ? `/${userRole}/dashboard` : `/onboarding/${userRole}`;
+
           navigate(destination);
         } else {
           navigate('/auth');

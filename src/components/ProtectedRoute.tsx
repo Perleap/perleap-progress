@@ -1,15 +1,15 @@
-import { ReactNode, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { ReactNode, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole?: "teacher" | "student";
+  requiredRole?: 'teacher' | 'student';
   redirectTo?: string;
 }
 
-const ProtectedRoute = ({ children, requiredRole, redirectTo = "/auth" }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: ProtectedRouteProps) => {
   const { user, session, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -29,14 +29,15 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = "/auth" }: Protec
     // Check role-based access
     if (requiredRole) {
       const userRole = user.user_metadata?.role;
-      
+
       if (userRole !== requiredRole) {
-        const dashboardRoute = userRole === 'teacher' 
-          ? '/teacher/dashboard' 
-          : userRole === 'student' 
-          ? '/student/dashboard' 
-          : '/auth';
-        
+        const dashboardRoute =
+          userRole === 'teacher'
+            ? '/teacher/dashboard'
+            : userRole === 'student'
+              ? '/student/dashboard'
+              : '/auth';
+
         navigate(dashboardRoute);
       }
     }

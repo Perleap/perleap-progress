@@ -1,18 +1,18 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare } from "lucide-react";
-import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
+import { DashboardHeader } from '@/components/DashboardHeader';
 
 interface TeacherProfile {
   full_name: string;
@@ -44,23 +44,23 @@ const TeacherSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [profile, setProfile] = useState<TeacherProfile>({
-    full_name: "",
+    full_name: '',
     avatar_url: null,
-    phone_number: "",
+    phone_number: '',
     subjects: [],
     years_experience: null,
-    student_education_level: "",
+    student_education_level: '',
   });
-  
+
   const [questions, setQuestions] = useState<TeacherQuestions>({
-    teaching_goals: "",
-    style_notes: "",
-    teaching_examples: "",
-    sample_explanation: "",
+    teaching_goals: '',
+    style_notes: '',
+    teaching_examples: '',
+    sample_explanation: '',
   });
-  
+
   const [notifications, setNotifications] = useState<NotificationSettings>({
     submission_notifications: true,
     student_messages: true,
@@ -86,22 +86,22 @@ const TeacherSettings = () => {
         .single();
 
       if (profileError) throw profileError;
-      
+
       if (profileData) {
         setProfile({
-          full_name: profileData.full_name || "",
+          full_name: profileData.full_name || '',
           avatar_url: profileData.avatar_url || null,
-          phone_number: profileData.phone_number || "",
+          phone_number: profileData.phone_number || '',
           subjects: profileData.subjects || [],
           years_experience: profileData.years_experience || null,
-          student_education_level: profileData.student_education_level || "",
+          student_education_level: profileData.student_education_level || '',
         });
-        
+
         setQuestions({
-          teaching_goals: profileData.teaching_goals || "",
-          style_notes: profileData.style_notes || "",
-          teaching_examples: profileData.teaching_examples || "",
-          sample_explanation: profileData.sample_explanation || "",
+          teaching_goals: profileData.teaching_goals || '',
+          style_notes: profileData.style_notes || '',
+          teaching_examples: profileData.teaching_examples || '',
+          sample_explanation: profileData.sample_explanation || '',
         });
       }
 
@@ -111,8 +111,9 @@ const TeacherSettings = () => {
       if (savedNotifications) {
         setNotifications(JSON.parse(savedNotifications));
       }
-    } catch (error: any) {
-      toast.error("Error loading settings");
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast.error('Error loading settings');
     } finally {
       setLoading(false);
     }
@@ -124,50 +125,51 @@ const TeacherSettings = () => {
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
+      toast.error('File size must be less than 5MB');
       return;
     }
 
     // Check file type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
       return;
     }
 
     setUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from("teacher-avatars")
+        .from('teacher-avatars')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        toast.error("Failed to upload photo");
+        toast.error('Failed to upload photo');
         setUploading(false);
         return;
       }
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("teacher-avatars")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('teacher-avatars').getPublicUrl(filePath);
 
       // Update profile with avatar URL
       const { error: updateError } = await supabase
-        .from("teacher_profiles")
+        .from('teacher_profiles')
         .update({ avatar_url: publicUrl })
-        .eq("user_id", user.id);
+        .eq('user_id', user.id);
 
       if (updateError) throw updateError;
 
       setProfile({ ...profile, avatar_url: publicUrl });
-      toast.success("Photo uploaded successfully!");
-    } catch (error: any) {
-      toast.error("Error uploading photo");
+      toast.success('Photo uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Error uploading photo');
     } finally {
       setUploading(false);
     }
@@ -175,7 +177,7 @@ const TeacherSettings = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -191,9 +193,10 @@ const TeacherSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success("Profile updated successfully!");
-    } catch (error: any) {
-      toast.error("Error updating profile");
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Error updating profile');
     } finally {
       setSaving(false);
     }
@@ -201,7 +204,7 @@ const TeacherSettings = () => {
 
   const handleSaveQuestions = async () => {
     if (!user) return;
-    
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -215,9 +218,10 @@ const TeacherSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success("Teaching preferences updated successfully!");
-    } catch (error: any) {
-      toast.error("Error updating questions");
+      toast.success('Teaching preferences updated successfully!');
+    } catch (error) {
+      console.error('Error updating questions:', error);
+      toast.error('Error updating questions');
     } finally {
       setSaving(false);
     }
@@ -226,12 +230,17 @@ const TeacherSettings = () => {
   const handleSaveNotifications = () => {
     // In a real app, you would save to database
     localStorage.setItem('teacher_notifications', JSON.stringify(notifications));
-    toast.success("Notification settings updated!");
+    toast.success('Notification settings updated!');
   };
 
   const getInitials = () => {
     if (!profile.full_name) return 'T';
-    return profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return profile.full_name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   if (loading) {
@@ -244,17 +253,12 @@ const TeacherSettings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-14 md:h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/teacher/dashboard')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg md:text-2xl font-bold">Settings</h1>
-          <div className="ml-auto">
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Settings"
+        userType="teacher"
+        showBackButton
+        onBackClick={() => navigate('/teacher/dashboard')}
+      />
 
       <main className="container py-8 px-4 max-w-4xl">
         <Tabs defaultValue="profile" className="space-y-6">
@@ -313,7 +317,9 @@ const TeacherSettings = () => {
                   <div>
                     <p className="text-sm font-medium">{profile.full_name || 'No name set'}</p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Click camera to upload photo</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click camera to upload photo
+                    </p>
                   </div>
                 </div>
 
@@ -332,7 +338,7 @@ const TeacherSettings = () => {
                   <Input
                     id="email"
                     type="email"
-                    value={user?.email || ""}
+                    value={user?.email || ''}
                     disabled
                     className="bg-muted"
                   />
@@ -355,10 +361,20 @@ const TeacherSettings = () => {
                   <Input
                     id="subjects"
                     value={profile.subjects.join(', ')}
-                    onChange={(e) => setProfile({ ...profile, subjects: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    onChange={(e) =>
+                      setProfile({
+                        ...profile,
+                        subjects: e.target.value
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
                     placeholder="Math, Physics, Chemistry"
                   />
-                  <p className="text-xs text-muted-foreground">Separate multiple subjects with commas</p>
+                  <p className="text-xs text-muted-foreground">
+                    Separate multiple subjects with commas
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -367,8 +383,13 @@ const TeacherSettings = () => {
                     id="yearsExperience"
                     type="number"
                     min="0"
-                    value={profile.years_experience || ""}
-                    onChange={(e) => setProfile({ ...profile, years_experience: e.target.value ? parseInt(e.target.value) : null })}
+                    value={profile.years_experience || ''}
+                    onChange={(e) =>
+                      setProfile({
+                        ...profile,
+                        years_experience: e.target.value ? parseInt(e.target.value) : null,
+                      })
+                    }
                     placeholder="5"
                   />
                 </div>
@@ -378,7 +399,9 @@ const TeacherSettings = () => {
                   <Input
                     id="studentLevel"
                     value={profile.student_education_level}
-                    onChange={(e) => setProfile({ ...profile, student_education_level: e.target.value })}
+                    onChange={(e) =>
+                      setProfile({ ...profile, student_education_level: e.target.value })
+                    }
                     placeholder="e.g., Middle School, High School, University"
                   />
                 </div>
@@ -390,7 +413,7 @@ const TeacherSettings = () => {
                       Saving...
                     </>
                   ) : (
-                    "Save Changes"
+                    'Save Changes'
                   )}
                 </Button>
               </CardContent>
@@ -411,9 +434,9 @@ const TeacherSettings = () => {
                     id="teachingGoals"
                     value={questions.teaching_goals}
                     onChange={(e) => setQuestions({ ...questions, teaching_goals: e.target.value })}
-                    placeholder={questions.teaching_goals || "Brief description (1-2 sentences)"}
+                    placeholder={questions.teaching_goals || 'Brief description (1-2 sentences)'}
                     rows={3}
-                    className={!questions.teaching_goals ? "text-muted-foreground" : ""}
+                    className={!questions.teaching_goals ? 'text-muted-foreground' : ''}
                   />
                 </div>
 
@@ -423,9 +446,11 @@ const TeacherSettings = () => {
                     id="teachingStyle"
                     value={questions.style_notes}
                     onChange={(e) => setQuestions({ ...questions, style_notes: e.target.value })}
-                    placeholder={questions.style_notes || "How would you describe your approach to teaching?"}
+                    placeholder={
+                      questions.style_notes || 'How would you describe your approach to teaching?'
+                    }
                     rows={4}
-                    className={!questions.style_notes ? "text-muted-foreground" : ""}
+                    className={!questions.style_notes ? 'text-muted-foreground' : ''}
                   />
                   <p className="text-xs text-muted-foreground">
                     Include your tone, personality, values, and approach
@@ -437,10 +462,15 @@ const TeacherSettings = () => {
                   <Textarea
                     id="teachingExample"
                     value={questions.teaching_examples}
-                    onChange={(e) => setQuestions({ ...questions, teaching_examples: e.target.value })}
-                    placeholder={questions.teaching_examples || "How do you explain a concept or give feedback to students?"}
+                    onChange={(e) =>
+                      setQuestions({ ...questions, teaching_examples: e.target.value })
+                    }
+                    placeholder={
+                      questions.teaching_examples ||
+                      'How do you explain a concept or give feedback to students?'
+                    }
                     rows={4}
-                    className={!questions.teaching_examples ? "text-muted-foreground" : ""}
+                    className={!questions.teaching_examples ? 'text-muted-foreground' : ''}
                   />
                   <p className="text-xs text-muted-foreground">
                     Write a short example that shows your natural teaching voice
@@ -452,10 +482,15 @@ const TeacherSettings = () => {
                   <Textarea
                     id="additionalNotes"
                     value={questions.sample_explanation}
-                    onChange={(e) => setQuestions({ ...questions, sample_explanation: e.target.value })}
-                    placeholder={questions.sample_explanation || "Any specific preferences or additional context..."}
+                    onChange={(e) =>
+                      setQuestions({ ...questions, sample_explanation: e.target.value })
+                    }
+                    placeholder={
+                      questions.sample_explanation ||
+                      'Any specific preferences or additional context...'
+                    }
                     rows={3}
-                    className={!questions.sample_explanation ? "text-muted-foreground" : ""}
+                    className={!questions.sample_explanation ? 'text-muted-foreground' : ''}
                   />
                 </div>
 
@@ -466,7 +501,7 @@ const TeacherSettings = () => {
                       Saving...
                     </>
                   ) : (
-                    "Save Changes"
+                    'Save Changes'
                   )}
                 </Button>
               </CardContent>
@@ -558,4 +593,3 @@ const TeacherSettings = () => {
 };
 
 export default TeacherSettings;
-

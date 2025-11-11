@@ -122,4 +122,3 @@ export const ClassroomOverview = ({ classroom, onEdit }: ClassroomOverviewProps)
     </div>
   );
 };
-

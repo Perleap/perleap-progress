@@ -1,27 +1,11 @@
-import { supabase } from "@/integrations/supabase/client";
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  type: string;
-  title: string;
-  message: string;
-  link: string | null;
-  metadata: Record<string, any>;
-  is_read: boolean;
-  created_at: string;
-}
-
-export type NotificationType =
-  // Student notifications
-  | 'assignment_created'
-  | 'feedback_received'
-  | 'deadline_reminder'
-  | 'enrolled_in_classroom'
-  // Teacher notifications
-  | 'student_enrolled'
-  | 'submission_received'
-  | 'student_completed_activity';
+import { supabase } from '@/integrations/supabase/client';
+import type {
+  Notification,
+  NotificationType,
+  NotificationMetadata,
+  NotificationInsert,
+  CreateNotificationInput,
+} from '@/types/notifications';
 
 /**
  * Create a new notification for a user
@@ -33,26 +17,28 @@ export async function createNotification(
   title: string,
   message: string,
   link?: string,
-  metadata?: Record<string, any>
-) {
+  metadata?: NotificationMetadata
+): Promise<Notification> {
   try {
+    const insertData: NotificationInsert = {
+      user_id: userId,
+      type,
+      title,
+      message,
+      link: link || null,
+      metadata: metadata || {},
+      is_read: false,
+    };
+
     const { data, error } = await supabase
-      .from('notifications' as any)
-      .insert({
-        user_id: userId,
-        type,
-        title,
-        message,
-        link: link || null,
-        metadata: metadata || {},
-        is_read: false,
-      })
+      .from('notifications')
+      .insert(insertData)
       .select()
       .single();
 
     if (error) throw error;
 
-    return data as unknown as Notification;
+    return data as Notification;
   } catch (error) {
     throw error;
   }
@@ -63,34 +49,24 @@ export async function createNotification(
  * Useful for notifying all students in a classroom
  */
 export async function createBulkNotifications(
-  notifications: Array<{
-    userId: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    link?: string;
-    metadata?: Record<string, any>;
-  }>
-) {
+  notifications: CreateNotificationInput[]
+): Promise<Notification[]> {
   try {
-    const { data, error } = await supabase
-      .from('notifications' as any)
-      .insert(
-        notifications.map((n) => ({
-          user_id: n.userId,
-          type: n.type,
-          title: n.title,
-          message: n.message,
-          link: n.link || null,
-          metadata: n.metadata || {},
-          is_read: false,
-        }))
-      )
-      .select();
+    const insertData: NotificationInsert[] = notifications.map((n) => ({
+      user_id: n.userId,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      link: n.link || null,
+      metadata: n.metadata || {},
+      is_read: false,
+    }));
+
+    const { data, error } = await supabase.from('notifications').insert(insertData).select();
 
     if (error) throw error;
 
-    return data as unknown as Notification[];
+    return data as Notification[];
   } catch (error) {
     throw error;
   }
@@ -100,10 +76,10 @@ export async function createBulkNotifications(
  * Get unread notifications for a user
  * Returns data structure compatible with future real-time subscriptions
  */
-export async function getUnreadNotifications(userId: string) {
+export async function getUnreadNotifications(userId: string): Promise<Notification[]> {
   try {
     const { data, error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .eq('is_read', false)
@@ -111,7 +87,7 @@ export async function getUnreadNotifications(userId: string) {
 
     if (error) throw error;
 
-    return data as unknown as Notification[];
+    return data as Notification[];
   } catch (error) {
     return [];
   }
@@ -120,10 +96,13 @@ export async function getUnreadNotifications(userId: string) {
 /**
  * Get all notifications for a user (with optional limit)
  */
-export async function getAllNotifications(userId: string, limit: number = 50) {
+export async function getAllNotifications(
+  userId: string,
+  limit: number = 50
+): Promise<Notification[]> {
   try {
     const { data, error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -131,7 +110,7 @@ export async function getAllNotifications(userId: string, limit: number = 50) {
 
     if (error) throw error;
 
-    return data as unknown as Notification[];
+    return data as Notification[];
   } catch (error) {
     return [];
   }
@@ -143,7 +122,7 @@ export async function getAllNotifications(userId: string, limit: number = 50) {
 export async function getUnreadCount(userId: string): Promise<number> {
   try {
     const { count, error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_read', false);
@@ -159,10 +138,10 @@ export async function getUnreadCount(userId: string): Promise<number> {
 /**
  * Mark a single notification as read
  */
-export async function markAsRead(notificationId: string) {
+export async function markAsRead(notificationId: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .update({ is_read: true })
       .eq('id', notificationId);
 
@@ -177,10 +156,10 @@ export async function markAsRead(notificationId: string) {
 /**
  * Mark all notifications as read for a user
  */
-export async function markAllAsRead(userId: string) {
+export async function markAllAsRead(userId: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .update({ is_read: true })
       .eq('user_id', userId)
       .eq('is_read', false);
@@ -197,13 +176,16 @@ export async function markAllAsRead(userId: string) {
  * Delete old read notifications (cleanup utility)
  * Can be called periodically to keep the table manageable
  */
-export async function deleteOldNotifications(userId: string, daysOld: number = 30) {
+export async function deleteOldNotifications(
+  userId: string,
+  daysOld: number = 30
+): Promise<boolean> {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
     const { error } = await supabase
-      .from('notifications' as any)
+      .from('notifications')
       .delete()
       .eq('user_id', userId)
       .eq('is_read', true)
@@ -220,7 +202,7 @@ export async function deleteOldNotifications(userId: string, daysOld: number = 3
 /**
  * Future: Subscribe to real-time notification updates
  * This function structure is ready for when real-time is implemented
- * 
+ *
  * Usage example (future):
  * const unsubscribe = subscribeToNotifications(userId, (notification) => {
  *   // Handle new notification
@@ -229,12 +211,14 @@ export async function deleteOldNotifications(userId: string, daysOld: number = 3
 export function subscribeToNotifications(
   userId: string,
   callback: (notification: Notification) => void
-) {
+): () => void {
   // Placeholder for future real-time implementation
   // Will use supabase.channel().on('postgres_changes', ...).subscribe()
-  
+
   return () => {
     // Cleanup function for future implementation
   };
 }
 
+// Re-export types for convenience
+export type { Notification, NotificationType, NotificationMetadata } from '@/types/notifications';

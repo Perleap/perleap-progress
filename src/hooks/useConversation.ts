@@ -74,7 +74,8 @@ export const useConversation = ({
     setSending(true);
     try {
       const request: ChatRequest = {
-        message: '[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]',
+        message:
+          '[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]',
         assignmentInstructions,
         submissionId,
         studentId,
@@ -160,4 +161,3 @@ export const useConversation = ({
     initializeConversation,
   };
 };
-

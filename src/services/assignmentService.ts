@@ -16,7 +16,7 @@ import type {
  * Fetch all assignments for a classroom
  */
 export const getClassroomAssignments = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: Assignment[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -39,7 +39,7 @@ export const getClassroomAssignments = async (
  * Get assignment by ID with classroom info
  */
 export const getAssignmentById = async (
-  assignmentId: string,
+  assignmentId: string
 ): Promise<{ data: AssignmentWithClassroom | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -62,7 +62,7 @@ export const getAssignmentById = async (
  * Get assignments for student's enrolled classrooms
  */
 export const getStudentAssignments = async (
-  studentId: string,
+  studentId: string
 ): Promise<{ data: AssignmentWithClassroom[] | null; error: ApiError | null }> => {
   try {
     const { data: enrollments, error: enrollError } = await supabase
@@ -97,7 +97,7 @@ export const getStudentAssignments = async (
  * Create a new assignment
  */
 export const createAssignment = async (
-  assignment: CreateAssignmentInput,
+  assignment: CreateAssignmentInput
 ): Promise<{ data: Assignment | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -121,7 +121,7 @@ export const createAssignment = async (
  */
 export const updateAssignment = async (
   assignmentId: string,
-  updates: Omit<UpdateAssignmentInput, 'id'>,
+  updates: Omit<UpdateAssignmentInput, 'id'>
 ): Promise<{ data: Assignment | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -145,7 +145,7 @@ export const updateAssignment = async (
  * Delete an assignment
  */
 export const deleteAssignment = async (
-  assignmentId: string,
+  assignmentId: string
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
     const { error } = await supabase.from('assignments').delete().eq('id', assignmentId);
@@ -159,4 +159,3 @@ export const deleteAssignment = async (
     return { success: false, error: handleSupabaseError(error) };
   }
 };
-

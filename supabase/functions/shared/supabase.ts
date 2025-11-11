@@ -135,3 +135,100 @@ export const saveConversation = async (
   }
 };
 
+/**
+ * Fetch full teacher profile with teaching style data
+ */
+export const getTeacherProfile = async (teacherId: string) => {
+  const supabase = createSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('teacher_profiles')
+    .select('*')
+    .eq('user_id', teacherId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
+};
+
+/**
+ * Fetch full student profile with learning preferences
+ */
+export const getStudentProfile = async (studentId: string) => {
+  const supabase = createSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('student_profiles')
+    .select('*')
+    .eq('user_id', studentId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
+};
+
+/**
+ * Fetch assignment details including hard_skills, domain, and materials
+ */
+export const getAssignmentDetails = async (assignmentId: string) => {
+  const supabase = createSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('hard_skills, hard_skill_domain, materials, instructions, classroom_id')
+    .eq('id', assignmentId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
+};
+
+/**
+ * Fetch classroom resources (course-level materials)
+ */
+export const getClassroomResources = async (classroomId: string) => {
+  const supabase = createSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('classrooms')
+    .select('resources, course_outline')
+    .eq('id', classroomId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
+};
+
+/**
+ * Get teacher ID from assignment ID
+ */
+export const getTeacherIdFromAssignment = async (
+  assignmentId: string,
+): Promise<string | null> => {
+  const supabase = createSupabaseClient();
+
+  const { data: assignmentData, error: assignmentError } = await supabase
+    .from('assignments')
+    .select('classroom_id, classrooms(teacher_id)')
+    .eq('id', assignmentId)
+    .single();
+
+  if (assignmentError || !assignmentData) {
+    return null;
+  }
+
+  return (assignmentData?.classrooms as any)?.teacher_id || null;
+};
+

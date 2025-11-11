@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { RefreshCw } from "lucide-react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { RefreshCw } from 'lucide-react';
 
 interface RegenerateScoresButtonProps {
   classroomId: string;
@@ -22,12 +22,12 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         .eq('classroom_id', classroomId);
 
       if (!assignments || assignments.length === 0) {
-        toast.info("No assignments found");
+        toast.info('No assignments found');
         setLoading(false);
         return;
       }
 
-      const assignmentIds = assignments.map(a => a.id);
+      const assignmentIds = assignments.map((a) => a.id);
 
       // Get all submissions with feedback (completed assignments)
       const { data: submissions } = await supabase
@@ -36,7 +36,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         .in('assignment_id', assignmentIds);
 
       if (!submissions || submissions.length === 0) {
-        toast.info("No completed submissions found");
+        toast.info('No completed submissions found');
         setLoading(false);
         return;
       }
@@ -45,12 +45,15 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
       const { data: feedbackData } = await supabase
         .from('assignment_feedback')
         .select('submission_id')
-        .in('submission_id', submissions.map(s => s.id));
+        .in(
+          'submission_id',
+          submissions.map((s) => s.id)
+        );
 
-      const completedSubmissionIds = feedbackData?.map(f => f.submission_id) || [];
+      const completedSubmissionIds = feedbackData?.map((f) => f.submission_id) || [];
 
       if (completedSubmissionIds.length === 0) {
-        toast.info("No completed submissions found");
+        toast.info('No completed submissions found');
         setLoading(false);
         return;
       }
@@ -62,7 +65,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
       for (const submissionId of completedSubmissionIds) {
         try {
           const { error } = await supabase.functions.invoke('regenerate-scores', {
-            body: { submissionId }
+            body: { submissionId },
           });
 
           if (error) {
@@ -84,18 +87,14 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         toast.error(`Failed to regenerate ${failCount} profiles`);
       }
     } catch (error) {
-      toast.error("Failed to regenerate scores");
+      toast.error('Failed to regenerate scores');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Button
-      variant="outline"
-      onClick={regenerateAllScores}
-      disabled={loading}
-    >
+    <Button variant="outline" onClick={regenerateAllScores} disabled={loading}>
       <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
       {loading ? 'Regenerating...' : 'Regenerate All 5D Scores'}
     </Button>

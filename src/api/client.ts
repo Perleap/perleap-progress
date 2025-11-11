@@ -27,7 +27,7 @@ export const handleSupabaseError = (error: unknown): ApiError => {
  * Type-safe wrapper for Supabase queries with error handling
  */
 export const safeQuery = async <T>(
-  queryFn: () => Promise<{ data: T | null; error: unknown }>,
+  queryFn: () => Promise<{ data: T | null; error: unknown }>
 ): Promise<{ data: T | null; error: ApiError | null }> => {
   try {
     const { data, error } = await queryFn();
@@ -41,4 +41,3 @@ export const safeQuery = async <T>(
 };
 
 export { supabase };
-

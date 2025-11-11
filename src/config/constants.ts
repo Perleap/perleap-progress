@@ -59,7 +59,8 @@ export const DIMENSION_CONFIG = {
   },
   thinking: {
     label: 'Thinking',
-    description: 'Strong analysis, deep insight, and sound judgment; critical and analytical skills',
+    description:
+      'Strong analysis, deep insight, and sound judgment; critical and analytical skills',
     color: '#3B82F6',
   },
   connection: {
@@ -116,4 +117,3 @@ export const STORAGE_KEYS = {
   USER_PREFERENCES: 'user_preferences',
   THEME: 'theme',
 } as const;
-

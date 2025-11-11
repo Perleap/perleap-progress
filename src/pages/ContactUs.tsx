@@ -1,21 +1,21 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const ContactUs = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    message: "",
+    firstName: '',
+    lastName: '',
+    email: '',
+    message: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +25,7 @@ const ContactUs = () => {
     // Simulate API call
     setTimeout(() => {
       toast.success("Message sent successfully! We'll get back to you soon.");
-      setFormData({ firstName: "", lastName: "", email: "", message: "" });
+      setFormData({ firstName: '', lastName: '', email: '', message: '' });
       setLoading(false);
     }, 1500);
   };
@@ -46,7 +46,7 @@ const ContactUs = () => {
             <img src="/perleap_logo.png" alt="PerLeap" className="h-10 w-10" />
             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <Link to="/">
               <Button size="sm" variant="ghost" className="font-medium">
                 <ArrowLeft className="h-4 w-4 mr-1" />
@@ -68,7 +68,8 @@ const ContactUs = () => {
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Get in Touch</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Have a question or feedback? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            Have a question or feedback? We'd love to hear from you. Send us a message and we'll
+            respond as soon as possible.
           </p>
         </div>
 
@@ -196,11 +197,11 @@ const ContactUs = () => {
           {/* Additional Info */}
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              You can also reach us through our{" "}
+              You can also reach us through our{' '}
               <a href="#" className="text-primary hover:underline font-medium">
                 Help Center
-              </a>{" "}
-              or{" "}
+              </a>{' '}
+              or{' '}
               <a href="#" className="text-primary hover:underline font-medium">
                 Community Forum
               </a>
@@ -213,4 +214,3 @@ const ContactUs = () => {
 };
 
 export default ContactUs;
-

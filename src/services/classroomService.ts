@@ -16,7 +16,7 @@ import type {
  * Fetch all classrooms for a teacher
  */
 export const getTeacherClassrooms = async (
-  teacherId: string,
+  teacherId: string
 ): Promise<{ data: Classroom[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -39,7 +39,7 @@ export const getTeacherClassrooms = async (
  */
 export const getClassroomById = async (
   classroomId: string,
-  teacherId: string,
+  teacherId: string
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -63,14 +63,10 @@ export const getClassroomById = async (
  * Create a new classroom
  */
 export const createClassroom = async (
-  classroom: Omit<Classroom, 'id' | 'created_at' | 'invite_code'>,
+  classroom: Omit<Classroom, 'id' | 'created_at' | 'invite_code'>
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
-      .from('classrooms')
-      .insert([classroom])
-      .select()
-      .single();
+    const { data, error } = await supabase.from('classrooms').insert([classroom]).select().single();
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -87,7 +83,7 @@ export const createClassroom = async (
  */
 export const updateClassroom = async (
   classroomId: string,
-  updates: Partial<Omit<Classroom, 'id' | 'created_at' | 'invite_code' | 'teacher_id'>>,
+  updates: Partial<Omit<Classroom, 'id' | 'created_at' | 'invite_code' | 'teacher_id'>>
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -111,7 +107,7 @@ export const updateClassroom = async (
  * Get enrollments for a classroom
  */
 export const getClassroomEnrollments = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: Enrollment[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -134,7 +130,7 @@ export const getClassroomEnrollments = async (
  * Get enrolled students with profiles
  */
 export const getEnrolledStudents = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: EnrolledStudent[] | null; error: ApiError | null }> => {
   try {
     const { data: enrollments, error: enrollError } = await supabase
@@ -172,7 +168,7 @@ export const getEnrolledStudents = async (
  * Find classroom by invite code
  */
 export const findClassroomByInviteCode = async (
-  inviteCode: string,
+  inviteCode: string
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -196,7 +192,7 @@ export const findClassroomByInviteCode = async (
  */
 export const joinClassroom = async (
   classroomId: string,
-  studentId: string,
+  studentId: string
 ): Promise<{ data: Enrollment | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -220,7 +216,7 @@ export const joinClassroom = async (
  */
 export const isStudentEnrolled = async (
   classroomId: string,
-  studentId: string,
+  studentId: string
 ): Promise<{ enrolled: boolean; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -244,7 +240,7 @@ export const isStudentEnrolled = async (
  * Get student's enrolled classrooms
  */
 export const getStudentClassrooms = async (
-  studentId: string,
+  studentId: string
 ): Promise<{ data: Classroom[] | null; error: ApiError | null }> => {
   try {
     const { data: enrollments, error: enrollError } = await supabase
@@ -258,10 +254,7 @@ export const getStudentClassrooms = async (
 
     const classroomIds = enrollments.map((e) => e.classroom_id);
 
-    const { data, error } = await supabase
-      .from('classrooms')
-      .select('*')
-      .in('id', classroomIds);
+    const { data, error } = await supabase.from('classrooms').select('*').in('id', classroomIds);
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -272,4 +265,3 @@ export const getStudentClassrooms = async (
     return { data: null, error: handleSupabaseError(error) };
   }
 };
-

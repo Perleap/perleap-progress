@@ -143,7 +143,7 @@
   "teacherDashboard": {
     "title": "לוח מורה",
     "welcome": "ברוך הבא {{name}} ללוח הבקרה שלך",
-    "myClassrooms": "הכיתות שלי",
+    "myClassrooms": "הכיתות שלי של Perleap",
     "subtitle": "נהל את הכיתות שלך ועקוב אחר התקדמות התלמידים",
     "createClassroom": "צור כיתה",
     "inviteCode": "קוד הזמנה:",
@@ -304,7 +304,8 @@
       "deleting": "שגיאה במחיקת כיתה"
     },
     "success": {
-      "deleted": "הכיתה נמחקה בהצלחה"
+      "deleted": "הכיתה נמחקה בהצלחה",
+      "assignmentDeleted": "המשימה נמחקה בהצלחה"
     }
   },
   "submissionsTab": {
@@ -470,6 +471,10 @@
     "no": "לא",
     "students": "תלמידים",
     "start": "התחלה",
+    "notifications": "התראות",
+    "noNotifications": "אין התראות חדשות",
+    "markAllRead": "סמן הכל כנקרא",
+    "notificationsRead": "כל ההתראות סומנו כנקראו",
     "end": "סיום"
   },
   "dimensions": {
@@ -493,6 +498,152 @@
     "action": {
       "label": "פעולה",
       "description": "הפיכת תוכניות לתוצאות עם מיקוד, נחישות ומיומנויות מעשיות"
+    }
+  },
+  "cra": {
+    "title": "יכולות הקשורות לתוכן (CRA)",
+    "description": "הערכה של מיומנויות קשות על בסיס ביצועי תלמידים",
+    "loading": "טוען...",
+    "nextSteps": "הצעדים הבאים",
+    "unknown": "לא ידוע",
+    "performance": {
+      "advanced": "מתקדם",
+      "intermediate": "בינוני",
+      "developing": "מתפתח",
+      "beginner": "מתחיל"
+    }
+  },
+  "studentOnboarding": {
+    "title": "הקמת פרופיל תלמיד",
+    "stepOf": "שלב {{current}} מתוך {{total}}: בואו נלמד על העדפות הלמידה שלך",
+    "step1": {
+      "fullName": "שם מלא *",
+      "profilePicture": "תמונת פרופיל (אופציונלי)",
+      "uploadPhoto": "העלה תמונה",
+      "fileSize": "PNG, JPG עד 5MB",
+      "learningMethodsQuestion": "איזה סוגי פעילויות או שיטות עוזרים לך ללמוד הכי טוב?",
+      "visual": "למידה ויזואלית",
+      "visualDesc": "אני לומד הכי טוב על ידי קריאת ספרי לימוד, הסתכלות על דיאגרמות, גרפים ותמונות",
+      "auditory": "למידה שמיעתית",
+      "auditoryDesc": "אני לומד הכי טוב על ידי הקשבה להסברים ודיונים",
+      "kinesthetic": "למידה קינסטטית",
+      "kinestheticDesc": "אני לומד הכי טוב על ידי ביצוע תרגול מעשי ופעילויות",
+      "video": "למידה באמצעות וידאו",
+      "videoDesc": "אני לומד הכי טוב על ידי צפייה בסרטונים והדגמות"
+    },
+    "step2": {
+      "soloVsGroupQuestion": "האם אתה לומד טוב יותר כשאתה לומד לבד, או שאתה מעדיף ללמוד עם אחרים?",
+      "solo": "למידה עצמאית",
+      "soloDesc": "אני מעדיף לעבוד על חומר לבד",
+      "group": "למידה קבוצתית",
+      "groupDesc": "אני אוהב פעילויות קבוצתיות ודיונים שעוזרים לי להבין",
+      "both": "גמיש",
+      "bothDesc": "אני אוהב שילוב של למידה עצמאית וקבוצתית",
+      "scheduledVsFlexibleQuestion": "האם אתה אוהב לעקוב אחר לוח זמנים קבוע או תוכנית, או שאתה מעדיף להיות גמיש?",
+      "scheduled": "לוח זמנים מובנה",
+      "scheduledDesc": "אני משגשג עם שגרה ותוכנית קבועה",
+      "flexible": "גישה גמישה",
+      "flexibleDesc": "אני מעדיף להחליט מה ללמוד תוך כדי"
+    },
+    "step3": {
+      "motivationQuestion": "מה מניע אותך להשקיע את המאמץ הטוב ביותר שלך כשלומדים משהו חדש?",
+      "curiosity": "סקרנות",
+      "curiosityDesc": "אני אוהב ללמוד על נושאים חדשים שמעניינים אותי",
+      "grades": "הישגים",
+      "gradesDesc": "אני רוצה להשיג ציונים גבוהים והצלחה אקדמית",
+      "encouragement": "הכרה",
+      "encouragementDesc": "אני מונע על ידי שבחים ועידוד מאחרים",
+      "personalGoals": "מטרות אישיות",
+      "personalGoalsDesc": "אני מונע על ידי המטרות והשאיפות שלי",
+      "competition": "תחרות",
+      "competitionDesc": "אני מונע על ידי תחרות ידידותית עם חברים"
+    },
+    "step4": {
+      "helpQuestion": "אם אתה נאבק להבין מושג או מיומנות, מה הדרך הטובה ביותר שמישהו יכול לעזור לך?",
+      "hints": "תן לי רמזים או קודים להבין את זה בעצמי",
+      "differentWay": "הסבר את זה בדרך אחרת או עם דוגמאות שונות",
+      "stepByStep": "הראה לי פתרון צעד אחר צעד",
+      "moreTime": "תן לי להבין את זה בעצמי עם יותר זמן",
+      "teacherQuestion": "מה אתה מחפש במורה או מאמן?",
+      "patient": "מישהו שסבלני ומבין",
+      "challenging": "מישהו שדוחף אותי להשיג את הטוב ביותר שלי",
+      "clear": "מישהו שמסביר הכל בצורה מאוד ברורה",
+      "fun": "מישהו שהופך את הלמידה למהנה ומרתקת"
+    },
+    "step5": {
+      "feedbackQuestion": "איך אתה מעדיף לקבל משוב או תיקונים על העבודה שלך?",
+      "immediate": "משוב מיידי בזמן שאני מתרגל",
+      "written": "הערות כתובות או ציונים אחר כך",
+      "discussion": "שיחה קצרה שבה המורה עובר על איך הלך לי",
+      "goalQuestion": "מה מטרה אחת שאתה מקווה להשיג באמצעות חוויית למידה זו?",
+      "goalPlaceholder": "לדוגמה, לשפר את הציון שלי, לשלוט במיומנות, לזכות בביטחון, להתכונן לקולג'..."
+    },
+    "step6": {
+      "specialNeedsQuestion": "האם יש לך צרכים או העדפות ספציפיות שעוזרות לך ללמוד טוב יותר?",
+      "specialNeedsPlaceholder": "לדוגמה, הפסקות קצרות, עזרים ויזואליים, תרגול מעשי, סביבה שקטה...",
+      "additionalNotesQuestion": "האם יש משהו נוסף שתרצה שהמורה או הבינה המלאכותית ידעו על איך אתה אוהב ללמוד או ללמוד?",
+      "additionalNotesPlaceholder": "שתף הערות אחרות, קשיי למידה, חרדות או העדפות..."
+    },
+    "back": "חזור",
+    "next": "הבא",
+    "completeSetup": "השלם הקמה",
+    "errors": {
+      "fileSize": "גודל הקובץ צריך להיות פחות מ-5MB",
+      "notAuthenticated": "משתמש לא מאומת. אנא התחבר שוב.",
+      "uploadAvatar": "נכשל להעלות תמונת פרופיל. ממשיך ללא תמונת פרופיל.",
+      "profileExists": "פרופיל כבר קיים לחשבון זה. מפנה ללוח הבקרה...",
+      "createProfile": "שגיאה ביצירת פרופיל. אנא נסה שוב."
+    },
+    "success": {
+      "profileCreated": "הפרופיל נוצר בהצלחה!"
+    }
+  },
+  "teacherOnboarding": {
+    "title": "הקמת פרופיל מורה",
+    "stepOf": "שלב {{current}} מתוך {{total}}:",
+    "step1Title": "מידע חיוני",
+    "step2Title": "סגנון הוראה וגישה",
+    "step1": {
+      "fullName": "שם מלא *",
+      "fullNamePlaceholder": "יוחנן דו",
+      "profilePicture": "תמונת פרופיל (אופציונלי)",
+      "uploadPhoto": "העלה תמונה",
+      "fileSize": "PNG, JPG עד 5MB",
+      "phoneNumber": "מספר טלפון",
+      "phoneNumberPlaceholder": "+972 50-123-4567",
+      "subjects": "מקצועות שאתה מלמד *",
+      "subjectsPlaceholder": "לדוגמה, מתמטיקה, פיזיקה, כימיה",
+      "subjectsHelp": "הפרד מקצועות מרובים בפסיקים",
+      "yearsExperience": "שנות ניסיון בהוראה *",
+      "yearsExperiencePlaceholder": "5",
+      "studentLevel": "רמת תלמידים",
+      "studentLevelPlaceholder": "לדוגמה, חטיבת ביניים, תיכון, אוניברסיטה"
+    },
+    "step2": {
+      "teachingGoalsQuestion": "מהן מטרות ההוראה העיקריות שלך?",
+      "teachingGoalsPlaceholder": "תיאור קצר (1-2 משפטים)",
+      "teachingGoalsHelp": "לדוגמה, \"לעזור לתלמידים לפתח מיומנויות חשיבה ביקורתית ולבנות ביטחון בפתרון בעיות\"",
+      "teachingStyleQuestion": "תאר את סגנון ההוראה שלך",
+      "teachingStylePlaceholder": "איך היית מתאר את הגישה שלך להוראה?",
+      "teachingStyleHelp": "כלול את הטון, האישיות, הערכים והגישה שלך (לדוגמה, סבלני, מובנה, מעודד שאלות, משתמש בדוגמאות מהעולם האמיתי)",
+      "teachingExampleQuestion": "שתף דוגמה קצרה להוראה",
+      "teachingExamplePlaceholder": "איך אתה מסביר מושג או נותן משוב לתלמידים?",
+      "teachingExampleHelp": "כתוב דוגמה קצרה שמראה את קול ההוראה הטבעי שלך",
+      "additionalNotesQuestion": "משהו נוסף שאנחנו צריכים לדעת? (אופציונלי)",
+      "additionalNotesPlaceholder": "העדפות ספציפיות או הקשר נוסף..."
+    },
+    "back": "חזור",
+    "next": "הבא",
+    "completeSetup": "השלם הקמה",
+    "errors": {
+      "fileSize": "גודל הקובץ צריך להיות פחות מ-5MB",
+      "notAuthenticated": "משתמש לא מאומת. אנא התחבר שוב.",
+      "uploadAvatar": "נכשל להעלות תמונת פרופיל. ממשיך ללא תמונת פרופיל.",
+      "profileExists": "פרופיל כבר קיים לחשבון זה. מפנה ללוח הבקרה...",
+      "createProfile": "שגיאה ביצירת פרופיל. אנא נסה שוב."
+    },
+    "success": {
+      "profileCreated": "הפרופיל נוצר בהצלחה!"
     }
   }
 }

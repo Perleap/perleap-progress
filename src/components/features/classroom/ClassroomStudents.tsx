@@ -54,4 +54,3 @@ export const ClassroomStudents = ({ students }: ClassroomStudentsProps) => {
     </div>
   );
 };
-

@@ -1,6 +1,6 @@
 // Update this page (the content is just a fallback if you fail to update the page)
 
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Index = () => {
   return (

@@ -1,11 +1,16 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Eye, ChevronDown, ChevronUp } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 interface SubmissionCardProps {
   submission: {
@@ -15,7 +20,7 @@ interface SubmissionCardProps {
     assignment_title: string;
     has_feedback: boolean;
     teacher_feedback?: string;
-    conversation_context?: any[];
+    conversation_context?: ConversationMessage[];
   };
 }
 
@@ -25,7 +30,8 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
   const [isConversationOpen, setIsConversationOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
-  const hasConversation = submission.conversation_context && submission.conversation_context.length > 0;
+  const hasConversation =
+    submission.conversation_context && submission.conversation_context.length > 0;
 
   return (
     <Card>
@@ -40,7 +46,9 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={submission.has_feedback ? 'default' : 'secondary'}>
-              {submission.has_feedback ? t('submissionCard.completed') : t('submissionCard.inProgress')}
+              {submission.has_feedback
+                ? t('submissionCard.completed')
+                : t('submissionCard.inProgress')}
             </Badge>
             <Button
               variant="ghost"
@@ -52,7 +60,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
           </div>
         </div>
       </CardHeader>
-      
+
       {submission.has_feedback && (
         <CardContent className="space-y-4">
           {hasConversation && (
@@ -60,26 +68,26 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
               <CollapsibleTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-between">
                   <span className="font-semibold">{t('submissionCard.conversation')}</span>
-                  {isConversationOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {isConversationOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {submission.conversation_context!.map((msg: any, idx: number) => (
+                  {submission.conversation_context!.map((msg, idx) => (
                     <div
                       key={idx}
                       className={`p-3 rounded-lg text-sm ${
-                        msg.role === 'user'
-                          ? 'bg-primary/10 ml-8'
-                          : 'bg-muted mr-8'
+                        msg.role === 'user' ? 'bg-primary/10 ml-8' : 'bg-muted mr-8'
                       }`}
                     >
                       <div className="font-semibold mb-1 text-xs">
                         {msg.role === 'user' ? submission.student_name : t('submissionCard.ai')}
                       </div>
-                      <div className="whitespace-pre-wrap">
-                        {msg.content}
-                      </div>
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
                     </div>
                   ))}
                 </div>
@@ -92,15 +100,16 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
               <CollapsibleTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-between">
                   <span className="font-semibold">{t('submissionCard.teacherFeedback')}</span>
-                  {isFeedbackOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {isFeedbackOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
                 <div className="prose prose-sm max-w-none text-muted-foreground p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
-                  {submission.teacher_feedback
-                    ?.replace(/\*\*/g, '')
-                    ?.replace(/\/\//g, '')
-                    ?.trim()}
+                  {submission.teacher_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
                 </div>
               </CollapsibleContent>
             </Collapsible>

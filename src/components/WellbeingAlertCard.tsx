@@ -1,13 +1,13 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import type { StudentAlert, AlertLevel } from "@/types/alerts";
-import { ALERT_TYPE_LABELS, ALERT_LEVEL_COLORS } from "@/types/alerts";
-import { useTranslation } from "react-i18next";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import type { StudentAlert, AlertLevel } from '@/types/alerts';
+import { ALERT_TYPE_LABELS, ALERT_LEVEL_COLORS } from '@/types/alerts';
+import { useTranslation } from 'react-i18next';
 
 interface WellbeingAlertCardProps {
   alerts: StudentAlert[];
@@ -15,7 +15,11 @@ interface WellbeingAlertCardProps {
   onAcknowledge?: () => void;
 }
 
-export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: WellbeingAlertCardProps) {
+export function WellbeingAlertCard({
+  alerts,
+  studentName,
+  onAcknowledge,
+}: WellbeingAlertCardProps) {
   const { t } = useTranslation();
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
 
@@ -24,29 +28,33 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
   }
 
   // Consolidate alerts - get unique alert types and most severe level
-  const uniqueAlertTypes = Array.from(new Set(alerts.map(a => a.alert_type)));
-  const hasAnyAcknowledged = alerts.some(a => a.is_acknowledged);
-  const hasAnyUnacknowledged = alerts.some(a => !a.is_acknowledged);
+  const uniqueAlertTypes = Array.from(new Set(alerts.map((a) => a.alert_type)));
+  const hasAnyAcknowledged = alerts.some((a) => a.is_acknowledged);
+  const hasAnyUnacknowledged = alerts.some((a) => !a.is_acknowledged);
 
-  const mostSevereLevel: AlertLevel = alerts.some(a => a.alert_level === 'critical') ? 'critical' : 'concerning';
+  const mostSevereLevel: AlertLevel = alerts.some((a) => a.alert_level === 'critical')
+    ? 'critical'
+    : 'concerning';
   const colors = ALERT_LEVEL_COLORS[mostSevereLevel];
 
   // Get all unique triggered messages (avoid duplicates)
   const allTriggeredMessages = Array.from(
     new Map(
-      alerts.flatMap(a => a.triggered_messages).map(tm => [tm.message_index, tm])
+      alerts.flatMap((a) => a.triggered_messages).map((tm) => [tm.message_index, tm])
     ).values()
   );
 
   // Get the most comprehensive AI analysis (use the longest one)
-  const bestAnalysis = alerts.reduce((best, current) => 
+  const bestAnalysis = alerts.reduce((best, current) =>
     current.ai_analysis.length > best.ai_analysis.length ? current : best
   ).ai_analysis;
 
   const handleAcknowledge = async (alertId: string) => {
     setAcknowledging(alertId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('student_alerts')
         .update({
@@ -70,9 +78,11 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
   const handleAcknowledgeAll = async () => {
     setAcknowledging('all');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const unacknowledgedIds = alerts.filter(a => !a.is_acknowledged).map(a => a.id);
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const unacknowledgedIds = alerts.filter((a) => !a.is_acknowledged).map((a) => a.id);
+
       const { error } = await supabase
         .from('student_alerts')
         .update({
@@ -101,7 +111,9 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
             <AlertTriangle className={`h-6 w-6 ${colors.text} mt-1`} />
             <div>
               <CardTitle className={`text-xl ${colors.text}`}>
-                {mostSevereLevel === 'critical' ? `🚨 ${t('wellbeing.level.critical')} ${t('wellbeing.alert')}` : `⚠️ ${t('wellbeing.level.concerning')}`}
+                {mostSevereLevel === 'critical'
+                  ? `🚨 ${t('wellbeing.level.critical')} ${t('wellbeing.alert')}`
+                  : `⚠️ ${t('wellbeing.level.concerning')}`}
               </CardTitle>
               <CardDescription className="mt-1">
                 Concerning signs detected in {studentName}'s conversation
@@ -138,7 +150,7 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
               <Badge variant={mostSevereLevel === 'critical' ? 'destructive' : 'default'}>
                 {mostSevereLevel.toUpperCase()}
               </Badge>
-              {uniqueAlertTypes.map(type => (
+              {uniqueAlertTypes.map((type) => (
                 <Badge key={type} variant="outline">
                   {ALERT_TYPE_LABELS[type]}
                 </Badge>
@@ -184,23 +196,23 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
               ⚠️ Immediate Action Recommended
             </p>
             <p className="text-sm text-red-800">
-              This is a critical alert. Please reach out to {studentName} immediately to ensure their safety and wellbeing. 
-              Consider involving school counseling services or mental health professionals if appropriate.
+              This is a critical alert. Please reach out to {studentName} immediately to ensure
+              their safety and wellbeing. Consider involving school counseling services or mental
+              health professionals if appropriate.
             </p>
             <p className="text-xs text-red-700 mt-2">
-              If you believe the student is in immediate danger, contact emergency services or your institution's crisis response team.
+              If you believe the student is in immediate danger, contact emergency services or your
+              institution's crisis response team.
             </p>
           </div>
         )}
 
         {mostSevereLevel === 'concerning' && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
-            <p className="text-sm font-semibold text-yellow-900 mb-2">
-              💡 Recommended Action
-            </p>
+            <p className="text-sm font-semibold text-yellow-900 mb-2">💡 Recommended Action</p>
             <p className="text-sm text-yellow-800">
-              Please check in with {studentName} to provide support and guidance. Early intervention can make a significant difference 
-              in student wellbeing and academic success.
+              Please check in with {studentName} to provide support and guidance. Early intervention
+              can make a significant difference in student wellbeing and academic success.
             </p>
           </div>
         )}
@@ -208,4 +220,3 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
     </Card>
   );
 }
-

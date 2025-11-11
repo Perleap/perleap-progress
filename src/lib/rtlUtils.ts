@@ -6,7 +6,7 @@
 /**
  * Returns the appropriate class based on current direction
  * @param ltrClass - Class to use for LTR layout
- * @param rtlClass - Class to use for RTL layout  
+ * @param rtlClass - Class to use for RTL layout
  * @param isRTL - Whether current direction is RTL
  * @returns The appropriate class string
  */
@@ -55,10 +55,10 @@ export const rtlFlexDirection = (
   isRTL: boolean
 ): string => {
   if (!isRTL) return `flex-${direction}`;
-  
+
   if (direction === 'row') return 'flex-row-reverse';
   if (direction === 'row-reverse') return 'flex-row';
-  
+
   return `flex-${direction}`;
 };
 
@@ -71,4 +71,3 @@ export const rtlFlexDirection = (
 export const cn = (...classes: (string | boolean | undefined)[]): string => {
   return classes.filter(Boolean).join(' ');
 };
-

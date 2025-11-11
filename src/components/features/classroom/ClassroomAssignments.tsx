@@ -59,19 +59,14 @@ export const ClassroomAssignments = ({
                     <CardTitle>{assignment.title}</CardTitle>
                     <CardDescription className="mt-2">
                       Type: {assignment.type.replace('_', ' ')} •
-                      {assignment.due_at &&
-                        ` Due: ${new Date(assignment.due_at).toLocaleString()}`}
+                      {assignment.due_at && ` Due: ${new Date(assignment.due_at).toLocaleString()}`}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
                       {assignment.status}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditAssignment(assignment)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onEditAssignment(assignment)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
@@ -96,4 +91,3 @@ export const ClassroomAssignments = ({
     </div>
   );
 };
-

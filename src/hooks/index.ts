@@ -10,3 +10,5 @@ export * from './useConversation';
 export * from './use-mobile';
 export * from './use-toast';
 export * from './usePersistedState';
+export * from './useNotifications';
+export * from './useAvatarUpload';

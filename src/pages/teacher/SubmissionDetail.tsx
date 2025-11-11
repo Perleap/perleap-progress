@@ -1,19 +1,24 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, MessageSquare, AlertTriangle, Sparkles } from "lucide-react";
-import { toast } from "sonner";
-import { WellbeingAlertCard } from "@/components/WellbeingAlertCard";
-import { StudentAnalytics } from "@/components/StudentAnalytics";
-import { CreateAssignmentDialog } from "@/components/CreateAssignmentDialog";
-import type { StudentAlert } from "@/types/alerts";
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { ArrowLeft, MessageSquare, AlertTriangle, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
+import { StudentAnalytics } from '@/components/StudentAnalytics';
+import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
+import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
+import type { StudentAlert } from '@/types/alerts';
+
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 interface Submission {
   id: string;
@@ -22,8 +27,11 @@ interface Submission {
   assignment_id: string;
   assignments: {
     title: string;
+    due_at: string;
+    classroom_id: string;
     classrooms: {
       name: string;
+      teacher_id: string;
     };
   };
 }
@@ -32,7 +40,15 @@ interface Feedback {
   student_feedback: string;
   teacher_feedback: string;
   created_at: string;
-  conversation_context: any;
+  conversation_context: ConversationMessage[] | null;
+}
+
+interface GeneratedAssignmentData {
+  title: string;
+  instructions: string;
+  type: string;
+  target_dimensions: Record<string, boolean>;
+  due_at: string;
 }
 
 const SubmissionDetail = () => {
@@ -47,7 +63,8 @@ const SubmissionDetail = () => {
   const [alerts, setAlerts] = useState<StudentAlert[]>([]);
   const [generatingAssignment, setGeneratingAssignment] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-  const [generatedAssignmentData, setGeneratedAssignmentData] = useState<any>(null);
+  const [generatedAssignmentData, setGeneratedAssignmentData] =
+    useState<GeneratedAssignmentData | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -74,14 +91,14 @@ const SubmissionDetail = () => {
       }
 
       // Check if this teacher owns the classroom
-      const teacherId = (submissionData.assignments as any).classrooms.teacher_id;
+      const teacherId = submissionData.assignments.classrooms.teacher_id;
       if (teacherId !== user?.id) {
         toast.error(t('submissionDetail.errors.loading'));
         navigate(-1);
         return;
       }
 
-      setSubmission(submissionData as any);
+      setSubmission(submissionData as Submission);
 
       // Fetch student name
       const { data: studentProfile } = await supabase
@@ -113,8 +130,10 @@ const SubmissionDetail = () => {
       if (alertsData) {
         setAlerts(alertsData);
       }
-    } catch (error: any) {
-      toast.error("Error loading submission");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error loading submission';
+      console.error('Error loading submission:', errorMessage);
+      toast.error('Error loading submission');
       navigate(-1);
     } finally {
       setLoading(false);
@@ -131,9 +150,9 @@ const SubmissionDetail = () => {
           teacherFeedback: feedback.teacher_feedback,
           studentFeedback: feedback.student_feedback,
           conversationContext: feedback.conversation_context,
-          originalAssignmentTitle: (submission.assignments as any).title,
+          originalAssignmentTitle: submission.assignments.title,
           studentName: studentName,
-        }
+        },
       });
 
       if (error) throw error;
@@ -144,7 +163,7 @@ const SubmissionDetail = () => {
 
       // Calculate default due date: 1 week after original assignment due date
       let defaultDueDate = '';
-      const originalDueDate = (submission.assignments as any).due_at;
+      const originalDueDate = submission.assignments.due_at;
       if (originalDueDate) {
         const oneWeekLater = new Date(originalDueDate);
         oneWeekLater.setDate(oneWeekLater.getDate() + 7);
@@ -161,11 +180,13 @@ const SubmissionDetail = () => {
         due_at: defaultDueDate,
       });
       setAssignmentDialogOpen(true);
-      
-      toast.success("AI-generated assignment ready for review!");
-    } catch (error: any) {
+
+      toast.success('AI-generated assignment ready for review!');
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to generate assignment. Please try again.';
       console.error('Error generating follow-up assignment:', error);
-      toast.error(error.message || "Failed to generate assignment. Please try again.");
+      toast.error(errorMessage);
     } finally {
       setGeneratingAssignment(false);
     }
@@ -183,33 +204,19 @@ const SubmissionDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-16 items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{t('submissionDetail.title')}: {studentName}</h1>
-            <p className="text-sm text-muted-foreground">
-              {(submission.assignments as any).title}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <LanguageSwitcher />
-          </div>
-          <Badge variant="secondary">
-            {new Date(submission.submitted_at).toLocaleDateString()}
-          </Badge>
-        </div>
-      </header>
+      <DashboardHeader
+        title={`${t('submissionDetail.title')}: ${studentName}`}
+        subtitle={`${submission.assignments.title} - ${new Date(submission.submitted_at).toLocaleDateString()}`}
+        userType="teacher"
+        showBackButton
+      />
 
       <main className="container py-8 max-w-5xl">
         <div className="space-y-6">
           {/* Wellbeing Alerts - Show prominently at top */}
           {alerts.length > 0 && (
-            <WellbeingAlertCard 
-              alerts={alerts} 
+            <WellbeingAlertCard
+              alerts={alerts}
               studentName={studentName}
               onAcknowledge={fetchData}
             />
@@ -221,12 +228,15 @@ const SubmissionDetail = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-primary">{t('submissionDetail.teacherFeedback')}</CardTitle>
+                      <CardTitle className="text-primary">
+                        {t('submissionDetail.teacherFeedback')}
+                      </CardTitle>
                       <CardDescription>
-                        AI-generated analysis and recommendations based on {studentName}'s learning conversation
+                        AI-generated analysis and recommendations based on {studentName}'s learning
+                        conversation
                       </CardDescription>
                     </div>
-                    <Button 
+                    <Button
                       onClick={handleGenerateFollowupAssignment}
                       disabled={generatingAssignment}
                       className="flex items-center gap-2"
@@ -264,18 +274,21 @@ const SubmissionDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none text-muted-foreground">
-                    {feedback.student_feedback
-                      ?.replace(/\*\*/g, '')
-                      ?.replace(/\/\//g, '')
-                      ?.trim()}
+                    {feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
                   </div>
                 </CardContent>
               </Card>
 
-              <StudentAnalytics 
+              <StudentAnalytics
                 studentId={submission.student_id}
-                classroomId={(submission.assignments as any).classroom_id}
+                classroomId={submission.assignments.classroom_id}
                 currentSubmissionId={submission.id}
+              />
+
+              <HardSkillsAssessmentTable
+                submissionId={submission.id}
+                title="Content Related Abilities (CRA)"
+                description={`Hard skills assessment for ${studentName}'s performance`}
               />
 
               <Card>
@@ -295,48 +308,48 @@ const SubmissionDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {Array.isArray(feedback.conversation_context) && feedback.conversation_context.map((msg: any, idx: number) => {
-                      // Check if this message triggered any alerts
-                      const triggeredAlerts = alerts.flatMap(alert => 
-                        alert.triggered_messages.filter(tm => tm.message_index === idx)
-                      );
-                      const isConcerning = triggeredAlerts.length > 0;
-                      
-                      return (
-                        <div
-                          key={idx}
-                          className={`p-4 rounded-lg relative ${
-                            isConcerning 
-                              ? 'bg-red-50 border-2 border-red-400 ml-8'
-                              : msg.role === 'user'
-                                ? 'bg-primary/10 ml-8'
-                                : 'bg-muted mr-8'
-                          }`}
-                        >
-                          {isConcerning && (
-                            <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
-                              <AlertTriangle className="h-4 w-4" />
-                            </div>
-                          )}
-                          <div className="font-semibold mb-1 text-sm flex items-center gap-2">
-                            {msg.role === 'user' ? studentName : 'Perleap'}
+                    {feedback.conversation_context &&
+                      Array.isArray(feedback.conversation_context) &&
+                      feedback.conversation_context.map((msg, idx) => {
+                        // Check if this message triggered any alerts
+                        const triggeredAlerts = alerts.flatMap((alert) =>
+                          alert.triggered_messages.filter((tm) => tm.message_index === idx)
+                        );
+                        const isConcerning = triggeredAlerts.length > 0;
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-4 rounded-lg relative ${
+                              isConcerning
+                                ? 'bg-red-50 border-2 border-red-400 ml-8'
+                                : msg.role === 'user'
+                                  ? 'bg-primary/10 ml-8'
+                                  : 'bg-muted mr-8'
+                            }`}
+                          >
                             {isConcerning && (
-                              <Badge variant="destructive" className="text-xs">
-                                Concerning
-                              </Badge>
+                              <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
+                                <AlertTriangle className="h-4 w-4" />
+                              </div>
+                            )}
+                            <div className="font-semibold mb-1 text-sm flex items-center gap-2">
+                              {msg.role === 'user' ? studentName : 'Perleap'}
+                              {isConcerning && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Concerning
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                            {isConcerning && triggeredAlerts.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-red-300 text-xs text-red-700">
+                                <strong>Why flagged:</strong> {triggeredAlerts[0].reason}
+                              </div>
                             )}
                           </div>
-                          <div className="text-sm whitespace-pre-wrap">
-                            {msg.content}
-                          </div>
-                          {isConcerning && triggeredAlerts.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-red-300 text-xs text-red-700">
-                              <strong>Why flagged:</strong> {triggeredAlerts[0].reason}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </CardContent>
               </Card>
@@ -361,7 +374,7 @@ const SubmissionDetail = () => {
         <CreateAssignmentDialog
           open={assignmentDialogOpen}
           onOpenChange={setAssignmentDialogOpen}
-          classroomId={(submission.assignments as any).classroom_id}
+          classroomId={submission.assignments.classroom_id}
           onSuccess={() => {
             toast.success(t('createAssignment.success.created'));
             setAssignmentDialogOpen(false);

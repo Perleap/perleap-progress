@@ -1,16 +1,15 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Calendar } from "lucide-react";
-import { toast } from "sonner";
-import { AssignmentChatInterface } from "@/components/AssignmentChatInterface";
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { ArrowLeft, Calendar, FileText, Link as LinkIcon, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 
 interface Assignment {
   id: string;
@@ -18,6 +17,7 @@ interface Assignment {
   instructions: string;
   due_at: string;
   type: string;
+  materials?: string;
   target_dimensions: {
     vision: boolean;
     values: boolean;
@@ -54,16 +54,26 @@ const AssignmentDetail = () => {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
       navigate('/auth');
       return;
     }
-    fetchData();
+
+    // Only fetch if we haven't fetched yet and we're not currently fetching
+    if (!hasFetchedRef.current && !isFetchingRef.current) {
+      fetchData();
+    }
   }, [id, user]);
 
   const fetchData = async () => {
+    if (isFetchingRef.current) return; // Prevent concurrent fetches
+
+    isFetchingRef.current = true;
+
     try {
       // Fetch assignment with teacher info
       const { data: assignmentData, error: assignError } = await supabase
@@ -73,7 +83,7 @@ const AssignmentDetail = () => {
         .maybeSingle();
 
       if (assignError) throw assignError;
-      
+
       if (!assignmentData) {
         toast.error(t('assignmentDetail.errors.loading'));
         navigate('/student/dashboard');
@@ -88,7 +98,7 @@ const AssignmentDetail = () => {
           .select('full_name')
           .eq('user_id', assignmentData.classrooms.teacher_id)
           .maybeSingle();
-        
+
         if (teacherProfile?.full_name) {
           teacherName = teacherProfile.full_name;
         }
@@ -98,83 +108,75 @@ const AssignmentDetail = () => {
         ...assignmentData,
         classrooms: {
           ...assignmentData.classrooms,
-          teacher_profiles: { full_name: teacherName }
-        }
+          teacher_profiles: { full_name: teacherName },
+        },
       } as any);
 
-      // Check for existing submission
-      const { data: submissionData } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('assignment_id', id)
-        .eq('student_id', user?.id)
-        .maybeSingle();
+      // Try to get or create submission using upsert to handle conflicts
+      let finalSubmission = null;
 
-      if (submissionData) {
-        setSubmission(submissionData);
-        
-        // Check for feedback
+      const { data: submissionData, error: subError } = await supabase
+        .from('submissions')
+        .upsert(
+          {
+            assignment_id: id!,
+            student_id: user!.id,
+            text_body: '',
+          },
+          {
+            onConflict: 'assignment_id,student_id',
+            ignoreDuplicates: false,
+          }
+        )
+        .select()
+        .single();
+
+      if (subError) {
+        // If upsert fails, try to fetch existing submission
+        const { data: existingSubmission } = await supabase
+          .from('submissions')
+          .select('*')
+          .eq('assignment_id', id)
+          .eq('student_id', user?.id)
+          .maybeSingle();
+
+        if (existingSubmission) {
+          finalSubmission = existingSubmission;
+        } else {
+          throw subError;
+        }
+      } else {
+        finalSubmission = submissionData;
+      }
+
+      // Set submission and check for feedback
+      if (finalSubmission) {
+        setSubmission(finalSubmission);
+
         const { data: feedbackData } = await supabase
           .from('assignment_feedback')
           .select('*')
-          .eq('submission_id', submissionData.id)
+          .eq('submission_id', finalSubmission.id)
           .maybeSingle();
-        
+
         if (feedbackData) {
           setFeedback(feedbackData);
         }
-      } else {
-        // Create initial submission for this assignment
-        const { data: newSubmission, error: subError } = await supabase
-          .from('submissions')
-          .insert({
-            assignment_id: id!,
-            student_id: user!.id,
-            text_body: ''
-          })
-          .select()
-          .single();
-
-        if (subError) {
-          // If duplicate key error (submission already exists), fetch it instead
-          if (subError.code === '23505') {
-            const { data: existingSubmission } = await supabase
-              .from('submissions')
-              .select('*')
-              .eq('assignment_id', id)
-              .eq('student_id', user?.id)
-              .single();
-            
-            if (existingSubmission) {
-              setSubmission(existingSubmission);
-              
-              // Check for feedback on the existing submission
-              const { data: feedbackData } = await supabase
-                .from('assignment_feedback')
-                .select('*')
-                .eq('submission_id', existingSubmission.id)
-                .maybeSingle();
-              
-              if (feedbackData) {
-                setFeedback(feedbackData);
-              }
-            }
-          } else {
-            throw subError;
-          }
-        } else {
-          setSubmission(newSubmission);
-        }
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error(t('assignmentDetail.errors.loading'));
       navigate('/student/dashboard');
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
+      hasFetchedRef.current = true;
     }
   };
 
   const handleActivityComplete = () => {
+    // Reset flags to allow refetch after completing activity
+    hasFetchedRef.current = false;
+    isFetchingRef.current = false;
     fetchData();
   };
 
@@ -194,21 +196,12 @@ const AssignmentDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg md:text-2xl font-bold truncate">{assignment.title}</h1>
-            <p className="text-xs md:text-sm text-muted-foreground truncate">{assignment.classrooms.name}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        title={assignment.title}
+        subtitle={assignment.classrooms.name}
+        userType="student"
+        showBackButton
+      />
 
       <main className="container py-4 md:py-8 px-4 max-w-4xl">
         <div className="space-y-6">
@@ -216,12 +209,11 @@ const AssignmentDetail = () => {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle>
-                    {t('assignmentDetail.title')}
-                  </CardTitle>
+                  <CardTitle>{t('assignmentDetail.title')}</CardTitle>
                   <CardDescription className="flex items-center gap-2 mt-2">
                     <Calendar className="h-4 w-4" />
-                    {assignment.due_at && `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
+                    {assignment.due_at &&
+                      `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
                   </CardDescription>
                 </div>
                 <Badge variant="secondary">{assignment.type.replace('_', ' ')}</Badge>
@@ -230,7 +222,9 @@ const AssignmentDetail = () => {
             <CardContent className="space-y-4">
               <div>
                 <h3 className="font-semibold mb-2">{t('assignmentDetail.instructions')}</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{assignment.instructions}</p>
+                <p className="text-muted-foreground whitespace-pre-wrap">
+                  {assignment.instructions}
+                </p>
               </div>
 
               {targetDimensions.length > 0 && (
@@ -245,6 +239,62 @@ const AssignmentDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* Course Materials Section */}
+              {assignment.materials &&
+                (() => {
+                  try {
+                    const materials = JSON.parse(assignment.materials as string);
+                    if (Array.isArray(materials) && materials.length > 0) {
+                      return (
+                        <div>
+                          <h3 className="font-semibold mb-2">Course Materials</h3>
+                          <div className="space-y-2">
+                            {materials.map((material, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover:bg-muted transition-colors"
+                              >
+                                {material.type === 'pdf' ? (
+                                  <FileText className="h-5 w-5 text-primary" />
+                                ) : (
+                                  <LinkIcon className="h-5 w-5 text-primary" />
+                                )}
+                                <span className="flex-1 text-sm font-medium truncate">
+                                  {material.name}
+                                </span>
+                                {material.type === 'pdf' ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(material.url, '_blank')}
+                                    className="gap-2"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                    Download
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(material.url, '_blank')}
+                                    className="gap-2"
+                                  >
+                                    <LinkIcon className="h-4 w-4" />
+                                    Open
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // Ignore parsing errors
+                  }
+                  return null;
+                })()}
             </CardContent>
           </Card>
 
@@ -264,15 +314,13 @@ const AssignmentDetail = () => {
               <CardHeader>
                 <CardTitle className="text-primary">{t('assignmentDetail.viewFeedback')}</CardTitle>
                 <CardDescription>
-                  {t('assignmentDetail.submitted')}: {new Date(feedback.created_at).toLocaleString()}
+                  {t('assignmentDetail.submitted')}:{' '}
+                  {new Date(feedback.created_at).toLocaleString()}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="prose prose-sm max-w-none">
-                  {feedback.student_feedback
-                    ?.replace(/\*\*/g, '')
-                    ?.replace(/\/\//g, '')
-                    ?.trim()}
+                  {feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
                 </div>
               </CardContent>
             </Card>

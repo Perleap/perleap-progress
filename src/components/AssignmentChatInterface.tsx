@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Send, Loader2, CheckCircle } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTranslation } from "react-i18next";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Send, Loader2, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -24,28 +24,26 @@ interface AssignmentChatInterfaceProps {
   onComplete: () => void;
 }
 
-export function AssignmentChatInterface({ 
+export function AssignmentChatInterface({
   assignmentId,
   assignmentTitle,
   teacherName,
-  assignmentInstructions, 
+  assignmentInstructions,
   submissionId,
-  onComplete 
+  onComplete,
 }: AssignmentChatInterfaceProps) {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [completing, setCompleting] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
 
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
   const generateInitialGreeting = useCallback(async () => {
@@ -56,31 +54,40 @@ export function AssignmentChatInterface({
         .select('prompt_template')
         .eq('prompt_key', 'chat_initial_greeting')
         .eq('is_active', true)
-        .single();
+        .order('version', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (promptError) throw promptError;
 
+      // Fallback if prompt is not found in database
+      const promptTemplate =
+        promptData?.prompt_template ||
+        '[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]';
+
       const { data, error } = await supabase.functions.invoke('perleap-chat', {
         body: {
-          message: promptData.prompt_template,
+          message: promptTemplate,
           assignmentInstructions,
           submissionId,
           studentId: user!.id,
           assignmentId,
           isInitialGreeting: true,
-          language: language
-        }
+          language: language,
+        },
       });
 
       if (error) throw error;
 
       setMessages([{ role: 'assistant', content: data.message }]);
-    } catch {
+    } catch (error) {
+      console.error('Error generating initial greeting:', error);
       toast.error(t('assignmentChat.errors.startingConversation'));
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, assignmentInstructions, submissionId, user]);
+  }, [assignmentId, assignmentInstructions, submissionId, user, language]);
 
   const loadConversation = useCallback(async () => {
     try {
@@ -91,16 +98,17 @@ export function AssignmentChatInterface({
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
-      
+
       if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         setMessages(data.messages as unknown as Message[]);
       } else {
         await generateInitialGreeting();
       }
-    } catch {
+    } catch (error) {
+      console.error('Error loading conversation:', error);
       toast.error(t('assignmentChat.errors.loadingConversation'));
     }
-  }, [submissionId, generateInitialGreeting]);
+  }, [submissionId, generateInitialGreeting, t]);
 
   useEffect(() => {
     if (!hasInitialized.current) {
@@ -108,21 +116,20 @@ export function AssignmentChatInterface({
       loadConversation();
     }
 
-    return () => {
-      hasInitialized.current = false;
-    };
+    // Don't reset on unmount - this was causing refetches on tab switch
+    // The component will naturally reload conversation if submissionId changes
   }, [submissionId, loadConversation]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages, loading, scrollToBottom]);
 
   const sendMessage = async () => {
     const messageText = input.trim();
     if (!messageText) return;
 
-    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
-    setInput("");
+    setMessages((prev) => [...prev, { role: 'user', content: messageText }]);
+    setInput('');
     setLoading(true);
 
     try {
@@ -133,14 +140,15 @@ export function AssignmentChatInterface({
           submissionId,
           studentId: user!.id,
           assignmentId,
-          language: language
-        }
+          language: language,
+        },
       });
 
       if (error) throw error;
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
-    } catch {
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.message }]);
+    } catch (error) {
+      console.error('Error sending message:', error);
       toast.error(t('assignmentChat.errors.communicating'));
     } finally {
       setLoading(false);
@@ -155,15 +163,16 @@ export function AssignmentChatInterface({
           submissionId,
           studentId: user!.id,
           assignmentId,
-          language: language
-        }
+          language: language,
+        },
       });
 
       if (error) throw error;
 
       toast.success(t('assignmentChat.success.activityCompleted'));
       onComplete();
-    } catch {
+    } catch (error) {
+      console.error('Error generating feedback:', error);
       toast.error(t('assignmentChat.errors.generatingFeedback'));
     } finally {
       setCompleting(false);
@@ -176,10 +185,12 @@ export function AssignmentChatInterface({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{teacherName} - {assignmentTitle}</CardTitle>
+        <CardTitle>
+          {teacherName} - {assignmentTitle}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ScrollArea className="h-[400px] pr-4" ref={scrollRef}>
+        <ScrollArea className="h-[400px] pr-4">
           <div className="space-y-4">
             {messages.map((message, index) => {
               const isUser = message.role === 'user';
@@ -194,7 +205,9 @@ export function AssignmentChatInterface({
                       isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap" dir="auto">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap" dir="auto">
+                      {message.content}
+                    </p>
                   </div>
                 </div>
               );
@@ -206,6 +219,7 @@ export function AssignmentChatInterface({
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 
@@ -226,19 +240,19 @@ export function AssignmentChatInterface({
             className="min-h-[60px] max-h-[200px] resize-none"
             rows={2}
           />
-          <Button 
-            onClick={sendMessage} 
-            disabled={isDisabled || !input.trim()} 
-            size="icon" 
+          <Button
+            onClick={sendMessage}
+            disabled={isDisabled || !input.trim()}
+            size="icon"
             className="h-10 w-10 shrink-0"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
 
-        <Button 
-          onClick={handleComplete} 
-          disabled={!canComplete} 
+        <Button
+          onClick={handleComplete}
+          disabled={!canComplete}
           className="w-full"
           variant="secondary"
         >
