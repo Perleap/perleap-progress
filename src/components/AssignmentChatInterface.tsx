@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Send, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,6 +32,8 @@ export function AssignmentChatInterface({
   submissionId,
   onComplete 
 }: AssignmentChatInterfaceProps) {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -63,7 +67,8 @@ export function AssignmentChatInterface({
           submissionId,
           studentId: user!.id,
           assignmentId,
-          isInitialGreeting: true
+          isInitialGreeting: true,
+          language: language
         }
       });
 
@@ -71,7 +76,7 @@ export function AssignmentChatInterface({
 
       setMessages([{ role: 'assistant', content: data.message }]);
     } catch {
-      toast.error('Error starting conversation');
+      toast.error(t('assignmentChat.errors.startingConversation'));
     } finally {
       setLoading(false);
     }
@@ -93,7 +98,7 @@ export function AssignmentChatInterface({
         await generateInitialGreeting();
       }
     } catch {
-      toast.error('Error loading conversation');
+      toast.error(t('assignmentChat.errors.loadingConversation'));
     }
   }, [submissionId, generateInitialGreeting]);
 
@@ -127,7 +132,8 @@ export function AssignmentChatInterface({
           assignmentInstructions,
           submissionId,
           studentId: user!.id,
-          assignmentId
+          assignmentId,
+          language: language
         }
       });
 
@@ -135,7 +141,7 @@ export function AssignmentChatInterface({
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
     } catch {
-      toast.error('Error communicating with Perleap agent');
+      toast.error(t('assignmentChat.errors.communicating'));
     } finally {
       setLoading(false);
     }
@@ -148,16 +154,17 @@ export function AssignmentChatInterface({
         body: {
           submissionId,
           studentId: user!.id,
-          assignmentId
+          assignmentId,
+          language: language
         }
       });
 
       if (error) throw error;
 
-      toast.success('Activity completed! Your feedback has been generated.');
+      toast.success(t('assignmentChat.success.activityCompleted'));
       onComplete();
     } catch {
-      toast.error('Error generating feedback');
+      toast.error(t('assignmentChat.errors.generatingFeedback'));
     } finally {
       setCompleting(false);
     }
@@ -180,13 +187,14 @@ export function AssignmentChatInterface({
                 <div
                   key={index}
                   className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                  dir="auto"
                 >
                   <div
                     className={`max-w-[80%] rounded-lg p-3 ${
                       isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap" dir="auto">{message.content}</p>
                   </div>
                 </div>
               );
@@ -203,7 +211,7 @@ export function AssignmentChatInterface({
 
         <div className="flex gap-2 items-end">
           <Textarea
-            placeholder="Type your message..."
+            placeholder={t('assignmentChat.placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -236,13 +244,13 @@ export function AssignmentChatInterface({
         >
           {completing ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating Feedback...
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              {t('assignmentChat.generatingFeedback')}
             </>
           ) : (
             <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Complete Activity & Get Feedback
+              <CheckCircle className="me-2 h-4 w-4" />
+              {t('assignmentChat.completeActivity')}
             </>
           )}
         </Button>

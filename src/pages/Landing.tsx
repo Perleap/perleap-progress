@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Brain, Users2, Target, TrendingUp, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Landing = () => {
+  const { t } = useTranslation();
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -15,27 +20,29 @@ const Landing = () => {
           <div className="flex items-center gap-2 md:gap-4">
             <Link to="/about">
               <Button size="sm" variant="ghost" className="font-medium hidden md:inline-flex">
-                About
+                {t('landing.nav.about')}
               </Button>
             </Link>
             <Link to="/pricing">
               <Button size="sm" variant="ghost" className="font-medium hidden sm:inline-flex">
-                Pricing
+                {t('landing.nav.pricing')}
               </Button>
             </Link>
             <Link to="/contact">
               <Button size="sm" variant="ghost" className="font-medium hidden sm:inline-flex">
-                Contact
+                {t('landing.nav.contact')}
               </Button>
             </Link>
+            <ThemeToggle />
+            <LanguageSwitcher />
             <Link to="/login">
               <Button size="sm" variant="ghost" className="font-medium">
-                Log In
+                {t('landing.nav.login')}
               </Button>
             </Link>
             <Link to="/register">
               <Button size="sm" className="font-medium">
-                Register
+                {t('landing.nav.register')}
               </Button>
             </Link>
           </div>
@@ -47,22 +54,22 @@ const Landing = () => {
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="max-w-3xl">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 leading-tight -ml-1">
-              <div>Where every teacher's step</div>
-              <div>becomes a student's leap</div>
+              <div>{t('landing.hero.title1')}</div>
+              <div>{t('landing.hero.title2')}</div>
             </h1>
             <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed">
-              At Perleap, we empower teachers to create intelligent, personalized AI assistants-built to reflect their voice, goals, and style in every classroom
+              {t('landing.hero.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <Link to="/register" className="w-full sm:w-auto">
                 <Button size="lg" className="font-medium w-full sm:w-auto">
-                  Get started
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  {t('landing.hero.getStarted')}
+                  <ArrowRight className="h-4 w-4 ms-2" />
                 </Button>
               </Link>
               <Link to="/contact" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="font-medium w-full sm:w-auto">
-                  Contact us
+                  {t('landing.hero.contactUs')}
                 </Button>
               </Link>
             </div>
@@ -153,9 +160,9 @@ const Landing = () => {
       <section id="features" className="container py-12 md:py-20 lg:py-32 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">Everything you need to succeed</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">{t('landing.features.title')}</h2>
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
-              Comprehensive tools designed to transform teaching and learning experiences
+              {t('landing.features.subtitle')}
             </p>
           </div>
 
@@ -164,9 +171,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-cognitive/40 flex items-center justify-center mb-6">
                 <Brain className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">5D Growth Tracking</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('landing.features.growth.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Monitor soft skills development across Vision, Values, Thinking, Connection, and Action dimensions with precision.
+                {t('landing.features.growth.description')}
               </p>
             </div>
 
@@ -174,9 +181,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-social/40 flex items-center justify-center mb-6">
                 <Sparkles className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">AI Teaching Partner</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('landing.features.aiPartner.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Generate lesson plans and receive intelligent feedback tailored to your teaching style.
+                {t('landing.features.aiPartner.description')}
               </p>
             </div>
 
@@ -184,9 +191,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-creative/40 flex items-center justify-center mb-6">
                 <Users2 className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Personalized Learning</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('landing.features.personalized.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Every student receives customized guidance and a personal learning plan.
+                {t('landing.features.personalized.description')}
               </p>
             </div>
 
@@ -194,9 +201,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-emotional/40 flex items-center justify-center mb-6">
                 <Target className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Smart Assessments</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('landing.features.assessments.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Automated evaluation with narrative feedback and progress tracking.
+                {t('landing.features.assessments.description')}
               </p>
             </div>
 
@@ -204,9 +211,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-behavioral/40 flex items-center justify-center mb-6">
                 <TrendingUp className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Analytics Dashboard</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('landing.features.analytics.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Visualize class progress with comprehensive charts and insights.
+                {t('landing.features.analytics.description')}
               </p>
             </div>
 
@@ -214,9 +221,9 @@ const Landing = () => {
               <div className="w-12 h-12 rounded-2xl bg-dimension-cognitive/40 flex items-center justify-center mb-6">
                 <Shield className="h-6 w-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Secure & Private</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('landing.features.security.title')}</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Enterprise-grade security with role-based access and data protection.
+                {t('landing.features.security.description')}
               </p>
             </div>
           </div>
@@ -229,15 +236,15 @@ const Landing = () => {
           <div className="grid sm:grid-cols-3 gap-8 md:gap-12 text-center">
             <div>
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">95%</div>
-              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">Teacher Satisfaction</p>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">{t('landing.stats.satisfaction')}</p>
             </div>
             <div>
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">10K+</div>
-              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">Students Empowered</p>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">{t('landing.stats.students')}</p>
             </div>
             <div>
               <div className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-3">5D</div>
-              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">Growth Dimensions</p>
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg">{t('landing.stats.dimensions')}</p>
             </div>
           </div>
         </div>
@@ -246,14 +253,14 @@ const Landing = () => {
       {/* CTA Section */}
       <section className="container py-12 md:py-20 lg:py-32 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">Ready to transform education?</h2>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6">{t('landing.cta.title')}</h2>
           <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-6 md:mb-8 leading-relaxed px-4">
-            Join thousands of educators building the future of learning with AI-powered insights.
+            {t('landing.cta.subtitle')}
           </p>
           <Link to="/register">
             <Button size="lg" className="font-medium">
-              Get started today
-              <ArrowRight className="h-4 w-4 ml-2" />
+              {t('landing.cta.button')}
+              <ArrowRight className="h-4 w-4 ms-2" />
             </Button>
           </Link>
         </div>
@@ -269,33 +276,33 @@ const Landing = () => {
                 <span className="font-semibold">PerLeap</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                AI Teaching & Learning Copilot
+                {t('landing.footer.tagline')}
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-semibold mb-4">{t('landing.footer.product')}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+                <li><a href="#features" className="hover:text-foreground transition-colors">{t('landing.footer.features')}</a></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">{t('landing.nav.pricing')}</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
+              <h4 className="font-semibold mb-4">{t('landing.footer.company')}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/about" className="hover:text-foreground transition-colors">About</Link></li>
-                <li><Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
+                <li><Link to="/about" className="hover:text-foreground transition-colors">{t('landing.nav.about')}</Link></li>
+                <li><Link to="/contact" className="hover:text-foreground transition-colors">{t('landing.nav.contact')}</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
+              <h4 className="font-semibold mb-4">{t('landing.footer.legal')}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Terms</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.privacy')}</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">{t('landing.footer.terms')}</a></li>
               </ul>
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-            © 2025 PerLeap. All rights reserved.
+            {t('landing.footer.copyright')}
           </div>
         </div>
       </footer>

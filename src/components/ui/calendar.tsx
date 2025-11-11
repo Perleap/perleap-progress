@@ -1,17 +1,24 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
+import { he } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
 function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+  const { language } = useLanguage();
+  const locale = language === 'he' ? he : undefined;
+  
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       captionLayout="buttons"
+      locale={locale}
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       className={cn("p-6", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",

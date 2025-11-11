@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ArrowLeft, ArrowRight, Upload } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const StudentOnboarding = () => {
   const { user } = useAuth();
@@ -417,6 +418,9 @@ const StudentOnboarding = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-3xl">
         <CardHeader>
           <CardTitle>Student Profile Setup</CardTitle>

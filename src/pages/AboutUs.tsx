@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Target, Users, Lightbulb, Award, Heart, Rocket } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const AboutUs = () => {
   return (
@@ -20,6 +21,7 @@ const AboutUs = () => {
                 Back to Home
               </Button>
             </Link>
+            <ThemeToggle />
             <Link to="/auth">
               <Button size="sm" className="font-medium">
                 Get Started

@@ -1,6 +1,7 @@
 import { Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { DIMENSION_CONFIG } from '@/config/constants';
 import type { FiveDScores } from '@/types/models';
+import { useTranslation } from 'react-i18next';
 
 interface RadarChartProps {
   scores: FiveDScores;
@@ -19,6 +20,7 @@ interface CustomTooltipProps {
 }
 
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+  const { t } = useTranslation();
   if (!active || !payload?.length) return null;
 
   const { dimension, value } = payload[0].payload as { dimension: keyof typeof DIMENSION_CONFIG; value: number };
@@ -26,23 +28,24 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 
   return (
     <div className="bg-background border border-border rounded-lg shadow-lg p-3 max-w-xs">
-      <p className="font-semibold text-sm mb-1">{config.label}</p>
+      <p className="font-semibold text-sm mb-1">{t(`dimensions.${dimension}.label`)}</p>
       <p className="text-xs text-muted-foreground mb-2">
-        Score: <span className="font-bold text-foreground">{value.toFixed(1)}/10</span>
+        {t('dimensions.score')}: <span className="font-bold text-foreground">{value.toFixed(1)}/10</span>
       </p>
       <p className="text-xs text-muted-foreground italic border-t pt-2 mt-2">
-        {config.description}
+        {t(`dimensions.${dimension}.description`)}
       </p>
     </div>
   );
 };
 
 export const RadarChart = ({ scores, explanations, showLabels = true }: RadarChartProps) => {
+  const { t } = useTranslation();
   const data = Object.entries(scores).map(([dimension, value]) => ({
     dimension,
     value,
     fullMark: 10,
-    label: DIMENSION_CONFIG[dimension as keyof typeof DIMENSION_CONFIG].label,
+    label: t(`dimensions.${dimension}.label`),
   }));
 
   return (
@@ -86,11 +89,11 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
-                    <span className="text-sm font-semibold">{config.label}</span>
+                    <span className="text-sm font-semibold">{t(`dimensions.${dimension}.label`)}</span>
                     <span className="text-sm font-bold">{value.toFixed(1)}/10</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    {explanation || config.description}
+                    {explanation || t(`dimensions.${dimension}.description`)}
                   </p>
                 </div>
               </div>

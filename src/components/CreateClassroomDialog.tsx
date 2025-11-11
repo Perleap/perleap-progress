@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +17,7 @@ interface CreateClassroomDialogProps {
 }
 
 export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateClassroomDialogProps) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -125,13 +127,13 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Classroom</DialogTitle>
-          <DialogDescription>Fill in the course details to create a new classroom</DialogDescription>
+          <DialogTitle>{t('createClassroom.title')}</DialogTitle>
+          <DialogDescription>{t('createClassroom.description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="courseTitle">Main Subject or Course Title *</Label>
+            <Label htmlFor="courseTitle">{t('createClassroom.courseTitle')} *</Label>
             <Input
               id="courseTitle"
               value={formData.courseTitle}
@@ -141,7 +143,7 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="courseDuration">Course Duration</Label>
+            <Label htmlFor="courseDuration">{t('createClassroom.courseDuration')}</Label>
             <Input
               id="courseDuration"
               placeholder="e.g., 12 weeks, 1 semester"

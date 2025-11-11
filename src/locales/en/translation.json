@@ -1,0 +1,498 @@
+{
+  "landing": {
+    "nav": {
+      "about": "About",
+      "pricing": "Pricing",
+      "contact": "Contact",
+      "login": "Login",
+      "register": "Sign Up"
+    },
+    "hero": {
+      "title1": "Transform Education with",
+      "title2": "AI-Powered Learning",
+      "subtitle": "Empower students to reach their full potential through personalized, guided learning experiences that develop both academic and soft skills.",
+      "getStarted": "Get Started Free",
+      "contactUs": "Contact Us"
+    },
+    "features": {
+      "title": "Why PerLeap?",
+      "subtitle": "We combine cutting-edge AI with proven pedagogical methods to create transformative learning experiences.",
+      "growth": {
+        "title": "Growth-Focused Learning",
+        "description": "Every interaction is designed to build confidence, encourage deeper thinking, and celebrate progress."
+      },
+      "aiPartner": {
+        "title": "AI Learning Partner",
+        "description": "Our intelligent agent guides students through assignments, asking thoughtful questions rather than giving direct answers."
+      },
+      "personalized": {
+        "title": "Personalized Journeys",
+        "description": "Adaptive learning paths that meet each student where they are and help them grow at their own pace."
+      },
+      "assessments": {
+        "title": "Multidimensional Assessments",
+        "description": "Go beyond test scores with our unique 5D framework that evaluates Vision, Values, Thinking, Connection, and Action."
+      },
+      "analytics": {
+        "title": "Actionable Analytics",
+        "description": "Gain deep insights into student progress with intuitive dashboards and comprehensive feedback."
+      },
+      "security": {
+        "title": "Secure & Private",
+        "description": "Enterprise-grade security ensures your data is always protected and your privacy is respected."
+      }
+    },
+    "stats": {
+      "satisfaction": "Teacher Satisfaction",
+      "students": "Active Students",
+      "dimensions": "Skill Dimensions"
+    },
+    "cta": {
+      "title": "Ready to Transform Your Classroom?",
+      "subtitle": "Join thousands of educators who are already using PerLeap to unlock their students' potential.",
+      "button": "Start Free Trial"
+    },
+    "footer": {
+      "tagline": "Transforming education through AI-powered personalized learning.",
+      "product": "Product",
+      "features": "Features",
+      "company": "Company",
+      "legal": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "copyright": "© 2024 PerLeap. All rights reserved."
+    }
+  },
+  "auth": {
+    "welcome": "Welcome to PerLeap",
+    "subtitle": "Sign in to your account or create a new one",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "signInButton": "Sign In",
+    "signInWithGoogle": "Sign in with Google",
+    "createAccount": "Create Account",
+    "signUpWithGoogle": "Sign up with Google",
+    "orContinueWith": "Or continue with",
+    "orSignUpWith": "Or sign up with",
+    "iAmA": "I am a...",
+    "teacher": "Teacher",
+    "student": "Student",
+    "errors": {
+      "invalidEmail": "Please enter a valid email address",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "selectRole": "Please select your role (Teacher or Student)",
+      "selectRoleFirst": "Please select your role first"
+    },
+    "errors2": {
+      "creatingAccount": "Error creating account",
+      "signingIn": "Error signing in",
+      "signingInGoogle": "Error signing in with Google"
+    },
+    "success": {
+      "accountCreated": "Account created! Please check your email to verify your account.",
+      "accountCreatedSuccess": "Account created successfully!",
+      "signedIn": "Successfully signed in!"
+    }
+  },
+  "studentDashboard": {
+    "title": "Student Dashboard",
+    "welcome": "Welcome back, {{name}}!",
+    "myClasses": "My Classes",
+    "myAssignments": "My Assignments",
+    "notifications": "Notifications",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all as read",
+    "joinClass": "Join Class",
+    "sortBy": "Sort by",
+    "sortOptions": {
+      "dueDate": "Due Date",
+      "recent": "Most Recent",
+      "oldest": "Oldest First"
+    },
+    "joinClassroom": {
+      "title": "Join a Classroom",
+      "description": "Enter the invite code provided by your teacher",
+      "inviteCode": "Invite Code",
+      "placeholder": "ABC123",
+      "button": "Join Classroom",
+      "joining": "Joining..."
+    },
+    "empty": {
+      "noClasses": "No classes yet",
+      "noClassesDescription": "Join a classroom using your teacher's invite code",
+      "noAssignments": "No assignments yet",
+      "noAssignmentsDescription": "Your assignments will appear here once your teacher creates them"
+    },
+    "errors": {
+      "loadingData": "Error loading dashboard data",
+      "enterInviteCode": "Please enter an invite code",
+      "checkingCode": "Error checking invite code",
+      "noClassroomFound": "No classroom found with code: {{code}}",
+      "alreadyEnrolled": "You are already enrolled in this classroom",
+      "joiningClassroom": "Error joining classroom",
+      "unexpected": "An unexpected error occurred"
+    },
+    "success": {
+      "joinedClassroom": "Successfully joined {{name}}!",
+      "markedRead": "Notifications marked as read"
+    }
+  },
+  "teacherDashboard": {
+    "title": "Teacher Dashboard",
+    "welcome": "Welcome {{name}} to your dashboard",
+    "myClassrooms": "My Classrooms",
+    "subtitle": "Manage your classes and track student progress",
+    "createClassroom": "Create Classroom",
+    "inviteCode": "Invite code:",
+    "notifications": "Notifications",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all read",
+    "empty": {
+      "title": "No classrooms yet",
+      "description": "Create your first classroom to get started"
+    },
+    "errors": {
+      "loadingClassrooms": "Error loading classrooms"
+    },
+    "success": {
+      "notificationsRead": "All notifications marked as read"
+    }
+  },
+  "assignmentChat": {
+    "placeholder": "Type your message here...",
+    "completeActivity": "Complete Activity",
+    "generatingFeedback": "Generating feedback...",
+    "errors": {
+      "startingConversation": "Error starting conversation",
+      "loadingConversation": "Error loading conversation",
+      "communicating": "Error communicating with AI assistant",
+      "generatingFeedback": "Error generating feedback"
+    },
+    "success": {
+      "activityCompleted": "Activity completed! Feedback generated."
+    }
+  },
+  "calendar": {
+    "title": "Calendar",
+    "today": "Today",
+    "noEvents": "No events for this month",
+    "classStarts": "Class starts",
+    "classEnds": "Class ends",
+    "assignment": "Assignment",
+    "dueDate": "Due date",
+    "activeClasses": "Active Classes",
+    "assignmentsDue": "Assignments Due",
+    "noAssignments": "No assignments due on this date",
+    "upcomingAssignments": "Upcoming Assignments"
+  },
+  "createClassroom": {
+    "title": "Create New Classroom",
+    "description": "Set up a new classroom for your students",
+    "courseTitle": "Main Subject or Course Title",
+    "courseDuration": "Course Duration",
+    "courseDurationPlaceholder": "e.g., 12 weeks, 1 semester",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "courseOutline": "Course Outline (topics + flow)",
+    "courseOutlinePlaceholder": "Describe the main topics and how they flow...",
+    "resources": "Resources You Typically Use",
+    "resourcesPlaceholder": "Books, links, PDFs, tools...",
+    "uploadPdf": "Upload course PDF",
+    "learningOutcomes": "Learning Outcomes (optional)",
+    "addOutcome": "Add outcome",
+    "creating": "Creating...",
+    "create": "Create Classroom",
+    "errors": {
+      "creatingClassroom": "Error creating classroom"
+    },
+    "success": {
+      "created": "Classroom created successfully!"
+    }
+  },
+  "editClassroom": {
+    "title": "Edit Classroom",
+    "description": "Update classroom information",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "errors": {
+      "loading": "Error loading classroom",
+      "saving": "Error saving changes"
+    },
+    "success": {
+      "saved": "Changes saved successfully!"
+    }
+  },
+  "createAssignment": {
+    "title": "Create New Assignment",
+    "description": "Create an assignment for your students",
+    "assignmentTitle": "Assignment Title",
+    "assignmentInstructions": "Instructions",
+    "dueDate": "Due Date",
+    "type": "Type",
+    "types": {
+      "homework": "Homework",
+      "project": "Project",
+      "quiz": "Quiz",
+      "exam": "Exam"
+    },
+    "creating": "Creating...",
+    "create": "Create Assignment",
+    "errors": {
+      "creating": "Error creating assignment"
+    },
+    "success": {
+      "created": "Assignment created successfully!"
+    }
+  },
+  "editAssignment": {
+    "title": "Edit Assignment",
+    "description": "Update assignment details",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "errors": {
+      "loading": "Error loading assignment",
+      "saving": "Error saving changes"
+    },
+    "success": {
+      "saved": "Assignment updated successfully!"
+    }
+  },
+  "classroomDetail": {
+    "students": "Students",
+    "assignments": "Assignments",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "submissionsTab": "Submissions",
+    "inviteCode": "Invite Code",
+    "copyCode": "Copy Code",
+    "codeCopied": "Code copied!",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this classroom?",
+    "deleteButton": "Delete Classroom",
+    "deleting": "Deleting...",
+    "createAssignment": "Create Assignment",
+    "noStudents": "No students enrolled yet",
+    "noAssignments": "No assignments yet",
+    "shareCode": "Share this invite code with your students",
+    "assignmentsSubtitle": "Create and manage assignments",
+    "overview": {
+      "title": "Classroom Overview",
+      "courseInfo": "Course Information",
+      "courseTitle": "Course Title",
+      "duration": "Duration",
+      "courseDates": "Course Dates",
+      "courseOutline": "Course Outline",
+      "resources": "Resources",
+      "learningOutcomes": "Learning Outcomes",
+      "keyChallenges": "Key Challenges"
+    },
+    "submissions": {
+      "title": "Student Submissions",
+      "subtitle": "View completed assignments and feedback"
+    },
+    "studentsTab": {
+      "title": "Enrolled Students",
+      "subtitle": "View and manage your students",
+      "joined": "Joined"
+    },
+    "errors": {
+      "loading": "Error loading classroom",
+      "deleting": "Error deleting classroom"
+    },
+    "success": {
+      "deleted": "Classroom deleted successfully"
+    }
+  },
+  "submissionsTab": {
+    "filterTitle": "Filter & Search Submissions",
+    "exportAll": "Export All",
+    "search": "Search",
+    "searchPlaceholder": "Search in conversations, feedback, names...",
+    "assignment": "Assignment",
+    "allStudents": "All Students",
+    "allAssignments": "All Assignments",
+    "noMatches": "No submissions match filters",
+    "adjustFilters": "Try adjusting your filters"
+  },
+  "submissionCard": {
+    "submitted": "Submitted",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "conversation": "Conversation History",
+    "teacherFeedback": "Teacher Feedback",
+    "ai": "Perleap AI"
+  },
+  "submissionDetail": {
+    "title": "Submission Details",
+    "student": "Student",
+    "submittedAt": "Submitted at",
+    "conversation": "Conversation",
+    "feedback": "Feedback",
+    "studentFeedback": "Student Feedback",
+    "teacherFeedback": "Teacher Feedback",
+    "scores": "5D Scores",
+    "dimensions": {
+      "vision": "Vision",
+      "values": "Values",
+      "thinking": "Thinking",
+      "connection": "Connection",
+      "action": "Action"
+    },
+    "wellbeing": "Wellbeing Analysis",
+    "noFeedback": "No feedback generated yet",
+    "regenerateScores": "Regenerate Scores",
+    "errors": {
+      "loading": "Error loading submission"
+    }
+  },
+  "assignmentDetail": {
+    "title": "Assignment Details",
+    "instructions": "Instructions",
+    "dueDate": "Due Date",
+    "type": "Type",
+    "startAssignment": "Start Assignment",
+    "continueAssignment": "Continue Assignment",
+    "viewFeedback": "View Feedback",
+    "submitted": "Submitted",
+    "notStarted": "Not Started",
+    "inProgress": "In Progress",
+    "errors": {
+      "loading": "Error loading assignment"
+    }
+  },
+  "studentClassroom": {
+    "assignments": "Assignments",
+    "about": "About",
+    "resources": "Resources",
+    "noAssignments": "No assignments yet",
+    "courseOutline": "Course Outline",
+    "learningOutcomes": "Learning Outcomes",
+    "errors": {
+      "loading": "Error loading classroom"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "fullName": "Full Name",
+    "email": "Email",
+    "avatarUrl": "Avatar URL",
+    "bio": "Bio",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "errors": {
+      "loading": "Error loading profile",
+      "saving": "Error saving changes"
+    },
+    "success": {
+      "saved": "Profile updated successfully!"
+    }
+  },
+  "analytics": {
+    "overview": "Overview",
+    "classAverage": "Class Average - 5D Soft Skills Profile",
+    "profile5D": "5D Soft Skills Profile",
+    "topPerformers": "Top Performers",
+    "needsAttention": "Needs Attention",
+    "assignmentCompletion": "Assignment Completion",
+    "participationRate": "Participation Rate",
+    "averageScore": "Average Score",
+    "students": "students",
+    "noData": "No data available yet",
+    "filtersTitle": "Analytics Filters",
+    "filterByStudent": "Filter by Student",
+    "filterByAssignment": "Filter by Assignment",
+    "all": "All",
+    "allAssignments": "All Assignments",
+    "totalStudents": "Total Students",
+    "assignments": "Assignments",
+    "totalSubmissions": "Total Submissions",
+    "completionRate": "Completion Rate",
+    "averageScoresDesc": "Average soft skills scores across all students with data",
+    "individualProfile": "Individual student soft skills performance profile",
+    "classInsights": "Class Insights",
+    "classInsightsDesc": "AI-generated insights about class performance",
+    "comingSoon": "📊 Coming Soon",
+    "comingSoonDesc": "AI-powered analysis of your class's soft skills development trends and recommendations will appear here.",
+    "performanceSummary": "Class Performance Summary",
+    "performanceSummaryDesc": "Overall statistics and completion rates",
+    "activeStudents": "Active Students",
+    "avgSubmissions": "Average Submissions per Student",
+    "engagementRate": "Class Engagement Rate",
+    "average5D": "Average 5D Scores"
+  },
+  "wellbeing": {
+    "alert": "Wellbeing Alert",
+    "level": {
+      "critical": "Critical",
+      "concerning": "Concerning",
+      "none": "No Concerns"
+    },
+    "types": {
+      "struggle": "Academic/Emotional Struggle",
+      "self_harm_risk": "Self-Harm Risk",
+      "disengagement": "Disengagement",
+      "wants_to_quit": "Wants to Quit"
+    },
+    "viewDetails": "View Details",
+    "analysis": "Analysis",
+    "triggeredMessages": "Triggered Messages"
+  },
+  "onboarding": {
+    "welcome": "Welcome to PerLeap",
+    "letsGetStarted": "Let's get started",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "skip": "Skip for now"
+  },
+  "common": {
+    "loading": "Loading...",
+    "teacher": "Teacher",
+    "student": "Student",
+    "due": "Due",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "students": "Students",
+    "start": "Start",
+    "end": "End"
+  },
+  "dimensions": {
+    "score": "Score",
+    "vision": {
+      "label": "Vision",
+      "description": "Imagining new possibilities and bold ideas; creative, adaptive thinking"
+    },
+    "values": {
+      "label": "Values",
+      "description": "Guided by ethics and integrity; building trust and understanding limits"
+    },
+    "thinking": {
+      "label": "Thinking",
+      "description": "Strong analysis, deep insight, and sound judgment; critical and analytical skills"
+    },
+    "connection": {
+      "label": "Connection",
+      "description": "Empathy, clear communication, and effective collaboration"
+    },
+    "action": {
+      "label": "Action",
+      "description": "Turning plans into results with focus, determination, and practical skills"
+    }
+  }
+}

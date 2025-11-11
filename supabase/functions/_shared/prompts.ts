@@ -10,11 +10,12 @@ const promptCache = new Map<string, { template: string; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Fetch a prompt template from the database by key with caching
+ * Fetch a prompt template from the database by key and language with caching
  */
-export async function getPromptTemplate(promptKey: string): Promise<string> {
+export async function getPromptTemplate(promptKey: string, language: string = 'en'): Promise<string> {
   // Check cache first
-  const cached = promptCache.get(promptKey);
+  const cacheKey = `${promptKey}_${language}`;
+  const cached = promptCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.template;
   }
@@ -23,19 +24,35 @@ export async function getPromptTemplate(promptKey: string): Promise<string> {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data, error } = await supabase
+  // Try to get prompt in requested language
+  let { data, error } = await supabase
     .from('ai_prompts')
     .select('prompt_template')
     .eq('prompt_key', promptKey)
+    .eq('language', language)
     .eq('is_active', true)
     .single();
 
+  // Fallback to English if not found
+  if ((error || !data) && language !== 'en') {
+    const result = await supabase
+      .from('ai_prompts')
+      .select('prompt_template')
+      .eq('prompt_key', promptKey)
+      .eq('language', 'en')
+      .eq('is_active', true)
+      .single();
+    
+    data = result.data;
+    error = result.error;
+  }
+
   if (error || !data) {
-    throw new Error(`Failed to fetch prompt: ${promptKey}`);
+    throw new Error(`Failed to fetch prompt: ${promptKey} in language: ${language}`);
   }
 
   // Cache the result
-  promptCache.set(promptKey, {
+  promptCache.set(cacheKey, {
     template: data.prompt_template,
     timestamp: Date.now(),
   });
@@ -68,8 +85,9 @@ export function renderPrompt(
 export async function getPrompt(
   promptKey: string,
   variables: Record<string, string> = {},
+  language: string = 'en',
 ): Promise<string> {
-  const template = await getPromptTemplate(promptKey);
+  const template = await getPromptTemplate(promptKey, language);
   return renderPrompt(template, variables);
 }
 
@@ -81,20 +99,21 @@ export async function generateChatSystemPrompt(
   assignmentInstructions: string,
   teacherName: string,
   isInitialGreeting: boolean,
+  language: string = 'en',
 ): Promise<string> {
   const greetingInstruction = isInitialGreeting
-    ? await getPrompt('chat_greeting_instruction', { teacherName })
+    ? await getPrompt('chat_greeting_instruction', { teacherName }, language)
     : '';
 
   const afterGreeting = isInitialGreeting
-    ? await getPromptTemplate('chat_after_greeting')
+    ? await getPromptTemplate('chat_after_greeting', language)
     : '';
 
   return await getPrompt('chat_system', {
     assignmentInstructions,
     greetingInstruction,
     afterGreeting,
-  });
+  }, language);
 }
 
 /**
@@ -103,20 +122,21 @@ export async function generateChatSystemPrompt(
 export async function generateFeedbackPrompt(
   studentName: string,
   teacherName: string,
+  language: string = 'en',
 ): Promise<string> {
   return await getPrompt('feedback_generation', {
     studentName,
     teacherName,
-  });
+  }, language);
 }
 
 /**
  * Generate 5D scores prompt
  */
-export async function generateScoresPrompt(studentName: string): Promise<string> {
+export async function generateScoresPrompt(studentName: string, language: string = 'en'): Promise<string> {
   return await getPrompt('five_d_scores', {
     studentName,
-  });
+  }, language);
 }
 
 /**
@@ -124,15 +144,16 @@ export async function generateScoresPrompt(studentName: string): Promise<string>
  */
 export async function generateWellbeingAnalysisPrompt(
   studentName: string,
+  language: string = 'en',
 ): Promise<string> {
   return await getPrompt('wellbeing_analysis', {
     studentName,
-  });
+  }, language);
 }
 
 /**
  * Get initial greeting message
  */
-export async function getInitialGreetingMessage(): Promise<string> {
-  return await getPromptTemplate('chat_initial_greeting');
+export async function getInitialGreetingMessage(language: string = 'en'): Promise<string> {
+  return await getPromptTemplate('chat_initial_greeting', language);
 }

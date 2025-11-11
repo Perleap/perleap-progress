@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { FileText, Filter, Download, Search } from "lucide-react";
 import { SubmissionCard } from "./SubmissionCard";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -35,6 +37,8 @@ interface Assignment {
 }
 
 export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
+  const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const [submissions, setSubmissions] = useState<SubmissionWithDetails[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -200,7 +204,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+    return <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>;
   }
 
   if (submissions.length === 0) {
@@ -224,7 +228,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <Filter className="h-4 w-4 md:h-5 md:w-5" />
-              Filter & Search Submissions
+              {t('submissionsTab.filterTitle')}
             </CardTitle>
             <Button 
               onClick={handleBulkExport} 
@@ -232,34 +236,34 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
               size="sm"
               className="w-full sm:w-auto"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Export All
+              <Download className="h-4 w-4 me-2" />
+              {t('submissionsTab.exportAll')}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
+              <label className="text-sm font-medium mb-2 block">{t('submissionsTab.search')}</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
                 <Input
-                  placeholder="Search in conversations, feedback, names..."
+                  placeholder={t('submissionsTab.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 text-sm"
+                  className={`${isRTL ? 'pr-9' : 'pl-9'} text-sm`}
                 />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium mb-2 block">Student</label>
+                <label className="text-sm font-medium mb-2 block">{t('common.student')}</label>
                 <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                   <SelectTrigger className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Students</SelectItem>
+                    <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
                     {students.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
@@ -267,13 +271,13 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Assignment</label>
+                <label className="text-sm font-medium mb-2 block">{t('submissionsTab.assignment')}</label>
                 <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
                   <SelectTrigger className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Assignments</SelectItem>
+                    <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
                     {assignments.map(a => (
                       <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
                     ))}
@@ -289,9 +293,9 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No submissions match filters</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('submissionsTab.noMatches')}</h3>
             <p className="text-muted-foreground">
-              Try adjusting your filters
+              {t('submissionsTab.adjustFilters')}
             </p>
           </CardContent>
         </Card>

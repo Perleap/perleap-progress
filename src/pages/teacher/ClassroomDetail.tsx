@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +69,7 @@ interface EnrolledStudent {
 }
 
 const ClassroomDetail = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -99,7 +103,7 @@ const ClassroomDetail = () => {
 
       if (error) throw error;
       if (!data) {
-        toast.error("Classroom not found");
+        toast.error(t('classroomDetail.errors.loading'));
         navigate('/teacher/dashboard');
         return;
       }
@@ -107,7 +111,7 @@ const ClassroomDetail = () => {
       await fetchAssignments();
       await fetchStudents();
     } catch (error: any) {
-      toast.error("Error loading classroom");
+      toast.error(t('classroomDetail.errors.loading'));
       navigate('/teacher/dashboard');
     } finally {
       setLoading(false);
@@ -177,10 +181,10 @@ const ClassroomDetail = () => {
         .eq('id', assignmentId);
 
       if (error) throw error;
-      toast.success("Assignment deleted");
+      toast.success(t('classroomDetail.success.deleted'));
       fetchAssignments();
     } catch (error: any) {
-      toast.error("Error deleting assignment");
+      toast.error(t('classroomDetail.errors.deleting'));
     }
   };
 
@@ -195,10 +199,10 @@ const ClassroomDetail = () => {
 
       if (error) throw error;
 
-      toast.success("Classroom deleted successfully");
+      toast.success(t('classroomDetail.success.deleted'));
       navigate('/teacher/dashboard');
     } catch (error: any) {
-      toast.error(error.message || "Error deleting classroom");
+      toast.error(error.message || t('classroomDetail.errors.deleting'));
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -208,7 +212,7 @@ const ClassroomDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -226,6 +230,10 @@ const ClassroomDetail = () => {
             <h1 className="text-lg md:text-2xl font-bold truncate">{classroom.name}</h1>
             <p className="text-xs md:text-sm text-muted-foreground truncate">{classroom.subject}</p>
           </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -233,21 +241,21 @@ const ClassroomDetail = () => {
         <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
           <div className="overflow-x-auto pb-2 -mx-4 px-4">
             <TabsList className="inline-flex w-full min-w-max md:w-auto">
-              <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
-              <TabsTrigger value="assignments" className="text-xs md:text-sm">Assignments</TabsTrigger>
-              <TabsTrigger value="students" className="text-xs md:text-sm">Students</TabsTrigger>
-              <TabsTrigger value="submissions" className="text-xs md:text-sm">Submissions</TabsTrigger>
-              <TabsTrigger value="analytics" className="text-xs md:text-sm">Analytics</TabsTrigger>
+              <TabsTrigger value="overview" className="text-xs md:text-sm">{t('classroomDetail.settings')}</TabsTrigger>
+              <TabsTrigger value="assignments" className="text-xs md:text-sm">{t('classroomDetail.assignments')}</TabsTrigger>
+              <TabsTrigger value="students" className="text-xs md:text-sm">{t('classroomDetail.students')}</TabsTrigger>
+              <TabsTrigger value="submissions" className="text-xs md:text-sm">{t('classroomDetail.submissionsTab')}</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs md:text-sm">{t('classroomDetail.analytics')}</TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="overview" className="space-y-4 md:space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h2 className="text-xl md:text-2xl font-bold">Classroom Overview</h2>
+              <h2 className="text-xl md:text-2xl font-bold">{t('classroomDetail.overview.title')}</h2>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button onClick={() => setEditDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Information
+                  <Edit className="me-2 h-4 w-4" />
+                  {t('classroomDetail.edit')}
                 </Button>
                 <Button 
                   onClick={() => setDeleteDialogOpen(true)} 
@@ -255,16 +263,16 @@ const ClassroomDetail = () => {
                   variant="destructive" 
                   className="w-full sm:w-auto"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Classroom
+                  <Trash2 className="me-2 h-4 w-4" />
+                  {t('classroomDetail.deleteButton')}
                 </Button>
               </div>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Invite Code</CardTitle>
-                <CardDescription>Share this code with students to join the classroom</CardDescription>
+                <CardTitle>{t('classroomDetail.inviteCode')}</CardTitle>
+                <CardDescription>{t('classroomDetail.shareCode')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
@@ -280,18 +288,18 @@ const ClassroomDetail = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
-                    Course Information
+                    {t('classroomDetail.overview.courseInfo')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h3 className="font-semibold mb-1">Course Title</h3>
+                    <h3 className="font-semibold mb-1">{t('classroomDetail.overview.courseTitle')}</h3>
                     <p className="text-muted-foreground">{classroom.course_title}</p>
                   </div>
                   
                   {classroom.course_duration && (
                     <div>
-                      <h3 className="font-semibold mb-1">Duration</h3>
+                      <h3 className="font-semibold mb-1">{t('classroomDetail.overview.duration')}</h3>
                       <p className="text-muted-foreground">{classroom.course_duration}</p>
                     </div>
                   )}
@@ -300,32 +308,32 @@ const ClassroomDetail = () => {
                     <div>
                       <h3 className="font-semibold mb-1 flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        Course Dates
+                        {t('classroomDetail.overview.courseDates')}
                       </h3>
                       <div className="text-muted-foreground">
-                        {classroom.start_date && <p>Start: {new Date(classroom.start_date).toLocaleDateString()}</p>}
-                        {classroom.end_date && <p>End: {new Date(classroom.end_date).toLocaleDateString()}</p>}
+                        {classroom.start_date && <p>{t('common.start')}: {new Date(classroom.start_date).toLocaleDateString()}</p>}
+                        {classroom.end_date && <p>{t('common.end')}: {new Date(classroom.end_date).toLocaleDateString()}</p>}
                       </div>
                     </div>
                   )}
 
                   {classroom.course_outline && (
                     <div>
-                      <h3 className="font-semibold mb-1">Course Outline</h3>
+                      <h3 className="font-semibold mb-1">{t('classroomDetail.overview.courseOutline')}</h3>
                       <p className="text-muted-foreground whitespace-pre-wrap">{classroom.course_outline}</p>
                     </div>
                   )}
 
                   {classroom.resources && (
                     <div>
-                      <h3 className="font-semibold mb-1">Resources</h3>
+                      <h3 className="font-semibold mb-1">{t('classroomDetail.overview.resources')}</h3>
                       <p className="text-muted-foreground whitespace-pre-wrap">{classroom.resources}</p>
                     </div>
                   )}
 
                   {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
                     <div>
-                      <h3 className="font-semibold mb-1">Learning Outcomes</h3>
+                      <h3 className="font-semibold mb-1">{t('classroomDetail.overview.learningOutcomes')}</h3>
                       <ul className="list-disc list-inside text-muted-foreground space-y-1">
                         {classroom.learning_outcomes.map((outcome: string, index: number) => (
                           <li key={index}>{outcome}</li>
@@ -336,7 +344,7 @@ const ClassroomDetail = () => {
 
                   {classroom.key_challenges && classroom.key_challenges.length > 0 && (
                     <div>
-                      <h3 className="font-semibold mb-1">Key Challenges</h3>
+                      <h3 className="font-semibold mb-1">{t('classroomDetail.overview.keyChallenges')}</h3>
                       <ul className="list-disc list-inside text-muted-foreground space-y-1">
                         {classroom.key_challenges.map((challenge: string, index: number) => (
                           <li key={index}>{challenge}</li>
@@ -352,12 +360,12 @@ const ClassroomDetail = () => {
           <TabsContent value="assignments" className="space-y-4 md:space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold">Assignments</h2>
-                <p className="text-sm text-muted-foreground">Create and manage assignments</p>
+                <h2 className="text-xl md:text-2xl font-bold">{t('classroomDetail.assignments')}</h2>
+                <p className="text-sm text-muted-foreground">{t('classroomDetail.assignmentsSubtitle')}</p>
               </div>
               <Button onClick={() => setAssignmentDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Assignment
+                <Plus className="me-2 h-4 w-4" />
+                {t('classroomDetail.createAssignment')}
               </Button>
             </div>
 
@@ -365,11 +373,11 @@ const ClassroomDetail = () => {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No assignments yet</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t('classroomDetail.noAssignments')}</h3>
                   <p className="text-muted-foreground mb-4">Create your first assignment to get started</p>
                   <Button onClick={() => setAssignmentDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Assignment
+                    <Plus className="me-2 h-4 w-4" />
+                    {t('classroomDetail.createAssignment')}
                   </Button>
                 </CardContent>
               </Card>
@@ -428,15 +436,15 @@ const ClassroomDetail = () => {
 
           <TabsContent value="students" className="space-y-4 md:space-y-6">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold">Enrolled Students</h2>
-              <p className="text-sm text-muted-foreground">View and manage your students</p>
+              <h2 className="text-xl md:text-2xl font-bold">{t('classroomDetail.studentsTab.title')}</h2>
+              <p className="text-sm text-muted-foreground">{t('classroomDetail.studentsTab.subtitle')}</p>
             </div>
 
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Students ({students.length})
+                  {t('common.students')} ({students.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -467,7 +475,7 @@ const ClassroomDetail = () => {
                               {displayName}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Joined: {new Date(enrollment.created_at).toLocaleDateString()}
+                              {t('classroomDetail.studentsTab.joined')}: {new Date(enrollment.created_at).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
@@ -481,8 +489,8 @@ const ClassroomDetail = () => {
 
           <TabsContent value="submissions" className="space-y-4 md:space-y-6">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold">Student Submissions</h2>
-              <p className="text-sm text-muted-foreground">View completed assignments and feedback</p>
+              <h2 className="text-xl md:text-2xl font-bold">{t('classroomDetail.submissions.title')}</h2>
+              <p className="text-sm text-muted-foreground">{t('classroomDetail.submissions.subtitle')}</p>
             </div>
             <SubmissionsTab classroomId={id!} />
           </TabsContent>
@@ -491,7 +499,7 @@ const ClassroomDetail = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 md:h-6 md:w-6" />
-                <h2 className="text-xl md:text-2xl font-bold">Analytics</h2>
+                <h2 className="text-xl md:text-2xl font-bold">{t('classroomDetail.analytics')}</h2>
               </div>
               <RegenerateScoresButton 
                 classroomId={id!} 

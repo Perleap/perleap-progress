@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const ContactUs = () => {
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,7 @@ const ContactUs = () => {
                 Back to Home
               </Button>
             </Link>
+            <ThemeToggle />
             <Link to="/auth">
               <Button size="sm" className="font-medium">
                 Get Started

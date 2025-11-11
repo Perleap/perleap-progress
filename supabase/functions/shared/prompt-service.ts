@@ -38,32 +38,50 @@ export const clearPromptCache = (promptKey?: string) => {
 };
 
 /**
- * Retrieve a prompt template by key.
+ * Retrieve a prompt template by key and language.
  */
 export const getPromptTemplate = async (
   promptKey: string,
+  language: string = 'en',
   fallback?: string,
 ): Promise<string> => {
   const now = Date.now();
-  const cached = promptCache.get(promptKey);
+  const cacheKey = `${promptKey}_${language}`;
+  const cached = promptCache.get(cacheKey);
 
   if (cached && cached.expiresAt > now) {
     return cached.content;
   }
 
   const supabase = createSupabaseClient();
-  const { data, error } = await supabase
+  // Try to get the prompt in the requested language
+  let { data, error } = await supabase
     .from('ai_prompts')
     .select('content')
     .eq('prompt_key', promptKey)
+    .eq('language', language)
     .maybeSingle();
+  
+  // If not found in requested language, fallback to English
+  if (!data?.content && language !== 'en') {
+    logWarn(`Prompt "${promptKey}" not found in language "${language}", falling back to English`);
+    const result = await supabase
+      .from('ai_prompts')
+      .select('content')
+      .eq('prompt_key', promptKey)
+      .eq('language', 'en')
+      .maybeSingle();
+    
+    data = result.data;
+    error = result.error;
+  }
 
   if (error) {
     logWarn(`Failed to fetch prompt "${promptKey}" from database`, error);
   }
 
   if (data?.content) {
-    promptCache.set(promptKey, {
+    promptCache.set(cacheKey, {
       content: data.content,
       expiresAt: now + PROMPT_CACHE_TTL_MS,
     });
@@ -71,15 +89,15 @@ export const getPromptTemplate = async (
   }
 
   if (fallback) {
-    logWarn(`Using fallback prompt for key "${promptKey}"`);
-    promptCache.set(promptKey, {
+    logWarn(`Using fallback prompt for key "${promptKey}" in language "${language}"`);
+    promptCache.set(cacheKey, {
       content: fallback,
       expiresAt: now + PROMPT_CACHE_TTL_MS,
     });
     return fallback;
   }
 
-  const message = `Prompt template not found for key "${promptKey}"`;
+  const message = `Prompt template not found for key "${promptKey}" in language "${language}"`;
   logError(message);
   throw new Error(message);
 };

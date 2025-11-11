@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createNotification, getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
 import { StudentCalendar } from "@/components/StudentCalendar";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Assignment {
   id: string;
@@ -66,6 +69,7 @@ interface CalendarAssignment {
 }
 
 const StudentDashboard = () => {
+  const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -167,7 +171,7 @@ const StudentDashboard = () => {
         setUnreadCount(notifs.length);
       }
     } catch (error: any) {
-      toast.error("Error loading data");
+      toast.error(t('studentDashboard.errors.loadingData'));
     } finally {
       setLoading(false);
     }
@@ -175,7 +179,7 @@ const StudentDashboard = () => {
 
   const joinClassroom = async () => {
     if (!user || !inviteCode.trim()) {
-      toast.error("Please enter an invite code");
+      toast.error(t('studentDashboard.errors.enterInviteCode'));
       return;
     }
 
@@ -191,12 +195,12 @@ const StudentDashboard = () => {
         .maybeSingle();
 
       if (classroomError) {
-        toast.error("Error checking invite code. Please try again.");
+        toast.error(t('studentDashboard.errors.checkingCode'));
         return;
       }
 
       if (!classroom) {
-        toast.error(`No classroom found with code: ${trimmedCode}`);
+        toast.error(t('studentDashboard.errors.noClassroomFound', { code: trimmedCode }));
         return;
       }
 
@@ -209,7 +213,7 @@ const StudentDashboard = () => {
         .maybeSingle();
 
       if (existingEnrollment) {
-        toast.error("You're already enrolled in this classroom");
+        toast.error(t('studentDashboard.errors.alreadyEnrolled'));
         setDialogOpen(false);
         return;
       }
@@ -223,7 +227,7 @@ const StudentDashboard = () => {
         });
 
       if (enrollError) {
-        toast.error("Error joining classroom. Please contact your teacher.");
+        toast.error(t('studentDashboard.errors.joiningClassroom'));
         return;
       }
 
@@ -275,12 +279,12 @@ const StudentDashboard = () => {
       } catch (notifError) {
       }
 
-      toast.success(`Successfully joined ${classroom.name}!`);
+      toast.success(t('studentDashboard.success.joinedClassroom', { name: classroom.name }));
       setInviteCode("");
       setDialogOpen(false);
       await fetchData();
     } catch (error: any) {
-      toast.error("An unexpected error occurred");
+      toast.error(t('studentDashboard.errors.unexpected'));
     } finally {
       setJoining(false);
     }
@@ -337,9 +341,14 @@ const StudentDashboard = () => {
       <header className="border-b">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
           <h1 className="text-lg md:text-2xl font-bold">
-            {!loading && profile.full_name ? `Welcome ${profile.full_name.split(' ')[0]} to your dashboard` : 'Student Dashboard'}
+            {!loading && profile.full_name ? t('studentDashboard.welcome', { name: profile.full_name.split(' ')[0] }) : t('studentDashboard.title')}
           </h1>
           <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+            
             {/* Notifications Dropdown */}
             <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
               <DropdownMenuTrigger asChild>
@@ -358,7 +367,7 @@ const StudentDashboard = () => {
               <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
                 <div className="p-2">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">Notifications</h3>
+                    <h3 className="font-semibold">{t('studentDashboard.notifications')}</h3>
                     {unreadCount > 0 && (
                       <Button
                         variant="ghost"
@@ -369,17 +378,17 @@ const StudentDashboard = () => {
                             await markAllAsRead(user.id);
                             setNotifications([]);
                             setUnreadCount(0);
-                            toast.success("All notifications marked as read");
+                            toast.success(t('studentDashboard.success.markedRead'));
                           }
                         }}
                       >
-                        Mark all read
+                        {t('studentDashboard.markAllRead')}
                       </Button>
                     )}
                   </div>
                   {notifications.length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground text-sm">
-                      No new notifications
+                      {t('studentDashboard.noNotifications')}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -439,32 +448,32 @@ const StudentDashboard = () => {
             {/* My Classes Section */}
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <h2 className="text-xl md:text-2xl font-bold">My Classes</h2>
+                <h2 className="text-xl md:text-2xl font-bold">{t('studentDashboard.myClasses')}</h2>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="w-full sm:w-auto">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Join Class
+                      <Plus className="me-2 h-4 w-4" />
+                      {t('studentDashboard.joinClass')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Join a Classroom</DialogTitle>
-                      <DialogDescription>Enter the invite code provided by your teacher</DialogDescription>
+                      <DialogTitle>{t('studentDashboard.joinClassroom.title')}</DialogTitle>
+                      <DialogDescription>{t('studentDashboard.joinClassroom.description')}</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="code">Invite Code</Label>
+                        <Label htmlFor="code">{t('studentDashboard.joinClassroom.inviteCode')}</Label>
                         <Input
                           id="code"
-                          placeholder="ABC123"
+                          placeholder={t('studentDashboard.joinClassroom.placeholder')}
                           value={inviteCode}
                           onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                           maxLength={6}
                         />
                       </div>
                       <Button onClick={joinClassroom} className="w-full" disabled={joining}>
-                        {joining ? "Joining..." : "Join Classroom"}
+                        {joining ? t('studentDashboard.joinClassroom.joining') : t('studentDashboard.joinClassroom.button')}
                       </Button>
                     </div>
                   </DialogContent>
@@ -472,16 +481,16 @@ const StudentDashboard = () => {
               </div>
 
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
               ) : classrooms.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
-                    <p className="text-muted-foreground mb-4">Join a classroom to get started</p>
+                    <h3 className="text-lg font-semibold mb-2">{t('studentDashboard.empty.noClasses')}</h3>
+                    <p className="text-muted-foreground mb-4">{t('studentDashboard.empty.noClassesDescription')}</p>
                     <Button onClick={() => setDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Join Class
+                      <Plus className="me-2 h-4 w-4" />
+                      {t('studentDashboard.joinClass')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -506,28 +515,28 @@ const StudentDashboard = () => {
             {/* Assignments Section */}
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <h2 className="text-xl md:text-2xl font-bold">My Assignments</h2>
+                <h2 className="text-xl md:text-2xl font-bold">{t('studentDashboard.myAssignments')}</h2>
                 {!loading && assignments.length > 0 && (
                   <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
                     <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Sort by" />
+                      <SelectValue placeholder={t('studentDashboard.sortBy')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="due-date">Due Date (Earliest)</SelectItem>
-                      <SelectItem value="recent">Recent (Newest)</SelectItem>
-                      <SelectItem value="oldest">Oldest (First Received)</SelectItem>
+                      <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
+                      <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
+                      <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </div>
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
               ) : assignments.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No assignments yet</h3>
-                    <p className="text-muted-foreground">Your assignments will appear here</p>
+                    <h3 className="text-lg font-semibold mb-2">{t('studentDashboard.empty.noAssignments')}</h3>
+                    <p className="text-muted-foreground">{t('studentDashboard.empty.noAssignmentsDescription')}</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -548,20 +557,20 @@ const StudentDashboard = () => {
                         <CardHeader className="p-4 pb-3">
                           <CardTitle className="text-base mb-1">{assignment.title}</CardTitle>
                           <CardDescription className="text-sm mb-2">
-                            {assignment.classrooms.name} • Due: {new Date(assignment.due_at).toLocaleDateString()}
+                            {assignment.classrooms.name} • {t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}
                           </CardDescription>
                           <div className="flex items-center gap-2 mt-2">
                             <Avatar className="h-6 w-6">
                               {assignment.classrooms.teacher_profiles?.avatar_url && (
                                 <AvatarImage 
                                   src={assignment.classrooms.teacher_profiles.avatar_url} 
-                                  alt={assignment.classrooms.teacher_profiles.full_name || 'Teacher'} 
+                                  alt={assignment.classrooms.teacher_profiles.full_name || t('common.teacher')} 
                                 />
                               )}
                               <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
                             </Avatar>
                             <span className="text-xs text-muted-foreground">
-                              {assignment.classrooms.teacher_profiles?.full_name || 'Teacher'}
+                              {assignment.classrooms.teacher_profiles?.full_name || t('common.teacher')}
                             </span>
                           </div>
                         </CardHeader>
