@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +46,7 @@ interface Feedback {
 }
 
 const AssignmentDetail = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -71,7 +75,7 @@ const AssignmentDetail = () => {
       if (assignError) throw assignError;
       
       if (!assignmentData) {
-        toast.error("Assignment not found");
+        toast.error(t('assignmentDetail.errors.loading'));
         navigate('/student/dashboard');
         return;
       }
@@ -163,7 +167,7 @@ const AssignmentDetail = () => {
         }
       }
     } catch (error: any) {
-      toast.error("Error loading assignment");
+      toast.error(t('assignmentDetail.errors.loading'));
       navigate('/student/dashboard');
     } finally {
       setLoading(false);
@@ -177,7 +181,7 @@ const AssignmentDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -199,6 +203,10 @@ const AssignmentDetail = () => {
             <h1 className="text-lg md:text-2xl font-bold truncate">{assignment.title}</h1>
             <p className="text-xs md:text-sm text-muted-foreground truncate">{assignment.classrooms.name}</p>
           </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -209,11 +217,11 @@ const AssignmentDetail = () => {
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <CardTitle>
-                    Assignment Details
+                    {t('assignmentDetail.title')}
                   </CardTitle>
                   <CardDescription className="flex items-center gap-2 mt-2">
                     <Calendar className="h-4 w-4" />
-                    {assignment.due_at && `Due: ${new Date(assignment.due_at).toLocaleString()}`}
+                    {assignment.due_at && `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
                   </CardDescription>
                 </div>
                 <Badge variant="secondary">{assignment.type.replace('_', ' ')}</Badge>
@@ -221,7 +229,7 @@ const AssignmentDetail = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">Instructions</h3>
+                <h3 className="font-semibold mb-2">{t('assignmentDetail.instructions')}</h3>
                 <p className="text-muted-foreground whitespace-pre-wrap">{assignment.instructions}</p>
               </div>
 
@@ -254,9 +262,9 @@ const AssignmentDetail = () => {
           {feedback && (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-primary">Your Feedback</CardTitle>
+                <CardTitle className="text-primary">{t('assignmentDetail.viewFeedback')}</CardTitle>
                 <CardDescription>
-                  Completed on {new Date(feedback.created_at).toLocaleString()}
+                  {t('assignmentDetail.submitted')}: {new Date(feedback.created_at).toLocaleString()}
                 </CardDescription>
               </CardHeader>
               <CardContent>

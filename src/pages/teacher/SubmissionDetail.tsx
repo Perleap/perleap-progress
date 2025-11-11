@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +36,7 @@ interface Feedback {
 }
 
 const SubmissionDetail = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -64,7 +68,7 @@ const SubmissionDetail = () => {
 
       if (subError) throw subError;
       if (!submissionData) {
-        toast.error("Submission not found");
+        toast.error(t('submissionDetail.errors.loading'));
         navigate(-1);
         return;
       }
@@ -72,7 +76,7 @@ const SubmissionDetail = () => {
       // Check if this teacher owns the classroom
       const teacherId = (submissionData.assignments as any).classrooms.teacher_id;
       if (teacherId !== user?.id) {
-        toast.error("You don't have access to this submission");
+        toast.error(t('submissionDetail.errors.loading'));
         navigate(-1);
         return;
       }
@@ -170,7 +174,7 @@ const SubmissionDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -185,10 +189,14 @@ const SubmissionDetail = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">{studentName}'s Submission</h1>
+            <h1 className="text-2xl font-bold">{t('submissionDetail.title')}: {studentName}</h1>
             <p className="text-sm text-muted-foreground">
               {(submission.assignments as any).title}
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
           </div>
           <Badge variant="secondary">
             {new Date(submission.submitted_at).toLocaleDateString()}
@@ -213,7 +221,7 @@ const SubmissionDetail = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-primary">Pedagogical Insights for You</CardTitle>
+                      <CardTitle className="text-primary">{t('submissionDetail.teacherFeedback')}</CardTitle>
                       <CardDescription>
                         AI-generated analysis and recommendations based on {studentName}'s learning conversation
                       </CardDescription>
@@ -249,7 +257,7 @@ const SubmissionDetail = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Feedback Given to Student</CardTitle>
+                  <CardTitle>{t('submissionDetail.studentFeedback')}</CardTitle>
                   <CardDescription>
                     What {studentName} saw after completing the assignment
                   </CardDescription>
@@ -339,7 +347,7 @@ const SubmissionDetail = () => {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No feedback yet</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('submissionDetail.noFeedback')}</h3>
                 <p className="text-muted-foreground text-center">
                   This student hasn't completed the assignment yet
                 </p>
@@ -355,7 +363,7 @@ const SubmissionDetail = () => {
           onOpenChange={setAssignmentDialogOpen}
           classroomId={(submission.assignments as any).classroom_id}
           onSuccess={() => {
-            toast.success("Follow-up assignment created successfully!");
+            toast.success(t('createAssignment.success.created'));
             setAssignmentDialogOpen(false);
             setGeneratedAssignmentData(null);
           }}

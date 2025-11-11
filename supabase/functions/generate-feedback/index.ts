@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { submissionId, studentId, assignmentId } = await req.json();
+    const { submissionId, studentId, assignmentId, language = 'en' } = await req.json();
     const supabase = createSupabaseClient();
 
     // Fetch student and teacher names
@@ -61,7 +61,7 @@ serve(async (req) => {
       .join('\n\n');
 
     // Generate feedback
-    const feedbackPrompt = await generateFeedbackPrompt(studentName, teacherName);
+    const feedbackPrompt = await generateFeedbackPrompt(studentName, teacherName, language);
     const { content: feedbackText } = await createChatCompletion(
       feedbackPrompt,
       [{ role: 'user', content: conversationText }],
@@ -91,7 +91,7 @@ serve(async (req) => {
     }
 
     // Generate 5D scores
-    const scoresPrompt = await generateScoresPrompt(studentName);
+    const scoresPrompt = await generateScoresPrompt(studentName, language);
     const { content: scoresText } = await createChatCompletion(
       scoresPrompt,
       [{ role: 'user', content: conversationText }],

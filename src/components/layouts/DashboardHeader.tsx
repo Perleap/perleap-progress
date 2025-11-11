@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 interface DashboardHeaderProps {
   title: string;
@@ -35,6 +37,8 @@ export const DashboardHeader = ({
         <h1 className="text-lg md:text-2xl font-bold">{title}</h1>
         <div className="flex items-center gap-2">
           {additionalActions}
+          <ThemeToggle />
+          <LanguageSwitcher />
           <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>

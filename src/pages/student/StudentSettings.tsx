@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +43,7 @@ interface NotificationSettings {
 }
 
 const StudentSettings = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -118,7 +122,7 @@ const StudentSettings = () => {
         setNotifications(JSON.parse(savedNotifications));
       }
     } catch (error: any) {
-      toast.error("Error loading settings");
+      toast.error(t('settings.errors.loading'));
     } finally {
       setLoading(false);
     }
@@ -193,9 +197,9 @@ const StudentSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success("Profile updated successfully!");
+      toast.success(t('settings.success.saved'));
     } catch (error: any) {
-      toast.error("Error updating profile");
+      toast.error(t('settings.errors.saving'));
     } finally {
       setSaving(false);
     }
@@ -223,9 +227,9 @@ const StudentSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success("Learning preferences updated successfully!");
+      toast.success(t('settings.success.saved'));
     } catch (error: any) {
-      toast.error("Error updating questions");
+      toast.error(t('settings.errors.saving'));
     } finally {
       setSaving(false);
     }
@@ -234,7 +238,7 @@ const StudentSettings = () => {
   const handleSaveNotifications = () => {
     // In a real app, you would save to database
     localStorage.setItem('student_notifications', JSON.stringify(notifications));
-    toast.success("Notification settings updated!");
+    toast.success(t('settings.success.saved'));
   };
 
   const getInitials = () => {
@@ -257,7 +261,11 @@ const StudentSettings = () => {
           <Button variant="ghost" size="sm" onClick={() => navigate('/student/dashboard')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-lg md:text-2xl font-bold">Settings</h1>
+          <h1 className="text-lg md:text-2xl font-bold">{t('settings.title')}</h1>
+          <div className="ms-auto flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -282,7 +290,7 @@ const StudentSettings = () => {
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle>{t('settings.profile')}</CardTitle>
                 <CardDescription>Update your personal information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -323,7 +331,7 @@ const StudentSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                        <Label htmlFor="fullName">{t('settings.fullName')}</Label>
                   <Input
                     id="fullName"
                     value={profile.full_name}

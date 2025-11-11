@@ -6,6 +6,7 @@ import { Check, Info, ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "react-router-dom";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Mock data for pricing plans
 const pricingPlans = {
@@ -121,6 +122,7 @@ const Pricing = () => {
                 Contact
               </Button>
             </Link>
+            <ThemeToggle />
             <Link to="/auth">
               <Button size="sm" className="font-medium">
                 Get Started

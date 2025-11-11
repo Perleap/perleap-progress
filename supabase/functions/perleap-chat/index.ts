@@ -16,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, assignmentInstructions, submissionId, studentId, assignmentId, isInitialGreeting } =
+    const { message, assignmentInstructions, submissionId, studentId, assignmentId, isInitialGreeting, language = 'en' } =
       await req.json();
 
     const teacherName = await getTeacherNameByAssignment(assignmentId);
@@ -31,6 +31,7 @@ serve(async (req) => {
       assignmentInstructions,
       teacherName,
       isInitialGreeting,
+      language,
     );
 
     const openAIMessages: Message[] = isInitialGreeting

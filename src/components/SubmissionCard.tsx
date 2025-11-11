@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface SubmissionCardProps {
   submission: {
@@ -19,6 +20,7 @@ interface SubmissionCardProps {
 }
 
 export function SubmissionCard({ submission }: SubmissionCardProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isConversationOpen, setIsConversationOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -33,12 +35,12 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
             <CardTitle className="text-lg">{submission.student_name}</CardTitle>
             <CardDescription>{submission.assignment_title}</CardDescription>
             <p className="text-sm text-muted-foreground">
-              Submitted: {new Date(submission.submitted_at).toLocaleString()}
+              {t('submissionCard.submitted')}: {new Date(submission.submitted_at).toLocaleString()}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={submission.has_feedback ? 'default' : 'secondary'}>
-              {submission.has_feedback ? 'Completed' : 'In Progress'}
+              {submission.has_feedback ? t('submissionCard.completed') : t('submissionCard.inProgress')}
             </Badge>
             <Button
               variant="ghost"
@@ -57,7 +59,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
             <Collapsible open={isConversationOpen} onOpenChange={setIsConversationOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-between">
-                  <span className="font-semibold">Conversation History</span>
+                  <span className="font-semibold">{t('submissionCard.conversation')}</span>
                   {isConversationOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
               </CollapsibleTrigger>
@@ -73,7 +75,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
                       }`}
                     >
                       <div className="font-semibold mb-1 text-xs">
-                        {msg.role === 'user' ? submission.student_name : 'Perleap AI'}
+                        {msg.role === 'user' ? submission.student_name : t('submissionCard.ai')}
                       </div>
                       <div className="whitespace-pre-wrap">
                         {msg.content}
@@ -89,7 +91,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
             <Collapsible open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full justify-between">
-                  <span className="font-semibold">Teacher Feedback</span>
+                  <span className="font-semibold">{t('submissionCard.teacherFeedback')}</span>
                   {isFeedbackOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </Button>
               </CollapsibleTrigger>

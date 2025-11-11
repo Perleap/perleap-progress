@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface TeacherProfile {
   full_name: string;
@@ -249,6 +250,9 @@ const TeacherSettings = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-lg md:text-2xl font-bold">Settings</h1>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

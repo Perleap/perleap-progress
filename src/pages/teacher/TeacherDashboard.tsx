@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getUnreadNotifications, markAsRead, markAllAsRead, type Notification } from "@/lib/notificationService";
 import { TeacherCalendar } from "@/components/TeacherCalendar";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Classroom {
   id: string;
@@ -36,6 +39,7 @@ interface CalendarClassroom {
 }
 
 const TeacherDashboard = () => {
+  const { t } = useTranslation();
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -88,7 +92,7 @@ const TeacherDashboard = () => {
         setUnreadCount(notifs.length);
       }
     } catch (error: any) {
-      toast.error("Error loading classrooms");
+      toast.error(t('teacherDashboard.errors.loadingClassrooms'));
     } finally {
       setLoading(false);
     }
@@ -121,7 +125,7 @@ const TeacherDashboard = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -131,9 +135,11 @@ const TeacherDashboard = () => {
       <header className="border-b">
         <div className="container flex h-14 md:h-16 items-center justify-between px-4">
           <h1 className="text-lg md:text-2xl font-bold">
-            {!loading && profile.full_name ? `Welcome ${profile.full_name.split(' ')[0]} to your dashboard` : 'Teacher Dashboard'}
+            {!loading && profile.full_name ? t('teacherDashboard.welcome', { name: profile.full_name.split(' ')[0] }) : t('teacherDashboard.title')}
           </h1>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
             {/* Notifications Dropdown */}
             <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
               <DropdownMenuTrigger asChild>
@@ -152,7 +158,7 @@ const TeacherDashboard = () => {
               <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
                 <div className="p-2">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">Notifications</h3>
+                    <h3 className="font-semibold">{t('teacherDashboard.notifications')}</h3>
                     {unreadCount > 0 && (
                       <Button
                         variant="ghost"
@@ -163,17 +169,17 @@ const TeacherDashboard = () => {
                             await markAllAsRead(user.id);
                             setNotifications([]);
                             setUnreadCount(0);
-                            toast.success("All notifications marked as read");
+                            toast.success(t('teacherDashboard.success.notificationsRead'));
                           }
                         }}
                       >
-                        Mark all read
+                        {t('teacherDashboard.markAllRead')}
                       </Button>
                     )}
                   </div>
                   {notifications.length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground text-sm">
-                      No new notifications
+                      {t('teacherDashboard.noNotifications')}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -233,26 +239,26 @@ const TeacherDashboard = () => {
             <div className="mb-6 md:mb-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">My Classrooms</h2>
-              <p className="text-sm md:text-base text-muted-foreground">Manage your classes and track student progress</p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{t('teacherDashboard.myClassrooms')}</h2>
+              <p className="text-sm md:text-base text-muted-foreground">{t('teacherDashboard.subtitle')}</p>
             </div>
             <Button onClick={() => setDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Classroom
+              <Plus className="me-2 h-4 w-4" />
+              {t('teacherDashboard.createClassroom')}
             </Button>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+            <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
           ) : classrooms.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No classrooms yet</h3>
-                <p className="text-muted-foreground mb-4">Create your first classroom to get started</p>
+                <h3 className="text-lg font-semibold mb-2">{t('teacherDashboard.empty.title')}</h3>
+                <p className="text-muted-foreground mb-4">{t('teacherDashboard.empty.description')}</p>
                 <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Classroom
+                  <Plus className="me-2 h-4 w-4" />
+                  {t('teacherDashboard.createClassroom')}
                 </Button>
               </CardContent>
             </Card>
@@ -267,7 +273,7 @@ const TeacherDashboard = () => {
                   <CardContent>
                     <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
                       <Users className="h-3 w-3 md:h-4 md:w-4" />
-                      <span>Invite code: {classroom.invite_code}</span>
+                      <span>{t('teacherDashboard.inviteCode')} {classroom.invite_code}</span>
                     </div>
                   </CardContent>
                 </Card>

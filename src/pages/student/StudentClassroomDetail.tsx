@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,6 +37,7 @@ interface Assignment {
 }
 
 const StudentClassroomDetail = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -70,7 +74,7 @@ const StudentClassroomDetail = () => {
       if (enrollError) throw enrollError;
       
       if (!enrollment) {
-        toast.error("You're not enrolled in this classroom");
+        toast.error(t('studentClassroom.errors.loading'));
         navigate('/student/dashboard');
         return;
       }
@@ -104,7 +108,7 @@ const StudentClassroomDetail = () => {
         setScores(null);
       }
     } catch (error: any) {
-      toast.error("Error loading classroom details");
+      toast.error(t('studentClassroom.errors.loading'));
       navigate('/student/dashboard');
     } finally {
       setLoading(false);
@@ -131,7 +135,7 @@ const StudentClassroomDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="text-muted-foreground">{t('common.loading')}</div>
       </div>
     );
   }
@@ -149,6 +153,10 @@ const StudentClassroomDetail = () => {
             <h1 className="text-2xl font-bold">{classroom.name}</h1>
             <p className="text-sm text-muted-foreground">{classroom.subject}</p>
           </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -157,8 +165,8 @@ const StudentClassroomDetail = () => {
           <div className="lg:col-span-2">
             <Tabs defaultValue="overview" className="space-y-6">
               <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="assignments">Assignments</TabsTrigger>
+                <TabsTrigger value="overview">{t('studentClassroom.about')}</TabsTrigger>
+                <TabsTrigger value="assignments">{t('studentClassroom.assignments')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-6">
@@ -241,7 +249,7 @@ const StudentClassroomDetail = () => {
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-12">
                       <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No assignments yet</h3>
+                      <h3 className="text-lg font-semibold mb-2">{t('studentClassroom.noAssignments')}</h3>
                       <p className="text-muted-foreground">Check back later for new assignments</p>
                     </CardContent>
                   </Card>
@@ -253,12 +261,12 @@ const StudentClassroomDetail = () => {
                       </h3>
                       <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
                         <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Sort by" />
+                          <SelectValue placeholder={t('studentDashboard.sortBy')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="due-date">Due Date (Earliest)</SelectItem>
-                          <SelectItem value="recent">Recent (Newest)</SelectItem>
-                          <SelectItem value="oldest">Oldest (First Received)</SelectItem>
+                          <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
+                          <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
+                          <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -271,8 +279,8 @@ const StudentClassroomDetail = () => {
                       <CardHeader>
                         <CardTitle>{assignment.title}</CardTitle>
                         <CardDescription>
-                          Type: {assignment.type.replace('_', ' ')} • 
-                          {assignment.due_at && ` Due: ${new Date(assignment.due_at).toLocaleString()}`}
+                          {t('assignmentDetail.type')}: {assignment.type.replace('_', ' ')} • 
+                          {assignment.due_at && ` ${t('common.due')}: ${new Date(assignment.due_at).toLocaleString()}`}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>

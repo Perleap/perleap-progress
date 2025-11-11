@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { StudentAlert, AlertLevel } from "@/types/alerts";
 import { ALERT_TYPE_LABELS, ALERT_LEVEL_COLORS } from "@/types/alerts";
+import { useTranslation } from "react-i18next";
 
 interface WellbeingAlertCardProps {
   alerts: StudentAlert[];
@@ -15,6 +16,7 @@ interface WellbeingAlertCardProps {
 }
 
 export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: WellbeingAlertCardProps) {
+  const { t } = useTranslation();
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
 
   if (!alerts || alerts.length === 0) {
@@ -99,7 +101,7 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
             <AlertTriangle className={`h-6 w-6 ${colors.text} mt-1`} />
             <div>
               <CardTitle className={`text-xl ${colors.text}`}>
-                {mostSevereLevel === 'critical' ? '🚨 Critical Wellbeing Alert' : '⚠️ Wellbeing Concern Detected'}
+                {mostSevereLevel === 'critical' ? `🚨 ${t('wellbeing.level.critical')} ${t('wellbeing.alert')}` : `⚠️ ${t('wellbeing.level.concerning')}`}
               </CardTitle>
               <CardDescription className="mt-1">
                 Concerning signs detected in {studentName}'s conversation
@@ -115,12 +117,12 @@ export function WellbeingAlertCard({ alerts, studentName, onAcknowledge }: Wellb
             >
               {acknowledging === 'all' ? (
                 <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  <Clock className="h-4 w-4 me-2 animate-spin" />
                   Acknowledging...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <CheckCircle className="h-4 w-4 me-2" />
                   Acknowledge All
                 </>
               )}

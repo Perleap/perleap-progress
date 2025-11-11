@@ -55,11 +55,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    // Clear any cached data and persisted forms
-    clearAllPersistedForms();
-    sessionStorage.clear();
-    navigate('/');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+      }
+    } catch (error) {
+      // If network fails, still clean up locally
+      console.error('Sign out failed, cleaning up locally:', error);
+    } finally {
+      // Always clear local data even if API call fails
+      clearAllPersistedForms();
+      sessionStorage.clear();
+      // Clear auth-related localStorage items
+      const keysToKeep = ['language_preference']; // Keep language preference
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(key => {
+        if (!keysToKeep.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+      navigate('/');
+    }
   };
 
   return (

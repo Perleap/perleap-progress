@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Calendar } from "@/components/ui/calendar";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isSameDay } from "date-fns";
+import { he } from "date-fns/locale";
 import { CalendarDays, AlertCircle } from "lucide-react";
 import { CALENDAR_MODIFIERS_STYLES } from "@/lib/calendarUtils";
 
@@ -60,6 +63,8 @@ interface TeacherCalendarProps {
 }
 
 export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading: propLoading }: TeacherCalendarProps) {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
   const [assignments, setAssignments] = useState<AssignmentWithIncomplete[]>([]);
@@ -230,7 +235,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading calendar...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -241,7 +246,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5" />
-          Assignment Calendar
+          {t('calendar.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -259,7 +264,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
         {selectedDate && (
           <div className="space-y-3">
             <h3 className="font-semibold text-sm">
-              {format(selectedDate, 'MMMM d, yyyy')}
+              {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
             </h3>
             
             {/* Active Classes */}
@@ -267,7 +272,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
               <div className="space-y-2">
                 <h4 className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                   <CalendarDays className="h-3 w-3" />
-                  Active Classes ({activeClassesForSelectedDate.length})
+                  {t('calendar.activeClasses')} ({activeClassesForSelectedDate.length})
                 </h4>
                 <div className="space-y-1">
                   {activeClassesForSelectedDate.map((classroom) => (
@@ -279,7 +284,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
                       <p className="text-[10px] text-muted-foreground">{classroom.subject}</p>
                       {classroom.start_date && classroom.end_date && (
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          {format(new Date(classroom.start_date), 'MMM d')} - {format(new Date(classroom.end_date), 'MMM d')}
+                          {format(new Date(classroom.start_date), 'MMM d', { locale: language === 'he' ? he : undefined })} - {format(new Date(classroom.end_date), 'MMM d', { locale: language === 'he' ? he : undefined })}
                         </p>
                       )}
                     </div>
@@ -291,10 +296,10 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
             {/* Assignments Due */}
             <div className="space-y-2">
               <h4 className="text-xs font-semibold text-red-600 dark:text-red-400">
-                Assignments Due
+                {t('calendar.assignmentsDue')}
               </h4>
               {assignmentsForSelectedDate.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No assignments due on this date</p>
+                <p className="text-xs text-muted-foreground">{t('calendar.noAssignments')}</p>
               ) : (
                 <ScrollArea className="h-[200px]">
                   <div className="space-y-3">
@@ -364,7 +369,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
         {/* Upcoming Assignments Summary */}
         {assignments.length > 0 && (
           <div className="pt-4 border-t">
-            <h3 className="font-semibold text-sm mb-2">Upcoming Assignments ({assignments.length})</h3>
+            <h3 className="font-semibold text-sm mb-2">{t('calendar.upcomingAssignments')} ({assignments.length})</h3>
             <ScrollArea className="h-[150px]">
               <div className="space-y-1">
                 {assignments.slice(0, 10).map((assignment) => (
@@ -378,7 +383,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
                       )}
                     </div>
                     <span className="text-muted-foreground ml-2 whitespace-nowrap">
-                      {format(new Date(assignment.due_at), 'MMM d')}
+                      {format(new Date(assignment.due_at), 'MMM d', { locale: language === 'he' ? he : undefined })}
                     </span>
                   </div>
                 ))}

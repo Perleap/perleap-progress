@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { FiveDChart } from "./FiveDChart";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 interface ClassroomAnalyticsProps {
   classroomId: string;
@@ -33,6 +34,7 @@ interface AllStudentsInfo {
 }
 
 export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
   const [assignmentCount, setAssignmentCount] = useState(0);
@@ -209,18 +211,18 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
     <div className="space-y-4 md:space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Analytics Filters</CardTitle>
+          <CardTitle className="text-base md:text-lg">{t('analytics.filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium mb-2 block">Filter by Student</label>
+              <label className="text-sm font-medium mb-2 block">{t('analytics.filterByStudent')}</label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">{t('analytics.all')}</SelectItem>
                   {allStudents.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
@@ -228,13 +230,13 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Filter by Assignment</label>
+              <label className="text-sm font-medium mb-2 block">{t('analytics.filterByAssignment')}</label>
               <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Assignments</SelectItem>
+                  <SelectItem value="all">{t('analytics.allAssignments')}</SelectItem>
                   {assignments.map(a => (
                     <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
                   ))}
@@ -246,13 +248,13 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
       </Card>
 
       <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Total Students</CardTitle></CardHeader>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">{t('analytics.totalStudents')}</CardTitle></CardHeader>
           <CardContent><div className="text-xl md:text-2xl font-bold">{studentCount}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Assignments</CardTitle></CardHeader>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">{t('analytics.assignments')}</CardTitle></CardHeader>
           <CardContent><div className="text-xl md:text-2xl font-bold">{assignmentCount}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Total Submissions</CardTitle></CardHeader>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">{t('analytics.totalSubmissions')}</CardTitle></CardHeader>
           <CardContent><div className="text-xl md:text-2xl font-bold">{students.reduce((s, st) => s + st.feedbackCount, 0)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">Completion Rate</CardTitle></CardHeader>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-xs md:text-sm">{t('analytics.completionRate')}</CardTitle></CardHeader>
           <CardContent><div className="text-xl md:text-2xl font-bold">{studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%</div></CardContent></Card>
       </div>
 
@@ -260,12 +262,12 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base md:text-lg">
-              {selectedStudent === "all" ? "Class Average - 5D Soft Skills Profile" : `${allStudents.find(s => s.id === selectedStudent)?.name} - 5D Soft Skills Profile`}
+              {selectedStudent === "all" ? t('analytics.classAverage') : `${allStudents.find(s => s.id === selectedStudent)?.name} - ${t('analytics.profile5D')}`}
             </CardTitle>
             <CardDescription className="text-sm">
               {selectedStudent === "all" 
-                ? "Average soft skills scores across all students with data"
-                : "Individual student soft skills performance profile"}
+                ? t('analytics.averageScoresDesc')
+                : t('analytics.individualProfile')}
             </CardDescription>
           </CardHeader>
           <CardContent><FiveDChart scores={classAverage} explanations={null} /></CardContent>
@@ -274,37 +276,37 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Class Insights</CardTitle>
-          <CardDescription className="text-sm">AI-generated insights about class performance</CardDescription>
+          <CardTitle className="text-base md:text-lg">{t('analytics.classInsights')}</CardTitle>
+          <CardDescription className="text-sm">{t('analytics.classInsightsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            <p className="mb-2">📊 Coming Soon</p>
-            <p className="text-sm">AI-powered analysis of your class's soft skills development trends and recommendations will appear here.</p>
+            <p className="mb-2">{t('analytics.comingSoon')}</p>
+            <p className="text-sm">{t('analytics.comingSoonDesc')}</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Class Performance Summary</CardTitle>
-          <CardDescription className="text-sm">Overall statistics and completion rates</CardDescription>
+          <CardTitle className="text-base md:text-lg">{t('analytics.performanceSummary')}</CardTitle>
+          <CardDescription className="text-sm">{t('analytics.performanceSummaryDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <p className="text-xs md:text-sm text-muted-foreground">Active Students</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('analytics.activeStudents')}</p>
                 <p className="text-xl md:text-2xl font-bold">{students.filter(s => s.feedbackCount > 0).length} / {studentCount}</p>
               </div>
               <div className="space-y-2">
-                <p className="text-xs md:text-sm text-muted-foreground">Average Submissions per Student</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('analytics.avgSubmissions')}</p>
                 <p className="text-xl md:text-2xl font-bold">
                   {studentCount > 0 ? (students.reduce((sum, s) => sum + s.feedbackCount, 0) / studentCount).toFixed(1) : 0}
                 </p>
               </div>
               <div className="space-y-2">
-                <p className="text-xs md:text-sm text-muted-foreground">Class Engagement Rate</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{t('analytics.engagementRate')}</p>
                 <p className="text-xl md:text-2xl font-bold">
                   {studentCount > 0 ? Math.round((students.filter(s => s.feedbackCount > 0).length / studentCount) * 100) : 0}%
                 </p>
@@ -313,11 +315,11 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
             
             {students.filter(s => s.latestScores).length > 0 && (
               <div className="pt-4 border-t">
-                <h4 className="text-sm md:text-base font-semibold mb-3">Average 5D Scores</h4>
+                <h4 className="text-sm md:text-base font-semibold mb-3">{t('analytics.average5D')}</h4>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                   {Object.entries(classAverage || {}).map(([dimension, score]) => (
                     <div key={dimension} className="text-center p-2 md:p-3 bg-muted rounded-lg">
-                      <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">{dimension}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">{t(`submissionDetail.dimensions.${dimension}`)}</p>
                       <p className="text-base md:text-xl font-bold">{score.toFixed(1)}/10</p>
                     </div>
                   ))}
