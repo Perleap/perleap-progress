@@ -21,34 +21,32 @@ const getInitialLanguage = (): string => {
 
 const storedLanguage = getInitialLanguage();
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      en: {
-        translation: enTranslations
-      },
-      he: {
-        translation: heTranslations
-      }
+i18n.use(initReactI18next).init({
+  resources: {
+    en: {
+      translation: enTranslations,
     },
-    fallbackLng: 'en',
-    lng: storedLanguage,
-    
-    // Disable language detection to prevent automatic language changes
-    detection: {
-      order: [],
-      caches: []
+    he: {
+      translation: heTranslations,
     },
+  },
+  fallbackLng: 'en',
+  lng: storedLanguage,
 
-    interpolation: {
-      escapeValue: false // React already escapes values
-    },
+  // Disable language detection to prevent automatic language changes
+  detection: {
+    order: [],
+    caches: [],
+  },
 
-    react: {
-      useSuspense: false
-    }
-  });
+  interpolation: {
+    escapeValue: false, // React already escapes values
+  },
+
+  react: {
+    useSuspense: false,
+  },
+});
 
 // Listen for language changes and persist to localStorage
 i18n.on('languageChanged', (lng) => {
@@ -56,12 +54,11 @@ i18n.on('languageChanged', (lng) => {
   if (lng === 'he' || lng === 'en') {
     try {
       localStorage.setItem('language_preference', lng);
-      console.log('Language changed and saved:', lng);
     } catch (e) {
       console.error('Error saving language preference:', e);
     }
   }
-  
+
   // Update HTML dir attribute for RTL
   document.documentElement.dir = lng === 'he' ? 'rtl' : 'ltr';
   document.documentElement.lang = lng;
@@ -72,8 +69,4 @@ const initialLang = getInitialLanguage();
 document.documentElement.dir = initialLang === 'he' ? 'rtl' : 'ltr';
 document.documentElement.lang = initialLang;
 
-// Log initial language for debugging
-console.log('Initial language loaded:', initialLang);
-
 export default i18n;
-

@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Target, Users, Lightbulb, Award, Heart, Rocket } from "lucide-react";
-import { Link } from "react-router-dom";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Target, Users, Lightbulb, Award, Heart, Rocket } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const AboutUs = () => {
   return (
@@ -14,7 +14,7 @@ const AboutUs = () => {
             <img src="/perleap_logo.png" alt="PerLeap" className="h-10 w-10" />
             <span className="text-lg md:text-xl font-semibold">PerLeap</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <Link to="/">
               <Button size="sm" variant="ghost" className="font-medium">
                 <ArrowLeft className="h-4 w-4 mr-1" />
@@ -38,7 +38,8 @@ const AboutUs = () => {
             About PerLeap
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            We're on a mission to transform education through AI-powered insights, empowering teachers and inspiring students to reach their full potential.
+            We're on a mission to transform education through AI-powered insights, empowering
+            teachers and inspiring students to reach their full potential.
           </p>
         </div>
 
@@ -51,7 +52,9 @@ const AboutUs = () => {
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-4">Our Mission</h2>
               <p className="text-muted-foreground leading-relaxed">
-                To revolutionize the educational experience by providing teachers with intelligent tools that streamline their workflow, while giving every student personalized guidance that nurtures growth across all dimensions of learning.
+                To revolutionize the educational experience by providing teachers with intelligent
+                tools that streamline their workflow, while giving every student personalized
+                guidance that nurtures growth across all dimensions of learning.
               </p>
             </CardContent>
           </Card>
@@ -63,7 +66,9 @@ const AboutUs = () => {
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-4">Our Vision</h2>
               <p className="text-muted-foreground leading-relaxed">
-                A world where every educator is empowered with AI-driven insights and every student receives a personalized learning journey that adapts to their unique strengths, challenges, and learning style.
+                A world where every educator is empowered with AI-driven insights and every student
+                receives a personalized learning journey that adapts to their unique strengths,
+                challenges, and learning style.
               </p>
             </CardContent>
           </Card>
@@ -76,16 +81,25 @@ const AboutUs = () => {
               <h2 className="text-3xl font-bold text-foreground mb-6 text-center">Our Story</h2>
               <div className="space-y-4 text-muted-foreground leading-relaxed max-w-4xl mx-auto">
                 <p>
-                  PerLeap was born from a simple observation: teachers are incredibly passionate about their students' success, but they're often overwhelmed by administrative tasks and lack the tools to truly personalize learning at scale.
+                  PerLeap was born from a simple observation: teachers are incredibly passionate
+                  about their students' success, but they're often overwhelmed by administrative
+                  tasks and lack the tools to truly personalize learning at scale.
                 </p>
                 <p>
-                  Founded by educators and technologists who experienced these challenges firsthand, we set out to create a platform that would give teachers their time back while enhancing the quality of feedback and insights they could provide to each student.
+                  Founded by educators and technologists who experienced these challenges firsthand,
+                  we set out to create a platform that would give teachers their time back while
+                  enhancing the quality of feedback and insights they could provide to each student.
                 </p>
                 <p>
-                  Our innovative 5D Soft Skills Tracking system—monitoring Vision, Values, Thinking, Connection, and Action—ensures that we're not just measuring academic performance, but nurturing the whole student. Combined with AI-powered analytics and personalized learning paths, PerLeap is transforming classrooms into dynamic, adaptive learning environments.
+                  Our innovative 5D Soft Skills Tracking system—monitoring Vision, Values, Thinking,
+                  Connection, and Action—ensures that we're not just measuring academic performance,
+                  but nurturing the whole student. Combined with AI-powered analytics and
+                  personalized learning paths, PerLeap is transforming classrooms into dynamic,
+                  adaptive learning environments.
                 </p>
                 <p>
-                  Today, we're proud to partner with thousands of educators and empower tens of thousands of students around the world. But we're just getting started.
+                  Today, we're proud to partner with thousands of educators and empower tens of
+                  thousands of students around the world. But we're just getting started.
                 </p>
               </div>
             </CardContent>
@@ -174,7 +188,8 @@ const AboutUs = () => {
             <CardContent className="pt-10 pb-10">
               <h2 className="text-3xl font-bold text-foreground mb-4">Join Us on This Journey</h2>
               <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Whether you're an educator looking to transform your classroom or a student ready to unlock your potential, we're here to support you every step of the way.
+                Whether you're an educator looking to transform your classroom or a student ready to
+                unlock your potential, we're here to support you every step of the way.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/auth">

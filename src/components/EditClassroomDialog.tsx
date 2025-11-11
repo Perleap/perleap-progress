@@ -1,33 +1,62 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+
+interface Classroom {
+  id: string;
+  name: string;
+  subject: string;
+  course_title: string;
+  course_duration: string;
+  start_date: string;
+  end_date: string;
+  course_outline: string;
+  resources: string;
+  learning_outcomes: string[] | null;
+  key_challenges: string[] | null;
+}
 
 interface EditClassroomDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  classroom: any;
+  classroom: Classroom;
   onSuccess: () => void;
 }
 
-export function EditClassroomDialog({ open, onOpenChange, classroom, onSuccess }: EditClassroomDialogProps) {
+export function EditClassroomDialog({
+  open,
+  onOpenChange,
+  classroom,
+  onSuccess,
+}: EditClassroomDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: classroom.name || "",
-    subject: classroom.subject || "",
-    course_title: classroom.course_title || "",
-    course_duration: classroom.course_duration || "",
-    start_date: classroom.start_date || "",
-    end_date: classroom.end_date || "",
-    course_outline: classroom.course_outline || "",
-    resources: classroom.resources || "",
-    learning_outcomes: Array.isArray(classroom.learning_outcomes) ? classroom.learning_outcomes.join("\n") : "",
-    key_challenges: Array.isArray(classroom.key_challenges) ? classroom.key_challenges.join("\n") : "",
+    name: classroom.name || '',
+    subject: classroom.subject || '',
+    course_title: classroom.course_title || '',
+    course_duration: classroom.course_duration || '',
+    start_date: classroom.start_date || '',
+    end_date: classroom.end_date || '',
+    course_outline: classroom.course_outline || '',
+    resources: classroom.resources || '',
+    learning_outcomes: Array.isArray(classroom.learning_outcomes)
+      ? classroom.learning_outcomes.join('\n')
+      : '',
+    key_challenges: Array.isArray(classroom.key_challenges)
+      ? classroom.key_challenges.join('\n')
+      : '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,14 +65,14 @@ export function EditClassroomDialog({ open, onOpenChange, classroom, onSuccess }
 
     try {
       const learningOutcomes = formData.learning_outcomes
-        .split("\n")
-        .filter(o => o.trim())
-        .map(o => o.trim());
+        .split('\n')
+        .filter((o) => o.trim())
+        .map((o) => o.trim());
 
       const keyChallenges = formData.key_challenges
-        .split("\n")
-        .filter(c => c.trim())
-        .map(c => c.trim());
+        .split('\n')
+        .filter((c) => c.trim())
+        .map((c) => c.trim());
 
       const { error } = await supabase
         .from('classrooms')
@@ -63,11 +92,11 @@ export function EditClassroomDialog({ open, onOpenChange, classroom, onSuccess }
 
       if (error) throw error;
 
-      toast.success("Classroom updated successfully!");
+      toast.success('Classroom updated successfully!');
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error("Error updating classroom");
+    } catch (error) {
+      toast.error('Error updating classroom');
     } finally {
       setLoading(false);
     }

@@ -21,4 +21,3 @@ export const LoadingSpinner = ({ text = 'Loading...', className = '' }: LoadingS
     </div>
   );
 };
-

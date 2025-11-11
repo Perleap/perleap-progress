@@ -52,4 +52,3 @@ export const matchesRoute = (currentPath: string, routePattern: string): boolean
   const regex = new RegExp('^' + routePattern.replace(/:\w+/g, '[^/]+') + '$');
   return regex.test(currentPath);
 };
-

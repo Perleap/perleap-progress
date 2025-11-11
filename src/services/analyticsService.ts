@@ -21,7 +21,7 @@ export const saveFiveDSnapshot = async (
   scores: FiveDScores,
   source: 'onboarding' | 'assignment',
   submissionId: string | null = null,
-  classroomId: string | null = null,
+  classroomId: string | null = null
 ): Promise<{ data: FiveDSnapshot | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -54,7 +54,7 @@ export const saveFiveDSnapshot = async (
 export const getLatestScores = async (
   userId: string,
   excludeOnboarding = true,
-  classroomId: string | null = null,
+  classroomId: string | null = null
 ): Promise<{ data: FiveDScores | null; error: ApiError | null }> => {
   try {
     let query = supabase
@@ -78,7 +78,7 @@ export const getLatestScores = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data: data?.scores as FiveDScores || null, error: null };
+    return { data: (data?.scores as FiveDScores) || null, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -90,7 +90,7 @@ export const getLatestScores = async (
 export const getUserSnapshots = async (
   userId: string,
   excludeOnboarding = true,
-  classroomId: string | null = null,
+  classroomId: string | null = null
 ): Promise<{ data: FiveDSnapshot[] | null; error: ApiError | null }> => {
   try {
     let query = supabase
@@ -152,7 +152,7 @@ export const calculateAverageScores = (snapshots: FiveDSnapshot[]): FiveDScores 
       ...acc,
       [key]: totals[key as keyof FiveDScores] / snapshots.length,
     }),
-    {} as FiveDScores,
+    {} as FiveDScores
   );
 };
 
@@ -162,7 +162,7 @@ export const calculateAverageScores = (snapshots: FiveDSnapshot[]): FiveDScores 
 export const getClassroomAnalytics = async (
   classroomId: string,
   assignmentId: string | null = null,
-  studentId: string | null = null,
+  studentId: string | null = null
 ): Promise<{ data: ClassroomAnalytics | null; error: ApiError | null }> => {
   try {
     // Get student count
@@ -256,7 +256,7 @@ export const getClassroomAnalytics = async (
               ? ({
                   scores: s.latestScores,
                 } as FiveDSnapshot)
-              : null,
+              : null
           )
           .filter((s): s is FiveDSnapshot => s !== null);
         classAverage = calculateAverageScores(allSnapshots);
@@ -288,7 +288,7 @@ export const getClassroomAnalytics = async (
  * Regenerate scores for a classroom
  */
 export const regenerateClassroomScores = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.functions.invoke('regenerate-scores', {
@@ -304,4 +304,3 @@ export const regenerateClassroomScores = async (
     return { success: false, error: handleSupabaseError(error) };
   }
 };
-

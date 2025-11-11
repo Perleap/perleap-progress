@@ -21,7 +21,7 @@ import { SUBMISSION_STATUS } from '@/config/constants';
  */
 export const getOrCreateSubmission = async (
   assignmentId: string,
-  studentId: string,
+  studentId: string
 ): Promise<{ data: Submission | null; error: ApiError | null }> => {
   try {
     const { data: existing, error: fetchError } = await supabase
@@ -65,7 +65,7 @@ export const getOrCreateSubmission = async (
  * Get submission by ID
  */
 export const getSubmissionById = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ data: SubmissionWithDetails | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -76,7 +76,7 @@ export const getSubmissionById = async (
         assignments(title),
         student_profiles(full_name, first_name, last_name, avatar_url, user_id, created_at),
         assignment_feedback(student_feedback, teacher_feedback, created_at)
-      `,
+      `
       )
       .eq('id', submissionId)
       .maybeSingle();
@@ -95,7 +95,7 @@ export const getSubmissionById = async (
  * Get all submissions for a classroom
  */
 export const getClassroomSubmissions = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: SubmissionWithDetails[] | null; error: ApiError | null }> => {
   try {
     const { data: assignments, error: assignError } = await supabase
@@ -117,7 +117,7 @@ export const getClassroomSubmissions = async (
         assignments(title),
         student_profiles(full_name, first_name, last_name, avatar_url, user_id, created_at),
         assignment_feedback(student_feedback, teacher_feedback, created_at)
-      `,
+      `
       )
       .in('assignment_id', assignmentIds)
       .eq('status', SUBMISSION_STATUS.COMPLETED)
@@ -137,7 +137,7 @@ export const getClassroomSubmissions = async (
  * Get feedback for a submission
  */
 export const getSubmissionFeedback = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ data: AssignmentFeedback | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -160,7 +160,7 @@ export const getSubmissionFeedback = async (
  * Send chat message to Perleap agent
  */
 export const sendChatMessage = async (
-  request: ChatRequest,
+  request: ChatRequest
 ): Promise<{ data: ChatResponse | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.functions.invoke('perleap-chat', {
@@ -181,7 +181,7 @@ export const sendChatMessage = async (
  * Generate feedback for a completed submission
  */
 export const generateFeedback = async (
-  request: FeedbackRequest,
+  request: FeedbackRequest
 ): Promise<{ data: FeedbackResponse | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.functions.invoke('generate-feedback', {
@@ -202,7 +202,7 @@ export const generateFeedback = async (
  * Mark submission as completed
  */
 export const completeSubmission = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
     const { error } = await supabase
@@ -222,4 +222,3 @@ export const completeSubmission = async (
     return { success: false, error: handleSupabaseError(error) };
   }
 };
-

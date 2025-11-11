@@ -1,4 +1,4 @@
-import { isSameDay } from "date-fns";
+import { isSameDay } from 'date-fns';
 
 export interface ClassroomDateRange {
   id: string;
@@ -14,16 +14,11 @@ export interface ClassroomDateRange {
  * @param classrooms - Array of classrooms with date ranges
  * @returns boolean indicating if the date is within any classroom's range
  */
-export const isDateInClassRange = (
-  date: Date,
-  classrooms: ClassroomDateRange[]
-): boolean => {
+export const isDateInClassRange = (date: Date, classrooms: ClassroomDateRange[]): boolean => {
   return classrooms.some((classroom) => {
     if (!classroom.start_date && !classroom.end_date) return true;
 
-    const classStart = classroom.start_date
-      ? new Date(classroom.start_date)
-      : null;
+    const classStart = classroom.start_date ? new Date(classroom.start_date) : null;
     const classEnd = classroom.end_date ? new Date(classroom.end_date) : null;
 
     if (classStart && date < classStart) return false;
@@ -46,9 +41,7 @@ export const getActiveClassroomsForDate = (
   return classrooms.filter((classroom) => {
     if (!classroom.start_date && !classroom.end_date) return true;
 
-    const classStart = classroom.start_date
-      ? new Date(classroom.start_date)
-      : null;
+    const classStart = classroom.start_date ? new Date(classroom.start_date) : null;
     const classEnd = classroom.end_date ? new Date(classroom.end_date) : null;
 
     if (classStart && date < classStart) return false;
@@ -84,4 +77,3 @@ export const CALENDAR_MODIFIERS_STYLES = {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
 } as const;
-

@@ -66,4 +66,3 @@ export const StudentProfilesList = ({ students }: StudentProfilesListProps) => {
     </Card>
   );
 };
-

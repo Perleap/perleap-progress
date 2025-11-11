@@ -1,27 +1,27 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { useTranslation } from "react-i18next";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
-import { format, isSameDay } from "date-fns";
-import { he } from "date-fns/locale";
-import { CalendarDays, AlertCircle } from "lucide-react";
-import { CALENDAR_MODIFIERS_STYLES } from "@/lib/calendarUtils";
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Calendar } from '@/components/ui/calendar';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
+import { format, isSameDay } from 'date-fns';
+import { he } from 'date-fns/locale';
+import { CalendarDays, AlertCircle } from 'lucide-react';
+import { CALENDAR_MODIFIERS_STYLES } from '@/lib/calendarUtils';
 
 // Utility function for date range checking
 const isDateInRange = (date: Date, startDate: string | null, endDate: string | null): boolean => {
   if (!startDate && !endDate) return true;
-  
+
   const start = startDate ? new Date(startDate) : null;
   const end = endDate ? new Date(endDate) : null;
-  
+
   if (start && date < start) return false;
   if (end && date > end) return false;
-  
+
   return true;
 };
 
@@ -62,7 +62,11 @@ interface TeacherCalendarProps {
   loading?: boolean;
 }
 
-export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading: propLoading }: TeacherCalendarProps) {
+export function TeacherCalendar({
+  teacherId,
+  classrooms: propClassrooms,
+  loading: propLoading,
+}: TeacherCalendarProps) {
   const { t } = useTranslation();
   const { language } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -88,7 +92,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
       }
 
       // Fetch all data in bulk to avoid N+1 queries
-      const assignmentIds = assignmentsData.map(a => a.id);
+      const assignmentIds = assignmentsData.map((a) => a.id);
 
       // Get all enrollments for these classrooms
       const { data: allEnrollments } = await supabase
@@ -103,7 +107,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
         .in('assignment_id', assignmentIds);
 
       // Get all unique student IDs
-      const allStudentIds = [...new Set(allEnrollments?.map(e => e.student_id) || [])];
+      const allStudentIds = [...new Set(allEnrollments?.map((e) => e.student_id) || [])];
 
       // Get all student profiles in one query
       const { data: allStudentProfiles } = await supabase
@@ -113,7 +117,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
 
       // Create lookup maps for fast access
       const enrollmentsByClassroom = new Map<string, string[]>();
-      allEnrollments?.forEach(e => {
+      allEnrollments?.forEach((e) => {
         if (!enrollmentsByClassroom.has(e.classroom_id)) {
           enrollmentsByClassroom.set(e.classroom_id, []);
         }
@@ -121,7 +125,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
       });
 
       const submissionsByAssignment = new Map<string, string[]>();
-      allSubmissions?.forEach(s => {
+      allSubmissions?.forEach((s) => {
         if (!submissionsByAssignment.has(s.assignment_id)) {
           submissionsByAssignment.set(s.assignment_id, []);
         }
@@ -129,18 +133,20 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
       });
 
       const studentProfilesMap = new Map<string, Student>();
-      allStudentProfiles?.forEach(p => {
+      allStudentProfiles?.forEach((p) => {
         studentProfilesMap.set(p.user_id, p as Student);
       });
 
       // Process assignments with all data in memory
-      const assignmentsWithIncomplete = assignmentsData.map((assignment: any) => {
+      const assignmentsWithIncomplete = assignmentsData.map((assignment: Assignment) => {
         const enrolledStudentIds = enrollmentsByClassroom.get(assignment.classroom_id) || [];
         const completedStudentIds = submissionsByAssignment.get(assignment.id) || [];
-        const incompleteStudentIds = enrolledStudentIds.filter(id => !completedStudentIds.includes(id));
+        const incompleteStudentIds = enrolledStudentIds.filter(
+          (id) => !completedStudentIds.includes(id)
+        );
 
         const incompleteStudents = incompleteStudentIds
-          .map(id => studentProfilesMap.get(id))
+          .map((id) => studentProfilesMap.get(id))
           .filter(Boolean) as Student[];
 
         return {
@@ -173,7 +179,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
       }
 
       setClassrooms(classroomsData);
-      await fetchAssignmentsOnly(classroomsData.map(c => c.id));
+      await fetchAssignmentsOnly(classroomsData.map((c) => c.id));
     } catch {
       setLoading(false);
     }
@@ -184,7 +190,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
       setClassrooms(propClassrooms);
       setLoading(propLoading ?? false);
       if (propClassrooms.length > 0) {
-        fetchAssignmentsOnly(propClassrooms.map(c => c.id));
+        fetchAssignmentsOnly(propClassrooms.map((c) => c.id));
       } else {
         setAssignments([]);
         setLoading(false);
@@ -196,29 +202,27 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
 
   // Memoize assignment dates to avoid recalculating on every render
   const datesWithAssignments = useMemo(
-    () => assignments.map(a => new Date(a.due_at)),
+    () => assignments.map((a) => new Date(a.due_at)),
     [assignments]
   );
 
   // Memoize assignments for selected date
   const assignmentsForSelectedDate = useMemo(
-    () => selectedDate
-      ? assignments.filter(a => isSameDay(new Date(a.due_at), selectedDate))
-      : [],
+    () =>
+      selectedDate ? assignments.filter((a) => isSameDay(new Date(a.due_at), selectedDate)) : [],
     [assignments, selectedDate]
   );
 
   // Memoize function to check if a date is within any classroom's active range
   const isDateInClassRange = useMemo(() => {
-    return (date: Date) => classrooms.some(classroom => 
-      isDateInRange(date, classroom.start_date, classroom.end_date)
-    );
+    return (date: Date) =>
+      classrooms.some((classroom) => isDateInRange(date, classroom.start_date, classroom.end_date));
   }, [classrooms]);
 
   // Memoize active classes for selected date
   const activeClassesForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
-    return classrooms.filter(classroom => 
+    return classrooms.filter((classroom) =>
       isDateInRange(selectedDate, classroom.start_date, classroom.end_date)
     );
   }, [classrooms, selectedDate]);
@@ -266,7 +270,7 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
             <h3 className="font-semibold text-sm">
               {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
             </h3>
-            
+
             {/* Active Classes */}
             {activeClassesForSelectedDate.length > 0 && (
               <div className="space-y-2">
@@ -284,7 +288,13 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
                       <p className="text-[10px] text-muted-foreground">{classroom.subject}</p>
                       {classroom.start_date && classroom.end_date && (
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          {format(new Date(classroom.start_date), 'MMM d', { locale: language === 'he' ? he : undefined })} - {format(new Date(classroom.end_date), 'MMM d', { locale: language === 'he' ? he : undefined })}
+                          {format(new Date(classroom.start_date), 'MMM d', {
+                            locale: language === 'he' ? he : undefined,
+                          })}{' '}
+                          -{' '}
+                          {format(new Date(classroom.end_date), 'MMM d', {
+                            locale: language === 'he' ? he : undefined,
+                          })}
                         </p>
                       )}
                     </div>
@@ -303,62 +313,67 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
               ) : (
                 <ScrollArea className="h-[200px]">
                   <div className="space-y-3">
-                  {assignmentsForSelectedDate.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="p-3 rounded-lg border bg-card"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{assignment.title}</p>
-                          <p className="text-xs text-muted-foreground">{assignment.classrooms.name}</p>
-                        </div>
-                        <Badge variant="outline" className="text-xs ml-2">
-                          {assignment.type.replace('_', ' ')}
-                        </Badge>
-                      </div>
-
-                      {/* Completion Status */}
-                      <div className="flex items-center gap-2 text-xs mb-2">
-                        <span className="text-muted-foreground">
-                          {assignment.totalStudents - assignment.incompleteStudents.length} / {assignment.totalStudents} completed
-                        </span>
-                      </div>
-
-                      {/* Incomplete Students */}
-                      {assignment.incompleteStudents.length > 0 && (
-                        <div className="mt-2 pt-2 border-t">
-                          <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mb-2">
-                            <AlertCircle className="h-3 w-3" />
-                            <span>{assignment.incompleteStudents.length} pending</span>
+                    {assignmentsForSelectedDate.map((assignment) => (
+                      <div key={assignment.id} className="p-3 rounded-lg border bg-card">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{assignment.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {assignment.classrooms.name}
+                            </p>
                           </div>
-                          <div className="flex flex-wrap gap-1">
-                            {assignment.incompleteStudents.slice(0, 5).map((student) => (
-                              <div
-                                key={student.user_id}
-                                className="flex items-center gap-1 bg-accent/50 rounded-full pl-1 pr-2 py-0.5"
-                              >
-                                <Avatar className="h-4 w-4">
-                                  {student.avatar_url && (
-                                    <AvatarImage src={student.avatar_url} alt={student.full_name} />
-                                  )}
-                                  <AvatarFallback className="text-[8px]">
-                                    {student.full_name?.charAt(0) || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-[10px]">{student.full_name.split(' ')[0]}</span>
-                              </div>
-                            ))}
-                            {assignment.incompleteStudents.length > 5 && (
-                              <span className="text-[10px] text-muted-foreground">
-                                +{assignment.incompleteStudents.length - 5} more
-                              </span>
-                            )}
-                          </div>
+                          <Badge variant="outline" className="text-xs ml-2">
+                            {assignment.type.replace('_', ' ')}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        {/* Completion Status */}
+                        <div className="flex items-center gap-2 text-xs mb-2">
+                          <span className="text-muted-foreground">
+                            {assignment.totalStudents - assignment.incompleteStudents.length} /{' '}
+                            {assignment.totalStudents} completed
+                          </span>
+                        </div>
+
+                        {/* Incomplete Students */}
+                        {assignment.incompleteStudents.length > 0 && (
+                          <div className="mt-2 pt-2 border-t">
+                            <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mb-2">
+                              <AlertCircle className="h-3 w-3" />
+                              <span>{assignment.incompleteStudents.length} pending</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {assignment.incompleteStudents.slice(0, 5).map((student) => (
+                                <div
+                                  key={student.user_id}
+                                  className="flex items-center gap-1 bg-accent/50 rounded-full pl-1 pr-2 py-0.5"
+                                >
+                                  <Avatar className="h-4 w-4">
+                                    {student.avatar_url && (
+                                      <AvatarImage
+                                        src={student.avatar_url}
+                                        alt={student.full_name}
+                                      />
+                                    )}
+                                    <AvatarFallback className="text-[8px]">
+                                      {student.full_name?.charAt(0) || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-[10px]">
+                                    {student.full_name.split(' ')[0]}
+                                  </span>
+                                </div>
+                              ))}
+                              {assignment.incompleteStudents.length > 5 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{assignment.incompleteStudents.length - 5} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </ScrollArea>
               )}
@@ -369,11 +384,16 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
         {/* Upcoming Assignments Summary */}
         {assignments.length > 0 && (
           <div className="pt-4 border-t">
-            <h3 className="font-semibold text-sm mb-2">{t('calendar.upcomingAssignments')} ({assignments.length})</h3>
+            <h3 className="font-semibold text-sm mb-2">
+              {t('calendar.upcomingAssignments')} ({assignments.length})
+            </h3>
             <ScrollArea className="h-[150px]">
               <div className="space-y-1">
                 {assignments.slice(0, 10).map((assignment) => (
-                  <div key={assignment.id} className="flex justify-between items-center text-xs py-1">
+                  <div
+                    key={assignment.id}
+                    className="flex justify-between items-center text-xs py-1"
+                  >
                     <div className="flex-1">
                       <span className="truncate block">{assignment.title}</span>
                       {assignment.incompleteStudents.length > 0 && (
@@ -383,7 +403,9 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
                       )}
                     </div>
                     <span className="text-muted-foreground ml-2 whitespace-nowrap">
-                      {format(new Date(assignment.due_at), 'MMM d', { locale: language === 'he' ? he : undefined })}
+                      {format(new Date(assignment.due_at), 'MMM d', {
+                        locale: language === 'he' ? he : undefined,
+                      })}
                     </span>
                   </div>
                 ))}
@@ -395,4 +417,3 @@ export function TeacherCalendar({ teacherId, classrooms: propClassrooms, loading
     </Card>
   );
 }
-

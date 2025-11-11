@@ -10,7 +10,7 @@ import type { TeacherProfile, StudentProfile, ApiError } from '@/types';
  * Fetch teacher profile by user ID
  */
 export const getTeacherProfile = async (
-  userId: string,
+  userId: string
 ): Promise<{ data: TeacherProfile | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -33,7 +33,7 @@ export const getTeacherProfile = async (
  * Fetch student profile by user ID
  */
 export const getStudentProfile = async (
-  userId: string,
+  userId: string
 ): Promise<{ data: StudentProfile | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -57,7 +57,7 @@ export const getStudentProfile = async (
  */
 export const updateTeacherProfile = async (
   userId: string,
-  updates: Partial<Omit<TeacherProfile, 'user_id' | 'created_at'>>,
+  updates: Partial<Omit<TeacherProfile, 'user_id' | 'created_at'>>
 ): Promise<{ data: TeacherProfile | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -82,10 +82,10 @@ export const updateTeacherProfile = async (
  */
 export const updateStudentProfile = async (
   userId: string,
-  updates: Partial<Omit<StudentProfile, 'user_id' | 'created_at'>>,
+  updates: Partial<Omit<StudentProfile, 'user_id' | 'created_at'>>
 ): Promise<{ data: StudentProfile | null; error: ApiError | null }> => {
   try {
-    const { data, error} = await supabase
+    const { data, error } = await supabase
       .from('student_profiles')
       .update(updates)
       .eq('user_id', userId)
@@ -110,4 +110,3 @@ export const getInitials = (firstName?: string, lastName?: string): string => {
   const last = lastName?.[0] || '';
   return `${first}${last}`.toUpperCase() || 'U';
 };
-

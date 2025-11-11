@@ -40,4 +40,3 @@ export const PageHeader = ({ title, subtitle, backTo, actions }: PageHeaderProps
     </header>
   );
 };
-

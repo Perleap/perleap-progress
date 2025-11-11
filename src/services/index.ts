@@ -3,9 +3,10 @@
  * Central export point for all service modules
  */
 
-export * from './profileService';
-export * from './classroomService';
-export * from './assignmentService';
-export * from './submissionService';
 export * from './analyticsService';
-
+export * from './assignmentService';
+export * from './avatarService';
+export * from './classroomService';
+export * from './enrollmentService';
+export * from './profileService';
+export * from './submissionService';

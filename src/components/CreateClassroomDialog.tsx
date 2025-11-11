@@ -1,14 +1,20 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { Upload, X } from 'lucide-react';
 
 interface CreateClassroomDialogProps {
   open: boolean;
@@ -16,21 +22,25 @@ interface CreateClassroomDialogProps {
   onSuccess: (classroomId: string) => void;
 }
 
-export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateClassroomDialogProps) => {
+export const CreateClassroomDialog = ({
+  open,
+  onOpenChange,
+  onSuccess,
+}: CreateClassroomDialogProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  
+
   const [formData, setFormData] = useState({
-    courseTitle: "",
-    courseDuration: "",
-    startDate: "",
-    endDate: "",
-    courseOutline: "",
-    resources: "",
-    learningOutcomes: ["", "", ""],
-    keyChallenges: ["", ""]
+    courseTitle: '',
+    courseDuration: '',
+    startDate: '',
+    endDate: '',
+    courseOutline: '',
+    resources: '',
+    learningOutcomes: ['', '', ''],
+    keyChallenges: ['', ''],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,17 +55,17 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
       if (pdfFile) {
         const fileExt = pdfFile.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('course-materials')
           .upload(fileName, pdfFile);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('course-materials')
-          .getPublicUrl(fileName);
-        
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('course-materials').getPublicUrl(fileName);
+
         pdfUrl = publicUrl;
       }
 
@@ -64,40 +74,40 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
         .from('classrooms')
         .insert({
           teacher_id: user.id,
-          name: formData.courseTitle || "New Classroom",
-          subject: formData.courseTitle || "General",
+          name: formData.courseTitle || 'New Classroom',
+          subject: formData.courseTitle || 'General',
           course_title: formData.courseTitle,
           course_duration: formData.courseDuration,
           start_date: formData.startDate || null,
           end_date: formData.endDate || null,
           course_outline: formData.courseOutline,
           resources: pdfUrl ? `${formData.resources}\n\nCourse PDF: ${pdfUrl}` : formData.resources,
-          learning_outcomes: formData.learningOutcomes.filter(o => o.trim()),
-          key_challenges: formData.keyChallenges.filter(c => c.trim()),
+          learning_outcomes: formData.learningOutcomes.filter((o) => o.trim()),
+          key_challenges: formData.keyChallenges.filter((c) => c.trim()),
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      toast.success("Classroom created successfully!");
+      toast.success('Classroom created successfully!');
       onOpenChange(false);
       onSuccess(data.id);
-      
+
       // Reset form
       setFormData({
-        courseTitle: "",
-        courseDuration: "",
-        startDate: "",
-        endDate: "",
-        courseOutline: "",
-        resources: "",
-        learningOutcomes: ["", "", ""],
-        keyChallenges: ["", ""]
+        courseTitle: '',
+        courseDuration: '',
+        startDate: '',
+        endDate: '',
+        courseOutline: '',
+        resources: '',
+        learningOutcomes: ['', '', ''],
+        keyChallenges: ['', ''],
       });
       setPdfFile(null);
-    } catch (error: any) {
-      toast.error(error.message || "Error creating classroom");
+    } catch (error) {
+      toast.error(error.message || 'Error creating classroom');
     } finally {
       setLoading(false);
     }
@@ -110,7 +120,7 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
   };
 
   const addOutcome = () => {
-    setFormData({ ...formData, learningOutcomes: [...formData.learningOutcomes, ""] });
+    setFormData({ ...formData, learningOutcomes: [...formData.learningOutcomes, ''] });
   };
 
   const handleChallengeChange = (index: number, value: string) => {
@@ -120,7 +130,7 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
   };
 
   const addChallenge = () => {
-    setFormData({ ...formData, keyChallenges: [...formData.keyChallenges, ""] });
+    setFormData({ ...formData, keyChallenges: [...formData.keyChallenges, ''] });
   };
 
   return (
@@ -205,24 +215,14 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
                 className="hidden"
                 id="pdf-upload"
               />
-              <label
-                htmlFor="pdf-upload"
-                className="flex-1 cursor-pointer"
-              >
+              <label htmlFor="pdf-upload" className="flex-1 cursor-pointer">
                 <div className="flex items-center gap-2 px-4 py-2 border border-input rounded-2xl hover:bg-accent transition-colors">
                   <Upload className="h-4 w-4" />
-                  <span className="text-sm">
-                    {pdfFile ? pdfFile.name : "Upload course PDF"}
-                  </span>
+                  <span className="text-sm">{pdfFile ? pdfFile.name : 'Upload course PDF'}</span>
                 </div>
               </label>
               {pdfFile && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPdfFile(null)}
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={() => setPdfFile(null)}>
                   <X className="h-4 w-4" />
                 </Button>
               )}
@@ -264,7 +264,7 @@ export const CreateClassroomDialog = ({ open, onOpenChange, onSuccess }: CreateC
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Classroom"}
+              {loading ? 'Creating...' : 'Create Classroom'}
             </Button>
           </div>
         </form>

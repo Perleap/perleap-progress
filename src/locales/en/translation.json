@@ -143,7 +143,7 @@
   "teacherDashboard": {
     "title": "Teacher Dashboard",
     "welcome": "Welcome {{name}} to your dashboard",
-    "myClassrooms": "My Classrooms",
+    "myClassrooms": "My Perleap's Classrooms",
     "subtitle": "Manage your classes and track student progress",
     "createClassroom": "Create Classroom",
     "inviteCode": "Invite code:",
@@ -304,7 +304,8 @@
       "deleting": "Error deleting classroom"
     },
     "success": {
-      "deleted": "Classroom deleted successfully"
+      "deleted": "Classroom deleted successfully",
+      "assignmentDeleted": "Assignment deleted successfully"
     }
   },
   "submissionsTab": {
@@ -470,6 +471,10 @@
     "no": "No",
     "students": "Students",
     "start": "Start",
+    "notifications": "Notifications",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all as read",
+    "notificationsRead": "All notifications marked as read",
     "end": "End"
   },
   "dimensions": {
@@ -493,6 +498,152 @@
     "action": {
       "label": "Action",
       "description": "Turning plans into results with focus, determination, and practical skills"
+    }
+  },
+  "cra": {
+    "title": "Content Related Abilities (CRA)",
+    "description": "Assessment of hard skills based on student performance",
+    "loading": "Loading...",
+    "nextSteps": "Next Steps",
+    "unknown": "Unknown",
+    "performance": {
+      "advanced": "Advanced",
+      "intermediate": "Intermediate",
+      "developing": "Developing",
+      "beginner": "Beginner"
+    }
+  },
+  "studentOnboarding": {
+    "title": "Student Profile Setup",
+    "stepOf": "Step {{current}} of {{total}}: Let's learn about your learning preferences",
+    "step1": {
+      "fullName": "Full Name *",
+      "profilePicture": "Profile Picture (Optional)",
+      "uploadPhoto": "Upload Photo",
+      "fileSize": "PNG, JPG up to 5MB",
+      "learningMethodsQuestion": "What kinds of activities or methods help you learn best?",
+      "visual": "Visual Learning",
+      "visualDesc": "I learn best by reading textbooks, looking at diagrams, charts, and pictures",
+      "auditory": "Auditory Learning",
+      "auditoryDesc": "I learn best by listening to explanations and discussions",
+      "kinesthetic": "Kinesthetic Learning",
+      "kinestheticDesc": "I learn best by doing hands-on practice and activities",
+      "video": "Video Learning",
+      "videoDesc": "I learn best by watching videos and demonstrations"
+    },
+    "step2": {
+      "soloVsGroupQuestion": "Do you learn better when you study on your own, or do you prefer learning with others?",
+      "solo": "Solo Learning",
+      "soloDesc": "I prefer working through material on my own",
+      "group": "Group Learning",
+      "groupDesc": "I like group activities and discussions to help me understand",
+      "both": "Flexible",
+      "bothDesc": "I like a mix of both solo and group learning",
+      "scheduledVsFlexibleQuestion": "Do you like to follow a set study schedule or plan, or do you prefer to be flexible?",
+      "scheduled": "Structured Schedule",
+      "scheduledDesc": "I thrive with a set routine and plan",
+      "flexible": "Flexible Approach",
+      "flexibleDesc": "I prefer to decide what to study as I go"
+    },
+    "step3": {
+      "motivationQuestion": "What motivates you to put in your best effort when learning something new?",
+      "curiosity": "Curiosity",
+      "curiosityDesc": "I love learning about new topics that interest me",
+      "grades": "Achievement",
+      "gradesDesc": "I want to achieve high grades and academic success",
+      "encouragement": "Recognition",
+      "encouragementDesc": "I'm motivated by praise and encouragement from others",
+      "personalGoals": "Personal Goals",
+      "personalGoalsDesc": "I'm driven by my own goals and aspirations",
+      "competition": "Competition",
+      "competitionDesc": "I'm motivated by friendly competition with peers"
+    },
+    "step4": {
+      "helpQuestion": "If you're struggling to understand a concept or skill, what's the best way someone can help you?",
+      "hints": "Give me hints or clues to figure it out myself",
+      "differentWay": "Explain it in a different way or with different examples",
+      "stepByStep": "Show me a step-by-step solution",
+      "moreTime": "Let me figure it out on my own with more time",
+      "teacherQuestion": "What do you look for in a teacher or coach?",
+      "patient": "Someone who is patient and understanding",
+      "challenging": "Someone who pushes me to achieve my best",
+      "clear": "Someone who explains everything very clearly",
+      "fun": "Someone who makes learning fun and engaging"
+    },
+    "step5": {
+      "feedbackQuestion": "How do you prefer to receive feedback or corrections on your work?",
+      "immediate": "Immediate feedback as I practice",
+      "written": "Written comments or scores afterward",
+      "discussion": "A quick talk where the teacher goes over how I did",
+      "goalQuestion": "What is one goal you hope to achieve through this learning experience?",
+      "goalPlaceholder": "e.g., Improve my grade, master a skill, gain confidence, prepare for college..."
+    },
+    "step6": {
+      "specialNeedsQuestion": "Do you have any specific needs or preferences that help you learn better?",
+      "specialNeedsPlaceholder": "e.g., Short breaks, visual aids, hands-on practice, quiet environment...",
+      "additionalNotesQuestion": "Is there anything else you'd like your teacher or the AI to know about how you like to learn or study?",
+      "additionalNotesPlaceholder": "Share any other comments, learning difficulties, anxieties, or preferences..."
+    },
+    "back": "Back",
+    "next": "Next",
+    "completeSetup": "Complete Setup",
+    "errors": {
+      "fileSize": "File size should be less than 5MB",
+      "notAuthenticated": "User not authenticated. Please sign in again.",
+      "uploadAvatar": "Failed to upload avatar. Continuing without avatar.",
+      "profileExists": "A profile already exists for this account. Redirecting to dashboard...",
+      "createProfile": "Error creating profile. Please try again."
+    },
+    "success": {
+      "profileCreated": "Profile created successfully!"
+    }
+  },
+  "teacherOnboarding": {
+    "title": "Teacher Profile Setup",
+    "stepOf": "Step {{current}} of {{total}}:",
+    "step1Title": "Essential Information",
+    "step2Title": "Teaching Style & Approach",
+    "step1": {
+      "fullName": "Full Name *",
+      "fullNamePlaceholder": "John Doe",
+      "profilePicture": "Profile Picture (Optional)",
+      "uploadPhoto": "Upload Photo",
+      "fileSize": "PNG, JPG up to 5MB",
+      "phoneNumber": "Phone Number",
+      "phoneNumberPlaceholder": "+1 (555) 123-4567",
+      "subjects": "Subjects You Teach *",
+      "subjectsPlaceholder": "e.g., Math, Physics, Chemistry",
+      "subjectsHelp": "Separate multiple subjects with commas",
+      "yearsExperience": "Years of Teaching Experience *",
+      "yearsExperiencePlaceholder": "5",
+      "studentLevel": "Student Level",
+      "studentLevelPlaceholder": "e.g., Middle School, High School, University"
+    },
+    "step2": {
+      "teachingGoalsQuestion": "What are your main teaching goals?",
+      "teachingGoalsPlaceholder": "Brief description (1-2 sentences)",
+      "teachingGoalsHelp": "e.g., \"Help students develop critical thinking skills and build confidence in problem-solving\"",
+      "teachingStyleQuestion": "Describe your teaching style",
+      "teachingStylePlaceholder": "How would you describe your approach to teaching?",
+      "teachingStyleHelp": "Include your tone, personality, values, and approach (e.g., patient, structured, encourages questions, uses real-world examples)",
+      "teachingExampleQuestion": "Share a brief teaching example",
+      "teachingExamplePlaceholder": "How do you explain a concept or give feedback to students?",
+      "teachingExampleHelp": "Write a short example that shows your natural teaching voice",
+      "additionalNotesQuestion": "Anything else we should know? (Optional)",
+      "additionalNotesPlaceholder": "Any specific preferences or additional context..."
+    },
+    "back": "Back",
+    "next": "Next",
+    "completeSetup": "Complete Setup",
+    "errors": {
+      "fileSize": "File size should be less than 5MB",
+      "notAuthenticated": "User not authenticated. Please sign in again.",
+      "uploadAvatar": "Failed to upload avatar. Continuing without avatar.",
+      "profileExists": "A profile already exists for this account. Redirecting to dashboard...",
+      "createProfile": "Error creating profile. Please try again."
+    },
+    "success": {
+      "profileCreated": "Profile created successfully!"
     }
   }
 }

@@ -4,10 +4,13 @@ Welcome! This is the central documentation hub for the Perleap educational platf
 
 ## 📖 Start Here
 
+**⚠️ IMPORTANT:** Before running the app, you MUST deploy edge functions! → See [Edge Functions Guide](./EDGE_FUNCTIONS_GUIDE.md)
+
 **New to the project?** → Start with [`0-INDEX.md`](./0-INDEX.md) for complete navigation.
 
 **Quick access:**
 - [Quick Start Guide](./1-QUICK-START.md) - Get up to speed fast
+- [Edge Functions Guide](./EDGE_FUNCTIONS_GUIDE.md) - Deploy AI features (REQUIRED)
 - [Frontend Architecture](./2-FRONTEND-ARCHITECTURE.md) - How the code is organized
 - [Development Guide](./5-DEVELOPMENT-GUIDE.md) - How to add features
 - [Remaining Work](./6-REMAINING-WORK.md) - What needs to be done

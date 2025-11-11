@@ -59,4 +59,3 @@ export const useClassrooms = (role: 'teacher' | 'student'): UseClassroomsResult 
     refetch: fetchClassrooms,
   };
 };
-

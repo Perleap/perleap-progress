@@ -90,12 +90,20 @@ npm run build
 # Deploy to Vercel
 ```
 
-### Edge Functions (Supabase)
+### Edge Functions (Supabase) ⚠️ REQUIRED
+
+**You MUST deploy all 5 edge functions for the app to work!**
 
 ```bash
+# Deploy all critical functions
 supabase functions deploy perleap-chat
 supabase functions deploy generate-feedback
+supabase functions deploy regenerate-scores
+supabase functions deploy generate-followup-assignment
+supabase functions deploy analyze-student-wellbeing
 ```
+
+**See [Edge Functions Guide](./docs/EDGE_FUNCTIONS_GUIDE.md) for detailed instructions.**
 
 ## 🔐 Environment Variables
 

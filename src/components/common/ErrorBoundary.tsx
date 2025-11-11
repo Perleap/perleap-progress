@@ -48,9 +48,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 <AlertCircle className="h-6 w-6 text-destructive" />
                 <CardTitle>Something went wrong</CardTitle>
               </div>
-              <CardDescription>
-                An error occurred while rendering this component
-              </CardDescription>
+              <CardDescription>An error occurred while rendering this component</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {this.state.error && (
@@ -72,4 +70,3 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return this.props.children;
   }
 }
-

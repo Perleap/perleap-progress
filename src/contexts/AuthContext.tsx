@@ -32,21 +32,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     // Set up auth state listener for real-time changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
 
-          // Handle specific auth events
-          if (event === 'SIGNED_OUT') {
-            // Clear any saved redirect paths on sign out
-            sessionStorage.removeItem('redirectAfterLogin');
-          }
+        // Handle specific auth events
+        if (event === 'SIGNED_OUT') {
+          // Clear any saved redirect paths on sign out
+          sessionStorage.removeItem('redirectAfterLogin');
         }
       }
-    );
+    });
 
     return () => {
       mounted = false;
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Clear auth-related localStorage items
       const keysToKeep = ['language_preference']; // Keep language preference
       const allKeys = Object.keys(localStorage);
-      allKeys.forEach(key => {
+      allKeys.forEach((key) => {
         if (!keysToKeep.includes(key)) {
           localStorage.removeItem(key);
         }

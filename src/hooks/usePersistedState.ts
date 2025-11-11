@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'reac
 /**
  * A hook that persists state to localStorage/sessionStorage
  * This helps preserve user data when navigating back/forward in the browser
- * 
+ *
  * @param key - Unique key for storing the state
  * @param initialValue - Initial value if no stored value exists
  * @param storage - 'local' for localStorage (persists across sessions) or 'session' for sessionStorage (cleared on tab close)
@@ -50,14 +50,14 @@ export function usePersistedState<T>(
 /**
  * Save form data to prevent loss on navigation
  * Useful for forms, text inputs, etc.
- * 
+ *
  * Example usage:
  * ```tsx
- * const [formData, setFormData, clearFormData] = usePersistedState('my-form', { 
- *   name: '', 
- *   email: '' 
+ * const [formData, setFormData, clearFormData] = usePersistedState('my-form', {
+ *   name: '',
+ *   email: ''
  * });
- * 
+ *
  * // On successful form submission:
  * clearFormData(); // Clear the saved data
  * ```
@@ -75,7 +75,7 @@ export const usePersistedFormState = <T extends Record<string, any>>(
  */
 export const clearAllPersistedForms = () => {
   const keys = Object.keys(sessionStorage);
-  keys.forEach(key => {
+  keys.forEach((key) => {
     if (key.startsWith('form-')) {
       sessionStorage.removeItem(key);
     }

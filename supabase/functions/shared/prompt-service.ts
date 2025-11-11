@@ -54,12 +54,16 @@ export const getPromptTemplate = async (
   }
 
   const supabase = createSupabaseClient();
-  // Try to get the prompt in the requested language
+  // Try to get the prompt in the requested language (get latest version if multiple exist)
   let { data, error } = await supabase
     .from('ai_prompts')
     .select('content')
     .eq('prompt_key', promptKey)
     .eq('language', language)
+    .eq('is_active', true)
+    .order('version', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   
   // If not found in requested language, fallback to English
@@ -70,6 +74,10 @@ export const getPromptTemplate = async (
       .select('content')
       .eq('prompt_key', promptKey)
       .eq('language', 'en')
+      .eq('is_active', true)
+      .order('version', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
     
     data = result.data;

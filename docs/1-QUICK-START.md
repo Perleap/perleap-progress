@@ -71,7 +71,21 @@ perleap-progress/
 
 ## Next Steps
 
-- Deploy updated edge functions: `supabase functions deploy`
+### ⚠️ CRITICAL: Deploy Edge Functions
+
+**The application REQUIRES 5 edge functions to be deployed:**
+
+```bash
+supabase functions deploy perleap-chat
+supabase functions deploy generate-feedback
+supabase functions deploy regenerate-scores
+supabase functions deploy generate-followup-assignment
+supabase functions deploy analyze-student-wellbeing
+```
+
+**See [Edge Functions Guide](./EDGE_FUNCTIONS_GUIDE.md) for complete deployment instructions.**
+
+### Other Tasks
 - Review components to integrate new services/hooks
 - Add tests for critical paths
 - Set up monitoring and error tracking
