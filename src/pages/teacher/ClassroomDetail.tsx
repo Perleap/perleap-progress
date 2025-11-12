@@ -30,6 +30,8 @@ import {
   Trash2,
   FileText,
   Link as LinkIcon,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditClassroomDialog } from '@/components/EditClassroomDialog';
@@ -40,8 +42,14 @@ import { SubmissionsTab } from '@/components/SubmissionsTab';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 
 interface CourseMaterial {
+  type: 'pdf' | 'link';
   url: string;
   name: string;
+}
+
+interface Domain {
+  name: string;
+  components: string[];
 }
 
 interface Classroom {
@@ -57,6 +65,8 @@ interface Classroom {
   resources: string;
   learning_outcomes: string[] | null;
   key_challenges: string[] | null;
+  domains: Domain[] | null;
+  materials: CourseMaterial[] | null;
 }
 
 interface Assignment {
@@ -99,6 +109,7 @@ const ClassroomDetail = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
 
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
@@ -121,7 +132,7 @@ const ClassroomDetail = () => {
     if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchClassroom();
     }
-  }, [id, user]);
+  }, [id, user?.id]); // Use user?.id instead of user to avoid refetch on user object reference change
 
   const fetchClassroom = async () => {
     isFetchingRef.current = true;
@@ -281,6 +292,18 @@ const ClassroomDetail = () => {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
     }
+  };
+
+  const toggleDomain = (index: number) => {
+    setExpandedDomains(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
   };
 
   if (loading) {
@@ -459,6 +482,80 @@ const ClassroomDetail = () => {
                       </ul>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Domains & Components Section */}
+            {classroom.domains && classroom.domains.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Domains & Components
+                  </CardTitle>
+                  <CardDescription>Knowledge areas and their specific components</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {classroom.domains.map((domain, index) => (
+                    <div key={index} className="border rounded-lg">
+                      <button
+                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                        onClick={() => toggleDomain(index)}
+                      >
+                        <span className="font-semibold">{domain.name}</span>
+                        {expandedDomains.has(index) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
+                      {expandedDomains.has(index) && (
+                        <div className="px-3 pb-3 space-y-1">
+                          <p className="text-xs text-muted-foreground mb-2">Components:</p>
+                          <ul className="list-disc list-inside space-y-1">
+                            {domain.components.map((component, compIndex) => (
+                              <li key={compIndex} className="text-sm text-muted-foreground">
+                                {component}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Course Materials Section */}
+            {classroom.materials && classroom.materials.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Course Materials
+                  </CardTitle>
+                  <CardDescription>PDFs and links available for this classroom</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-2">
+                    {classroom.materials.map((material, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        className="justify-start h-auto py-3 px-4"
+                        onClick={() => window.open(material.url, '_blank')}
+                      >
+                        {material.type === 'pdf' ? (
+                          <FileText className="h-4 w-4 mr-2 flex-shrink-0" />
+                        ) : (
+                          <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                        )}
+                        <span className="text-left truncate">{material.name}</span>
+                      </Button>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}

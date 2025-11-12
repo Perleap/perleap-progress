@@ -67,7 +67,7 @@ const AssignmentDetail = () => {
     if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchData();
     }
-  }, [id, user]);
+  }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
     if (isFetchingRef.current) return; // Prevent concurrent fetches

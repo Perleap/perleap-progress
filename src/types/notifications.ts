@@ -9,6 +9,11 @@ export type NotificationType =
   | 'student_enrolled'
   | 'enrolled_in_classroom'
   | 'wellbeing_alert'
+  | 'feedback_received'
+  | 'student_completed_activity'
+  | 'student_alert_critical'
+  | 'student_alert_moderate'
+  | 'student_alert_low'
   | 'system';
 
 export interface Notification {

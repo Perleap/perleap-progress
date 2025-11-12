@@ -46,6 +46,7 @@ const TeacherDashboard = () => {
 
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -56,11 +57,17 @@ const TeacherDashboard = () => {
       return;
     }
 
+    // Reset fetch flag if user ID actually changed
+    if (lastUserIdRef.current !== user.id) {
+      hasFetchedRef.current = false;
+      lastUserIdRef.current = user.id;
+    }
+
     // Only fetch if we haven't fetched yet and not currently fetching
     if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchClassrooms();
     }
-  }, [user, authLoading, navigate]);
+  }, [user?.id, authLoading]); // Use user?.id instead of user to avoid refetch on user object reference change
 
   const fetchClassrooms = async () => {
     isFetchingRef.current = true;

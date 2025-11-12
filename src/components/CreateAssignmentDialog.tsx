@@ -35,6 +35,9 @@ interface CreateAssignmentDialogProps {
     instructions?: string;
     type?: string;
     due_at?: string;
+    difficulty_level?: string;
+    success_criteria?: string[];
+    scaffolding_tips?: string;
     target_dimensions?: {
       vision: boolean;
       values: boolean;
@@ -60,6 +63,18 @@ export function CreateAssignmentDialog({
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [linkInput, setLinkInput] = useState('');
+  const [classroomDomains, setClassroomDomains] = useState<Array<{ name: string; components: string[] }>>([]);
+  const [classroomMaterials, setClassroomMaterials] = useState<Array<{ type: 'pdf' | 'link'; url: string; name: string }>>([]);
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<Set<number>>(new Set());
+  const [selectedDomain, setSelectedDomain] = useState<string>('');
+  const [availableComponents, setAvailableComponents] = useState<string[]>([]);
+  
+  // AI-generated assignment metadata
+  const [aiMetadata, setAiMetadata] = useState<{
+    difficulty_level?: string;
+    success_criteria?: string[];
+    scaffolding_tips?: string;
+  }>({});
   const [formData, setFormData] = useState({
     title: '',
     instructions: '',
@@ -78,6 +93,39 @@ export function CreateAssignmentDialog({
     personalization_flag: false,
     materials: [] as Array<{ type: 'pdf' | 'link'; url: string; name: string }>,
   });
+
+  // Fetch classroom data for domains and materials
+  useEffect(() => {
+    const fetchClassroomData = async () => {
+      if (!classroomId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('classrooms')
+          .select('domains, materials')
+          .eq('id', classroomId)
+          .single();
+
+        if (error) throw error;
+
+        console.log('Classroom data fetched:', data);
+        if (data?.domains) {
+          console.log('Found domains:', data.domains);
+          setClassroomDomains(data.domains as Array<{ name: string; components: string[] }>);
+        }
+        if (data?.materials) {
+          console.log('Found materials:', data.materials);
+          setClassroomMaterials(data.materials as Array<{ type: 'pdf' | 'link'; url: string; name: string }>);
+        } else {
+          console.log('No materials found in classroom');
+        }
+      } catch (error) {
+        console.error('Error fetching classroom data:', error);
+      }
+    };
+
+    fetchClassroomData();
+  }, [classroomId]);
 
   // Update form data when initial data changes
   useEffect(() => {
@@ -99,6 +147,13 @@ export function CreateAssignmentDialog({
         },
         personalization_flag: false,
         materials: [] as Array<{ type: 'pdf' | 'link'; url: string; name: string }>,
+      });
+      
+      // Store AI metadata separately
+      setAiMetadata({
+        difficulty_level: initialData.difficulty_level,
+        success_criteria: initialData.success_criteria,
+        scaffolding_tips: initialData.scaffolding_tips,
       });
     }
   }, [initialData]);
@@ -182,6 +237,29 @@ export function CreateAssignmentDialog({
     setFormData({
       ...formData,
       materials: formData.materials.filter((_, i) => i !== index),
+    });
+  };
+
+  const toggleClassroomMaterial = (index: number) => {
+    const material = classroomMaterials[index];
+    setSelectedMaterialIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+        // Remove from formData.materials
+        setFormData({
+          ...formData,
+          materials: formData.materials.filter(m => m.url !== material.url),
+        });
+      } else {
+        newSet.add(index);
+        // Add to formData.materials
+        setFormData({
+          ...formData,
+          materials: [...formData.materials, material],
+        });
+      }
+      return newSet;
     });
   };
 
@@ -337,6 +415,25 @@ export function CreateAssignmentDialog({
             />
           </div>
 
+          {/* AI-Generated Metadata */}
+          {aiMetadata.difficulty_level && (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary mb-2">
+                <Sparkles className="h-4 w-4" />
+                AI Learning Optimization
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This assignment is set at a <span className="font-medium">{aiMetadata.difficulty_level === 'gentle_start' ? 'gentle start' : aiMetadata.difficulty_level}</span> level based on the student's demonstrated abilities. 
+                {aiMetadata.success_criteria && aiMetadata.success_criteria.length > 0 && (
+                  <> Success criteria: {aiMetadata.success_criteria.join(', ').toLowerCase()}.</>
+                )}
+                {aiMetadata.scaffolding_tips && (
+                  <> {aiMetadata.scaffolding_tips}</>
+                )}
+              </p>
+            </div>
+          )}
+
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Assignment Type *</Label>
@@ -385,11 +482,42 @@ export function CreateAssignmentDialog({
 
           <div className="space-y-2">
             <Label htmlFor="hard_skill_domain">Area/Domain</Label>
+            {classroomDomains.length > 0 ? (
+              <>
+                <Select
+                  value={selectedDomain}
+                  onValueChange={(value) => {
+                    setSelectedDomain(value);
+                    setFormData({ ...formData, hard_skill_domain: value });
+                    // Load components for selected domain
+                    const domain = classroomDomains.find(d => d.name === value);
+                    if (domain) {
+                      setAvailableComponents(domain.components);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select from classroom domains" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classroomDomains.map((domain, index) => (
+                      <SelectItem key={index} value={domain.name}>
+                        {domain.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Or enter manually below</p>
+              </>
+            ) : null}
             <Input
               id="hard_skill_domain"
               placeholder="e.g., Algebra, Geometry, Calculus, Literature"
               value={formData.hard_skill_domain}
-              onChange={(e) => setFormData({ ...formData, hard_skill_domain: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, hard_skill_domain: e.target.value });
+                setSelectedDomain(''); // Clear dropdown selection
+              }}
             />
             <p className="text-xs text-muted-foreground">
               The subject area for hard skill assessment (required if adding K/S components)
@@ -398,7 +526,38 @@ export function CreateAssignmentDialog({
 
           <div className="space-y-3">
             <Label className="text-base">K/S Components (Hard Skills)</Label>
+            
+            {/* Component selection dropdown if domain is selected */}
+            {selectedDomain && availableComponents.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Select from {selectedDomain} components:</Label>
+                <Select
+                  onValueChange={(value) => {
+                    // Add component if not already in the list
+                    if (!formData.hard_skills.includes(value)) {
+                      setFormData({ 
+                        ...formData, 
+                        hard_skills: [...formData.hard_skills, value] 
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a component to add" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableComponents.map((component, index) => (
+                      <SelectItem key={index} value={component}>
+                        {component}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
+              <Label className="text-sm">Selected components:</Label>
               {formData.hard_skills.map((skill, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <Input
@@ -433,7 +592,7 @@ export function CreateAssignmentDialog({
                 setFormData({ ...formData, hard_skills: [...formData.hard_skills, ''] })
               }
             >
-              Add Component
+              Add Component Manually
             </Button>
           </div>
 
@@ -443,9 +602,45 @@ export function CreateAssignmentDialog({
               Add PDFs or links to course materials that will help students complete this assignment
             </p>
 
-            {/* Display existing materials */}
+            {/* Select from classroom materials */}
+            {classroomMaterials.length > 0 ? (
+              <div className="space-y-2">
+                <Label className="text-sm">Select from classroom materials:</Label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  {classroomMaterials.map((material, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`classroom-material-${index}`}
+                        checked={selectedMaterialIds.has(index)}
+                        onCheckedChange={() => toggleClassroomMaterial(index)}
+                      />
+                      <label
+                        htmlFor={`classroom-material-${index}`}
+                        className="flex-1 flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        {material.type === 'pdf' ? (
+                          <Upload className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <LinkIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <span className="truncate">{material.name}</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="border rounded-md p-3 bg-muted/30">
+                <p className="text-xs text-muted-foreground text-center">
+                  No materials available in this classroom. Add materials to the classroom first or add them manually below.
+                </p>
+              </div>
+            )}
+
+            {/* Display selected materials */}
             {formData.materials.length > 0 && (
               <div className="space-y-2">
+                <Label className="text-sm">Selected materials:</Label>
                 {formData.materials.map((material, index) => (
                   <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
                     {material.type === 'pdf' ? (
@@ -467,47 +662,52 @@ export function CreateAssignmentDialog({
               </div>
             )}
 
-            {/* PDF Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="pdf-upload" className="text-sm">
-                Upload PDF
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="pdf-upload"
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handlePdfUpload}
-                  disabled={uploadingMaterial}
-                  className="flex-1"
-                />
-                {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
+            {/* Manual addition section */}
+            <div className="border-t pt-3 space-y-3">
+              <Label className="text-sm">Or add materials manually:</Label>
+              
+              {/* PDF Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="pdf-upload" className="text-sm">
+                  Upload PDF
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="pdf-upload"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfUpload}
+                    disabled={uploadingMaterial}
+                    className="flex-1"
+                  />
+                  {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
               </div>
-            </div>
 
-            {/* Link Input */}
-            <div className="space-y-2">
-              <Label htmlFor="link-input" className="text-sm">
-                Add Link
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="link-input"
-                  placeholder="https://..."
-                  value={linkInput}
-                  onChange={(e) => setLinkInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddLink();
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
-                  <LinkIcon className="h-4 w-4 mr-2" />
+              {/* Link Input */}
+              <div className="space-y-2">
+                <Label htmlFor="link-input" className="text-sm">
                   Add Link
-                </Button>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="link-input"
+                    placeholder="https://..."
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddLink();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    Add Link
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

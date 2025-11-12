@@ -74,7 +74,7 @@ const TeacherSettings = () => {
       return;
     }
     fetchSettings();
-  }, [user]);
+  }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchSettings = async () => {
     try {

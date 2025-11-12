@@ -173,6 +173,14 @@
     },
     "success": {
       "activityCompleted": "הפעילות הושלמה! משוב נוצר."
+    },
+    "completionDialog": {
+      "turnLimitTitle": "בדוק את ההבנה שלך",
+      "turnLimitDescription": "ניהלתם שיחה טובה עד כה! האם אתה מרגיש שאתה מבין את החומר מספיק טוב כדי להשלים את הפעילות הזאת?",
+      "aiDetectedTitle": "יעדי הלמידה הושגו",
+      "aiDetectedDescription": "נראה שכיסינו את הנקודות העיקריות של המשימה. האם תרצה להשלים את הפעילות הזאת עכשיו?",
+      "continueButton": "המשך לשוחח",
+      "completeButton": "השלם פעילות"
     }
   },
   "calendar": {

@@ -44,18 +44,31 @@ serve(async (req) => {
     // Create prompt for generating follow-up assignment
     const systemPrompt = `You are an expert educational designer specializing in personalized learning. Your task is to create a follow-up assignment for a student based on their recent work and the feedback they received.
 
+CRITICAL INSTRUCTION REQUIREMENTS:
+- Instructions must be EXACTLY 1 short paragraph (3-4 sentences maximum)
+- NO lengthy introductions or preambles
+- Get straight to what the student needs to do
+- Be clear, direct, and actionable
+
 The follow-up assignment should:
 1. Address gaps or areas for growth identified in the feedback
 2. Build on strengths demonstrated by the student
-3. Be appropriately challenging but achievable
+3. Set appropriate difficulty level based on student's demonstrated abilities:
+   - "gentle_start": For students who struggled significantly - easy entry point, highly scaffolded
+   - "moderate": For students with mixed performance - balanced challenge
+   - "challenging": For students who excelled - push them further
 4. Focus on specific learning dimensions that need attention
-5. Be engaging and relevant to the student's interests (if evident from their conversation)
+5. Provide clear, measurable success criteria (2-3 specific outcomes)
+6. Include a brief scaffolding tip to help students get started
 
 Return your response as a valid JSON object with the following structure:
 {
   "title": "Assignment title (concise and engaging)",
-  "instructions": "Detailed assignment instructions (2-3 paragraphs explaining what the student should do)",
+  "instructions": "Direct, concise instructions in ONE paragraph (3-4 sentences max). NO introduction, just what to do.",
   "type": "text_essay",
+  "difficulty_level": "gentle_start" | "moderate" | "challenging",
+  "success_criteria": ["Specific outcome 1", "Specific outcome 2", "Specific outcome 3"],
+  "scaffolding_tips": "1-2 sentence hint for getting started",
   "target_dimensions": {
     "vision": boolean,
     "values": boolean,
@@ -63,11 +76,13 @@ Return your response as a valid JSON object with the following structure:
     "connection": boolean,
     "action": boolean
   },
-  "reasoning": "Brief explanation of why this assignment was chosen (1-2 sentences)"
+  "reasoning": "Brief explanation of why this assignment and difficulty level were chosen (1-2 sentences)"
 }
 
 The type should be one of: "text_essay", "file_upload", "quiz", "project"
-Target dimensions should be set to true for the 1-3 dimensions this assignment primarily focuses on.`;
+Target dimensions should be set to true for the 1-3 dimensions this assignment primarily focuses on.
+Difficulty level MUST match the student's demonstrated ability level.
+Success criteria should be clear, specific, and measurable outcomes.`;
 
     const userPrompt = `Original Assignment: ${originalAssignmentTitle}
 
@@ -88,7 +103,7 @@ Based on this information, design a personalized follow-up assignment that will 
       systemPrompt,
       [{ role: 'user', content: userPrompt }],
       0.7,
-      1500,
+      800,
     );
 
     logInfo('Raw OpenAI response', { length: assignmentText.length });
@@ -118,6 +133,22 @@ Based on this information, design a personalized follow-up assignment that will 
       assignmentData.type = 'text_essay'; // Default fallback
     }
 
+    // Ensure difficulty_level is valid
+    const validDifficulties = ['gentle_start', 'moderate', 'challenging'];
+    if (!validDifficulties.includes(assignmentData.difficulty_level)) {
+      assignmentData.difficulty_level = 'moderate'; // Default fallback
+    }
+
+    // Ensure success_criteria is an array
+    if (!Array.isArray(assignmentData.success_criteria)) {
+      assignmentData.success_criteria = [];
+    }
+
+    // Ensure scaffolding_tips is a string
+    if (typeof assignmentData.scaffolding_tips !== 'string') {
+      assignmentData.scaffolding_tips = '';
+    }
+
     // Ensure target_dimensions has proper structure
     if (!assignmentData.target_dimensions || typeof assignmentData.target_dimensions !== 'object') {
       assignmentData.target_dimensions = {
@@ -132,6 +163,7 @@ Based on this information, design a personalized follow-up assignment that will 
     logInfo('Follow-up assignment generated successfully', {
       title: assignmentData.title,
       type: assignmentData.type,
+      difficulty_level: assignmentData.difficulty_level,
     });
 
     return new Response(
@@ -139,6 +171,9 @@ Based on this information, design a personalized follow-up assignment that will 
         title: assignmentData.title,
         instructions: assignmentData.instructions,
         type: assignmentData.type,
+        difficulty_level: assignmentData.difficulty_level,
+        success_criteria: assignmentData.success_criteria,
+        scaffolding_tips: assignmentData.scaffolding_tips,
         target_dimensions: assignmentData.target_dimensions,
         reasoning: assignmentData.reasoning || '',
       }),

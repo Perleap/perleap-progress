@@ -173,6 +173,14 @@
     },
     "success": {
       "activityCompleted": "Activity completed! Feedback generated."
+    },
+    "completionDialog": {
+      "turnLimitTitle": "Check Your Understanding",
+      "turnLimitDescription": "You've had a good conversation so far! Do you feel you understand the material well enough to complete this activity?",
+      "aiDetectedTitle": "Learning Objectives Achieved",
+      "aiDetectedDescription": "It looks like we've covered the main points of the assignment. Would you like to complete this activity now?",
+      "continueButton": "Continue Chatting",
+      "completeButton": "Complete Activity"
     }
   },
   "calendar": {

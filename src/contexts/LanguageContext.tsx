@@ -180,31 +180,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [language, isRTL]);
 
-  // Add visibility change listener to re-sync language when tab becomes visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        const storedLang = getStoredLanguage();
-
-        // Only update if there's a genuine mismatch with localStorage
-        if (storedLang !== language) {
-          setLanguageState(storedLang);
-        }
-
-        // Sync HTML attributes and i18n WITHOUT triggering languageChanged event
-        if (i18n.language !== storedLang) {
-          i18n.changeLanguage(storedLang);
-        }
-
-        // Always sync HTML attributes
-        document.documentElement.dir = storedLang === 'he' ? 'rtl' : 'ltr';
-        document.documentElement.lang = storedLang;
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [language]);
+  // Removed visibility change listener - it was causing unnecessary re-renders when tabbing back
+  // Language is already synced via localStorage and won't change unless user explicitly changes it
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, isRTL }}>

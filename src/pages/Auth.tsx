@@ -49,7 +49,7 @@ const Auth = () => {
         navigate('/student/dashboard');
       }
     }
-  }, [user, authLoading, navigate]);
+  }, [user?.id, authLoading]); // Use user?.id to avoid refetch on user object reference change
 
   // Set the active tab based on the route
   useEffect(() => {

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -92,12 +93,14 @@ const StudentDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [finishedAssignments, setFinishedAssignments] = useState<Assignment[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'recent' | 'latest' | 'due-date'>('due-date');
+  const [assignmentsTab, setAssignmentsTab] = useState<'active' | 'finished'>('active');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
@@ -112,7 +115,7 @@ const StudentDashboard = () => {
       return;
     }
     fetchData();
-  }, [user]);
+  }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
     try {
@@ -157,15 +160,25 @@ const StudentDashboard = () => {
           .eq('status', 'published')
           .order('due_at', { ascending: true });
 
-        // Fetch teacher profiles
         if (assignmentsData && assignmentsData.length > 0) {
+          // Fetch submissions for this student
+          const assignmentIds = assignmentsData.map((a) => a.id);
+          const { data: submissionsData } = await supabase
+            .from('submissions')
+            .select('assignment_id')
+            .eq('student_id', user?.id)
+            .in('assignment_id', assignmentIds);
+
+          const submittedAssignmentIds = new Set(submissionsData?.map((s) => s.assignment_id) || []);
+
+          // Fetch teacher profiles
           const teacherIds = [...new Set(assignmentsData.map((a) => a.classrooms.teacher_id))];
           const { data: teacherProfiles } = await supabase
             .from('teacher_profiles')
             .select('user_id, full_name, avatar_url')
             .in('user_id', teacherIds);
 
-          // Combine data
+          // Combine data and separate into active and finished
           const assignmentsWithTeachers = assignmentsData.map((assignment) => ({
             ...assignment,
             classrooms: {
@@ -176,13 +189,20 @@ const StudentDashboard = () => {
             },
           }));
 
-          setAssignments(assignmentsWithTeachers);
+          // Separate active and finished assignments
+          const active = assignmentsWithTeachers.filter(a => !submittedAssignmentIds.has(a.id));
+          const finished = assignmentsWithTeachers.filter(a => submittedAssignmentIds.has(a.id));
+
+          setAssignments(active);
+          setFinishedAssignments(finished);
         } else {
           setAssignments([]);
+          setFinishedAssignments([]);
         }
       } else {
         setClassrooms([]);
         setAssignments([]);
+        setFinishedAssignments([]);
       }
 
       // Fetch notifications
@@ -310,8 +330,8 @@ const StudentDashboard = () => {
     }
   };
 
-  const getSortedAssignments = () => {
-    const sorted = [...assignments];
+  const getSortedAssignments = (assignmentsList: Assignment[] = assignments) => {
+    const sorted = [...assignmentsList];
     switch (sortBy) {
       case 'recent':
         // Newest received first (by created_at)
@@ -560,92 +580,169 @@ const StudentDashboard = () => {
 
             {/* Assignments Section */}
             <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <h2 className="text-xl md:text-2xl font-bold">
-                  {t('studentDashboard.myAssignments')}
-                </h2>
-                {!loading && assignments.length > 0 && (
-                  <Select
-                    value={sortBy}
-                    onValueChange={(value) => setSortBy(value as typeof sortBy)}
-                  >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder={t('studentDashboard.sortBy')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="due-date">
-                        {t('studentDashboard.sortOptions.dueDate')}
-                      </SelectItem>
-                      <SelectItem value="recent">
-                        {t('studentDashboard.sortOptions.recent')}
-                      </SelectItem>
-                      <SelectItem value="oldest">
-                        {t('studentDashboard.sortOptions.oldest')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              {loading ? (
-                <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
-              ) : assignments.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      {t('studentDashboard.empty.noAssignments')}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {t('studentDashboard.empty.noAssignmentsDescription')}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {getSortedAssignments().map((assignment) => {
-                    const teacherInitials =
-                      assignment.classrooms.teacher_profiles?.full_name
-                        ?.split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .toUpperCase() || 'T';
-
-                    return (
-                      <Card
-                        key={assignment.id}
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                      >
-                        <CardHeader className="p-4 pb-3">
-                          <CardTitle className="text-base mb-1">{assignment.title}</CardTitle>
-                          <CardDescription className="text-sm mb-2">
-                            {assignment.classrooms.name} • {t('common.due')}:{' '}
-                            {new Date(assignment.due_at).toLocaleDateString()}
-                          </CardDescription>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Avatar className="h-6 w-6">
-                              {assignment.classrooms.teacher_profiles?.avatar_url && (
-                                <AvatarImage
-                                  src={assignment.classrooms.teacher_profiles.avatar_url}
-                                  alt={
-                                    assignment.classrooms.teacher_profiles.full_name ||
-                                    t('common.teacher')
-                                  }
-                                />
-                              )}
-                              <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs text-muted-foreground">
-                              {assignment.classrooms.teacher_profiles?.full_name ||
-                                t('common.teacher')}
-                            </span>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    );
-                  })}
+              <h2 className="text-xl md:text-2xl font-bold mb-4">
+                {t('studentDashboard.myAssignments')}
+              </h2>
+              
+              <Tabs value={assignmentsTab} onValueChange={(v) => setAssignmentsTab(v as 'active' | 'finished')}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                  <TabsList>
+                    <TabsTrigger value="active">Active</TabsTrigger>
+                    <TabsTrigger value="finished">Finished</TabsTrigger>
+                  </TabsList>
+                  
+                  {!loading && (assignmentsTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
+                    <Select
+                      value={sortBy}
+                      onValueChange={(value) => setSortBy(value as typeof sortBy)}
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder={t('studentDashboard.sortBy')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="due-date">
+                          {t('studentDashboard.sortOptions.dueDate')}
+                        </SelectItem>
+                        <SelectItem value="recent">
+                          {t('studentDashboard.sortOptions.recent')}
+                        </SelectItem>
+                        <SelectItem value="oldest">
+                          {t('studentDashboard.sortOptions.oldest')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-              )}
+
+                <TabsContent value="active">
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+                  ) : assignments.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          {t('studentDashboard.empty.noAssignments')}
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {t('studentDashboard.empty.noAssignmentsDescription')}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {getSortedAssignments().map((assignment) => {
+                        const teacherInitials =
+                          assignment.classrooms.teacher_profiles?.full_name
+                            ?.split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase() || 'T';
+
+                        return (
+                          <Card
+                            key={assignment.id}
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                          >
+                            <CardHeader className="p-4 pb-3">
+                              <CardTitle className="text-base mb-1">{assignment.title}</CardTitle>
+                              <CardDescription className="text-sm mb-2">
+                                {assignment.classrooms.name} • {t('common.due')}:{' '}
+                                {new Date(assignment.due_at).toLocaleDateString()}
+                              </CardDescription>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Avatar className="h-6 w-6">
+                                  {assignment.classrooms.teacher_profiles?.avatar_url && (
+                                    <AvatarImage
+                                      src={assignment.classrooms.teacher_profiles.avatar_url}
+                                      alt={
+                                        assignment.classrooms.teacher_profiles.full_name ||
+                                        t('common.teacher')
+                                      }
+                                    />
+                                  )}
+                                  <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground">
+                                  {assignment.classrooms.teacher_profiles?.full_name ||
+                                    t('common.teacher')}
+                                </span>
+                              </div>
+                            </CardHeader>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="finished">
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+                  ) : finishedAssignments.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          No Finished Assignments
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Assignments you've submitted will appear here
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {getSortedAssignments(finishedAssignments).map((assignment) => {
+                        const teacherInitials =
+                          assignment.classrooms.teacher_profiles?.full_name
+                            ?.split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase() || 'T';
+
+                        return (
+                          <Card
+                            key={assignment.id}
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                          >
+                            <CardHeader className="p-4 pb-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <CardTitle className="text-base">{assignment.title}</CardTitle>
+                                <Badge variant="secondary" className="text-xs">Completed</Badge>
+                              </div>
+                              <CardDescription className="text-sm mb-2">
+                                {assignment.classrooms.name} • {t('common.due')}:{' '}
+                                {new Date(assignment.due_at).toLocaleDateString()}
+                              </CardDescription>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Avatar className="h-6 w-6">
+                                  {assignment.classrooms.teacher_profiles?.avatar_url && (
+                                    <AvatarImage
+                                      src={assignment.classrooms.teacher_profiles.avatar_url}
+                                      alt={
+                                        assignment.classrooms.teacher_profiles.full_name ||
+                                        t('common.teacher')
+                                      }
+                                    />
+                                  )}
+                                  <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground">
+                                  {assignment.classrooms.teacher_profiles?.full_name ||
+                                    t('common.teacher')}
+                                </span>
+                              </div>
+                            </CardHeader>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
 

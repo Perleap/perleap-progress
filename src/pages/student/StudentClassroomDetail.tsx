@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -47,8 +48,10 @@ const StudentClassroomDetail = () => {
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [finishedAssignments, setFinishedAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'recent' | 'latest' | 'due-date'>('due-date');
+  const [assignmentsSubTab, setAssignmentsSubTab] = useState<'active' | 'finished'>('active');
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
 
@@ -62,7 +65,7 @@ const StudentClassroomDetail = () => {
     if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchData();
     }
-  }, [id, user]);
+  }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
     if (isFetchingRef.current) return; // Prevent concurrent fetches
@@ -97,7 +100,28 @@ const StudentClassroomDetail = () => {
         .order('due_at', { ascending: true });
 
       if (assignError) throw assignError;
-      setAssignments(assignmentsData || []);
+
+      if (assignmentsData && assignmentsData.length > 0) {
+        // Fetch submissions for this student
+        const assignmentIds = assignmentsData.map((a) => a.id);
+        const { data: submissionsData } = await supabase
+          .from('submissions')
+          .select('assignment_id')
+          .eq('student_id', user?.id)
+          .in('assignment_id', assignmentIds);
+
+        const submittedAssignmentIds = new Set(submissionsData?.map((s) => s.assignment_id) || []);
+
+        // Separate active and finished assignments
+        const active = assignmentsData.filter(a => !submittedAssignmentIds.has(a.id));
+        const finished = assignmentsData.filter(a => submittedAssignmentIds.has(a.id));
+
+        setAssignments(active);
+        setFinishedAssignments(finished);
+      } else {
+        setAssignments([]);
+        setFinishedAssignments([]);
+      }
 
       // Student analytics removed - only for teachers
     } catch (error) {
@@ -110,8 +134,8 @@ const StudentClassroomDetail = () => {
     }
   };
 
-  const getSortedAssignments = () => {
-    const sorted = [...assignments];
+  const getSortedAssignments = (assignmentsList: Assignment[] = assignments) => {
+    const sorted = [...assignmentsList];
     switch (sortBy) {
       case 'recent':
         // Newest received first (by created_at)
@@ -244,23 +268,14 @@ const StudentClassroomDetail = () => {
               </TabsContent>
 
               <TabsContent value="assignments" className="space-y-4">
-                {assignments.length === 0 ? (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                      <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">
-                        {t('studentClassroom.noAssignments')}
-                      </h3>
-                      <p className="text-muted-foreground">Check back later for new assignments</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-sm font-medium text-muted-foreground">
-                        {assignments.length}{' '}
-                        {assignments.length === 1 ? 'Assignment' : 'Assignments'}
-                      </h3>
+                <Tabs value={assignmentsSubTab} onValueChange={(v) => setAssignmentsSubTab(v as 'active' | 'finished')}>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <TabsList>
+                      <TabsTrigger value="active">Active</TabsTrigger>
+                      <TabsTrigger value="finished">Finished</TabsTrigger>
+                    </TabsList>
+                    
+                    {(assignmentsSubTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
                       <Select
                         value={sortBy}
                         onValueChange={(value) => setSortBy(value as typeof sortBy)}
@@ -280,30 +295,88 @@ const StudentClassroomDetail = () => {
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    {getSortedAssignments().map((assignment) => (
-                      <Card
-                        key={assignment.id}
-                        className="hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                      >
-                        <CardHeader>
-                          <CardTitle>{assignment.title}</CardTitle>
-                          <CardDescription>
-                            {t('assignmentDetail.type')}: {assignment.type.replace('_', ' ')} •
-                            {assignment.due_at &&
-                              ` ${t('common.due')}: ${new Date(assignment.due_at).toLocaleString()}`}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {assignment.instructions}
-                          </p>
+                    )}
+                  </div>
+
+                  <TabsContent value="active" className="mt-0">
+                    {assignments.length === 0 ? (
+                      <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-12">
+                          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">
+                            {t('studentClassroom.noAssignments')}
+                          </h3>
+                          <p className="text-muted-foreground">Check back later for new assignments</p>
                         </CardContent>
                       </Card>
-                    ))}
-                  </>
-                )}
+                    ) : (
+                      <div className="space-y-3">
+                        {getSortedAssignments().map((assignment) => (
+                          <Card
+                            key={assignment.id}
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                          >
+                            <CardHeader>
+                              <CardTitle>{assignment.title}</CardTitle>
+                              <CardDescription>
+                                {t('assignmentDetail.type')}: {assignment.type.replace('_', ' ')} •
+                                {assignment.due_at &&
+                                  ` ${t('common.due')}: ${new Date(assignment.due_at).toLocaleString()}`}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {assignment.instructions}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="finished" className="mt-0">
+                    {finishedAssignments.length === 0 ? (
+                      <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-12">
+                          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">
+                            No Finished Assignments
+                          </h3>
+                          <p className="text-muted-foreground">Assignments you've submitted will appear here</p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="space-y-3">
+                        {getSortedAssignments(finishedAssignments).map((assignment) => (
+                          <Card
+                            key={assignment.id}
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
+                            onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                          >
+                            <CardHeader>
+                              <div className="flex items-center justify-between mb-2">
+                                <CardTitle>{assignment.title}</CardTitle>
+                                <Badge variant="secondary" className="text-xs">Completed</Badge>
+                              </div>
+                              <CardDescription>
+                                {t('assignmentDetail.type')}: {assignment.type.replace('_', ' ')} •
+                                {assignment.due_at &&
+                                  ` ${t('common.due')}: ${new Date(assignment.due_at).toLocaleString()}`}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {assignment.instructions}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
             </Tabs>
           </div>

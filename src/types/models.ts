@@ -28,6 +28,17 @@ export interface StudentProfile {
   created_at: string;
 }
 
+export interface Domain {
+  name: string;
+  components: string[];
+}
+
+export interface CourseMaterial {
+  type: 'pdf' | 'link';
+  url: string;
+  name: string;
+}
+
 export interface Classroom {
   id: string;
   name: string;
@@ -42,6 +53,8 @@ export interface Classroom {
   resources: string | null;
   learning_outcomes: string[] | null;
   key_challenges: string[] | null;
+  domains: Domain[] | null;
+  materials: CourseMaterial[] | null;
   created_at: string;
 }
 

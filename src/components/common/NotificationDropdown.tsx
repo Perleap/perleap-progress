@@ -46,8 +46,17 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
       setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
       setUnreadCount((prev) => Math.max(0, prev - 1));
       setDropdownOpen(false);
-      if (notification.link) {
+      
+      // Navigate if link exists and is a valid string
+      if (notification.link && typeof notification.link === 'string' && notification.link.trim() !== '') {
+        console.log('Navigating to:', notification.link);
         navigate(notification.link);
+      } else {
+        console.warn('Notification clicked but no valid link to navigate to:', {
+          id: notification.id,
+          type: notification.type,
+          link: notification.link,
+        });
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);

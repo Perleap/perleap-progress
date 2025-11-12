@@ -47,6 +47,9 @@ interface GeneratedAssignmentData {
   title: string;
   instructions: string;
   type: string;
+  difficulty_level?: string;
+  success_criteria?: string[];
+  scaffolding_tips?: string;
   target_dimensions: Record<string, boolean>;
   due_at: string;
 }
@@ -72,7 +75,7 @@ const SubmissionDetail = () => {
       return;
     }
     fetchData();
-  }, [id, user]);
+  }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
     try {
@@ -176,6 +179,9 @@ const SubmissionDetail = () => {
         title: data.title,
         instructions: data.instructions,
         type: data.type,
+        difficulty_level: data.difficulty_level,
+        success_criteria: data.success_criteria,
+        scaffolding_tips: data.scaffolding_tips,
         target_dimensions: data.target_dimensions,
         due_at: defaultDueDate,
       });

@@ -81,7 +81,24 @@ serve(async (req) => {
       300,
     );
 
-    messages.push({ role: 'assistant', content: aiMessage });
+    // Check for conversation completion marker (case-insensitive and flexible)
+    const completionMarker = '[CONVERSATION_COMPLETE]';
+    let shouldEnd = false;
+    let endReason = '';
+    let cleanedMessage = aiMessage;
+
+    // Check if marker exists anywhere in the message (more robust)
+    const markerIndex = aiMessage.toUpperCase().indexOf(completionMarker);
+    if (markerIndex !== -1) {
+      shouldEnd = true;
+      endReason = 'ai_detected';
+      // Remove the marker and any surrounding whitespace
+      cleanedMessage = aiMessage.substring(0, markerIndex) + 
+                      aiMessage.substring(markerIndex + completionMarker.length);
+      cleanedMessage = cleanedMessage.trim();
+    }
+
+    messages.push({ role: 'assistant', content: cleanedMessage });
 
     await saveConversation(
       conversation.id,
@@ -91,7 +108,18 @@ serve(async (req) => {
       messages,
     );
 
-    return new Response(JSON.stringify({ message: aiMessage }), {
+    // Calculate turn count (exchanges = pairs of user + assistant messages)
+    // Don't count the initial greeting
+    const userMessageCount = messages.filter(m => m.role === 'user').length;
+    const assistantMessageCount = messages.filter(m => m.role === 'assistant').length;
+    const turnCount = Math.min(userMessageCount, assistantMessageCount);
+
+    return new Response(JSON.stringify({ 
+      message: cleanedMessage,
+      turnCount,
+      shouldEnd,
+      endReason,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

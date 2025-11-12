@@ -10,11 +10,20 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        console.log('🔄 AuthCallback: Starting authentication callback');
+        
         const {
           data: { user },
         } = await supabase.auth.getUser();
 
+        console.log('👤 AuthCallback: User data:', { 
+          userId: user?.id, 
+          email: user?.email,
+          role: user?.user_metadata?.role 
+        });
+
         if (!user) {
+          console.log('❌ AuthCallback: No user found, redirecting to /auth');
           navigate('/auth');
           return;
         }
@@ -29,7 +38,55 @@ const AuthCallback = () => {
           localStorage.removeItem('pending_role');
         }
 
-        const userRole = user.user_metadata.role || pendingRole;
+        let userRole = user.user_metadata.role || pendingRole;
+        console.log('🎭 AuthCallback: Initial role:', userRole);
+
+        // If no role in metadata or localStorage, check database for existing profiles
+        if (!userRole) {
+          console.log('🔍 AuthCallback: No role found, checking database profiles...');
+          
+          // Check if user has a teacher profile
+          const { data: teacherProfile, error: teacherError } = await supabase
+            .from('teacher_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          console.log('👨‍🏫 AuthCallback: Teacher profile check:', { 
+            found: !!teacherProfile, 
+            error: teacherError?.message 
+          });
+
+          if (teacherProfile) {
+            userRole = 'teacher';
+            console.log('✅ AuthCallback: Found teacher profile, updating user metadata');
+            // Update user metadata with the role
+            await supabase.auth.updateUser({
+              data: { role: 'teacher' },
+            });
+          } else {
+            // Check if user has a student profile
+            const { data: studentProfile, error: studentError } = await supabase
+              .from('student_profiles')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            console.log('👨‍🎓 AuthCallback: Student profile check:', { 
+              found: !!studentProfile, 
+              error: studentError?.message 
+            });
+
+            if (studentProfile) {
+              userRole = 'student';
+              console.log('✅ AuthCallback: Found student profile, updating user metadata');
+              // Update user metadata with the role
+              await supabase.auth.updateUser({
+                data: { role: 'student' },
+              });
+            }
+          }
+        }
 
         // Check if there's a saved redirect path
         const redirectPath = sessionStorage.getItem('redirectAfterLogin');
@@ -41,21 +98,27 @@ const AuthCallback = () => {
 
         // Redirect based on role and profile completion
         if (userRole === 'teacher' || userRole === 'student') {
+          console.log(`✅ AuthCallback: Role determined as ${userRole}, checking profile...`);
+          
           const tableName = `${userRole}_profiles`;
           const { data: profile } = await supabase
             .from(tableName)
             .select('id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
           const destination = profile ? `/${userRole}/dashboard` : `/onboarding/${userRole}`;
-
-          navigate(destination);
+          
+          console.log(`🚀 AuthCallback: Redirecting to ${destination}`);
+          navigate(destination, { replace: true });
         } else {
-          navigate('/auth');
+          // New user with no role - redirect to auth to select role
+          console.log('⚠️ AuthCallback: No role determined, redirecting to /auth');
+          navigate('/auth', { replace: true });
         }
       } catch (error) {
-        navigate('/auth');
+        console.error('❌ AuthCallback: Error during callback:', error);
+        navigate('/auth', { replace: true });
       }
     };
 

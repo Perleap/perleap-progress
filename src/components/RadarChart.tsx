@@ -53,9 +53,11 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 
 export const RadarChart = ({ scores, explanations, showLabels = true }: RadarChartProps) => {
   const { t } = useTranslation();
-  const data = Object.entries(scores).map(([dimension, value]) => ({
+  // Use a consistent order from DIMENSION_CONFIG to ensure charts display dimensions in the same order
+  const dimensionOrder: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
+  const data = dimensionOrder.map((dimension) => ({
     dimension,
-    value,
+    value: scores[dimension] || 0,
     fullMark: 10,
     label: t(`dimensions.${dimension}.label`),
   }));
@@ -85,10 +87,10 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
 
       {showLabels && (
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(Object.keys(scores) as Array<keyof FiveDScores>).map((dimension) => {
+          {dimensionOrder.map((dimension) => {
             const config = DIMENSION_CONFIG[dimension];
             const explanation = explanations?.[dimension];
-            const value = scores[dimension];
+            const value = scores[dimension] || 0;
 
             return (
               <div key={dimension} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
