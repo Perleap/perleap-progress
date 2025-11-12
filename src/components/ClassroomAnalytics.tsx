@@ -404,19 +404,73 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         </>
       )}
 
-      {/* Case 3: All Students + All Assignments - Show Classroom Average */}
+      {/* Case 3: All Students + All Assignments - Show Classroom Average + Expandable Student Cards */}
       {selectedStudent === 'all' && selectedAssignment === 'all' && classAverage && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base md:text-lg">{t('analytics.classAverage')}</CardTitle>
-            <CardDescription className="text-sm">
-              Average 5D scores across all students and all submissions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FiveDChart scores={classAverage} explanations={null} />
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base md:text-lg">{t('analytics.classAverage')}</CardTitle>
+              <CardDescription className="text-sm">
+                Average 5D scores across all students and all submissions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FiveDChart scores={classAverage} explanations={null} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base md:text-lg">Student Performance Overview</CardTitle>
+              <CardDescription className="text-sm">
+                View individual student averages across all assignments
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {students.filter((s) => s.latestScores).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No student data available yet</p>
+                </div>
+              ) : (
+                students
+                  .filter((s) => s.latestScores)
+                  .map((student) => (
+                    <Collapsible key={student.id} className="border rounded-lg">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-between p-4 hover:bg-accent"
+                        >
+                          <span className="font-medium">{student.fullName}</span>
+                          <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="px-4 pb-4 space-y-4">
+                        {/* Student's Average 5D Chart */}
+                        <div className="pt-2">
+                          <h4 className="text-sm font-semibold mb-3">
+                            Average 5D Profile (All Assignments)
+                          </h4>
+                          <FiveDChart scores={student.latestScores!} explanations={null} />
+                        </div>
+
+                        {/* Student's CRA Table */}
+                        <div className="border-t pt-4">
+                          <HardSkillsAssessmentTable
+                            studentId={student.id}
+                            assignmentId="all"
+                            classroomId={classroomId}
+                            title="Content Related Abilities (CRA)"
+                            description={`All hard skills assessments across all assignments`}
+                          />
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {/* Case 4: All Students + Specific Assignment - Show CRA with Collapsible Sections */}
