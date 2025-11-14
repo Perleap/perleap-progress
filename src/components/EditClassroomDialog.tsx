@@ -371,16 +371,16 @@ export function EditClassroomDialog({
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Domains & Components</Label>
+            <Label className="text-base">Subject Areas & Skills</Label>
             <p className="text-xs text-muted-foreground">
-              Add knowledge domains (e.g., Algebra, Geometry) and their specific components
+              Add subject areas (e.g., Algebra, Geometry) and their specific skills
             </p>
             
             {formData.domains.map((domain, domainIndex) => (
               <div key={domainIndex} className="space-y-2 p-3 border rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
                   <Input
-                    placeholder="Domain name (e.g., Algebra)"
+                    placeholder="Subject area name (e.g., Algebra)"
                     value={domain.name}
                     onChange={(e) => updateDomainName(domainIndex, e.target.value)}
                     className="flex-1"
@@ -396,11 +396,11 @@ export function EditClassroomDialog({
                 </div>
                 
                 <div className="space-y-2 ml-4">
-                  <Label className="text-sm">Components</Label>
+                  <Label className="text-sm">Skills</Label>
                   {domain.components.map((component, componentIndex) => (
                     <div key={componentIndex} className="flex items-center gap-2">
                       <Input
-                        placeholder={`Component ${componentIndex + 1}`}
+                        placeholder={`Skill ${componentIndex + 1}`}
                         value={component}
                         onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
                         className="flex-1 bg-background"
@@ -423,7 +423,7 @@ export function EditClassroomDialog({
                     onClick={() => addComponent(domainIndex)}
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    Add Component
+                    Add Skill
                   </Button>
                 </div>
               </div>
@@ -431,7 +431,7 @@ export function EditClassroomDialog({
             
             <Button type="button" variant="outline" onClick={addDomain}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Domain
+              Add Subject Area
             </Button>
           </div>
 

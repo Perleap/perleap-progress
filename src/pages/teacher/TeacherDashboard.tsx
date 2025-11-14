@@ -49,13 +49,11 @@ const TeacherDashboard = () => {
   const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // ProtectedRoute handles auth, just fetch data when user is available
     // Wait for auth to finish loading before checking user
     if (authLoading) return;
 
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    if (!user?.id) return;
 
     // Reset fetch flag if user ID actually changed
     if (lastUserIdRef.current !== user.id) {

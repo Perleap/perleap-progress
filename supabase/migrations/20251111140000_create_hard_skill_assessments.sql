@@ -51,7 +51,7 @@ CREATE POLICY "Service role can insert hard skill assessments"
 
 -- Add comments
 COMMENT ON TABLE public.hard_skill_assessments IS 'Stores Content Related Abilities (CRA) assessments for student hard skills per assignment submission';
-COMMENT ON COLUMN public.hard_skill_assessments.domain IS 'Area/Domain category (e.g., Algebra, Geometry)';
+COMMENT ON COLUMN public.hard_skill_assessments.domain IS 'Subject Area category (e.g., Algebra, Geometry)';
 COMMENT ON COLUMN public.hard_skill_assessments.skill_component IS 'The specific hard skill/knowledge component being assessed';
 COMMENT ON COLUMN public.hard_skill_assessments.current_level_percent IS 'Student proficiency level as percentage (0-100)';
 COMMENT ON COLUMN public.hard_skill_assessments.proficiency_description IS 'Brief description of the proficiency level';

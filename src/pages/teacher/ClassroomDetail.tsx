@@ -116,10 +116,8 @@ const ClassroomDetail = () => {
   const lastIdRef = useRef(id);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    // ProtectedRoute handles auth, just fetch data when user is available
+    if (!user?.id) return;
 
     // Reset refs if classroom ID changes
     if (lastIdRef.current !== id) {
@@ -492,9 +490,9 @@ const ClassroomDetail = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
-                    Domains & Components
+                    Subject Areas & Skills
                   </CardTitle>
-                  <CardDescription>Knowledge areas and their specific components</CardDescription>
+                  <CardDescription>Subject areas and their specific skills</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {classroom.domains.map((domain, index) => (
@@ -512,7 +510,7 @@ const ClassroomDetail = () => {
                       </button>
                       {expandedDomains.has(index) && (
                         <div className="px-3 pb-3 space-y-1">
-                          <p className="text-xs text-muted-foreground mb-2">Components:</p>
+                          <p className="text-xs text-muted-foreground mb-2">Skills:</p>
                           <ul className="list-disc list-inside space-y-1">
                             {domain.components.map((component, compIndex) => (
                               <li key={compIndex} className="text-sm text-muted-foreground">
@@ -656,7 +654,10 @@ const ClassroomDetail = () => {
                       {assignment.materials &&
                         (() => {
                           try {
-                            const materials: CourseMaterial[] = JSON.parse(assignment.materials);
+                            // Handle both JSONB (object) and old TEXT (string) formats
+                            const materials: CourseMaterial[] = typeof assignment.materials === 'string'
+                              ? JSON.parse(assignment.materials)
+                              : assignment.materials;
                             if (Array.isArray(materials) && materials.length > 0) {
                               return (
                                 <div className="pt-2 border-t">

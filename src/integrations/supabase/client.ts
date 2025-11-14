@@ -16,6 +16,14 @@ export const supabase = createClient<Database>(
       storage: localStorage,
       persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: true, // Need this for OAuth callbacks and email confirmations
+      storageKey: 'perleap-auth', // Custom storage key to prevent multi-tab conflicts
+      flowType: 'pkce', // Use PKCE flow for better security
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'perleap-web',
+      },
     },
   }
 );

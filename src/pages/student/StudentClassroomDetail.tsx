@@ -56,13 +56,9 @@ const StudentClassroomDetail = () => {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
+    // ProtectedRoute handles auth, just fetch data when user is available
     // Only fetch if we haven't fetched yet and we're not currently fetching
-    if (!hasFetchedRef.current && !isFetchingRef.current) {
+    if (user?.id && !hasFetchedRef.current && !isFetchingRef.current) {
       fetchData();
     }
   }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change

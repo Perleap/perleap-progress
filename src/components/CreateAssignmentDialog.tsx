@@ -94,38 +94,88 @@ export function CreateAssignmentDialog({
     materials: [] as Array<{ type: 'pdf' | 'link'; url: string; name: string }>,
   });
 
-  // Fetch classroom data for domains and materials
+  // Fetch classroom data for domains and materials, and last assignment data
   useEffect(() => {
-    const fetchClassroomData = async () => {
-      if (!classroomId) return;
+    const fetchData = async () => {
+      if (!classroomId || !open) return; // Only fetch when dialog is open
       
       try {
-        const { data, error } = await supabase
+        // Fetch classroom data
+        const { data: classroomData, error: classroomError } = await supabase
           .from('classrooms')
           .select('domains, materials')
           .eq('id', classroomId)
           .single();
 
-        if (error) throw error;
-
-        console.log('Classroom data fetched:', data);
-        if (data?.domains) {
-          console.log('Found domains:', data.domains);
-          setClassroomDomains(data.domains as Array<{ name: string; components: string[] }>);
+        if (classroomError) throw classroomError;
+        
+        let domains: Array<{ name: string; components: string[] }> = [];
+        
+        // Type assertion needed until TypeScript types are regenerated
+        const classroomDataWithExtras = classroomData as any;
+        
+        if (classroomDataWithExtras?.domains) {
+          domains = classroomDataWithExtras.domains as Array<{ name: string; components: string[] }>;
+          setClassroomDomains(domains);
         }
-        if (data?.materials) {
-          console.log('Found materials:', data.materials);
-          setClassroomMaterials(data.materials as Array<{ type: 'pdf' | 'link'; url: string; name: string }>);
-        } else {
-          console.log('No materials found in classroom');
+        
+        if (classroomDataWithExtras?.materials) {
+          setClassroomMaterials(classroomDataWithExtras.materials as Array<{ type: 'pdf' | 'link'; url: string; name: string }>);
+        }
+
+        // Fetch last assignment to auto-populate domain and hard skills
+        // Always fetch this, even for AI-generated assignments, since AI doesn't generate domain/hard_skills
+        const { data: lastAssignment, error: assignmentError } = await supabase
+          .from('assignments')
+          .select('hard_skill_domain, hard_skills')
+          .eq('classroom_id', classroomId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!assignmentError && lastAssignment) {
+          // Parse hard skills first
+          let parsedSkills: string[] = [];
+          if (lastAssignment.hard_skills) {
+            try {
+              const skills = typeof lastAssignment.hard_skills === 'string' 
+                ? JSON.parse(lastAssignment.hard_skills) 
+                : lastAssignment.hard_skills;
+              if (Array.isArray(skills) && skills.length > 0) {
+                parsedSkills = skills;
+              }
+            } catch (e) {
+              console.error('Error parsing hard_skills:', e);
+            }
+          }
+          
+          // Update domain and hard skills in a single setState call
+          if (lastAssignment.hard_skill_domain || parsedSkills.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              hard_skill_domain: lastAssignment.hard_skill_domain || prev.hard_skill_domain,
+              hard_skills: parsedSkills.length > 0 ? parsedSkills : prev.hard_skills
+            }));
+          }
+          
+          // Set selected domain and available components
+          if (lastAssignment.hard_skill_domain) {
+            setSelectedDomain(lastAssignment.hard_skill_domain);
+            
+            // Find and set available components for this domain
+            const domain = domains.find(d => d.name === lastAssignment.hard_skill_domain);
+            if (domain) {
+              setAvailableComponents(domain.components);
+            }
+          }
         }
       } catch (error) {
-        console.error('Error fetching classroom data:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchClassroomData();
-  }, [classroomId]);
+    fetchData();
+  }, [classroomId, initialData, open]); // Added 'open' to dependencies
 
   // Update form data when initial data changes
   useEffect(() => {
@@ -265,6 +315,10 @@ export function CreateAssignmentDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (loading) return;
+    
     setLoading(true);
 
     try {
@@ -280,7 +334,7 @@ export function CreateAssignmentDialog({
             status: formData.status as any,
             hard_skills: JSON.stringify(formData.hard_skills),
             hard_skill_domain: formData.hard_skill_domain || null,
-            materials: JSON.stringify(formData.materials),
+            materials: formData.materials, // JSONB column - pass as object, not stringified
             target_dimensions: formData.target_dimensions as any,
             personalization_flag: formData.personalization_flag,
             assigned_student_id: assignedStudentId || null,
@@ -481,7 +535,7 @@ export function CreateAssignmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hard_skill_domain">Area/Domain</Label>
+            <Label htmlFor="hard_skill_domain">Subject Area</Label>
             {classroomDomains.length > 0 ? (
               <>
                 <Select
@@ -520,17 +574,20 @@ export function CreateAssignmentDialog({
               }}
             />
             <p className="text-xs text-muted-foreground">
-              The subject area for hard skill assessment (required if adding K/S components)
+              The subject area for hard skill assessment (required if adding skills)
             </p>
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">K/S Components (Hard Skills)</Label>
+            <Label className="text-base">Skills to Assess</Label>
+            <p className="text-sm text-muted-foreground">
+              Specific skills or topics that will be assessed in this assignment.
+            </p>
             
             {/* Component selection dropdown if domain is selected */}
             {selectedDomain && availableComponents.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm">Select from {selectedDomain} components:</Label>
+                <Label className="text-sm">Select from {selectedDomain} skills:</Label>
                 <Select
                   onValueChange={(value) => {
                     // Add component if not already in the list
@@ -557,7 +614,7 @@ export function CreateAssignmentDialog({
             )}
 
             <div className="space-y-2">
-              <Label className="text-sm">Selected components:</Label>
+              <Label className="text-sm">Selected skills:</Label>
               {formData.hard_skills.map((skill, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <Input
@@ -567,7 +624,7 @@ export function CreateAssignmentDialog({
                       newSkills[index] = e.target.value;
                       setFormData({ ...formData, hard_skills: newSkills });
                     }}
-                    placeholder={`Component ${index + 1}`}
+                    placeholder={`Skill ${index + 1}`}
                     className="flex-1 bg-muted/50"
                   />
                   <Button
@@ -592,7 +649,7 @@ export function CreateAssignmentDialog({
                 setFormData({ ...formData, hard_skills: [...formData.hard_skills, ''] })
               }
             >
-              Add Component Manually
+              Add Skill Manually
             </Button>
           </div>
 

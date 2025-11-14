@@ -70,11 +70,10 @@ const SubmissionDetail = () => {
     useState<GeneratedAssignmentData | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
+    // ProtectedRoute handles auth, just fetch data when user is available
+    if (user?.id) {
+      fetchData();
     }
-    fetchData();
   }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {

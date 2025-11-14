@@ -290,7 +290,10 @@ function formatCourseMaterials(assignmentDetails: any, classroomResources: any):
   // Add assignment-specific materials
   if (assignmentDetails?.materials) {
     try {
-      const assignmentMaterials = JSON.parse(assignmentDetails.materials);
+      // Handle both JSONB (object) and old TEXT (string) formats
+      const assignmentMaterials = typeof assignmentDetails.materials === 'string'
+        ? JSON.parse(assignmentDetails.materials)
+        : assignmentDetails.materials;
       if (Array.isArray(assignmentMaterials) && assignmentMaterials.length > 0) {
         materials.push('Assignment Materials:');
         assignmentMaterials.forEach((material: any) => {

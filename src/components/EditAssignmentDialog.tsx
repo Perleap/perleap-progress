@@ -129,7 +129,10 @@ export function EditAssignmentDialog({
 
       if (data?.materials) {
         try {
-          const parsed = JSON.parse(data.materials);
+          // Handle both JSONB (object) and old TEXT (string) formats
+          const parsed = typeof data.materials === 'string' 
+            ? JSON.parse(data.materials) 
+            : data.materials;
           setMaterials(Array.isArray(parsed) ? parsed : []);
         } catch {
           setMaterials([]);
@@ -262,7 +265,7 @@ export function EditAssignmentDialog({
           due_at: dueDate || null,
           hard_skills: JSON.stringify(hardSkills),
           hard_skill_domain: hardSkillDomain || null,
-          materials: JSON.stringify(materials),
+          materials: materials, // JSONB column - pass as object, not stringified
         })
         .eq('id', assignment.id);
 
@@ -394,7 +397,7 @@ export function EditAssignmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hard_skill_domain">Area/Domain</Label>
+            <Label htmlFor="hard_skill_domain">Subject Area</Label>
             {classroomDomains.length > 0 ? (
               <>
                 <Select
@@ -434,17 +437,20 @@ export function EditAssignmentDialog({
               }}
             />
             <p className="text-xs text-muted-foreground">
-              The subject area for hard skill assessment (required if adding K/S components)
+              The subject area for hard skill assessment (required if adding skills)
             </p>
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">K/S Components (Hard Skills)</Label>
+            <Label className="text-base">Skills to Assess</Label>
+            <p className="text-sm text-muted-foreground">
+              Specific skills or topics that will be assessed in this assignment.
+            </p>
             
             {/* Component selection dropdown if domain is selected */}
             {selectedDomain && availableComponents.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm">Select from {selectedDomain} components:</Label>
+                <Label className="text-sm">Select from {selectedDomain} skills:</Label>
                 <Select
                   onValueChange={(value) => {
                     // Add component if not already in the list
@@ -468,7 +474,7 @@ export function EditAssignmentDialog({
             )}
 
             <div className="space-y-2">
-              <Label className="text-sm">Selected components:</Label>
+              <Label className="text-sm">Selected skills:</Label>
               {hardSkills.map((skill, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <Input
@@ -478,7 +484,7 @@ export function EditAssignmentDialog({
                       newSkills[index] = e.target.value;
                       setHardSkills(newSkills);
                     }}
-                    placeholder={`Component ${index + 1}`}
+                    placeholder={`Skill ${index + 1}`}
                     className="flex-1 bg-muted/50"
                   />
                   <Button
@@ -501,7 +507,7 @@ export function EditAssignmentDialog({
               size="sm"
               onClick={() => setHardSkills([...hardSkills, ''])}
             >
-              Add Component Manually
+              Add Skill Manually
             </Button>
           </div>
 

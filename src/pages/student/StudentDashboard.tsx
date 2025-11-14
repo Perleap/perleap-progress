@@ -110,11 +110,10 @@ const StudentDashboard = () => {
   });
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
+    // ProtectedRoute handles auth, just fetch data
+    if (user?.id) {
+      fetchData();
     }
-    fetchData();
   }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {

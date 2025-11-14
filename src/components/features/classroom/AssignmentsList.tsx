@@ -42,10 +42,13 @@ export const AssignmentsList = ({ assignments, onEdit, onDelete }: AssignmentsLi
     }
   };
 
-  const parseMaterials = (materialsJson: string | undefined) => {
-    if (!materialsJson) return null;
+  const parseMaterials = (materialsData: any) => {
+    if (!materialsData) return null;
     try {
-      const materials = JSON.parse(materialsJson);
+      // Handle both JSONB (object) and old TEXT (string) formats
+      const materials = typeof materialsData === 'string' 
+        ? JSON.parse(materialsData) 
+        : materialsData;
       return Array.isArray(materials) && materials.length > 0 ? materials : null;
     } catch {
       return null;
