@@ -28,65 +28,93 @@ const AuthCallback = () => {
           return;
         }
 
+        // ALWAYS check for existing profiles first to prevent duplicate registrations
+        console.log('🔍 AuthCallback: Checking for existing profiles...');
+        
+        // Check by user_id
+        const { data: teacherProfile } = await supabase
+          .from('teacher_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const { data: studentProfile } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        // Also check by email (in case of data inconsistency)
+        const userEmail = user.email?.toLowerCase().trim();
+        let teacherProfileByEmail = null;
+        let studentProfileByEmail = null;
+        
+        if (userEmail) {
+          const { data: tpEmail } = await supabase
+            .from('teacher_profiles')
+            .select('id, email')
+            .eq('email', userEmail)
+            .maybeSingle();
+          teacherProfileByEmail = tpEmail;
+
+          const { data: spEmail } = await supabase
+            .from('student_profiles')
+            .select('id, email')
+            .eq('email', userEmail)
+            .maybeSingle();
+          studentProfileByEmail = spEmail;
+        }
+
+        const hasTeacherProfile = teacherProfile || teacherProfileByEmail;
+        const hasStudentProfile = studentProfile || studentProfileByEmail;
+
+        console.log('👨‍🏫 AuthCallback: Existing profiles:', { 
+          hasTeacherProfile: !!hasTeacherProfile, 
+          hasStudentProfile: !!hasStudentProfile,
+          userEmail 
+        });
+
+        let userRole = user.user_metadata.role;
+
+        // If user already has a profile, use that role and prevent new registration
+        if (hasTeacherProfile || hasStudentProfile) {
+          const existingRole = hasTeacherProfile ? 'teacher' : 'student';
+          console.log(`✅ AuthCallback: User has existing ${existingRole} profile`);
+          
+          // Update user metadata if it doesn't match
+          if (userRole !== existingRole) {
+            console.log(`🔄 AuthCallback: Updating user metadata to match existing profile: ${existingRole}`);
+            await supabase.auth.updateUser({
+              data: { role: existingRole },
+            });
+            userRole = existingRole;
+          }
+
+          // Clear any pending role since we're using the existing profile
+          localStorage.removeItem('pending_role');
+          
+          // Redirect to the existing role's dashboard
+          console.log(`🚀 AuthCallback: Redirecting to existing ${existingRole} dashboard`);
+          navigate(`/${existingRole}/dashboard`, { replace: true });
+          return;
+        }
+
+        // No existing profiles found - process new registration
+        console.log('🆕 AuthCallback: No existing profiles, processing new registration');
+        
         // Check for pending role from localStorage (Google OAuth)
         const pendingRole = localStorage.getItem('pending_role');
 
-        if (pendingRole && !user.user_metadata.role) {
+        if (pendingRole && !userRole) {
+          console.log(`🎭 AuthCallback: Setting role from pending: ${pendingRole}`);
           await supabase.auth.updateUser({
             data: { role: pendingRole },
           });
           localStorage.removeItem('pending_role');
+          userRole = pendingRole;
         }
 
-        let userRole = user.user_metadata.role || pendingRole;
-        console.log('🎭 AuthCallback: Initial role:', userRole);
-
-        // If no role in metadata or localStorage, check database for existing profiles
-        if (!userRole) {
-          console.log('🔍 AuthCallback: No role found, checking database profiles...');
-          
-          // Check if user has a teacher profile
-          const { data: teacherProfile, error: teacherError } = await supabase
-            .from('teacher_profiles')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          console.log('👨‍🏫 AuthCallback: Teacher profile check:', { 
-            found: !!teacherProfile, 
-            error: teacherError?.message 
-          });
-
-          if (teacherProfile) {
-            userRole = 'teacher';
-            console.log('✅ AuthCallback: Found teacher profile, updating user metadata');
-            // Update user metadata with the role
-            await supabase.auth.updateUser({
-              data: { role: 'teacher' },
-            });
-          } else {
-            // Check if user has a student profile
-            const { data: studentProfile, error: studentError } = await supabase
-              .from('student_profiles')
-              .select('id')
-              .eq('user_id', user.id)
-              .maybeSingle();
-
-            console.log('👨‍🎓 AuthCallback: Student profile check:', { 
-              found: !!studentProfile, 
-              error: studentError?.message 
-            });
-
-            if (studentProfile) {
-              userRole = 'student';
-              console.log('✅ AuthCallback: Found student profile, updating user metadata');
-              // Update user metadata with the role
-              await supabase.auth.updateUser({
-                data: { role: 'student' },
-              });
-            }
-          }
-        }
+        console.log('🎭 AuthCallback: Final role for new user:', userRole);
 
         // Check if there's a saved redirect path
         const redirectPath = sessionStorage.getItem('redirectAfterLogin');

@@ -54,11 +54,23 @@ const StudentClassroomDetail = () => {
   const [assignmentsSubTab, setAssignmentsSubTab] = useState<'active' | 'finished'>('active');
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
+  const lastIdRef = useRef(id);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data when user is available
+    if (!user?.id) return;
+
+    // Reset refs if classroom ID or user ID changes
+    if (lastIdRef.current !== id || lastUserIdRef.current !== user.id) {
+      hasFetchedRef.current = false;
+      isFetchingRef.current = false;
+      lastIdRef.current = id;
+      lastUserIdRef.current = user.id;
+    }
+
     // Only fetch if we haven't fetched yet and we're not currently fetching
-    if (user?.id && !hasFetchedRef.current && !isFetchingRef.current) {
+    if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchData();
     }
   }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change

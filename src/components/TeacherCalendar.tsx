@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -75,7 +75,21 @@ export function TeacherCalendar({
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Add refs to prevent refetching when tabbing in/out
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const lastClassroomIdsRef = useRef<string>('');
+  const lastTeacherIdRef = useRef<string>('');
+
   const fetchAssignmentsOnly = useCallback(async (classroomIds: string[]) => {
+    // Prevent duplicate fetches
+    const classroomIdsKey = classroomIds.sort().join(',');
+    if (isFetchingRef.current || (hasFetchedRef.current && lastClassroomIdsRef.current === classroomIdsKey)) {
+      return;
+    }
+
+    isFetchingRef.current = true;
+
     try {
       // Fetch assignments with classroom info
       const { data: assignmentsData } = await supabase
@@ -157,12 +171,22 @@ export function TeacherCalendar({
       });
 
       setAssignments(assignmentsWithIncomplete);
+      lastClassroomIdsRef.current = classroomIdsKey;
+      hasFetchedRef.current = true;
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
   const fetchAssignments = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (isFetchingRef.current || (hasFetchedRef.current && lastTeacherIdRef.current === teacherId)) {
+      return;
+    }
+
+    isFetchingRef.current = true;
+
     try {
       const { data: classroomsData, error: classroomError } = await supabase
         .from('classrooms')
@@ -175,30 +199,58 @@ export function TeacherCalendar({
         setAssignments([]);
         setClassrooms([]);
         setLoading(false);
+        hasFetchedRef.current = true;
+        lastTeacherIdRef.current = teacherId;
         return;
       }
 
       setClassrooms(classroomsData);
+      lastTeacherIdRef.current = teacherId;
+      
+      // Reset classroom fetch tracking when fetching all
+      hasFetchedRef.current = false;
       await fetchAssignmentsOnly(classroomsData.map((c) => c.id));
     } catch {
       setLoading(false);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, [teacherId, fetchAssignmentsOnly]);
 
   useEffect(() => {
+    // Reset fetch flags if teacherId changes
+    if (lastTeacherIdRef.current !== teacherId) {
+      hasFetchedRef.current = false;
+      lastClassroomIdsRef.current = '';
+      lastTeacherIdRef.current = teacherId;
+    }
+
     if (propClassrooms !== undefined) {
-      setClassrooms(propClassrooms);
-      setLoading(propLoading ?? false);
-      if (propClassrooms.length > 0) {
-        fetchAssignmentsOnly(propClassrooms.map((c) => c.id));
-      } else {
-        setAssignments([]);
-        setLoading(false);
+      const classroomIds = propClassrooms.map((c) => c.id);
+      const classroomIdsKey = classroomIds.sort().join(',');
+      
+      // Only update if classrooms actually changed
+      if (lastClassroomIdsRef.current !== classroomIdsKey) {
+        setClassrooms(propClassrooms);
+        setLoading(propLoading ?? false);
+        
+        if (propClassrooms.length > 0) {
+          hasFetchedRef.current = false; // Reset to allow fetch
+          fetchAssignmentsOnly(classroomIds);
+        } else {
+          setAssignments([]);
+          setLoading(false);
+          hasFetchedRef.current = true;
+          lastClassroomIdsRef.current = '';
+        }
       }
     } else {
-      fetchAssignments();
+      // Only fetch if we haven't fetched for this teacher yet
+      if (!hasFetchedRef.current && !isFetchingRef.current) {
+        fetchAssignments();
+      }
     }
-  }, [teacherId, propClassrooms, propLoading, fetchAssignmentsOnly, fetchAssignments]);
+  }, [teacherId, propClassrooms, propLoading]); // Removed fetchAssignmentsOnly and fetchAssignments from deps
 
   // Memoize assignment dates to avoid recalculating on every render
   const datesWithAssignments = useMemo(

@@ -86,6 +86,7 @@ const TeacherOnboarding = () => {
 
       const { error } = await supabase.from('teacher_profiles').insert({
         user_id: user.id,
+        email: user.email,
         full_name: formData.fullName,
         avatar_url: avatarUrl || null,
         phone_number: formData.phoneNumber,

@@ -84,7 +84,11 @@
       "invalidEmail": "Please enter a valid email address",
       "passwordTooShort": "Password must be at least 6 characters",
       "selectRole": "Please select your role (Teacher or Student)",
-      "selectRoleFirst": "Please select your role first"
+      "selectRoleFirst": "Please select your role first",
+      "alreadyRegistered": "You already have an account as a {{role}}. Please sign in to access your existing account.",
+      "cannotRegisterMultipleRoles": "Cannot register with multiple roles. You already have an existing account.",
+      "emailAlreadyExists": "This email is already registered. Please sign in or use a different email address.",
+      "emailAlreadyRegisteredAs": "This email is already registered as a {{role}}. Please sign in to continue or use a different email address."
     },
     "errors2": {
       "creatingAccount": "Error creating account",

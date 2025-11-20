@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -109,14 +109,31 @@ const StudentDashboard = () => {
     avatar_url: '',
   });
 
+  // Prevent refetching when tabbing in/out
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data
-    if (user?.id) {
+    if (!user?.id) return;
+
+    // Reset refs if user ID changes
+    if (lastUserIdRef.current !== user.id) {
+      hasFetchedRef.current = false;
+      isFetchingRef.current = false;
+      lastUserIdRef.current = user.id;
+    }
+
+    // Only fetch if we haven't fetched yet and not currently fetching
+    if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchData();
     }
   }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
+    if (isFetchingRef.current) return; // Prevent concurrent fetches
+    isFetchingRef.current = true;
     try {
       // Fetch student profile
       const { data: profileData, error: profileError } = await supabase
@@ -215,6 +232,8 @@ const StudentDashboard = () => {
       toast.error(t('studentDashboard.errors.loadingData'));
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
+      hasFetchedRef.current = true;
     }
   };
 

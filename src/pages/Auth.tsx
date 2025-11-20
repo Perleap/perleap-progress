@@ -80,6 +80,58 @@ const Auth = () => {
 
     setLoading(true);
     try {
+      // Check if email already exists in profile tables
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Check teacher profiles by email
+      const { data: existingTeacherProfile, error: teacherError } = await supabase
+        .from('teacher_profiles')
+        .select('id, email')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      // Check student profiles by email
+      const { data: existingStudentProfile, error: studentError } = await supabase
+        .from('student_profiles')
+        .select('id, email')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      // If we found an existing profile, show error
+      if (existingTeacherProfile || existingStudentProfile) {
+        const existingRole = existingTeacherProfile ? 'teacher' : 'student';
+        toast.error(t('auth.errors.emailAlreadyRegisteredAs', { role: t(`common.${existingRole}`) }));
+        setLoading(false);
+        return;
+      }
+
+      // Also check if current user is already authenticated with a profile
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (currentUser) {
+        // Check if user already has a profile
+        const { data: teacherProfile } = await supabase
+          .from('teacher_profiles')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        const { data: studentProfile } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (teacherProfile || studentProfile) {
+          const existingRole = teacherProfile ? 'teacher' : 'student';
+          toast.error(t('auth.errors.alreadyRegistered', { role: t(`common.${existingRole}`) }));
+          setLoading(false);
+          // Redirect to appropriate dashboard
+          navigate(`/${existingRole}/dashboard`);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -91,17 +143,60 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Check if email confirmation is required
-      if (data.user && !data.session) {
-        toast.success(t('auth.success.accountCreated'), {
-          duration: 8000,
-        });
-      } else if (data.user && data.session) {
-        toast.success(t('auth.success.accountCreatedSuccess'));
-        navigate(`/onboarding/${role}`);
+      // Handle signup response
+      if (data.user) {
+        // If we have a session, user is confirmed - proceed to onboarding
+        if (data.session) {
+          toast.success(t('auth.success.accountCreatedSuccess'));
+          navigate(`/onboarding/${role}`);
+        } else {
+          // No session - email confirmation might be required
+          // For local development, try to sign in immediately
+          // This works if email confirmation is disabled
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (signInData?.session) {
+            // Successfully signed in - user was auto-confirmed
+            toast.success(t('auth.success.accountCreatedSuccess'));
+            navigate(`/onboarding/${role}`);
+          } else {
+            // Email confirmation required
+            toast.success(t('auth.success.accountCreated'), {
+              duration: 8000,
+            });
+            // Note: User needs to confirm email before they can proceed
+          }
+        }
       }
-    } catch (error) {
-      toast.error(error.message || t('auth.errors2.creatingAccount'));
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      
+      // Check for duplicate email error
+      // Supabase Auth returns various messages/codes for duplicate emails:
+      // - "User already registered"
+      // - "Email address is invalid" (when email exists)
+      // - Status 400 or 422
+      const errorMsg = error.message?.toLowerCase() || '';
+      const errorCode = error.code?.toLowerCase() || '';
+      
+      const isDuplicateEmail = 
+        errorMsg.includes('already registered') || 
+        errorMsg.includes('already exists') ||
+        errorMsg.includes('user already registered') ||
+        errorCode.includes('email_exists') ||
+        errorCode.includes('user_already_exists') ||
+        error.status === 422 || // Unprocessable entity (duplicate)
+        // If it's a 400 error with "invalid" message during signup, it's likely duplicate
+        (error.status === 400 && errorMsg.includes('invalid'));
+      
+      if (isDuplicateEmail) {
+        toast.error(t('auth.errors.emailAlreadyExists'));
+      } else {
+        toast.error(error.message || t('auth.errors2.creatingAccount'));
+      }
     } finally {
       setLoading(false);
     }
@@ -110,6 +205,33 @@ const Auth = () => {
   const handleGoogleSignIn = async (selectedRole?: 'teacher' | 'student') => {
     setLoading(true);
     try {
+      // Check if user is already authenticated with an existing profile
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (currentUser) {
+        // Check if user already has a profile
+        const { data: teacherProfile } = await supabase
+          .from('teacher_profiles')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        const { data: studentProfile } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (teacherProfile || studentProfile) {
+          const existingRole = teacherProfile ? 'teacher' : 'student';
+          toast.error(t('auth.errors.alreadyRegistered', { role: t(`common.${existingRole}`) }));
+          setLoading(false);
+          // Redirect to appropriate dashboard
+          navigate(`/${existingRole}/dashboard`);
+          return;
+        }
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

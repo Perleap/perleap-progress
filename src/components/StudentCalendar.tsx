@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +51,20 @@ export function StudentCalendar({
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Add refs to prevent refetching when tabbing in/out
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const lastStudentIdRef = useRef<string>('');
+  const lastPropsKeyRef = useRef<string>('');
+
   const fetchData = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (isFetchingRef.current || (hasFetchedRef.current && lastStudentIdRef.current === studentId)) {
+      return;
+    }
+
+    isFetchingRef.current = true;
+
     try {
       const { data: enrollments, error: enrollError } = await supabase
         .from('enrollments')
@@ -63,6 +76,9 @@ export function StudentCalendar({
       if (!enrollments?.length) {
         setAssignments([]);
         setClassrooms([]);
+        setLoading(false);
+        hasFetchedRef.current = true;
+        lastStudentIdRef.current = studentId;
         return;
       }
 
@@ -80,20 +96,40 @@ export function StudentCalendar({
       if (assignError) throw assignError;
 
       setAssignments((assignmentsData as Assignment[]) || []);
+      lastStudentIdRef.current = studentId;
+      hasFetchedRef.current = true;
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [studentId]);
 
   useEffect(() => {
-    if (propAssignments !== undefined && propClassrooms !== undefined) {
-      setAssignments(propAssignments);
-      setClassrooms(propClassrooms);
-      setLoading(propLoading ?? false);
-    } else {
-      fetchData();
+    // Reset fetch flags if studentId changes
+    if (lastStudentIdRef.current !== studentId) {
+      hasFetchedRef.current = false;
+      lastStudentIdRef.current = studentId;
     }
-  }, [studentId, propAssignments, propClassrooms, propLoading, fetchData]);
+
+    if (propAssignments !== undefined && propClassrooms !== undefined) {
+      // Create a key from props to detect changes
+      const propsKey = `${propAssignments.length}-${propClassrooms.length}`;
+      
+      // Only update if props actually changed
+      if (lastPropsKeyRef.current !== propsKey) {
+        setAssignments(propAssignments);
+        setClassrooms(propClassrooms);
+        setLoading(propLoading ?? false);
+        lastPropsKeyRef.current = propsKey;
+        hasFetchedRef.current = true;
+      }
+    } else {
+      // Only fetch if we haven't fetched for this student yet
+      if (!hasFetchedRef.current && !isFetchingRef.current) {
+        fetchData();
+      }
+    }
+  }, [studentId, propAssignments, propClassrooms, propLoading]); // Removed fetchData from deps
 
   const datesWithAssignments = useMemo(
     () => assignments.map((a) => new Date(a.due_at)),

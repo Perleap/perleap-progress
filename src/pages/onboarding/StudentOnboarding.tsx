@@ -87,6 +87,7 @@ const StudentOnboarding = () => {
       // Create student profile with preferences
       const { error } = await supabase.from('student_profiles').insert({
         user_id: user.id,
+        email: user.email,
         full_name: formData.fullName,
         avatar_url: avatarUrl || null,
         learning_methods: formData.learningMethods,

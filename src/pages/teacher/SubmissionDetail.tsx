@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -69,14 +69,33 @@ const SubmissionDetail = () => {
   const [generatedAssignmentData, setGeneratedAssignmentData] =
     useState<GeneratedAssignmentData | null>(null);
 
+  // Prevent refetching when tabbing in/out
+  const hasFetchedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const lastIdRef = useRef(id);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data when user is available
-    if (user?.id) {
+    if (!user?.id) return;
+
+    // Reset refs if submission ID or user ID changes
+    if (lastIdRef.current !== id || lastUserIdRef.current !== user.id) {
+      hasFetchedRef.current = false;
+      isFetchingRef.current = false;
+      lastIdRef.current = id;
+      lastUserIdRef.current = user.id;
+    }
+
+    // Only fetch if we haven't fetched yet and not currently fetching
+    if (!hasFetchedRef.current && !isFetchingRef.current) {
       fetchData();
     }
   }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
+    if (isFetchingRef.current) return; // Prevent concurrent fetches
+    isFetchingRef.current = true;
     try {
       // Fetch submission with assignment info
       const { data: submissionData, error: subError } = await supabase
@@ -139,6 +158,8 @@ const SubmissionDetail = () => {
       navigate(-1);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
+      hasFetchedRef.current = true;
     }
   };
 
