@@ -31,20 +31,20 @@ const AuthCallback = () => {
         // ALWAYS check for existing profiles first to prevent duplicate registrations
         console.log('🔍 AuthCallback: Checking for existing profiles...');
         
-        // Check by user_id
+        // Check by user_id - THIS IS THE SOURCE OF TRUTH
         const { data: teacherProfile } = await supabase
           .from('teacher_profiles')
-          .select('id')
+          .select('id, user_id, email')
           .eq('user_id', user.id)
           .maybeSingle();
 
         const { data: studentProfile } = await supabase
           .from('student_profiles')
-          .select('id')
+          .select('id, user_id, email')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        // Also check by email (in case of data inconsistency)
+        // Also check by email to detect orphaned data or conflicts
         const userEmail = user.email?.toLowerCase().trim();
         let teacherProfileByEmail = null;
         let studentProfileByEmail = null;
@@ -52,31 +52,48 @@ const AuthCallback = () => {
         if (userEmail) {
           const { data: tpEmail } = await supabase
             .from('teacher_profiles')
-            .select('id, email')
+            .select('id, user_id, email')
             .eq('email', userEmail)
             .maybeSingle();
           teacherProfileByEmail = tpEmail;
 
           const { data: spEmail } = await supabase
             .from('student_profiles')
-            .select('id, email')
+            .select('id, user_id, email')
             .eq('email', userEmail)
             .maybeSingle();
           studentProfileByEmail = spEmail;
         }
 
-        const hasTeacherProfile = teacherProfile || teacherProfileByEmail;
-        const hasStudentProfile = studentProfile || studentProfileByEmail;
+        // IMPORTANT: Only trust profiles that match the current user_id
+        // Profiles found by email with different user_id are orphaned data
+        const hasTeacherProfile = !!teacherProfile;
+        const hasStudentProfile = !!studentProfile;
 
-        console.log('👨‍🏫 AuthCallback: Existing profiles:', { 
-          hasTeacherProfile: !!hasTeacherProfile, 
-          hasStudentProfile: !!hasStudentProfile,
-          userEmail 
+        console.log('👨‍🏫 AuthCallback: Profile check results:', { 
+          hasTeacherProfile,
+          hasStudentProfile,
+          teacherProfileUserId: teacherProfile?.user_id,
+          studentProfileUserId: studentProfile?.user_id,
+          currentUserId: user.id,
+          userEmail,
+          orphanedTeacherProfile: teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id,
+          orphanedStudentProfile: studentProfileByEmail && studentProfileByEmail.user_id !== user.id,
         });
+
+        // Detect and warn about orphaned profiles (data cleanup needed)
+        if (teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id) {
+          console.warn('⚠️ AuthCallback: Found orphaned teacher_profile with email', userEmail, 
+            'but different user_id. This profile belongs to a deleted user and should be cleaned up.');
+        }
+        if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
+          console.warn('⚠️ AuthCallback: Found orphaned student_profile with email', userEmail, 
+            'but different user_id. This profile belongs to a deleted user and should be cleaned up.');
+        }
 
         let userRole = user.user_metadata.role;
 
-        // If user already has a profile, use that role and prevent new registration
+        // If user already has a profile (matching current user_id), use that role
         if (hasTeacherProfile || hasStudentProfile) {
           const existingRole = hasTeacherProfile ? 'teacher' : 'student';
           console.log(`✅ AuthCallback: User has existing ${existingRole} profile`);
@@ -129,19 +146,25 @@ const AuthCallback = () => {
           console.log(`✅ AuthCallback: Role determined as ${userRole}, checking profile...`);
           
           const tableName = `${userRole}_profiles`;
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from(tableName)
             .select('id')
             .eq('user_id', user.id)
             .maybeSingle();
 
+          if (profileError) {
+            console.error('❌ AuthCallback: Error checking profile:', profileError);
+          }
+
           const destination = profile ? `/${userRole}/dashboard` : `/onboarding/${userRole}`;
           
-          console.log(`🚀 AuthCallback: Redirecting to ${destination}`);
+          console.log(`🚀 AuthCallback: ${profile ? 'Profile exists' : 'No profile found'}, redirecting to ${destination}`);
           navigate(destination, { replace: true });
         } else {
           // New user with no role - redirect to auth to select role
-          console.log('⚠️ AuthCallback: No role determined, redirecting to /auth');
+          console.log('⚠️ AuthCallback: No role determined, redirecting to /auth to select role');
+          // Store a flag to indicate the user needs to complete registration
+          sessionStorage.setItem('needsRoleSelection', 'true');
           navigate('/auth', { replace: true });
         }
       } catch (error) {

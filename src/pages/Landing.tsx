@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 
 const Landing = () => {
@@ -12,23 +13,37 @@ const Landing = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect authenticated users to their dashboard
+  // Redirect authenticated users to their dashboard or onboarding
   useEffect(() => {
-    if (!loading && user) {
-      console.log('🏠 Landing: Authenticated user detected, redirecting...');
-      const role = user.user_metadata?.role;
-      
-      if (role === 'teacher') {
-        console.log('🏠 Landing: Redirecting teacher to dashboard');
-        navigate('/teacher/dashboard', { replace: true });
-      } else if (role === 'student') {
-        console.log('🏠 Landing: Redirecting student to dashboard');
-        navigate('/student/dashboard', { replace: true });
-      } else {
-        console.log('🏠 Landing: User has no role, redirecting to auth');
-        navigate('/auth', { replace: true });
+    const checkUserAndRedirect = async () => {
+      if (!loading && user) {
+        console.log('🏠 Landing: Authenticated user detected, checking profile...');
+        const role = user.user_metadata?.role;
+        
+        if (role === 'teacher' || role === 'student') {
+          // Check if user has completed their profile
+          const profileTable = role === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+          const { data: profile } = await supabase
+            .from(profileTable)
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (!profile) {
+            console.log(`🏠 Landing: User has ${role} role but no profile, redirecting to onboarding`);
+            navigate(`/onboarding/${role}`, { replace: true });
+          } else {
+            console.log(`🏠 Landing: Redirecting ${role} to dashboard`);
+            navigate(`/${role}/dashboard`, { replace: true });
+          }
+        } else {
+          console.log('🏠 Landing: User has no role, redirecting to auth');
+          navigate('/auth', { replace: true });
+        }
       }
-    }
+    };
+
+    checkUserAndRedirect();
   }, [user, loading, navigate]);
 
   // Show nothing while checking authentication to prevent flicker

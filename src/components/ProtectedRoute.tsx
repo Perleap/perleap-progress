@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -44,55 +45,85 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
   }, [location.pathname]);
 
   useEffect(() => {
-    if (loading) return;
-    if (hasNavigated.current) return; // Prevent multiple navigations
+    const checkAccessAndNavigate = async () => {
+      if (loading) return;
+      if (hasNavigated.current) return; // Prevent multiple navigations
 
-    const currentPath = location.pathname;
+      const currentPath = location.pathname;
 
-    // Redirect to auth if not authenticated or session is invalid
-    if (!user || !session || !isSessionValid(session)) {
-      // Prevent navigation loop - don't redirect if already at redirectTo
-      if (currentPath === redirectTo) {
-        console.log('🔒 Already at auth page, skipping redirect');
+      // Redirect to auth if not authenticated or session is invalid
+      if (!user || !session || !isSessionValid(session)) {
+        // Prevent navigation loop - don't redirect if already at redirectTo
+        if (currentPath === redirectTo) {
+          console.log('🔒 Already at auth page, skipping redirect');
+          return;
+        }
+
+        console.log('🔒 Protected route: No valid session, redirecting to auth');
+        
+        // Save current path for post-login redirect (except auth pages)
+        if (!currentPath.startsWith('/auth') && currentPath !== '/') {
+          sessionStorage.setItem('redirectAfterLogin', currentPath);
+        }
+        
+        hasNavigated.current = true;
+        navigate(redirectTo, { replace: true });
         return;
       }
 
-      console.log('🔒 Protected route: No valid session, redirecting to auth');
-      
-      // Save current path for post-login redirect (except auth pages)
-      if (!currentPath.startsWith('/auth') && currentPath !== '/') {
-        sessionStorage.setItem('redirectAfterLogin', currentPath);
-      }
-      
-      hasNavigated.current = true;
-      navigate(redirectTo, { replace: true });
-      return;
-    }
+      // Check role-based access
+      if (requiredRole) {
+        const userRole = user.user_metadata?.role;
 
-    // Check role-based access
-    if (requiredRole) {
-      const userRole = user.user_metadata?.role;
+        if (userRole !== requiredRole) {
+          console.log('🔒 Protected route: Role mismatch', { 
+            required: requiredRole, 
+            actual: userRole 
+          });
 
-      if (userRole !== requiredRole) {
-        console.log('🔒 Protected route: Role mismatch', { 
-          required: requiredRole, 
-          actual: userRole 
-        });
+          const dashboardRoute =
+            userRole === 'teacher'
+              ? '/teacher/dashboard'
+              : userRole === 'student'
+                ? '/student/dashboard'
+                : '/auth';
 
-        const dashboardRoute =
-          userRole === 'teacher'
-            ? '/teacher/dashboard'
-            : userRole === 'student'
-              ? '/student/dashboard'
-              : '/auth';
+          // Prevent navigation loop
+          if (currentPath !== dashboardRoute) {
+            hasNavigated.current = true;
+            navigate(dashboardRoute, { replace: true });
+          }
+          return;
+        }
 
-        // Prevent navigation loop
-        if (currentPath !== dashboardRoute) {
-          hasNavigated.current = true;
-          navigate(dashboardRoute, { replace: true });
+        // Check if user has completed their profile (unless they're on onboarding page)
+        if (!currentPath.startsWith('/onboarding/')) {
+          const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+          const { data: profile, error } = await supabase
+            .from(profileTable)
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('🔒 Protected route: Error checking profile', error);
+          }
+
+          if (!profile) {
+            console.log(`🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`);
+            const onboardingPath = `/onboarding/${userRole}`;
+            
+            if (currentPath !== onboardingPath) {
+              hasNavigated.current = true;
+              navigate(onboardingPath, { replace: true });
+            }
+            return;
+          }
         }
       }
-    }
+    };
+
+    checkAccessAndNavigate();
   }, [user, session, loading, requiredRole, navigate, redirectTo, location.pathname]);
 
   if (loading) {

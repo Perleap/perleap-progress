@@ -108,7 +108,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-4">
-                <div className="prose prose-sm max-w-none text-muted-foreground p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
+                <div className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
                   {submission.teacher_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
                 </div>
               </CollapsibleContent>

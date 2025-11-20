@@ -403,6 +403,28 @@
     },
     "success": {
       "saved": "Profile updated successfully!"
+    },
+    "deleteAccount": {
+      "title": "Delete Account",
+      "warning": "This action cannot be undone. Please read carefully:",
+      "consequences": {
+        "profile": "Your profile will be permanently deleted",
+        "data": "All your data will be removed from our systems",
+        "classrooms": "All classrooms you created will be deleted",
+        "assignments": "All assignments and student submissions will be deleted",
+        "enrollments": "You will be removed from all classrooms",
+        "submissions": "All your submissions will be permanently deleted",
+        "permanent": "This action is permanent and cannot be reversed"
+      },
+      "confirmPrompt": "To confirm deletion, please type 'confirm' in the box below:",
+      "typeConfirm": "Type 'confirm' to delete",
+      "deleteButton": "Delete My Account",
+      "success": "Your account has been deleted successfully",
+      "errors": {
+        "incorrectConfirmation": "Please type 'confirm' to proceed",
+        "notAuthenticated": "You must be logged in to delete your account",
+        "deleteFailed": "Failed to delete account. Please try again or contact support."
+      }
     }
   },
   "analytics": {

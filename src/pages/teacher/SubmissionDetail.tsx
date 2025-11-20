@@ -282,7 +282,7 @@ const SubmissionDetail = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-sm max-w-none">
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
                     {feedback.teacher_feedback
                       ?.replace(/\*\*/g, '')
                       ?.replace(/\/\//g, '')
@@ -299,7 +299,7 @@ const SubmissionDetail = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-sm max-w-none text-muted-foreground">
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground">
                     {feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
                   </div>
                 </CardContent>

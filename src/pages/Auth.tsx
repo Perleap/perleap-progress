@@ -31,25 +31,48 @@ const Auth = () => {
 
   // Check if user is already authenticated and redirect
   useEffect(() => {
-    if (!authLoading && user) {
-      // Check if there's a saved redirect path
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+    const checkAuthAndRedirect = async () => {
+      if (!authLoading && user) {
+        console.log('🔍 Auth: Checking authenticated user profile status...');
+        
+        const userRole = user.user_metadata?.role;
+        
+        // Check if user has completed their profile
+        if (userRole === 'teacher' || userRole === 'student') {
+          const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+          const { data: profile } = await supabase
+            .from(profileTable)
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
 
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-        return;
-      }
+          if (!profile) {
+            console.log(`⚠️ Auth: User has ${userRole} role but no profile, redirecting to onboarding`);
+            navigate(`/onboarding/${userRole}`, { replace: true });
+            return;
+          }
+        }
 
-      // Otherwise, redirect to appropriate dashboard based on role
-      const userRole = user.user_metadata?.role;
-      if (userRole === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else if (userRole === 'student') {
-        navigate('/student/dashboard');
+        // Check if there's a saved redirect path
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+          return;
+        }
+
+        // Otherwise, redirect to appropriate dashboard based on role
+        if (userRole === 'teacher') {
+          navigate('/teacher/dashboard');
+        } else if (userRole === 'student') {
+          navigate('/student/dashboard');
+        }
       }
-    }
-  }, [user?.id, authLoading]); // Use user?.id to avoid refetch on user object reference change
+    };
+    
+    checkAuthAndRedirect();
+  }, [user?.id, authLoading, navigate]); // Use user?.id to avoid refetch on user object reference change
 
   // Set the active tab based on the route
   useEffect(() => {
@@ -80,30 +103,11 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      // Check if email already exists in profile tables
-      const normalizedEmail = email.toLowerCase().trim();
-      
-      // Check teacher profiles by email
-      const { data: existingTeacherProfile, error: teacherError } = await supabase
-        .from('teacher_profiles')
-        .select('id, email')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-
-      // Check student profiles by email
-      const { data: existingStudentProfile, error: studentError } = await supabase
-        .from('student_profiles')
-        .select('id, email')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-
-      // If we found an existing profile, show error
-      if (existingTeacherProfile || existingStudentProfile) {
-        const existingRole = existingTeacherProfile ? 'teacher' : 'student';
-        toast.error(t('auth.errors.emailAlreadyRegisteredAs', { role: t(`common.${existingRole}`) }));
-        setLoading(false);
-        return;
-      }
+      // Note: We skip pre-checking profiles by email because:
+      // 1. Supabase will handle duplicate emails in auth.users
+      // 2. Profiles have CASCADE DELETE, so orphaned profiles shouldn't exist
+      // 3. If orphaned data exists, we'll handle it in AuthCallback
+      // This prevents issues with orphaned data blocking legitimate registrations
 
       // Also check if current user is already authenticated with a profile
       const { data: { user: currentUser } } = await supabase.auth.getUser();

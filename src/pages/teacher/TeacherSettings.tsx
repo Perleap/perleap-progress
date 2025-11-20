@@ -10,9 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare } from 'lucide-react';
+import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 
 interface TeacherProfile {
   full_name: string;
@@ -67,6 +68,8 @@ const TeacherSettings = () => {
     classroom_updates: true,
     email_notifications: false,
   });
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data when user is available
@@ -417,6 +420,33 @@ const TeacherSettings = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Danger Zone */}
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>
+                  Permanently delete your account and all associated data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg bg-destructive/10 p-4 space-y-2">
+                  <p className="text-sm font-medium">Delete your account</p>
+                  <p className="text-sm text-muted-foreground">
+                    Once you delete your account, there is no going back. All your classrooms,
+                    assignments, student data, and settings will be permanently removed.
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Questions Tab */}
@@ -587,6 +617,12 @@ const TeacherSettings = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <DeleteAccountDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        userRole="teacher"
+      />
     </div>
   );
 };
