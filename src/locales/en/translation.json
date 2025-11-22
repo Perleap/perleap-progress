@@ -114,7 +114,7 @@
     "sortOptions": {
       "dueDate": "Due Date",
       "recent": "Most Recent",
-      "oldest": "Oldest First"
+      "oldest": "Earliest First"
     },
     "joinClassroom": {
       "title": "Join a Classroom",

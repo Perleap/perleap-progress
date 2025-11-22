@@ -116,15 +116,34 @@ const StudentClassroomDetail = () => {
         const assignmentIds = assignmentsData.map((a) => a.id);
         const { data: submissionsData } = await supabase
           .from('submissions')
-          .select('assignment_id')
+          .select('id, assignment_id')
           .eq('student_id', user?.id)
           .in('assignment_id', assignmentIds);
 
-        const submittedAssignmentIds = new Set(submissionsData?.map((s) => s.assignment_id) || []);
+        // Fetch feedback to determine which assignments are truly completed
+        const submissionIds = submissionsData?.map(s => s.id) || [];
+        let finishedAssignmentIds = new Set<string>();
 
-        // Separate active and finished assignments
-        const active = assignmentsData.filter(a => !submittedAssignmentIds.has(a.id));
-        const finished = assignmentsData.filter(a => submittedAssignmentIds.has(a.id));
+        if (submissionIds.length > 0) {
+          const { data: feedbackData } = await supabase
+            .from('assignment_feedback')
+            .select('submission_id')
+            .in('submission_id', submissionIds);
+
+          const completedSubmissionIds = new Set(feedbackData?.map(f => f.submission_id) || []);
+          const submissionMap = new Map(submissionsData?.map(s => [s.id, s.assignment_id]) || []);
+
+          // Only mark as finished if feedback exists
+          finishedAssignmentIds = new Set(
+            Array.from(completedSubmissionIds)
+              .map(subId => submissionMap.get(subId))
+              .filter((id): id is string => id !== undefined)
+          );
+        }
+
+        // Separate active and finished assignments based on feedback existence
+        const active = assignmentsData.filter(a => !finishedAssignmentIds.has(a.id));
+        const finished = assignmentsData.filter(a => finishedAssignmentIds.has(a.id));
 
         setAssignments(active);
         setFinishedAssignments(finished);
@@ -148,11 +167,11 @@ const StudentClassroomDetail = () => {
     const sorted = [...assignmentsList];
     switch (sortBy) {
       case 'recent':
-        // Newest received first (by created_at)
-        // Assuming created_at exists but not in interface, using due_at as fallback or just keeping as is
-        return sorted;
-      case 'oldest':
+        // Newest received first - reverse the default order
         return sorted.reverse();
+      case 'oldest':
+        // Oldest first - keep default order (already sorted by due_at ascending)
+        return sorted;
       case 'due-date':
         // Earliest due date first
         return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());

@@ -173,11 +173,30 @@ const StudentDashboard = () => {
           const assignmentIds = assignmentsData.map((a) => a.id);
           const { data: submissionsData } = await supabase
             .from('submissions')
-            .select('assignment_id')
+            .select('id, assignment_id')
             .eq('student_id', user?.id)
             .in('assignment_id', assignmentIds);
 
-          const submittedAssignmentIds = new Set(submissionsData?.map((s) => s.assignment_id) || []);
+          // Fetch feedback to determine which assignments are truly completed
+          const submissionIds = submissionsData?.map(s => s.id) || [];
+          let finishedAssignmentIds = new Set<string>();
+
+          if (submissionIds.length > 0) {
+            const { data: feedbackData } = await supabase
+              .from('assignment_feedback')
+              .select('submission_id')
+              .in('submission_id', submissionIds);
+
+            const completedSubmissionIds = new Set(feedbackData?.map(f => f.submission_id) || []);
+            const submissionMap = new Map(submissionsData?.map(s => [s.id, s.assignment_id]) || []);
+
+            // Only mark as finished if feedback exists
+            finishedAssignmentIds = new Set(
+              Array.from(completedSubmissionIds)
+                .map(subId => submissionMap.get(subId))
+                .filter((id): id is string => id !== undefined)
+            );
+          }
 
           // Fetch teacher profiles
           const teacherIds = [...new Set(assignmentsData.map((a) => a.classrooms.teacher_id))];
@@ -197,9 +216,9 @@ const StudentDashboard = () => {
             },
           }));
 
-          // Separate active and finished assignments
-          const active = assignmentsWithTeachers.filter(a => !submittedAssignmentIds.has(a.id));
-          const finished = assignmentsWithTeachers.filter(a => submittedAssignmentIds.has(a.id));
+          // Separate active and finished assignments based on feedback existence
+          const active = assignmentsWithTeachers.filter(a => !finishedAssignmentIds.has(a.id));
+          const finished = assignmentsWithTeachers.filter(a => finishedAssignmentIds.has(a.id));
 
           setAssignments(active);
           setFinishedAssignments(finished);
@@ -337,13 +356,11 @@ const StudentDashboard = () => {
     const sorted = [...assignmentsList];
     switch (sortBy) {
       case 'recent':
-        // Newest received first (by created_at)
-        // Note: Assignment interface doesn't have created_at, assuming due_at for now or keeping as is if created_at exists in data but not interface
-        // Assuming created_at is fetched but not in interface, adding to interface would be better. 
-        // For now, using due_at as proxy or if created_at is available in runtime object.
-        return sorted;
-      case 'oldest':
+        // Newest received first - reverse the default order
         return sorted.reverse();
+      case 'oldest':
+        // Oldest first - keep default order (already sorted by due_at ascending)
+        return sorted;
       case 'due-date':
         // Earliest due date first
         return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());

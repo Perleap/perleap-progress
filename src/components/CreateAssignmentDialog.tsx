@@ -364,6 +364,28 @@ export function CreateAssignmentDialog({
                 }
               }
             ]);
+          } else {
+            // Notify all enrolled students for classroom-wide assignments
+            const { data: enrollments } = await supabase
+              .from('enrollments')
+              .select('student_id')
+              .eq('classroom_id', classroomId);
+
+            if (enrollments && enrollments.length > 0) {
+              const notifications = enrollments.map(e => ({
+                userId: e.student_id,
+                type: 'assignment_created' as const,
+                title: 'New Assignment',
+                message: `New assignment "${formData.title}" has been posted`,
+                link: `/student/assignment/${assignment.id}`,
+                metadata: {
+                  assignment_id: assignment.id,
+                  classroom_id: classroomId,
+                  assignment_title: formData.title,
+                }
+              }));
+              await createBulkNotifications(notifications);
+            }
           }
         } catch (error) {
           console.error('Error sending notifications:', error);
