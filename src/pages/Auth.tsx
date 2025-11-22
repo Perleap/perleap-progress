@@ -315,6 +315,19 @@ const Auth = () => {
     }
   };
 
+  // If user is already authenticated and auth is not loading, show loading state
+  // This prevents the Auth page from rendering and causing a flicker
+  if (!authLoading && user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BreathingBackground className="flex items-center justify-center min-h-screen p-4">
       <div className="absolute top-8 left-8 z-20">
