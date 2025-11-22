@@ -84,15 +84,17 @@ const TeacherDashboard = () => {
   const fetchClassrooms = async () => {
     isFetchingRef.current = true;
     try {
-      // Fetch teacher profile
+      // Fetch teacher profile - use maybeSingle() to handle cases where profile doesn't exist yet
       const { data: profileData, error: profileError } = await supabase
         .from('teacher_profiles')
         .select('full_name, avatar_url')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (!profileError && profileData) {
         setProfile(profileData);
+      } else if (profileError) {
+        console.error('Error fetching teacher profile:', profileError);
       }
 
       const { data, error } = await supabase

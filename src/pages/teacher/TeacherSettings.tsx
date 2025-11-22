@@ -80,14 +80,16 @@ const TeacherSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      // Fetch teacher profile with all fields
+      // Fetch teacher profile with all fields - use maybeSingle() to handle missing profiles
       const { data: profileData, error: profileError } = await supabase
         .from('teacher_profiles')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Error fetching teacher profile:', profileError);
+      }
 
       if (profileData) {
         setProfile({

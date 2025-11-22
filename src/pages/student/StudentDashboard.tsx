@@ -125,15 +125,17 @@ const StudentDashboard = () => {
     if (isFetchingRef.current) return; // Prevent concurrent fetches
     isFetchingRef.current = true;
     try {
-      // Fetch student profile
+      // Fetch student profile - use maybeSingle() to handle missing profiles
       const { data: profileData, error: profileError } = await supabase
         .from('student_profiles')
         .select('full_name, avatar_url')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (!profileError && profileData) {
         setProfile(profileData);
+      } else if (profileError) {
+        console.error('Error fetching student profile:', profileError);
       }
 
       // Fetch enrollments and classrooms with date ranges
