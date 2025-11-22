@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { CalendarDays } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getActiveClassroomsForDate,
@@ -28,7 +28,11 @@ interface Assignment {
   };
 }
 
-interface Classroom extends ClassroomDateRange {}
+interface Classroom extends ClassroomDateRange {
+  id: string;
+  name: string;
+  subject: string;
+}
 
 interface StudentCalendarProps {
   studentId: string;
@@ -47,9 +51,13 @@ export function StudentCalendar({
   const { language } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [assignments, setAssignments] = useState<Assignment[]>(propAssignments || []);
+  const [classrooms, setClassrooms] = useState<Classroom[]>(propClassrooms || []);
+  const [loading, setLoading] = useState(
+    propAssignments !== undefined && propClassrooms !== undefined
+      ? (propLoading ?? false)
+      : true
+  );
 
   // Add refs to prevent refetching when tabbing in/out
   const hasFetchedRef = useRef(false);
@@ -114,14 +122,23 @@ export function StudentCalendar({
     if (propAssignments !== undefined && propClassrooms !== undefined) {
       // Create a key from props to detect changes
       const propsKey = `${propAssignments.length}-${propClassrooms.length}`;
-      
-      // Only update if props actually changed
-      if (lastPropsKeyRef.current !== propsKey) {
+
+      // Initialize the ref on first render or update if props changed
+      if (lastPropsKeyRef.current === '') {
+        // First render with props - sync loading state
+        lastPropsKeyRef.current = propsKey;
+        hasFetchedRef.current = true;
+        setLoading(propLoading ?? false);
+      } else if (lastPropsKeyRef.current !== propsKey) {
+        // Props changed - update state
         setAssignments(propAssignments);
         setClassrooms(propClassrooms);
         setLoading(propLoading ?? false);
         lastPropsKeyRef.current = propsKey;
         hasFetchedRef.current = true;
+      } else if (propLoading !== undefined && loading !== propLoading) {
+        // Only loading state changed
+        setLoading(propLoading);
       }
     } else {
       // Only fetch if we haven't fetched for this student yet
@@ -129,7 +146,7 @@ export function StudentCalendar({
         fetchData();
       }
     }
-  }, [studentId, propAssignments, propClassrooms, propLoading]); // Removed fetchData from deps
+  }, [studentId, propAssignments, propClassrooms, propLoading, loading, fetchData]);
 
   const datesWithAssignments = useMemo(
     () => assignments.map((a) => new Date(a.due_at)),
@@ -161,7 +178,7 @@ export function StudentCalendar({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-none shadow-lg rounded-[32px]">
         <CardContent className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
@@ -170,47 +187,68 @@ export function StudentCalendar({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5" />
-          {t('calendar.title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          month={month}
-          onMonthChange={setMonth}
-          modifiers={modifiers}
-          modifiersStyles={CALENDAR_MODIFIERS_STYLES}
-          className="rounded-md border"
-        />
+    <Card className="border-none shadow-lg rounded-[32px] overflow-hidden bg-white dark:bg-slate-900">
+      <div className="p-6 pb-0">
+        <div className="flex items-center gap-2 mb-6">
+          <CalendarIcon className="h-6 w-6" />
+          <h2 className="text-2xl font-bold">Calendar</h2>
+        </div>
+      </div>
+
+      <CardContent className="p-6 pt-0 space-y-6">
+        <div className="border rounded-3xl p-4">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            month={month}
+            onMonthChange={setMonth}
+            modifiers={modifiers}
+            modifiersStyles={CALENDAR_MODIFIERS_STYLES}
+            className="w-full"
+            classNames={{
+              month: "space-y-4 w-full",
+              caption: "flex justify-center items-center relative pt-1 pb-6",
+              caption_label: "text-base font-bold uppercase tracking-wider",
+              nav: "flex items-center gap-1",
+              nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex w-full justify-between mb-2",
+              head_cell: "text-muted-foreground w-9 font-normal text-[10px] uppercase tracking-wider text-center",
+              row: "flex w-full mt-2 justify-between",
+              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent",
+              day: "h-9 w-9 p-0 font-normal text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all",
+              day_selected: "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full shadow-md",
+              day_today: "text-indigo-600 font-bold",
+            }}
+          />
+        </div>
 
         {selectedDate && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-sm">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h3 className="font-bold text-lg">
               {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
             </h3>
 
-            {activeClassesForSelectedDate.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3" />
-                  {t('calendar.activeClasses')} ({activeClassesForSelectedDate.length})
-                </h4>
-                <div className="space-y-1">
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {t('calendar.activeClasses')} ({activeClassesForSelectedDate.length})
+              </h4>
+
+              {activeClassesForSelectedDate.length > 0 ? (
+                <div className="space-y-2">
                   {activeClassesForSelectedDate.map((classroom) => (
                     <div
                       key={classroom.id}
-                      className="p-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
+                      className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 transition-all hover:scale-[1.02]"
                     >
-                      <p className="font-medium text-xs">{classroom.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{classroom.subject}</p>
+                      <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{classroom.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{classroom.subject}</p>
                       {classroom.start_date && classroom.end_date && (
-                        <p className="text-[10px] text-muted-foreground mt-1">
+                        <p className="text-[10px] text-slate-400 mt-2 font-medium">
                           {format(new Date(classroom.start_date), 'MMM d', {
                             locale: language === 'he' ? he : undefined,
                           })}{' '}
@@ -223,66 +261,41 @@ export function StudentCalendar({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-red-600 dark:text-red-400">
-                {t('calendar.assignmentsDue')}
-              </h4>
-              {assignmentsForSelectedDate.length === 0 ? (
-                <p className="text-xs text-muted-foreground">{t('calendar.noAssignments')}</p>
               ) : (
-                <ScrollArea className="h-[150px]">
-                  <div className="space-y-2">
-                    {assignmentsForSelectedDate.map((assignment) => (
-                      <div
-                        key={assignment.id}
-                        className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
-                      >
-                        <p className="font-medium text-sm">{assignment.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {assignment.classrooms.name}
-                        </p>
-                        <div className="flex gap-2 mt-2">
-                          <Badge variant="outline" className="text-xs">
-                            {assignment.type.replace('_', ' ')}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {assignment.classrooms.subject}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <p className="text-xs text-muted-foreground pl-1">No active classes on this date</p>
               )}
             </div>
-          </div>
-        )}
 
-        {assignments.length > 0 && (
-          <div className="pt-4 border-t">
-            <h3 className="font-semibold text-sm mb-2">
-              {t('calendar.upcomingAssignments')} ({assignments.length})
-            </h3>
-            <ScrollArea className="h-[150px]">
-              <div className="space-y-1">
-                {assignments.slice(0, 10).map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="flex justify-between items-center text-xs py-1"
-                  >
-                    <span className="truncate flex-1">{assignment.title}</span>
-                    <span className="text-muted-foreground ml-2 whitespace-nowrap">
-                      {format(new Date(assignment.due_at), 'MMM d', {
-                        locale: language === 'he' ? he : undefined,
-                      })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-red-500 dark:text-red-400">
+                {t('calendar.assignmentsDue')}
+              </h4>
+
+              {assignmentsForSelectedDate.length === 0 ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500">
+                  No assignments due on this date
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {assignmentsForSelectedDate.map((assignment) => (
+                    <div
+                      key={assignment.id}
+                      className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 transition-all hover:scale-[1.02]"
+                    >
+                      <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{assignment.title}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {assignment.classrooms.name}
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        <Badge variant="outline" className="text-[10px] bg-white dark:bg-slate-900 border-red-200 text-red-600">
+                          {assignment.type.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

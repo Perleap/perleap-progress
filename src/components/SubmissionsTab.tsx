@@ -221,11 +221,13 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   if (submissions.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No submissions yet</h3>
-          <p className="text-muted-foreground">
+      <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4">
+            <FileText className="h-8 w-8 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">No submissions yet</h3>
+          <p className="text-slate-500 dark:text-slate-400 max-w-md">
             Student submissions will appear here when they complete assignments
           </p>
         </CardContent>
@@ -234,19 +236,22 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Filter className="h-4 w-4 md:h-5 md:w-5" />
+    <div className="space-y-6">
+      <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
+                <Filter className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
               {t('submissionsTab.filterTitle')}
             </CardTitle>
             <Button
               onClick={handleBulkExport}
               disabled={submissions.length === 0}
               size="sm"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all"
+              variant="outline"
             >
               <Download className="h-4 w-4 me-2" />
               {t('submissionsTab.exportAll')}
@@ -254,29 +259,29 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="text-sm font-medium mb-2 block">{t('submissionsTab.search')}</label>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">{t('submissionsTab.search')}</label>
               <div className="relative">
                 <Search
-                  className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`}
+                  className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400`}
                 />
                 <Input
                   placeholder={t('submissionsTab.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`${isRTL ? 'pr-9' : 'pl-9'} text-sm`}
+                  className={`${isRTL ? 'pr-10' : 'pl-10'} rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all`}
                 />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium mb-2 block">{t('common.student')}</label>
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">{t('common.student')}</label>
                 <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                  <SelectTrigger className="text-sm">
+                  <SelectTrigger className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700">
                     <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
                     {students.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
@@ -287,14 +292,14 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
                   {t('submissionsTab.assignment')}
                 </label>
                 <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                  <SelectTrigger className="text-sm">
+                  <SelectTrigger className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700">
                     <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
                     {assignments.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
@@ -310,17 +315,21 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       </Card>
 
       {filteredSubmissions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t('submissionsTab.noMatches')}</h3>
-            <p className="text-muted-foreground">{t('submissionsTab.adjustFilters')}</p>
+        <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-3">
+              <Search className="h-6 w-6 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">{t('submissionsTab.noMatches')}</h3>
+            <p className="text-slate-500 dark:text-slate-400">{t('submissionsTab.adjustFilters')}</p>
           </CardContent>
         </Card>
       ) : (
-        filteredSubmissions.map((submission) => (
-          <SubmissionCard key={submission.id} submission={submission} />
-        ))
+        <div className="grid gap-4">
+          {filteredSubmissions.map((submission) => (
+            <SubmissionCard key={submission.id} submission={submission} />
+          ))}
+        </div>
       )}
     </div>
   );

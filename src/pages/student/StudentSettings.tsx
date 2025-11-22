@@ -149,13 +149,12 @@ const StudentSettings = () => {
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('student-avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
         toast.error('Failed to upload photo');
@@ -166,7 +165,7 @@ const StudentSettings = () => {
       // Get public URL
       const {
         data: { publicUrl },
-      } = supabase.storage.from('student-avatars').getPublicUrl(filePath);
+      } = supabase.storage.from('student-avatars').getPublicUrl(fileName);
 
       // Update profile with avatar URL
       const { error: updateError } = await supabase

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -14,8 +13,10 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, X, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Calendar, Target, AlertCircle, FileText, Sparkles } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 interface CreateClassroomDialogProps {
   open: boolean;
@@ -253,240 +254,341 @@ export const CreateClassroomDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('createClassroom.title')}</DialogTitle>
-          <DialogDescription>{t('createClassroom.description')}</DialogDescription>
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
+        <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+
+        <DialogHeader className="px-8 pt-8 pb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
+              <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              {t('createClassroom.title')}
+            </DialogTitle>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 ml-1">
+            {t('createClassroom.description')}
+          </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="courseTitle">{t('createClassroom.courseTitle')} *</Label>
-            <Input
-              id="courseTitle"
-              value={formData.courseTitle}
-              onChange={(e) => setFormData({ ...formData, courseTitle: e.target.value })}
-              required
-            />
-          </div>
+        <ScrollArea className="max-h-[calc(90vh-140px)] px-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
 
-          <div className="space-y-2">
-            <Label htmlFor="courseDuration">{t('createClassroom.courseDuration')}</Label>
-            <Input
-              id="courseDuration"
-              placeholder="e.g., 12 weeks, 1 semester"
-              value={formData.courseDuration}
-              onChange={(e) => setFormData({ ...formData, courseDuration: e.target.value })}
-            />
-          </div>
+            {/* Basic Info Section */}
+            <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
+                <BookOpen className="h-5 w-5" />
+                <h3 className="font-semibold">Course Basics</h3>
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="courseTitle" className="text-slate-600 dark:text-slate-300">
+                  {t('createClassroom.courseTitle')} <span className="text-red-400">*</span>
+                </Label>
+                <Input
+                  id="courseTitle"
+                  value={formData.courseTitle}
+                  onChange={(e) => setFormData({ ...formData, courseTitle: e.target.value })}
+                  required
+                  className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
+                  placeholder="e.g. Advanced Mathematics"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="courseOutline">Course Outline (topics + flow)</Label>
-            <Textarea
-              id="courseOutline"
-              placeholder="Describe the main topics and how they flow..."
-              value={formData.courseOutline}
-              onChange={(e) => setFormData({ ...formData, courseOutline: e.target.value })}
-              rows={4}
-            />
-          </div>
-
-          <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Subject Areas & Skills</Label>
-            <p className="text-xs text-muted-foreground">
-              Add subject areas (e.g., Algebra, Geometry) and their specific skills
-            </p>
-            
-            {formData.domains.map((domain, domainIndex) => (
-              <div key={domainIndex} className="space-y-2 p-3 border rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="Subject area name (e.g., Algebra)"
-                    value={domain.name}
-                    onChange={(e) => updateDomainName(domainIndex, e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeDomain(domainIndex)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label htmlFor="courseDuration" className="text-slate-600 dark:text-slate-300">
+                    {t('createClassroom.courseDuration')}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="courseDuration"
+                      placeholder="e.g., 12 weeks"
+                      value={formData.courseDuration}
+                      onChange={(e) => setFormData({ ...formData, courseDuration: e.target.value })}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 pl-10"
+                    />
+                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                  </div>
                 </div>
-                
-                <div className="space-y-2 ml-4">
-                  <Label className="text-sm">Skills</Label>
-                  {domain.components.map((component, componentIndex) => (
-                    <div key={componentIndex} className="flex items-center gap-2">
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate" className="text-slate-600 dark:text-slate-300">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate" className="text-slate-600 dark:text-slate-300">End Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="courseOutline" className="text-slate-600 dark:text-slate-300">
+                  Course Outline
+                </Label>
+                <Textarea
+                  id="courseOutline"
+                  placeholder="Describe the main topics and how they flow..."
+                  value={formData.courseOutline}
+                  onChange={(e) => setFormData({ ...formData, courseOutline: e.target.value })}
+                  rows={4}
+                  className="rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Subject Areas Section */}
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                  <Target className="h-5 w-5" />
+                  <h3 className="font-semibold">Subject Areas & Skills</h3>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addDomain}
+                  className="rounded-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Area
+                </Button>
+              </div>
+
+              {formData.domains.length === 0 && (
+                <div className="text-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50">
+                  <p className="text-slate-500 text-sm">Add subject areas to define what students will learn</p>
+                </div>
+              )}
+
+              <div className="grid gap-4">
+                {formData.domains.map((domain, domainIndex) => (
+                  <div key={domainIndex} className="space-y-4 p-5 border border-purple-100 dark:border-purple-900/30 rounded-3xl bg-purple-50/30 dark:bg-purple-900/10">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 font-bold text-sm">
+                        {domainIndex + 1}
+                      </div>
                       <Input
-                        placeholder={`Skill ${componentIndex + 1}`}
-                        value={component}
-                        onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
-                        className="flex-1 bg-background"
-                        size="sm"
+                        placeholder="Subject area name (e.g., Algebra)"
+                        value={domain.name}
+                        onChange={(e) => updateDomainName(domainIndex, e.target.value)}
+                        className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-10"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeComponent(domainIndex, componentIndex)}
+                        onClick={() => removeDomain(domainIndex)}
+                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="pl-11 space-y-3">
+                      <Label className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Skills</Label>
+                      <div className="grid gap-2">
+                        {domain.components.map((component, componentIndex) => (
+                          <div key={componentIndex} className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-purple-300" />
+                            <Input
+                              placeholder={`Skill ${componentIndex + 1}`}
+                              value={component}
+                              onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
+                              className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-9 text-sm"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeComponent(domainIndex, componentIndex)}
+                              className="h-8 w-8 text-slate-400 hover:text-red-500"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addComponent(domainIndex)}
+                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-100/50 text-xs font-medium"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Skill
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Materials Section */}
+            <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <FileText className="h-5 w-5" />
+                <h3 className="font-semibold">Course Materials</h3>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Upload PDF</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="pdf-upload"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePdfUpload}
+                      disabled={uploadingMaterial}
+                      className="h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Add Link</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://..."
+                      value={linkInput}
+                      onChange={(e) => setLinkInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddLink();
+                        }
+                      }}
+                      className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddLink}
+                      className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {formData.materials.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                  {formData.materials.map((material, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm group">
+                      <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                        {material.type === 'pdf' ? (
+                          <Upload className="h-4 w-4" />
+                        ) : (
+                          <LinkIcon className="h-4 w-4" />
+                        )}
+                      </div>
+                      <span className="flex-1 text-sm truncate font-medium text-slate-700 dark:text-slate-300">{material.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeMaterial(index)}
+                        className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* Outcomes & Challenges */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-emerald-700 dark:text-emerald-400 font-semibold">Learning Outcomes</Label>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={() => addComponent(domainIndex)}
+                    onClick={addOutcome}
+                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add Skill
+                    <Plus className="h-3 w-3 mr-1" /> Add
                   </Button>
                 </div>
+                <div className="space-y-2">
+                  {formData.learningOutcomes.map((outcome, index) => (
+                    <Input
+                      key={index}
+                      placeholder={`Outcome ${index + 1}`}
+                      value={outcome}
+                      onChange={(e) => handleOutcomeChange(index, e.target.value)}
+                      className="rounded-xl border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-900/10 focus-visible:ring-emerald-500"
+                    />
+                  ))}
+                </div>
               </div>
-            ))}
-            
-            <Button type="button" variant="outline" onClick={addDomain}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Subject Area
-            </Button>
-          </div>
 
-          <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Course Materials</Label>
-            <p className="text-xs text-muted-foreground">
-              Add PDFs and links that will be available for this classroom
-            </p>
-
-            {/* Display existing materials */}
-            {formData.materials.length > 0 && (
-              <div className="space-y-2">
-                {formData.materials.map((material, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-                    {material.type === 'pdf' ? (
-                      <Upload className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="flex-1 text-sm truncate">{material.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeMaterial(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* PDF Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="pdf-upload" className="text-sm">
-                Upload PDF
-              </Label>
-              <Input
-                id="pdf-upload"
-                type="file"
-                accept="application/pdf"
-                onChange={handlePdfUpload}
-                disabled={uploadingMaterial}
-              />
-            </div>
-
-            {/* Link Input */}
-            <div className="space-y-2">
-              <Label htmlFor="link-input" className="text-sm">
-                Add Link
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="link-input"
-                  placeholder="https://..."
-                  value={linkInput}
-                  onChange={(e) => setLinkInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddLink();
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <Button type="button" variant="outline" onClick={handleAddLink}>
-                  <LinkIcon className="h-4 w-4 mr-2" />
-                  Add
-                </Button>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-amber-700 dark:text-amber-400 font-semibold">Key Challenges</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={addChallenge}
+                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Add
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {formData.keyChallenges.map((challenge, index) => (
+                    <Input
+                      key={index}
+                      placeholder={`Challenge ${index + 1}`}
+                      value={challenge}
+                      onChange={(e) => handleChallengeChange(index, e.target.value)}
+                      className="rounded-xl border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10 focus-visible:ring-amber-500"
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Key Learning Outcomes/Objectives</Label>
-            {formData.learningOutcomes.map((outcome, index) => (
-              <Input
-                key={index}
-                placeholder={`Outcome ${index + 1}`}
-                value={outcome}
-                onChange={(e) => handleOutcomeChange(index, e.target.value)}
-              />
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={addOutcome}>
-              Add Outcome
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Specific Challenges or Components to Highlight</Label>
-            {formData.keyChallenges.map((challenge, index) => (
-              <Input
-                key={index}
-                placeholder={`Challenge ${index + 1}`}
-                value={challenge}
-                onChange={(e) => handleChallengeChange(index, e.target.value)}
-              />
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={addChallenge}>
-              Add Challenge
-            </Button>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Classroom'}
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="rounded-full px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
+              >
+                {loading ? 'Creating...' : 'Create Classroom'}
+              </Button>
+            </div>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

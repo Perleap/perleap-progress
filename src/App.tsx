@@ -23,6 +23,8 @@ import StudentSettings from './pages/student/StudentSettings';
 import Pricing from './pages/Pricing';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
+import Product from './pages/Product';
+import Solutions from './pages/Solutions';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient({
@@ -53,6 +55,8 @@ const App = () => (
             <LanguageProvider>
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/product" element={<Product />} />
+                <Route path="/solutions" element={<Solutions />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/login" element={<Auth />} />
                 <Route path="/register" element={<Auth />} />

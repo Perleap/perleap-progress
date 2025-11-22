@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +14,18 @@ import { TeacherCalendar } from '@/components/TeacherCalendar';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Settings, Moon, Sun, Globe, User } from "lucide-react";
+import { useTheme } from "next-themes";
+import { DashboardHeader } from '@/components/DashboardHeader';
 
 interface Classroom {
   id: string;
@@ -33,7 +46,8 @@ interface CalendarClassroom {
 }
 
 const TeacherDashboard = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { theme, setTheme } = useTheme();
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -111,6 +125,19 @@ const TeacherDashboard = () => {
     return names[0][0].toUpperCase();
   };
 
+  // Deterministic gradient based on classroom ID or name
+  const getGradient = (id: string) => {
+    const gradients = [
+      "from-pink-50 to-rose-100 dark:from-pink-950/30 dark:to-rose-900/30",
+      "from-orange-50 to-amber-100 dark:from-orange-950/30 dark:to-amber-900/30",
+      "from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/30",
+      "from-emerald-50 to-teal-100 dark:from-emerald-950/30 dark:to-teal-900/30",
+      "from-violet-50 to-purple-100 dark:from-violet-950/30 dark:to-purple-900/30",
+    ];
+    const index = id.charCodeAt(0) % gradients.length;
+    return gradients[index];
+  };
+
   // Transform data for calendar component
   const calendarClassrooms: CalendarClassroom[] = classrooms.map((c) => ({
     id: c.id,
@@ -130,115 +157,117 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container flex h-14 md:h-16 items-center justify-between px-4">
-          <h1 className="text-lg md:text-2xl font-bold">
-            {!loading && profile.full_name
-              ? t('teacherDashboard.welcome', { name: profile.full_name.split(' ')[0] })
-              : t('teacherDashboard.title')}
-          </h1>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <LanguageSwitcher />
-            <NotificationDropdown translationKeyPrefix="teacherDashboard" />
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={signOut}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="relative h-12 w-12 rounded-full p-0"
-              onClick={() => navigate('/teacher/settings')}
-            >
-              <Avatar className="h-12 w-12 cursor-pointer">
-                {profile.avatar_url && (
-                  <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
-                )}
-                <AvatarFallback>{getInitials()}</AvatarFallback>
-              </Avatar>
-            </Button>
+    <BreathingBackground className="min-h-screen pb-12">
+      <DashboardHeader
+        title={t('teacherDashboard.title')}
+        userType="teacher"
+      />
+
+      <main className="container py-8 px-4 relative z-10 max-w-7xl mx-auto">
+        {/* Hero Section */}
+        <div className="mb-10 relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-100 via-purple-50 to-blue-50 dark:from-violet-950/40 dark:via-purple-900/20 dark:to-blue-900/20 p-8 md:p-10 shadow-sm border border-white/20">
+          <div className="relative z-10">
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-3">
+              {t('teacherDashboard.welcome', { name: profile.full_name?.split(' ')[0] || 'Teacher' })}
+            </h1>
+            <p className="text-slate-600 dark:text-slate-300 text-lg max-w-2xl">
+              {t('teacherDashboard.subtitle')}
+            </p>
           </div>
+          <div className="absolute right-0 top-0 w-64 h-64 bg-white/30 dark:bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+          <div className="absolute left-0 bottom-0 w-48 h-48 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none" />
         </div>
-      </header>
 
-      <main className="container py-4 md:py-8 px-4">
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="mb-6 md:mb-8">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">
-                    {t('teacherDashboard.myClassrooms')}
-                  </h2>
-                  <p className="text-sm md:text-base text-muted-foreground">
-                    {t('teacherDashboard.subtitle')}
-                  </p>
+        <div className="grid lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl">
+                  <BookOpen className="h-5 w-5 text-primary" />
                 </div>
-                <Button onClick={() => setDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-                  <Plus className="me-2 h-4 w-4" />
-                  {t('teacherDashboard.createClassroom')}
-                </Button>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                  {t('teacherDashboard.myClassrooms')}
+                </h2>
               </div>
+              <Button
+                onClick={() => setDialogOpen(true)}
+                className="w-full sm:w-auto rounded-full shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90"
+              >
+                <Plus className="me-2 h-4 w-4" />
+                {t('teacherDashboard.createClassroom')}
+              </Button>
+            </div>
 
-              {loading ? (
-                <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
-              ) : classrooms.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      {t('teacherDashboard.empty.title')}
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      {t('teacherDashboard.empty.description')}
-                    </p>
-                    <Button onClick={() => setDialogOpen(true)}>
-                      <Plus className="me-2 h-4 w-4" />
-                      {t('teacherDashboard.createClassroom')}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {classrooms.map((classroom) => (
-                    <Card
-                      key={classroom.id}
-                      className="hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
-                    >
-                      <CardHeader>
-                        <CardTitle className="text-base md:text-lg">{classroom.name}</CardTitle>
-                        <CardDescription className="text-sm">{classroom.subject}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                          <Users className="h-3 w-3 md:h-4 md:w-4" />
-                          <span>
-                            {t('teacherDashboard.inviteCode')} {classroom.invite_code}
+            {loading ? (
+              <div className="grid sm:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-48 rounded-3xl bg-slate-100 dark:bg-slate-800/50 animate-pulse" />
+                ))}
+              </div>
+            ) : classrooms.length === 0 ? (
+              <Card className="bg-white/60 backdrop-blur-sm border-dashed border-2 border-slate-300 dark:border-slate-700 rounded-3xl overflow-hidden">
+                <CardContent className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-6">
+                    <BookOpen className="h-10 w-10 text-blue-500 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                    {t('teacherDashboard.empty.title')}
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-md mb-8">
+                    {t('teacherDashboard.empty.description')}
+                  </p>
+                  <Button onClick={() => setDialogOpen(true)} size="lg" className="rounded-full px-8">
+                    <Plus className="me-2 h-5 w-5" />
+                    {t('teacherDashboard.createClassroom')}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-6">
+                {classrooms.map((classroom) => (
+                  <Card
+                    key={classroom.id}
+                    className="group border-0 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer bg-white dark:bg-slate-900 rounded-3xl overflow-hidden ring-1 ring-slate-200/50 dark:ring-slate-800"
+                    onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
+                  >
+                    <div className={`h-16 bg-gradient-to-br ${getGradient(classroom.id)} p-4 relative overflow-hidden`}>
+                      <div className="absolute right-4 top-2 opacity-20 group-hover:opacity-40 transition-opacity transform group-hover:scale-110 duration-500">
+                        <BookOpen className="h-12 w-12" />
+                      </div>
+                      <Badge className="bg-white/90 dark:bg-black/50 text-slate-800 dark:text-slate-100 hover:bg-white dark:hover:bg-black/70 backdrop-blur-sm border-0 shadow-sm">
+                        {classroom.subject}
+                      </Badge>
+                    </div>
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 group-hover:text-primary transition-colors">
+                        {classroom.name}
+                      </h3>
+
+                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full">
+                          <Users className="h-3.5 w-3.5" />
+                          <span className="font-medium">
+                            {t('teacherDashboard.inviteCode')}: <span className="text-slate-700 dark:text-slate-300 font-mono">{classroom.invite_code}</span>
                           </span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Calendar Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-4 space-y-6">
             {user && (
-              <TeacherCalendar
-                teacherId={user.id}
-                classrooms={calendarClassrooms}
-                loading={loading}
-              />
+              <div className="sticky top-24">
+                <TeacherCalendar
+                  teacherId={user.id}
+                  classrooms={calendarClassrooms}
+                  loading={loading}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -249,7 +278,7 @@ const TeacherDashboard = () => {
         onOpenChange={setDialogOpen}
         onSuccess={handleClassroomCreated}
       />
-    </div>
+    </BreathingBackground>
   );
 };
 

@@ -1,22 +1,32 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const NotFound = () => {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <BreathingBackground className="flex items-center justify-center">
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle />
       </div>
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-gray-600">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 underline hover:text-blue-700">
-          Return to Home
-        </a>
+
+      <div className="text-center animate-fade-in p-8 rounded-3xl bg-white/30 backdrop-blur-md border border-white/20 shadow-xl max-w-md mx-4">
+        <h1 className="mb-2 text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500">404</h1>
+        <h2 className="mb-6 text-2xl font-semibold text-foreground">Page Not Found</h2>
+        <p className="mb-8 text-muted-foreground">
+          Oops! The page you are looking for doesn't exist or has been moved.
+        </p>
+        <Link to="/">
+          <Button className="bg-black text-white hover:bg-black/90 rounded-full px-8 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Return to Home
+          </Button>
+        </Link>
       </div>
-    </div>
+    </BreathingBackground>
   );
 };
 
