@@ -8,6 +8,9 @@ import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { Navbar } from '@/components/layouts/Navbar';
+import { Footer } from '@/components/layouts/Footer';
 
 const ContactUs = () => {
   const [loading, setLoading] = useState(false);
@@ -38,34 +41,12 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="container flex h-16 md:h-20 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/perleap_logo.png" alt="PerLeap" className="h-10 w-10" />
-            <span className="text-lg md:text-xl font-semibold">PerLeap</span>
-          </Link>
-          <div className="flex items-center gap-4 shrink-0">
-            <Link to="/">
-              <Button size="sm" variant="ghost" className="font-medium">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Home
-              </Button>
-            </Link>
-            <ThemeToggle />
-            <Link to="/auth">
-              <Button size="sm" className="font-medium">
-                Get Started
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+    <BreathingBackground>
+      <Navbar />
 
       <div className="container mx-auto px-4 pt-32 pb-16 max-w-6xl">
         {/* Page Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Get in Touch</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Have a question or feedback? We'd love to hear from you. Send us a message and we'll
@@ -73,12 +54,12 @@ const ContactUs = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid md:grid-cols-3 gap-8 mb-12 animate-fade-in delay-100">
           {/* Contact Info Cards */}
-          <Card className="bg-card border-border hover:shadow-lg transition-shadow">
+          <Card className="bg-white/50 backdrop-blur-sm border-black/5 hover:shadow-lg transition-all hover:-translate-y-1">
             <CardContent className="pt-6 text-center">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent/20 mb-4">
-                <Mail className="h-6 w-6 text-foreground" />
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 mb-4 text-purple-600">
+                <Mail className="h-6 w-6" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Email</h3>
               <p className="text-sm text-muted-foreground">contact@perleap.com</p>
@@ -86,10 +67,10 @@ const ContactUs = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border hover:shadow-lg transition-shadow">
+          <Card className="bg-white/50 backdrop-blur-sm border-black/5 hover:shadow-lg transition-all hover:-translate-y-1">
             <CardContent className="pt-6 text-center">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent/20 mb-4">
-                <Phone className="h-6 w-6 text-foreground" />
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-4 text-orange-600">
+                <Phone className="h-6 w-6" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Phone</h3>
               <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
@@ -97,10 +78,10 @@ const ContactUs = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border hover:shadow-lg transition-shadow">
+          <Card className="bg-white/50 backdrop-blur-sm border-black/5 hover:shadow-lg transition-all hover:-translate-y-1">
             <CardContent className="pt-6 text-center">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent/20 mb-4">
-                <MapPin className="h-6 w-6 text-foreground" />
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-4 text-blue-600">
+                <MapPin className="h-6 w-6" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Office</h3>
               <p className="text-sm text-muted-foreground">123 Education St.</p>
@@ -110,8 +91,8 @@ const ContactUs = () => {
         </div>
 
         {/* Contact Form */}
-        <div className="max-w-2xl mx-auto">
-          <Card className="bg-card border-border shadow-lg">
+        <div className="max-w-2xl mx-auto animate-fade-in delay-200">
+          <Card className="bg-white/60 backdrop-blur-md border-white/20 shadow-xl">
             <CardHeader>
               <CardTitle className="text-2xl">Send us a Message</CardTitle>
               <CardDescription>
@@ -131,7 +112,7 @@ const ContactUs = () => {
                       value={formData.firstName}
                       onChange={handleChange}
                       required
-                      className="rounded-xl"
+                      className="rounded-xl bg-white/50 border-black/10 focus:bg-white transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
@@ -144,7 +125,7 @@ const ContactUs = () => {
                       value={formData.lastName}
                       onChange={handleChange}
                       required
-                      className="rounded-xl"
+                      className="rounded-xl bg-white/50 border-black/10 focus:bg-white transition-colors"
                     />
                   </div>
                 </div>
@@ -159,7 +140,7 @@ const ContactUs = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="rounded-xl"
+                    className="rounded-xl bg-white/50 border-black/10 focus:bg-white transition-colors"
                   />
                 </div>
 
@@ -173,11 +154,11 @@ const ContactUs = () => {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="rounded-xl resize-none"
+                    className="rounded-xl resize-none bg-white/50 border-black/10 focus:bg-white transition-colors"
                   />
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                <Button type="submit" className="w-full bg-black text-white hover:bg-black/90 rounded-full h-12 text-base shadow-lg" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -209,7 +190,8 @@ const ContactUs = () => {
           </div>
         </div>
       </div>
-    </div>
+      <Footer />
+    </BreathingBackground>
   );
 };
 

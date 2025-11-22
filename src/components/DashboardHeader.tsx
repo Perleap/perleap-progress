@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Bell, LogOut } from 'lucide-react';
+import { Bell, Settings, Moon, Sun, Globe, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from 'next-themes';
 import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notificationService';
 
 interface DashboardHeaderProps {
@@ -37,33 +39,23 @@ export function DashboardHeader({
   showBackButton = false,
   onBackClick,
 }: DashboardHeaderProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile: authProfile } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const [profile, setProfile] = useState<Profile>({ full_name: '', avatar_url: null });
+  const { t, i18n } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  // Use auth profile if available, otherwise fall back to empty state
+  // This prevents the flicker by using the already loaded profile from context
+  const profile = authProfile || { full_name: '', avatar_url: null };
+
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
-      fetchProfile();
       fetchNotifications();
     }
   }, [user?.id]);
-
-  const fetchProfile = async () => {
-    const table = userType === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-    const { data } = await supabase
-      .from(table)
-      .select('full_name, avatar_url')
-      .eq('user_id', user?.id)
-      .single();
-
-    if (data) {
-      setProfile(data);
-    }
-  };
 
   const fetchNotifications = async () => {
     if (user?.id) {
@@ -83,7 +75,7 @@ export function DashboardHeader({
       .slice(0, 2);
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
+  const handleNotificationClick = async (notification: any) => {
     await markAsRead(notification.id);
     setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
     setUnreadCount((prev) => Math.max(0, prev - 1));
@@ -103,7 +95,7 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="border-b">
+    <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {showBackButton && (
@@ -139,9 +131,6 @@ export function DashboardHeader({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <ThemeToggle />
-          <LanguageSwitcher />
-
           {/* Notifications Dropdown */}
           <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
             <DropdownMenuTrigger asChild>
@@ -197,25 +186,54 @@ export function DashboardHeader({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Sign Out Button */}
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-
-          {/* Profile Avatar */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="relative h-10 w-10 rounded-full p-0"
-            onClick={() => navigate(`/${userType}/settings`)}
-          >
-            <Avatar className="h-10 w-10 cursor-pointer">
-              {profile.avatar_url && (
-                <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
-              )}
-              <AvatarFallback>{getInitials()}</AvatarFallback>
-            </Avatar>
-          </Button>
+          {/* Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-primary/10 hover:border-primary/20 transition-colors">
+                <Avatar className="h-full w-full">
+                  {profile.avatar_url && (
+                    <AvatarImage src={profile.avatar_url} alt={profile.full_name} className="object-cover" />
+                  )}
+                  <AvatarFallback className="bg-primary/5 text-primary font-medium">{getInitials()}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{profile.full_name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate(`/${userType}/settings`)}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>{t('settings.title')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : (
+                  <Moon className="mr-2 h-4 w-4" />
+                )}
+                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const newLang = i18n.language === 'en' ? 'he' : 'en';
+                i18n.changeLanguage(newLang);
+              }}>
+                <Globe className="mr-2 h-4 w-4" />
+                <span>{i18n.language === 'en' ? 'עברית' : 'English'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

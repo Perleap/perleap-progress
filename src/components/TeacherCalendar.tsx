@@ -2,14 +2,14 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { CalendarDays, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CALENDAR_MODIFIERS_STYLES } from '@/lib/calendarUtils';
 
 // Utility function for date range checking
@@ -78,7 +78,7 @@ export function TeacherCalendar({
   // Add refs to prevent refetching when tabbing in/out
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
-  const lastClassroomIdsRef = useRef<string>('');
+  const lastClassroomIdsRef = useRef<string | null>(null); // Use null as sentinel for "not initialized"
   const lastTeacherIdRef = useRef<string>('');
 
   const fetchAssignmentsOnly = useCallback(async (classroomIds: string[]) => {
@@ -206,7 +206,7 @@ export function TeacherCalendar({
 
       setClassrooms(classroomsData);
       lastTeacherIdRef.current = teacherId;
-      
+
       // Reset classroom fetch tracking when fetching all
       hasFetchedRef.current = false;
       await fetchAssignmentsOnly(classroomsData.map((c) => c.id));
@@ -221,19 +221,19 @@ export function TeacherCalendar({
     // Reset fetch flags if teacherId changes
     if (lastTeacherIdRef.current !== teacherId) {
       hasFetchedRef.current = false;
-      lastClassroomIdsRef.current = '';
+      lastClassroomIdsRef.current = null;
       lastTeacherIdRef.current = teacherId;
     }
 
     if (propClassrooms !== undefined) {
       const classroomIds = propClassrooms.map((c) => c.id);
       const classroomIdsKey = classroomIds.sort().join(',');
-      
-      // Only update if classrooms actually changed
-      if (lastClassroomIdsRef.current !== classroomIdsKey) {
+
+      // Update if classrooms changed OR if this is the first render (null sentinel)
+      if (lastClassroomIdsRef.current === null || lastClassroomIdsRef.current !== classroomIdsKey) {
         setClassrooms(propClassrooms);
         setLoading(propLoading ?? false);
-        
+
         if (propClassrooms.length > 0) {
           hasFetchedRef.current = false; // Reset to allow fetch
           fetchAssignmentsOnly(classroomIds);
@@ -241,7 +241,7 @@ export function TeacherCalendar({
           setAssignments([]);
           setLoading(false);
           hasFetchedRef.current = true;
-          lastClassroomIdsRef.current = '';
+          lastClassroomIdsRef.current = classroomIdsKey;
         }
       }
     } else {
@@ -250,7 +250,7 @@ export function TeacherCalendar({
         fetchAssignments();
       }
     }
-  }, [teacherId, propClassrooms, propLoading]); // Removed fetchAssignmentsOnly and fetchAssignments from deps
+  }, [teacherId, propClassrooms, propLoading]);
 
   // Memoize assignment dates to avoid recalculating on every render
   const datesWithAssignments = useMemo(
@@ -289,7 +289,7 @@ export function TeacherCalendar({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-none shadow-lg rounded-[32px]">
         <CardContent className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
@@ -298,48 +298,68 @@ export function TeacherCalendar({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5" />
-          {t('calendar.title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          month={month}
-          onMonthChange={setMonth}
-          modifiers={modifiers}
-          modifiersStyles={CALENDAR_MODIFIERS_STYLES}
-          className="rounded-md border"
-        />
+    <Card className="border-none shadow-lg rounded-[32px] overflow-hidden bg-white dark:bg-slate-900">
+      <div className="p-6 pb-0">
+        <div className="flex items-center gap-2 mb-6">
+          <CalendarIcon className="h-6 w-6" />
+          <h2 className="text-2xl font-bold">{t('calendar.title')}</h2>
+        </div>
+      </div>
+
+      <CardContent className="p-6 pt-0 space-y-6">
+        <div className="border rounded-3xl p-4">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            month={month}
+            onMonthChange={setMonth}
+            modifiers={modifiers}
+            modifiersStyles={CALENDAR_MODIFIERS_STYLES}
+            className="w-full"
+            classNames={{
+              month: "space-y-4 w-full",
+              caption: "flex justify-center items-center relative pt-1 pb-6",
+              caption_label: "text-base font-bold uppercase tracking-wider",
+              nav: "flex items-center gap-1",
+              nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex w-full justify-between mb-2",
+              head_cell: "text-muted-foreground w-9 font-normal text-[10px] uppercase tracking-wider text-center",
+              row: "flex w-full mt-2 justify-between",
+              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent",
+              day: "h-9 w-9 p-0 font-normal text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all",
+              day_selected: "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full shadow-md",
+              day_today: "text-indigo-600 font-bold",
+            }}
+          />
+        </div>
 
         {selectedDate && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-sm">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h3 className="font-bold text-lg">
               {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
             </h3>
 
-            {/* Active Classes */}
-            {activeClassesForSelectedDate.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3" />
-                  {t('calendar.activeClasses')} ({activeClassesForSelectedDate.length})
-                </h4>
-                <div className="space-y-1">
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {t('calendar.activeClasses')} ({activeClassesForSelectedDate.length})
+              </h4>
+
+              {activeClassesForSelectedDate.length > 0 ? (
+                <div className="space-y-2">
                   {activeClassesForSelectedDate.map((classroom) => (
                     <div
                       key={classroom.id}
-                      className="p-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
+                      className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 transition-all hover:scale-[1.02]"
                     >
-                      <p className="font-medium text-xs">{classroom.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{classroom.subject}</p>
+                      <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{classroom.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{classroom.subject}</p>
                       {classroom.start_date && classroom.end_date && (
-                        <p className="text-[10px] text-muted-foreground mt-1">
+                        <p className="text-[10px] text-slate-400 mt-2 font-medium">
                           {format(new Date(classroom.start_date), 'MMM d', {
                             locale: language === 'he' ? he : undefined,
                           })}{' '}
@@ -352,117 +372,84 @@ export function TeacherCalendar({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Assignments Due */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-red-600 dark:text-red-400">
-                {t('calendar.assignmentsDue')}
-              </h4>
-              {assignmentsForSelectedDate.length === 0 ? (
-                <p className="text-xs text-muted-foreground">{t('calendar.noAssignments')}</p>
               ) : (
-                <ScrollArea className="h-[200px]">
-                  <div className="space-y-3">
-                    {assignmentsForSelectedDate.map((assignment) => (
-                      <div key={assignment.id} className="p-3 rounded-lg border bg-card">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{assignment.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {assignment.classrooms.name}
-                            </p>
-                          </div>
-                          <Badge variant="outline" className="text-xs ml-2">
-                            {assignment.type.replace('_', ' ')}
-                          </Badge>
-                        </div>
-
-                        {/* Completion Status */}
-                        <div className="flex items-center gap-2 text-xs mb-2">
-                          <span className="text-muted-foreground">
-                            {assignment.totalStudents - assignment.incompleteStudents.length} /{' '}
-                            {assignment.totalStudents} completed
-                          </span>
-                        </div>
-
-                        {/* Incomplete Students */}
-                        {assignment.incompleteStudents.length > 0 && (
-                          <div className="mt-2 pt-2 border-t">
-                            <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 mb-2">
-                              <AlertCircle className="h-3 w-3" />
-                              <span>{assignment.incompleteStudents.length} pending</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {assignment.incompleteStudents.slice(0, 5).map((student) => (
-                                <div
-                                  key={student.user_id}
-                                  className="flex items-center gap-1 bg-accent/50 rounded-full pl-1 pr-2 py-0.5"
-                                >
-                                  <Avatar className="h-4 w-4">
-                                    {student.avatar_url && (
-                                      <AvatarImage
-                                        src={student.avatar_url}
-                                        alt={student.full_name}
-                                      />
-                                    )}
-                                    <AvatarFallback className="text-[8px]">
-                                      {student.full_name?.charAt(0) || '?'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-[10px]">
-                                    {student.full_name.split(' ')[0]}
-                                  </span>
-                                </div>
-                              ))}
-                              {assignment.incompleteStudents.length > 5 && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  +{assignment.incompleteStudents.length - 5} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <p className="text-xs text-muted-foreground pl-1">No active classes on this date</p>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Upcoming Assignments Summary */}
-        {assignments.length > 0 && (
-          <div className="pt-4 border-t">
-            <h3 className="font-semibold text-sm mb-2">
-              {t('calendar.upcomingAssignments')} ({assignments.length})
-            </h3>
-            <ScrollArea className="h-[150px]">
-              <div className="space-y-1">
-                {assignments.slice(0, 10).map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="flex justify-between items-center text-xs py-1"
-                  >
-                    <div className="flex-1">
-                      <span className="truncate block">{assignment.title}</span>
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-red-500 dark:text-red-400">
+                {t('calendar.assignmentsDue')}
+              </h4>
+
+              {assignmentsForSelectedDate.length === 0 ? (
+                <p className="text-sm text-slate-400 dark:text-slate-500">
+                  No assignments due on this date
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {assignmentsForSelectedDate.map((assignment) => (
+                    <div
+                      key={assignment.id}
+                      className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 transition-all hover:scale-[1.02]"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{assignment.title}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {assignment.classrooms.name}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] bg-white dark:bg-slate-900 border-red-200 text-red-600">
+                          {assignment.type.replace('_', ' ')}
+                        </Badge>
+                      </div>
+
+                      {/* Completion Status Bar */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[10px] text-slate-500">
+                          <span>Progress</span>
+                          <span>{Math.round(((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-red-400 to-pink-500 rounded-full transition-all duration-500"
+                            style={{ width: `${((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Incomplete Students */}
                       {assignment.incompleteStudents.length > 0 && (
-                        <span className="text-orange-600 dark:text-orange-400 text-[10px]">
-                          {assignment.incompleteStudents.length} pending
-                        </span>
+                        <div className="mt-3 pt-3 border-t border-red-100 dark:border-red-900/30">
+                          <div className="flex items-center gap-1.5 text-[10px] text-red-600 dark:text-red-400 mb-2 font-medium">
+                            <AlertCircle className="h-3 w-3" />
+                            <span>{assignment.incompleteStudents.length} pending submissions</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {assignment.incompleteStudents.slice(0, 5).map((student) => (
+                              <Avatar key={student.user_id} className="h-5 w-5 border border-white dark:border-slate-900">
+                                {student.avatar_url && (
+                                  <AvatarImage src={student.avatar_url} alt={student.full_name} />
+                                )}
+                                <AvatarFallback className="text-[8px] bg-red-100 text-red-700">
+                                  {student.full_name?.charAt(0) || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))}
+                            {assignment.incompleteStudents.length > 5 && (
+                              <div className="h-5 w-5 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center border border-white dark:border-slate-900 text-[8px] font-medium text-red-600">
+                                +{assignment.incompleteStudents.length - 5}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <span className="text-muted-foreground ml-2 whitespace-nowrap">
-                      {format(new Date(assignment.due_at), 'MMM d', {
-                        locale: language === 'he' ? he : undefined,
-                      })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

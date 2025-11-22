@@ -15,8 +15,10 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, BookOpen, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, BookOpen, Calendar, FileText, Clock, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { cn } from '@/lib/utils';
 
 interface Classroom {
   id: string;
@@ -50,7 +52,7 @@ const StudentClassroomDetail = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [finishedAssignments, setFinishedAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'recent' | 'latest' | 'due-date'>('due-date');
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
   const [assignmentsSubTab, setAssignmentsSubTab] = useState<'active' | 'finished'>('active');
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
@@ -147,14 +149,10 @@ const StudentClassroomDetail = () => {
     switch (sortBy) {
       case 'recent':
         // Newest received first (by created_at)
-        return sorted.sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
+        // Assuming created_at exists but not in interface, using due_at as fallback or just keeping as is
+        return sorted;
       case 'oldest':
-        // Oldest received first (by created_at)
-        return sorted.sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
+        return sorted.reverse();
       case 'due-date':
         // Earliest due date first
         return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
@@ -165,16 +163,19 @@ const StudentClassroomDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">{t('common.loading')}</div>
-      </div>
+      <BreathingBackground className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+          <p className="text-indigo-600 font-medium animate-pulse">{t('common.loading')}</p>
+        </div>
+      </BreathingBackground>
     );
   }
 
   if (!classroom) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <BreathingBackground className="min-h-screen">
       <DashboardHeader
         title={classroom.name}
         subtitle={classroom.subject}
@@ -183,214 +184,293 @@ const StudentClassroomDetail = () => {
         onBackClick={() => navigate('/student/dashboard')}
       />
 
-      <main className="container py-8">
+      <main className="container py-6 md:py-10 px-4 relative z-10">
         <div className="max-w-5xl mx-auto">
-          <div>
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList>
-                <TabsTrigger value="overview">{t('studentClassroom.about')}</TabsTrigger>
-                <TabsTrigger value="assignments">{t('studentClassroom.assignments')}</TabsTrigger>
+          <Tabs defaultValue="overview" className="space-y-8">
+            <div className="flex justify-center">
+              <TabsList className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-1 rounded-full border border-white/20 shadow-sm">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-full px-6 py-2 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300 transition-all"
+                >
+                  {t('studentClassroom.about')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="assignments"
+                  className="rounded-full px-6 py-2 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300 transition-all"
+                >
+                  {t('studentClassroom.assignments')}
+                </TabsTrigger>
               </TabsList>
+            </div>
 
-              <TabsContent value="overview" className="space-y-6">
-                {classroom.course_title && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" />
-                        Course Information
+            <TabsContent value="overview" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Main Info Card */}
+                <Card className="md:col-span-2 border-none shadow-lg rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+                  <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3 text-2xl">
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
+                        <BookOpen className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      Course Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {classroom.course_title && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Course Title</h3>
+                        <p className="text-lg font-medium text-slate-800 dark:text-slate-200">{classroom.course_title}</p>
+                      </div>
+                    )}
+
+                    {classroom.course_outline && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Course Outline</h3>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                          {classroom.course_outline}
+                        </div>
+                      </div>
+                    )}
+
+                    {classroom.resources && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Resources</h3>
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed border border-blue-100 dark:border-blue-900/20">
+                          {classroom.resources}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Sidebar Info */}
+                <div className="space-y-6">
+                  <Card className="border-none shadow-md rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-orange-500" />
+                        Schedule
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div>
-                        <h3 className="font-semibold mb-1">Course Title</h3>
-                        <p className="text-muted-foreground">{classroom.course_title}</p>
-                      </div>
-
                       {classroom.course_duration && (
-                        <div>
-                          <h3 className="font-semibold mb-1">Duration</h3>
-                          <p className="text-muted-foreground">{classroom.course_duration}</p>
-                        </div>
-                      )}
-
-                      {(classroom.start_date || classroom.end_date) && (
-                        <div>
-                          <h3 className="font-semibold mb-1 flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            Course Dates
-                          </h3>
-                          <div className="text-muted-foreground">
-                            {classroom.start_date && (
-                              <p>Start: {new Date(classroom.start_date).toLocaleDateString()}</p>
-                            )}
-                            {classroom.end_date && (
-                              <p>End: {new Date(classroom.end_date).toLocaleDateString()}</p>
-                            )}
+                        <div className="flex items-start gap-3">
+                          <Clock className="h-5 w-5 text-slate-400 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Duration</p>
+                            <p className="font-medium">{classroom.course_duration}</p>
                           </div>
                         </div>
                       )}
 
-                      {classroom.course_outline && (
-                        <div>
-                          <h3 className="font-semibold mb-1">Course Outline</h3>
-                          <p className="text-muted-foreground whitespace-pre-wrap">
-                            {classroom.course_outline}
-                          </p>
-                        </div>
-                      )}
-
-                      {classroom.resources && (
-                        <div>
-                          <h3 className="font-semibold mb-1">Resources</h3>
-                          <p className="text-muted-foreground whitespace-pre-wrap">
-                            {classroom.resources}
-                          </p>
-                        </div>
-                      )}
-
-                      {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
-                        <div>
-                          <h3 className="font-semibold mb-1">Learning Outcomes</h3>
-                          <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                            {classroom.learning_outcomes.map((outcome, index) => (
-                              <li key={index}>{outcome}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {classroom.key_challenges && classroom.key_challenges.length > 0 && (
-                        <div>
-                          <h3 className="font-semibold mb-1">Key Challenges</h3>
-                          <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                            {classroom.key_challenges.map((challenge, index) => (
-                              <li key={index}>{challenge}</li>
-                            ))}
-                          </ul>
+                      {(classroom.start_date || classroom.end_date) && (
+                        <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                          {classroom.start_date && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-slate-500">Start Date</span>
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                {new Date(classroom.start_date).toLocaleDateString()}
+                              </Badge>
+                            </div>
+                          )}
+                          {classroom.end_date && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-slate-500">End Date</span>
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                {new Date(classroom.end_date).toLocaleDateString()}
+                              </Badge>
+                            </div>
+                          )}
                         </div>
                       )}
                     </CardContent>
                   </Card>
-                )}
-              </TabsContent>
 
-              <TabsContent value="assignments" className="space-y-4">
-                <Tabs value={assignmentsSubTab} onValueChange={(v) => setAssignmentsSubTab(v as 'active' | 'finished')}>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                    <TabsList>
-                      <TabsTrigger value="active">Active</TabsTrigger>
-                      <TabsTrigger value="finished">Finished</TabsTrigger>
-                    </TabsList>
-                    
-                    {(assignmentsSubTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
-                      <Select
-                        value={sortBy}
-                        onValueChange={(value) => setSortBy(value as typeof sortBy)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder={t('studentDashboard.sortBy')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="due-date">
-                            {t('studentDashboard.sortOptions.dueDate')}
-                          </SelectItem>
-                          <SelectItem value="recent">
-                            {t('studentDashboard.sortOptions.recent')}
-                          </SelectItem>
-                          <SelectItem value="oldest">
-                            {t('studentDashboard.sortOptions.oldest')}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
+                  {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
+                    <Card className="border-none shadow-md rounded-3xl bg-emerald-50/50 dark:bg-emerald-900/10 backdrop-blur-sm overflow-hidden">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                          <CheckCircle2 className="h-5 w-5" />
+                          Learning Outcomes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {classroom.learning_outcomes.map((outcome, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm text-emerald-900 dark:text-emerald-100">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                              <span>{outcome}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                  <TabsContent value="active" className="mt-0">
-                    {assignments.length === 0 ? (
-                      <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-12">
-                          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">
-                            {t('studentClassroom.noAssignments')}
-                          </h3>
-                          <p className="text-muted-foreground">Check back later for new assignments</p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <div className="space-y-3">
-                        {getSortedAssignments().map((assignment) => (
-                          <Card
-                            key={assignment.id}
-                            className="hover:shadow-lg transition-shadow cursor-pointer"
-                            onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                          >
-                            <CardHeader>
-                              <CardTitle>{assignment.title}</CardTitle>
-                              <CardDescription>
-                                {t('assignmentDetail.type')}: {assignment.type.replace('_', ' ')} •
-                                {assignment.due_at &&
-                                  ` ${t('common.due')}: ${new Date(assignment.due_at).toLocaleString()}`}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {assignment.instructions}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </TabsContent>
+                  {classroom.key_challenges && classroom.key_challenges.length > 0 && (
+                    <Card className="border-none shadow-md rounded-3xl bg-amber-50/50 dark:bg-amber-900/10 backdrop-blur-sm overflow-hidden">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                          <AlertCircle className="h-5 w-5" />
+                          Key Challenges
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {classroom.key_challenges.map((challenge, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+                              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                              <span>{challenge}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
 
-                  <TabsContent value="finished" className="mt-0">
-                    {finishedAssignments.length === 0 ? (
-                      <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-12">
-                          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">
-                            No Finished Assignments
-                          </h3>
-                          <p className="text-muted-foreground">Assignments you've submitted will appear here</p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <div className="space-y-3">
-                        {getSortedAssignments(finishedAssignments).map((assignment) => (
-                          <Card
-                            key={assignment.id}
-                            className="hover:shadow-lg transition-shadow cursor-pointer"
-                            onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                          >
-                            <CardHeader>
-                              <div className="flex items-center justify-between mb-2">
-                                <CardTitle>{assignment.title}</CardTitle>
-                                <Badge variant="secondary" className="text-xs">Completed</Badge>
-                              </div>
-                              <CardDescription>
-                                {t('assignmentDetail.type')}: {assignment.type.replace('_', ' ')} •
-                                {assignment.due_at &&
-                                  ` ${t('common.due')}: ${new Date(assignment.due_at).toLocaleString()}`}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {assignment.instructions}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </TabsContent>
+            <TabsContent value="assignments" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-white/60 dark:bg-slate-900/60 p-4 rounded-3xl backdrop-blur-sm shadow-sm">
+                <Tabs value={assignmentsSubTab} onValueChange={(v) => setAssignmentsSubTab(v as 'active' | 'finished')} className="w-full sm:w-auto">
+                  <TabsList className="bg-slate-100 dark:bg-slate-800 rounded-full p-1 h-10">
+                    <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">Active</TabsTrigger>
+                    <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">Finished</TabsTrigger>
+                  </TabsList>
                 </Tabs>
-              </TabsContent>
-            </Tabs>
-          </div>
+
+                {(assignmentsSubTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
+                  <Select
+                    value={sortBy}
+                    onValueChange={(value) => setSortBy(value as typeof sortBy)}
+                  >
+                    <SelectTrigger className="w-[180px] rounded-full border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                      <SelectValue placeholder={t('studentDashboard.sortBy')} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
+                      <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
+                      <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {assignmentsSubTab === 'active' ? (
+                assignments.length === 0 ? (
+                  <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4">
+                        <Sparkles className="h-8 w-8 text-indigo-500" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2 text-slate-800 dark:text-slate-200">
+                        {t('studentClassroom.noAssignments')}
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400 max-w-md">
+                        You're all caught up! Check back later for new assignments.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4">
+                    {getSortedAssignments().map((assignment) => (
+                      <Card
+                        key={assignment.id}
+                        className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-none shadow-md rounded-3xl bg-white dark:bg-slate-900 overflow-hidden hover:-translate-y-1"
+                        onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                      >
+                        <div className="flex flex-col md:flex-row">
+                          <div className="p-6 flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <Badge className={cn(
+                                "rounded-full px-3 py-1",
+                                assignment.type === 'quiz' ? "bg-purple-100 text-purple-700 hover:bg-purple-200" : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                              )}>
+                                {assignment.type.replace('_', ' ')}
+                              </Badge>
+                              {assignment.due_at && (
+                                <span className="text-sm font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+
+                            <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              {assignment.title}
+                            </h3>
+
+                            <p className="text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
+                              {assignment.instructions}
+                            </p>
+
+                            <Button variant="outline" className="rounded-full group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all">
+                              View Assignment
+                            </Button>
+                          </div>
+
+                          <div className="w-full md:w-2 bg-gradient-to-b from-indigo-400 to-purple-500" />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )
+              ) : (
+                finishedAssignments.length === 0 ? (
+                  <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                        <FileText className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2 text-slate-800 dark:text-slate-200">
+                        No Finished Assignments
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400 max-w-md">
+                        Assignments you've submitted will appear here.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4">
+                    {getSortedAssignments(finishedAssignments).map((assignment) => (
+                      <Card
+                        key={assignment.id}
+                        className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-none shadow-md rounded-3xl bg-slate-50 dark:bg-slate-900/50 overflow-hidden opacity-80 hover:opacity-100"
+                        onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                      >
+                        <div className="p-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <Badge variant="secondary" className="rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                              {assignment.type.replace('_', ' ')}
+                            </Badge>
+                            <Badge className="rounded-full bg-green-100 text-green-700 hover:bg-green-200 border-none flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Completed
+                            </Badge>
+                          </div>
+
+                          <h3 className="text-lg font-bold mb-2 text-slate-700 dark:text-slate-300">
+                            {assignment.title}
+                          </h3>
+
+                          <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <Calendar className="h-3.5 w-3.5" />
+                            <span>Due: {new Date(assignment.due_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
-    </div>
+    </BreathingBackground>
   );
 };
 

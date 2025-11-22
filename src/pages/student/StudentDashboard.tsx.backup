@@ -16,7 +16,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, BookOpen, Bell, Sparkles, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { LogOut, Plus, BookOpen, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -27,14 +27,22 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   createNotification,
   getUnreadNotifications,
+  markAsRead,
+  markAllAsRead,
   type Notification,
 } from '@/lib/notificationService';
 import { StudentCalendar } from '@/components/StudentCalendar';
 import { useTranslation } from 'react-i18next';
-import { DashboardHeader } from '@/components/DashboardHeader';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface Assignment {
   id: string;
@@ -42,7 +50,6 @@ interface Assignment {
   due_at: string;
   classrooms: {
     name: string;
-    subject: string;
     teacher_id: string;
     teacher_profiles?: {
       full_name: string;
@@ -83,7 +90,7 @@ interface CalendarAssignment {
 
 const StudentDashboard = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [finishedAssignments, setFinishedAssignments] = useState<Assignment[]>([]);
@@ -92,8 +99,11 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
+  const [sortBy, setSortBy] = useState<'recent' | 'latest' | 'due-date'>('due-date');
   const [assignmentsTab, setAssignmentsTab] = useState<'active' | 'finished'>('active');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [profile, setProfile] = useState<{ full_name: string; avatar_url?: string }>({
     full_name: '',
     avatar_url: '',
@@ -210,6 +220,13 @@ const StudentDashboard = () => {
         setAssignments([]);
         setFinishedAssignments([]);
       }
+
+      // Fetch notifications
+      if (user?.id) {
+        const notifs = await getUnreadNotifications(user.id);
+        setNotifications(notifs);
+        setUnreadCount(notifs.length);
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       toast.error(t('studentDashboard.errors.loadingData'));
@@ -317,7 +334,7 @@ const StudentDashboard = () => {
             classroom_name: classroom.name,
           }
         );
-      } catch (notifError) { }
+      } catch (notifError) {}
 
       toast.success(t('studentDashboard.success.joinedClassroom', { name: classroom.name }));
       setInviteCode('');
@@ -336,12 +353,14 @@ const StudentDashboard = () => {
     switch (sortBy) {
       case 'recent':
         // Newest received first (by created_at)
-        // Note: Assignment interface doesn't have created_at, assuming due_at for now or keeping as is if created_at exists in data but not interface
-        // Assuming created_at is fetched but not in interface, adding to interface would be better. 
-        // For now, using due_at as proxy or if created_at is available in runtime object.
-        return sorted;
+        return sorted.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       case 'oldest':
-        return sorted.reverse();
+        // Oldest received first (by created_at)
+        return sorted.sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       case 'due-date':
         // Earliest due date first
         return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
@@ -372,7 +391,7 @@ const StudentDashboard = () => {
     id: a.id,
     title: a.title,
     due_at: a.due_at,
-    type: 'assignment', // Default type
+    type: a.type,
     classrooms: {
       name: a.classrooms.name,
       subject: a.classrooms.subject || '',
@@ -380,43 +399,147 @@ const StudentDashboard = () => {
   }));
 
   return (
-    <BreathingBackground className="min-h-screen">
-      <DashboardHeader
-        title={!loading && profile.full_name
-          ? t('studentDashboard.welcome', { name: profile.full_name.split(' ')[0] })
-          : t('studentDashboard.title')}
-        userType="student"
-      />
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="container flex h-14 md:h-16 items-center justify-between px-4">
+          <h1 className="text-lg md:text-2xl font-bold">
+            {!loading && profile.full_name
+              ? t('studentDashboard.welcome', { name: profile.full_name.split(' ')[0] })
+              : t('studentDashboard.title')}
+          </h1>
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+            {/* Language Switcher */}
+            <LanguageSwitcher />
 
-      <main className="container py-6 md:py-10 px-4 relative z-10">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            {/* My Classes Section */}
-            <section>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
-                    <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            {/* Notifications Dropdown */}
+            <DropdownMenu
+              open={notificationDropdownOpen}
+              onOpenChange={setNotificationDropdownOpen}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <div className="p-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">{t('studentDashboard.notifications')}</h3>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={async () => {
+                          if (user?.id) {
+                            await markAllAsRead(user.id);
+                            setNotifications([]);
+                            setUnreadCount(0);
+                            toast.success(t('studentDashboard.success.markedRead'));
+                          }
+                        }}
+                      >
+                        {t('studentDashboard.markAllRead')}
+                      </Button>
+                    )}
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('studentDashboard.myClasses')}</h2>
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      {t('studentDashboard.noNotifications')}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
+                          onClick={async () => {
+                            await markAsRead(notification.id);
+                            setNotifications((prev) =>
+                              prev.filter((n) => n.id !== notification.id)
+                            );
+                            setUnreadCount((prev) => Math.max(0, prev - 1));
+                            setNotificationDropdownOpen(false);
+                            if (notification.link) {
+                              navigate(notification.link);
+                            }
+                          }}
+                        >
+                          <p className="font-medium">{notification.title}</p>
+                          <p className="text-xs text-muted-foreground">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(notification.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Sign Out Button */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+
+            {/* Profile Avatar */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative h-12 w-12 rounded-full p-0"
+              onClick={() => navigate('/student/settings')}
+            >
+              <Avatar className="h-12 w-12 cursor-pointer">
+                {profile.avatar_url && (
+                  <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                )}
+                <AvatarFallback>{getInitials()}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container py-4 md:py-8 px-4">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* My Classes Section */}
+            <div>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <h2 className="text-xl md:text-2xl font-bold">{t('studentDashboard.myClasses')}</h2>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="rounded-full shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-indigo-500 to-purple-600 border-0">
+                    <Button size="sm" className="w-full sm:w-auto">
                       <Plus className="me-2 h-4 w-4" />
                       {t('studentDashboard.joinClass')}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="rounded-3xl sm:max-w-[425px]">
+                  <DialogContent>
                     <DialogHeader>
-                      <DialogTitle className="text-xl">{t('studentDashboard.joinClassroom.title')}</DialogTitle>
+                      <DialogTitle>{t('studentDashboard.joinClassroom.title')}</DialogTitle>
                       <DialogDescription>
                         {t('studentDashboard.joinClassroom.description')}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-6 py-4">
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="code" className="text-base font-medium">
+                        <Label htmlFor="code">
                           {t('studentDashboard.joinClassroom.inviteCode')}
                         </Label>
                         <Input
@@ -425,14 +548,9 @@ const StudentDashboard = () => {
                           value={inviteCode}
                           onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                           maxLength={6}
-                          className="text-center text-2xl tracking-widest uppercase h-14 rounded-xl border-2 focus-visible:ring-indigo-500"
                         />
                       </div>
-                      <Button
-                        onClick={joinClassroom}
-                        className="w-full rounded-full h-12 text-lg font-medium bg-indigo-600 hover:bg-indigo-700"
-                        disabled={joining}
-                      >
+                      <Button onClick={joinClassroom} className="w-full" disabled={joining}>
                         {joining
                           ? t('studentDashboard.joinClassroom.joining')
                           : t('studentDashboard.joinClassroom.button')}
@@ -443,127 +561,90 @@ const StudentDashboard = () => {
               </div>
 
               {loading ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-40 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
-                  ))}
-                </div>
+                <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
               ) : classrooms.length === 0 ? (
-                <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4">
-                      <Sparkles className="h-8 w-8 text-indigo-500" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2 text-slate-800 dark:text-slate-200">
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">
                       {t('studentDashboard.empty.noClasses')}
                     </h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md">
+                    <p className="text-muted-foreground mb-4">
                       {t('studentDashboard.empty.noClassesDescription')}
                     </p>
-                    <Button onClick={() => setDialogOpen(true)} className="rounded-full">
+                    <Button onClick={() => setDialogOpen(true)}>
                       <Plus className="me-2 h-4 w-4" />
                       {t('studentDashboard.joinClass')}
                     </Button>
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {classrooms.map((classroom, index) => {
-                    // Generate deterministic gradient based on index
-                    const gradients = [
-                      'from-blue-400 to-indigo-500',
-                      'from-purple-400 to-pink-500',
-                      'from-emerald-400 to-teal-500',
-                      'from-orange-400 to-amber-500',
-                      'from-rose-400 to-red-500',
-                      'from-cyan-400 to-blue-500',
-                    ];
-                    const gradient = gradients[index % gradients.length];
-
-                    return (
-                      <Card
-                        key={classroom.id}
-                        className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-none shadow-md rounded-3xl overflow-hidden bg-white dark:bg-slate-900 hover:-translate-y-1"
-                        onClick={() => navigate(`/student/classroom/${classroom.id}`)}
-                      >
-                        <div className={`h-16 bg-gradient-to-r ${gradient} p-4 flex flex-col justify-between relative overflow-hidden`}>
-                          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-xl" />
-                          <div className="absolute bottom-0 left-0 w-16 h-16 bg-black/5 rounded-full -ml-4 -mb-4 blur-lg" />
-
-                          <Badge className="self-start bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-sm">
-                            {classroom.subject}
-                          </Badge>
-                        </div>
-                        <CardContent className="p-5">
-                          <h3 className="font-bold text-lg mb-1 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                            {classroom.name}
-                          </h3>
-                          <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 gap-2 mt-3">
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>Active Course</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {classrooms.map((classroom) => (
+                    <Card
+                      key={classroom.id}
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/student/classroom/${classroom.id}`)}
+                    >
+                      <CardHeader>
+                        <CardTitle className="text-base md:text-lg">{classroom.name}</CardTitle>
+                        <CardDescription className="text-sm">{classroom.subject}</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  ))}
                 </div>
               )}
-            </section>
+            </div>
 
             {/* Assignments Section */}
-            <section>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-                    <CalendarIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('studentDashboard.myAssignments')}</h2>
-                </div>
-
-                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-800">
-                  <Tabs value={assignmentsTab} onValueChange={(v) => setAssignmentsTab(v as 'active' | 'finished')} className="w-auto">
-                    <TabsList className="h-9 bg-transparent p-0">
-                      <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">Active</TabsTrigger>
-                      <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">Finished</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {!loading && (assignmentsTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
-                  <div className="flex justify-end mb-2">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold mb-4">
+                {t('studentDashboard.myAssignments')}
+              </h2>
+              
+              <Tabs value={assignmentsTab} onValueChange={(v) => setAssignmentsTab(v as 'active' | 'finished')}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                  <TabsList>
+                    <TabsTrigger value="active">Active</TabsTrigger>
+                    <TabsTrigger value="finished">Finished</TabsTrigger>
+                  </TabsList>
+                  
+                  {!loading && (assignmentsTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
                     <Select
                       value={sortBy}
                       onValueChange={(value) => setSortBy(value as typeof sortBy)}
                     >
-                      <SelectTrigger className="w-[180px] rounded-full border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                      <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder={t('studentDashboard.sortBy')} />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
-                        <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
-                        <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
+                      <SelectContent>
+                        <SelectItem value="due-date">
+                          {t('studentDashboard.sortOptions.dueDate')}
+                        </SelectItem>
+                        <SelectItem value="recent">
+                          {t('studentDashboard.sortOptions.recent')}
+                        </SelectItem>
+                        <SelectItem value="oldest">
+                          {t('studentDashboard.sortOptions.oldest')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {loading ? (
-                  <div className="space-y-3">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="h-24 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
-                    ))}
-                  </div>
-                ) : assignmentsTab === 'active' ? (
-                  assignments.length === 0 ? (
-                    <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl">
-                      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="h-12 w-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-3">
-                          <Sparkles className="h-6 w-6 text-green-600 dark:text-green-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-1">{t('studentDashboard.empty.noAssignments')}</h3>
-                        <p className="text-sm text-muted-foreground">{t('studentDashboard.empty.noAssignmentsDescription')}</p>
+                <TabsContent value="active">
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+                  ) : assignments.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          {t('studentDashboard.empty.noAssignments')}
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {t('studentDashboard.empty.noAssignmentsDescription')}
+                        </p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -579,59 +660,54 @@ const StudentDashboard = () => {
                         return (
                           <Card
                             key={assignment.id}
-                            className="group hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-3xl bg-white dark:bg-slate-900 overflow-hidden"
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
                             onClick={() => navigate(`/student/assignment/${assignment.id}`)}
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center p-2">
-                              <div className="p-4 flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline" className="rounded-full border-indigo-200 text-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
-                                    {assignment.classrooms.name}
-                                  </Badge>
-                                  <span className="text-xs text-slate-400">•</span>
-                                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <h3 className="text-lg font-bold group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                  {assignment.title}
-                                </h3>
-                              </div>
-
-                              <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-l border-slate-100 dark:border-slate-800 sm:pl-6">
-                                <div className="text-right hidden sm:block">
-                                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.teacher')}</p>
-                                  <p className="text-sm font-medium truncate max-w-[100px]">
-                                    {assignment.classrooms.teacher_profiles?.full_name || t('common.teacher')}
-                                  </p>
-                                </div>
-                                <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shadow-sm">
+                            <CardHeader className="p-4 pb-3">
+                              <CardTitle className="text-base mb-1">{assignment.title}</CardTitle>
+                              <CardDescription className="text-sm mb-2">
+                                {assignment.classrooms.name} • {t('common.due')}:{' '}
+                                {new Date(assignment.due_at).toLocaleDateString()}
+                              </CardDescription>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Avatar className="h-6 w-6">
                                   {assignment.classrooms.teacher_profiles?.avatar_url && (
                                     <AvatarImage
                                       src={assignment.classrooms.teacher_profiles.avatar_url}
-                                      alt={assignment.classrooms.teacher_profiles.full_name || t('common.teacher')}
+                                      alt={
+                                        assignment.classrooms.teacher_profiles.full_name ||
+                                        t('common.teacher')
+                                      }
                                     />
                                   )}
-                                  <AvatarFallback className="bg-indigo-100 text-indigo-600">{teacherInitials}</AvatarFallback>
+                                  <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
                                 </Avatar>
+                                <span className="text-xs text-muted-foreground">
+                                  {assignment.classrooms.teacher_profiles?.full_name ||
+                                    t('common.teacher')}
+                                </span>
                               </div>
-                            </div>
+                            </CardHeader>
                           </Card>
                         );
                       })}
                     </div>
-                  )
-                ) : (
-                  // Finished assignments tab
-                  finishedAssignments.length === 0 ? (
-                    <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl">
-                      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
-                          <BookOpen className="h-6 w-6 text-slate-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-1">No Finished Assignments</h3>
-                        <p className="text-sm text-muted-foreground">Assignments you've submitted will appear here</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="finished">
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">{t('common.loading')}</div>
+                  ) : finishedAssignments.length === 0 ? (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          No Finished Assignments
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Assignments you've submitted will appear here
+                        </p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -647,62 +723,61 @@ const StudentDashboard = () => {
                         return (
                           <Card
                             key={assignment.id}
-                            className="group hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-3xl bg-slate-50 dark:bg-slate-900/50 overflow-hidden opacity-80 hover:opacity-100"
+                            className="hover:shadow-lg transition-shadow cursor-pointer"
                             onClick={() => navigate(`/student/assignment/${assignment.id}`)}
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center p-2">
-                              <div className="p-4 flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="secondary" className="rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                    {assignment.classrooms.name}
-                                  </Badge>
-                                  <Badge className="rounded-full bg-green-100 text-green-700 hover:bg-green-200 border-none">
-                                    Completed
-                                  </Badge>
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
-                                  {assignment.title}
-                                </h3>
+                            <CardHeader className="p-4 pb-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <CardTitle className="text-base">{assignment.title}</CardTitle>
+                                <Badge variant="secondary" className="text-xs">Completed</Badge>
                               </div>
-
-                              <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-l border-slate-200 dark:border-slate-800 sm:pl-6">
-                                <Avatar className="h-8 w-8 grayscale opacity-70">
+                              <CardDescription className="text-sm mb-2">
+                                {assignment.classrooms.name} • {t('common.due')}:{' '}
+                                {new Date(assignment.due_at).toLocaleDateString()}
+                              </CardDescription>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Avatar className="h-6 w-6">
                                   {assignment.classrooms.teacher_profiles?.avatar_url && (
                                     <AvatarImage
                                       src={assignment.classrooms.teacher_profiles.avatar_url}
-                                      alt={assignment.classrooms.teacher_profiles.full_name || t('common.teacher')}
+                                      alt={
+                                        assignment.classrooms.teacher_profiles.full_name ||
+                                        t('common.teacher')
+                                      }
                                     />
                                   )}
-                                  <AvatarFallback>{teacherInitials}</AvatarFallback>
+                                  <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
                                 </Avatar>
+                                <span className="text-xs text-muted-foreground">
+                                  {assignment.classrooms.teacher_profiles?.full_name ||
+                                    t('common.teacher')}
+                                </span>
                               </div>
-                            </div>
+                            </CardHeader>
                           </Card>
                         );
                       })}
                     </div>
-                  )
-                )}
-              </div>
-            </section>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
 
           {/* Calendar Sidebar */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              {user && (
-                <StudentCalendar
-                  studentId={user.id}
-                  assignments={calendarAssignments}
-                  classrooms={calendarClassrooms}
-                  loading={loading}
-                />
-              )}
-            </div>
+            {user && (
+              <StudentCalendar
+                studentId={user.id}
+                assignments={calendarAssignments}
+                classrooms={calendarClassrooms}
+                loading={loading}
+              />
+            )}
           </div>
         </div>
       </main>
-    </BreathingBackground>
+    </div>
   );
 };
 

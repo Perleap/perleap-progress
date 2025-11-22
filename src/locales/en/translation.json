@@ -509,7 +509,20 @@
     "noNotifications": "No new notifications",
     "markAllRead": "Mark all as read",
     "notificationsRead": "All notifications marked as read",
-    "end": "End"
+    "end": "End",
+    "welcome": "Welcome",
+    "settings": "Settings",
+    "darkMode": "Dark Mode",
+    "language": "Language",
+    "logout": "Log out",
+    "backToDashboard": "Back to Dashboard",
+    "subject": "Subject",
+    "graded": "Graded",
+    "submitted": "Submitted",
+    "missing": "Missing",
+    "assigned": "Assigned",
+    "viewSubmission": "View Submission",
+    "startAssignment": "Start Assignment"
   },
   "dimensions": {
     "score": "Score",

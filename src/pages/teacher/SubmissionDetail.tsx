@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, MessageSquare, AlertTriangle, Sparkles } from 'lucide-react';
+import { ArrowLeft, MessageSquare, AlertTriangle, Sparkles, User, Calendar, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { StudentAlert } from '@/types/alerts';
 
 interface ConversationMessage {
@@ -62,6 +64,7 @@ const SubmissionDetail = () => {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [studentName, setStudentName] = useState<string>('');
+  const [studentAvatar, setStudentAvatar] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<StudentAlert[]>([]);
   const [generatingAssignment, setGeneratingAssignment] = useState(false);
@@ -106,6 +109,23 @@ const SubmissionDetail = () => {
 
       if (subError) throw subError;
       if (!submissionData) {
+        console.error('Submission not found');
+        toast.error(t('submissionDetail.errors.loading'));
+        navigate(-1);
+        return;
+      }
+
+      // Safety check for assignment data
+      if (!submissionData.assignments) {
+        console.error('Assignment data missing for submission');
+        toast.error(t('submissionDetail.errors.loading'));
+        navigate(-1);
+        return;
+      }
+
+      // Safety check for classroom data
+      if (!submissionData.assignments.classrooms) {
+        console.error('Classroom data missing for assignment');
         toast.error(t('submissionDetail.errors.loading'));
         navigate(-1);
         return;
@@ -114,6 +134,7 @@ const SubmissionDetail = () => {
       // Check if this teacher owns the classroom
       const teacherId = submissionData.assignments.classrooms.teacher_id;
       if (teacherId !== user?.id) {
+        console.error('Unauthorized access to submission');
         toast.error(t('submissionDetail.errors.loading'));
         navigate(-1);
         return;
@@ -124,11 +145,12 @@ const SubmissionDetail = () => {
       // Fetch student name
       const { data: studentProfile } = await supabase
         .from('student_profiles')
-        .select('full_name')
+        .select('full_name, avatar_url')
         .eq('user_id', submissionData.student_id)
         .single();
 
       setStudentName(studentProfile?.full_name || 'Unknown Student');
+      setStudentAvatar(studentProfile?.avatar_url);
 
       // Fetch feedback
       const { data: feedbackData } = await supabase
@@ -138,7 +160,7 @@ const SubmissionDetail = () => {
         .maybeSingle();
 
       if (feedbackData) {
-        setFeedback(feedbackData);
+        setFeedback(feedbackData as unknown as Feedback);
       }
 
       // Fetch wellbeing alerts
@@ -149,7 +171,7 @@ const SubmissionDetail = () => {
         .order('created_at', { ascending: false });
 
       if (alertsData) {
-        setAlerts(alertsData);
+        setAlerts(alertsData as unknown as StudentAlert[]);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error loading submission';
@@ -229,16 +251,61 @@ const SubmissionDetail = () => {
   if (!submission) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <BreathingBackground className="min-h-screen pb-12">
       <DashboardHeader
-        title={`${t('submissionDetail.title')}: ${studentName}`}
-        subtitle={`${submission.assignments.title} - ${new Date(submission.submitted_at).toLocaleDateString()}`}
+        title={`${t('submissionDetail.title')}`}
+        subtitle={`${submission.assignments.title}`}
         userType="teacher"
         showBackButton
+        onBackClick={() => navigate(-1)}
       />
 
-      <main className="container py-8 max-w-5xl">
-        <div className="space-y-6">
+      <main className="container py-8 px-4 max-w-6xl mx-auto relative z-10">
+        <div className="space-y-8">
+          {/* Student Info Header */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-3xl border border-white/20 shadow-sm">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-md">
+                <AvatarImage src={studentAvatar} alt={studentName} />
+                <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xl">{studentName.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{studentName}</h1>
+                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 mt-1">
+                  <span className="flex items-center gap-1 text-sm">
+                    <BookOpen className="h-3.5 w-3.5" />
+                    {submission.assignments.classrooms.name}
+                  </span>
+                  <span className="flex items-center gap-1 text-sm">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {new Date(submission.submitted_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {feedback && (
+              <Button
+                onClick={handleGenerateFollowupAssignment}
+                disabled={generatingAssignment}
+                className="rounded-full shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0"
+                size="lg"
+              >
+                {generatingAssignment ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Follow-up Assignment
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
           {/* Wellbeing Alerts - Show prominently at top */}
           {alerts.length > 0 && (
             <WellbeingAlertCard
@@ -248,92 +315,71 @@ const SubmissionDetail = () => {
             />
           )}
 
-          {feedback && (
-            <>
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-primary">
-                        {t('submissionDetail.teacherFeedback')}
-                      </CardTitle>
-                      <CardDescription>
-                        AI-generated analysis and recommendations based on {studentName}'s learning
-                        conversation
-                      </CardDescription>
+          {feedback ? (
+            <div className="grid lg:grid-cols-12 gap-8">
+              {/* Left Column: Feedback & Analytics */}
+              <div className="lg:col-span-7 space-y-8">
+                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-900/30 pb-6">
+                    <CardTitle className="text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-indigo-500" />
+                      {t('submissionDetail.teacherFeedback')}
+                    </CardTitle>
+                    <CardDescription className="text-indigo-700/70 dark:text-indigo-300/70">
+                      AI-generated analysis and recommendations based on the learning conversation
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="prose prose-slate dark:prose-invert max-w-none">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {feedback.teacher_feedback
+                          ?.replace(/\*\*/g, '')
+                          ?.replace(/\/\//g, '')
+                          ?.trim() || 'No teacher feedback generated'}
+                      </div>
                     </div>
-                    <Button
-                      onClick={handleGenerateFollowupAssignment}
-                      disabled={generatingAssignment}
-                      className="flex items-center gap-2"
-                    >
-                      {generatingAssignment ? (
-                        <>
-                          <span className="animate-spin">⏳</span>
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          Generate Follow-up Assignment
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
-                    {feedback.teacher_feedback
-                      ?.replace(/\*\*/g, '')
-                      ?.replace(/\/\//g, '')
-                      ?.trim() || 'No teacher feedback generated'}
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('submissionDetail.studentFeedback')}</CardTitle>
-                  <CardDescription>
-                    What {studentName} saw after completing the assignment
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground">
-                    {feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
-                  </div>
-                </CardContent>
-              </Card>
+                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-slate-500" />
+                      {t('submissionDetail.studentFeedback')}
+                    </CardTitle>
+                    <CardDescription>
+                      What {studentName} saw after completing the assignment
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl text-slate-600 dark:text-slate-400 italic">
+                      "{feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}"
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <StudentAnalytics
-                studentId={submission.student_id}
-                classroomId={submission.assignments.classroom_id}
-                currentSubmissionId={submission.id}
-              />
+                <div className="space-y-8">
+                  <StudentAnalytics
+                    studentId={submission.student_id}
+                    classroomId={submission.assignments.classroom_id}
+                    currentSubmissionId={submission.id}
+                  />
+                </div>
+              </div>
 
-              <HardSkillsAssessmentTable
-                submissionId={submission.id}
-                title="Content Related Abilities (CRA)"
-                description={`Hard skills assessment for ${studentName}'s performance`}
-              />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Conversation History
-                  </CardTitle>
-                  <CardDescription>
-                    Complete conversation between {studentName} and Perleap
-                    {alerts.length > 0 && (
-                      <span className="text-red-600 font-semibold ml-2">
-                        • Concerning messages are highlighted in red
-                      </span>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
+              {/* Right Column: Conversation History & CRA */}
+              <div className="lg:col-span-5 space-y-6">
+                <Card className="h-[600px] flex flex-col rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                  <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 z-10 shrink-0">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                      Conversation History
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Complete transcript between {studentName} and Perleap
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
                     {feedback.conversation_context &&
                       Array.isArray(feedback.conversation_context) &&
                       feedback.conversation_context.map((msg, idx) => {
@@ -342,53 +388,60 @@ const SubmissionDetail = () => {
                           alert.triggered_messages.filter((tm) => tm.message_index === idx)
                         );
                         const isConcerning = triggeredAlerts.length > 0;
+                        const isUser = msg.role === 'user';
 
                         return (
                           <div
                             key={idx}
-                            className={`p-4 rounded-lg relative ${
-                              isConcerning
-                                ? 'bg-red-50 border-2 border-red-400 ml-8'
-                                : msg.role === 'user'
-                                  ? 'bg-primary/10 ml-8'
-                                  : 'bg-muted mr-8'
-                            }`}
+                            className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                           >
-                            {isConcerning && (
-                              <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
-                                <AlertTriangle className="h-4 w-4" />
-                              </div>
-                            )}
-                            <div className="font-semibold mb-1 text-sm flex items-center gap-2">
-                              {msg.role === 'user' ? studentName : 'Perleap'}
+                            <div
+                              className={`max-w-[85%] p-4 rounded-2xl relative shadow-sm ${isConcerning
+                                ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
+                                : isUser
+                                  ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none'
+                                }`}
+                            >
                               {isConcerning && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Concerning
-                                </Badge>
+                                <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm z-10">
+                                  <AlertTriangle className="h-3 w-3" />
+                                </div>
+                              )}
+
+                              <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+
+                              {isConcerning && triggeredAlerts.length > 0 && (
+                                <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-800/50 text-xs text-red-700 dark:text-red-300 bg-red-100/50 dark:bg-red-900/20 -mx-4 -mb-4 p-3 rounded-b-2xl">
+                                  <strong>Why flagged:</strong> {triggeredAlerts[0].reason}
+                                </div>
                               )}
                             </div>
-                            <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
-                            {isConcerning && triggeredAlerts.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-red-300 text-xs text-red-700">
-                                <strong>Why flagged:</strong> {triggeredAlerts[0].reason}
-                              </div>
-                            )}
+                            <span className="text-[10px] text-slate-400 mt-1 px-1">
+                              {isUser ? studentName : 'Perleap'}
+                            </span>
                           </div>
                         );
                       })}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                  </CardContent>
+                </Card>
 
-          {!feedback && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">{t('submissionDetail.noFeedback')}</h3>
-                <p className="text-muted-foreground text-center">
-                  This student hasn't completed the assignment yet
+                <HardSkillsAssessmentTable
+                  submissionId={submission.id}
+                  title="Content Related Abilities (CRA)"
+                  description={`Hard skills assessment for ${studentName}'s performance`}
+                />
+              </div>
+            </div>
+          ) : (
+            <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-6">
+                  <MessageSquare className="h-10 w-10 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{t('submissionDetail.noFeedback')}</h3>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md">
+                  This student hasn't completed the assignment yet, or feedback is still being generated.
                 </p>
               </CardContent>
             </Card>
@@ -406,12 +459,12 @@ const SubmissionDetail = () => {
             setAssignmentDialogOpen(false);
             setGeneratedAssignmentData(null);
           }}
-          initialData={generatedAssignmentData}
+          initialData={generatedAssignmentData as any}
           assignedStudentId={submission.student_id}
           studentName={studentName}
         />
       )}
-    </div>
+    </BreathingBackground>
   );
 };
 

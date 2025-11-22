@@ -40,6 +40,7 @@ import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
 import { SubmissionsTab } from '@/components/SubmissionsTab';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
 
 interface CourseMaterial {
   type: 'pdf' | 'link';
@@ -148,7 +149,27 @@ const ClassroomDetail = () => {
         navigate('/teacher/dashboard');
         return;
       }
-      setClassroom(data);
+
+      // Safely cast JSON fields
+      const learning_outcomes = Array.isArray(data.learning_outcomes)
+        ? data.learning_outcomes.map(String)
+        : null;
+
+      const key_challenges = Array.isArray(data.key_challenges)
+        ? data.key_challenges.map(String)
+        : null;
+
+      // Cast domains and materials if they exist in the data
+      const domains = (data as any).domains as Domain[] | null;
+      const materials = (data as any).materials as CourseMaterial[] | null;
+
+      setClassroom({
+        ...data,
+        learning_outcomes,
+        key_challenges,
+        domains: domains || null,
+        materials: materials || null,
+      });
       await fetchAssignments();
       await fetchStudents();
     } catch (error) {
@@ -315,7 +336,7 @@ const ClassroomDetail = () => {
   if (!classroom) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <BreathingBackground className="min-h-screen pb-12">
       <DashboardHeader
         title={classroom.name}
         subtitle={classroom.subject}
@@ -324,38 +345,52 @@ const ClassroomDetail = () => {
         onBackClick={() => navigate('/teacher/dashboard')}
       />
 
-      <main className="container py-4 md:py-8 px-4">
-        <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
-          <div className="overflow-x-auto pb-2 -mx-4 px-4">
-            <TabsList className="inline-flex w-full min-w-max md:w-auto">
-              <TabsTrigger value="overview" className="text-xs md:text-sm">
-                {t('classroomDetail.settings')}
-              </TabsTrigger>
-              <TabsTrigger value="assignments" className="text-xs md:text-sm">
-                {t('classroomDetail.assignments')}
-              </TabsTrigger>
-              <TabsTrigger value="students" className="text-xs md:text-sm">
-                {t('classroomDetail.students')}
-              </TabsTrigger>
-              <TabsTrigger value="submissions" className="text-xs md:text-sm">
-                {t('classroomDetail.submissionsTab')}
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="text-xs md:text-sm">
-                {t('classroomDetail.analytics')}
-              </TabsTrigger>
-            </TabsList>
-          </div>
+      <main className="container py-6 md:py-8 px-4 max-w-7xl mx-auto">
+        <Tabs defaultValue="overview" className="space-y-6 md:space-y-8">
+          <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-full inline-flex h-auto w-full sm:w-auto overflow-x-auto justify-start">
+            <TabsTrigger
+              value="overview"
+              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+            >
+              About
+            </TabsTrigger>
+            <TabsTrigger
+              value="assignments"
+              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+            >
+              Assignments
+            </TabsTrigger>
+            <TabsTrigger
+              value="students"
+              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+            >
+              {t('classroomDetail.students')}
+            </TabsTrigger>
+            <TabsTrigger
+              value="submissions"
+              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+            >
+              {t('classroomDetail.submissionsTab')}
+            </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+            >
+              {t('classroomDetail.analytics')}
+            </TabsTrigger>
+          </TabsList>
 
-          <TabsContent value="overview" className="space-y-4 md:space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h2 className="text-xl md:text-2xl font-bold">
+          <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
                 {t('classroomDetail.overview.title')}
               </h2>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <Button
                   onClick={() => setEditDialogOpen(true)}
                   size="sm"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all"
+                  variant="outline"
                 >
                   <Edit className="me-2 h-4 w-4" />
                   {t('classroomDetail.edit')}
@@ -364,7 +399,7 @@ const ClassroomDetail = () => {
                   onClick={() => setDeleteDialogOpen(true)}
                   size="sm"
                   variant="destructive"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all"
                 >
                   <Trash2 className="me-2 h-4 w-4" />
                   {t('classroomDetail.deleteButton')}
@@ -372,152 +407,211 @@ const ClassroomDetail = () => {
               </div>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('classroomDetail.inviteCode')}</CardTitle>
-                <CardDescription>{t('classroomDetail.shareCode')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <code className="text-2xl font-mono font-bold px-4 py-2 bg-muted rounded-lg">
-                    {classroom.invite_code}
-                  </code>
-                </div>
-              </CardContent>
-            </Card>
-
-            {classroom.course_title && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    {t('classroomDetail.overview.courseInfo')}
-                  </CardTitle>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {/* Invite Code Card */}
+              <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-900/20 dark:to-pink-900/20 overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-slate-800 dark:text-slate-100">{t('classroomDetail.inviteCode')}</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">{t('classroomDetail.shareCode')}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      {t('classroomDetail.overview.courseTitle')}
-                    </h3>
-                    <p className="text-muted-foreground">{classroom.course_title}</p>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm">
+                      <code className="text-3xl font-mono font-bold text-indigo-600 dark:text-indigo-400 tracking-wider">
+                        {classroom.invite_code}
+                      </code>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full hover:bg-white/50 dark:hover:bg-slate-800/50"
+                      onClick={() => {
+                        navigator.clipboard.writeText(classroom.invite_code);
+                        toast.success('Copied to clipboard!');
+                      }}
+                    >
+                      <LinkIcon className="h-5 w-5 text-slate-500" />
+                    </Button>
                   </div>
-
-                  {classroom.course_duration && (
-                    <div>
-                      <h3 className="font-semibold mb-1">
-                        {t('classroomDetail.overview.duration')}
-                      </h3>
-                      <p className="text-muted-foreground">{classroom.course_duration}</p>
-                    </div>
-                  )}
-
-                  {(classroom.start_date || classroom.end_date) && (
-                    <div>
-                      <h3 className="font-semibold mb-1 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        {t('classroomDetail.overview.courseDates')}
-                      </h3>
-                      <div className="text-muted-foreground">
-                        {classroom.start_date && (
-                          <p>
-                            {t('common.start')}:{' '}
-                            {new Date(classroom.start_date).toLocaleDateString()}
-                          </p>
-                        )}
-                        {classroom.end_date && (
-                          <p>
-                            {t('common.end')}: {new Date(classroom.end_date).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {classroom.course_outline && (
-                    <div>
-                      <h3 className="font-semibold mb-1">
-                        {t('classroomDetail.overview.courseOutline')}
-                      </h3>
-                      <p className="text-muted-foreground whitespace-pre-wrap">
-                        {classroom.course_outline}
-                      </p>
-                    </div>
-                  )}
-
-                  {classroom.resources && (
-                    <div>
-                      <h3 className="font-semibold mb-1">
-                        {t('classroomDetail.overview.resources')}
-                      </h3>
-                      <p className="text-muted-foreground whitespace-pre-wrap">
-                        {classroom.resources}
-                      </p>
-                    </div>
-                  )}
-
-                  {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-1">
-                        {t('classroomDetail.overview.learningOutcomes')}
-                      </h3>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        {classroom.learning_outcomes.map((outcome: string, index: number) => (
-                          <li key={index}>{outcome}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {classroom.key_challenges && classroom.key_challenges.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-1">
-                        {t('classroomDetail.overview.keyChallenges')}
-                      </h3>
-                      <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        {classroom.key_challenges.map((challenge: string, index: number) => (
-                          <li key={index}>{challenge}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
-            )}
+
+              {/* Course Info */}
+              {classroom.course_title && (
+                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                        <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      {t('classroomDetail.overview.courseInfo')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                        {t('classroomDetail.overview.courseTitle')}
+                      </h3>
+                      <p className="font-medium text-slate-800 dark:text-slate-200">{classroom.course_title}</p>
+                    </div>
+
+                    {classroom.course_duration && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                          {t('classroomDetail.overview.duration')}
+                        </h3>
+                        <p className="font-medium text-slate-800 dark:text-slate-200">{classroom.course_duration}</p>
+                      </div>
+                    )}
+
+                    {(classroom.start_date || classroom.end_date) && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                          {t('classroomDetail.overview.courseDates')}
+                        </h3>
+                        <div className="text-slate-700 dark:text-slate-300 space-y-1">
+                          {classroom.start_date && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              <span className="text-sm">{t('common.start')}: {new Date(classroom.start_date).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                          {classroom.end_date && (
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                              <span className="text-sm">{t('common.end')}: {new Date(classroom.end_date).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Outline & Resources */}
+              {(classroom.course_outline || classroom.resources) && (
+                <Card className="md:col-span-2 lg:col-span-2 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                        <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {classroom.course_outline && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                          {t('classroomDetail.overview.courseOutline')}
+                        </h3>
+                        <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                          {classroom.course_outline}
+                        </p>
+                      </div>
+                    )}
+
+                    {classroom.resources && (
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                          {t('classroomDetail.overview.resources')}
+                        </h3>
+                        <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                          {classroom.resources}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Learning Outcomes & Challenges */}
+              {(classroom.learning_outcomes?.length || classroom.key_challenges?.length) ? (
+                <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                  <CardContent className="p-6 grid md:grid-cols-2 gap-8">
+                    {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
+                      <div>
+                        <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">
+                          <span className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400">
+                            <BarChart3 className="h-4 w-4" />
+                          </span>
+                          {t('classroomDetail.overview.learningOutcomes')}
+                        </h3>
+                        <ul className="space-y-3">
+                          {classroom.learning_outcomes.map((outcome: string, index: number) => (
+                            <li key={index} className="flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold mt-0.5">
+                                {index + 1}
+                              </span>
+                              <span className="text-sm leading-relaxed">{outcome}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {classroom.key_challenges && classroom.key_challenges.length > 0 && (
+                      <div>
+                        <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">
+                          <span className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded-lg text-rose-600 dark:text-rose-400">
+                            <Users className="h-4 w-4" />
+                          </span>
+                          {t('classroomDetail.overview.keyChallenges')}
+                        </h3>
+                        <ul className="space-y-3">
+                          {classroom.key_challenges.map((challenge: string, index: number) => (
+                            <li key={index} className="flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xs font-bold mt-0.5">
+                                !
+                              </span>
+                              <span className="text-sm leading-relaxed">{challenge}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : null}
+            </div>
 
             {/* Domains & Components Section */}
             {classroom.domains && classroom.domains.length > 0 && (
-              <Card>
+              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
+                    <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                      <BookOpen className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    </div>
                     Subject Areas & Skills
                   </CardTitle>
                   <CardDescription>Subject areas and their specific skills</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {classroom.domains.map((domain, index) => (
-                    <div key={index} className="border rounded-lg">
+                    <div key={index} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
                       <button
-                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-white dark:bg-slate-900/30"
                         onClick={() => toggleDomain(index)}
                       >
-                        <span className="font-semibold">{domain.name}</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{domain.name}</span>
                         {expandedDomains.has(index) ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-5 w-5 text-slate-400" />
                         ) : (
-                          <ChevronRight className="h-4 w-4" />
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
                         )}
                       </button>
                       {expandedDomains.has(index) && (
-                        <div className="px-3 pb-3 space-y-1">
-                          <p className="text-xs text-muted-foreground mb-2">Skills:</p>
-                          <ul className="list-disc list-inside space-y-1">
+                        <div className="px-4 pb-4 pt-2 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Skills</p>
+                          <div className="flex flex-wrap gap-2">
                             {domain.components.map((component, compIndex) => (
-                              <li key={compIndex} className="text-sm text-muted-foreground">
+                              <Badge key={compIndex} variant="secondary" className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 font-normal">
                                 {component}
-                              </li>
+                              </Badge>
                             ))}
-                          </ul>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -528,29 +622,36 @@ const ClassroomDetail = () => {
 
             {/* Course Materials Section */}
             {classroom.materials && classroom.materials.length > 0 && (
-              <Card>
+              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+                      <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    </div>
                     Course Materials
                   </CardTitle>
                   <CardDescription>PDFs and links available for this classroom</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-2">
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {classroom.materials.map((material, index) => (
                       <Button
                         key={index}
                         variant="outline"
-                        className="justify-start h-auto py-3 px-4"
+                        className="justify-start h-auto py-4 px-4 rounded-2xl border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:bg-primary/5 transition-all group"
                         onClick={() => window.open(material.url, '_blank')}
                       >
-                        {material.type === 'pdf' ? (
-                          <FileText className="h-4 w-4 mr-2 flex-shrink-0" />
-                        ) : (
-                          <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        )}
-                        <span className="text-left truncate">{material.name}</span>
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl mr-3 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+                          {material.type === 'pdf' ? (
+                            <FileText className="h-5 w-5 text-slate-500 group-hover:text-primary transition-colors" />
+                          ) : (
+                            <LinkIcon className="h-5 w-5 text-slate-500 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                        <div className="flex-1 text-left overflow-hidden">
+                          <span className="block font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">{material.name}</span>
+                          <span className="text-xs text-slate-400 capitalize">{material.type}</span>
+                        </div>
                       </Button>
                     ))}
                   </div>
@@ -559,20 +660,19 @@ const ClassroomDetail = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="assignments" className="space-y-4 md:space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <TabsContent value="assignments" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold">
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
                   {t('classroomDetail.assignments')}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-slate-500 dark:text-slate-400 mt-1">
                   {t('classroomDetail.assignmentsSubtitle')}
                 </p>
               </div>
               <Button
                 onClick={() => setAssignmentDialogOpen(true)}
-                size="sm"
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto rounded-full shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90"
               >
                 <Plus className="me-2 h-4 w-4" />
                 {t('classroomDetail.createAssignment')}
@@ -580,16 +680,18 @@ const ClassroomDetail = () => {
             </div>
 
             {assignments.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
+              <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4">
+                    <BookOpen className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                     {t('classroomDetail.noAssignments')}
                   </h3>
-                  <p className="text-muted-foreground mb-4">
+                  <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
                     Create your first assignment to get started
                   </p>
-                  <Button onClick={() => setAssignmentDialogOpen(true)}>
+                  <Button onClick={() => setAssignmentDialogOpen(true)} className="rounded-full">
                     <Plus className="me-2 h-4 w-4" />
                     {t('classroomDetail.createAssignment')}
                   </Button>
@@ -598,55 +700,68 @@ const ClassroomDetail = () => {
             ) : (
               <div className="grid gap-4">
                 {assignments.map((assignment) => (
-                  <Card key={assignment.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <CardTitle>{assignment.title}</CardTitle>
+                  <Card key={assignment.id} className="group rounded-3xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
+                              {assignment.title}
+                            </CardTitle>
                             {assignment.assigned_student_id && (
                               <Badge
                                 variant="outline"
-                                className="bg-purple-50 text-purple-700 border-purple-200"
+                                className="rounded-full bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
                               >
                                 For: {assignment.student_profiles?.full_name || 'Student'}
                               </Badge>
                             )}
+                            <Badge
+                              variant={assignment.status === 'published' ? 'default' : 'secondary'}
+                              className={`rounded-full px-3 font-normal ${assignment.status === 'published'
+                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                                }`}
+                            >
+                              {assignment.status}
+                            </Badge>
                           </div>
-                          <CardDescription className="mt-2">
-                            Type: {assignment.type.replace('_', ' ')} •
-                            {assignment.due_at &&
-                              ` Due: ${new Date(assignment.due_at).toLocaleString()}`}
-                          </CardDescription>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                            <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                              Type: {assignment.type.replace('_', ' ')}
+                            </span>
+                            {assignment.due_at && (
+                              <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                                Due: {new Date(assignment.due_at).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={assignment.status === 'published' ? 'default' : 'secondary'}
-                          >
-                            {assignment.status}
-                          </Badge>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                             onClick={() => {
                               setSelectedAssignment(assignment);
                               setEditAssignmentDialogOpen(true);
                             }}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4 text-slate-500" />
                           </Button>
                           <Button
-                            variant="destructive"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600"
                             onClick={() => deleteAssignment(assignment.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 text-slate-500 hover:text-rose-600" />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
                         {assignment.instructions}
                       </p>
 
@@ -654,15 +769,14 @@ const ClassroomDetail = () => {
                       {assignment.materials &&
                         (() => {
                           try {
-                            // Handle both JSONB (object) and old TEXT (string) formats
                             const materials: CourseMaterial[] = typeof assignment.materials === 'string'
                               ? JSON.parse(assignment.materials)
                               : assignment.materials;
                             if (Array.isArray(materials) && materials.length > 0) {
                               return (
-                                <div className="pt-2 border-t">
-                                  <p className="text-xs font-semibold text-muted-foreground mb-2">
-                                    Course Materials ({materials.length})
+                                <div className="pt-2">
+                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                    Attachments ({materials.length})
                                   </p>
                                   <div className="flex flex-wrap gap-2">
                                     {materials.map((material, index) => (
@@ -671,19 +785,14 @@ const ClassroomDetail = () => {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => window.open(material.url, '_blank')}
-                                        className="gap-2"
+                                        className="gap-2 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                                       >
                                         {material.type === 'pdf' ? (
-                                          <>
-                                            <FileText className="h-3 w-3" />
-                                            <span className="text-xs">{material.name}</span>
-                                          </>
+                                          <FileText className="h-3.5 w-3.5 text-rose-500" />
                                         ) : (
-                                          <>
-                                            <LinkIcon className="h-3 w-3" />
-                                            <span className="text-xs">{material.name}</span>
-                                          </>
+                                          <LinkIcon className="h-3.5 w-3.5 text-blue-500" />
                                         )}
+                                        <span className="text-xs font-medium">{material.name}</span>
                                       </Button>
                                     ))}
                                   </div>
@@ -702,28 +811,35 @@ const ClassroomDetail = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="students" className="space-y-4 md:space-y-6">
+          <TabsContent value="students" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold">
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
                 {t('classroomDetail.studentsTab.title')}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
                 {t('classroomDetail.studentsTab.subtitle')}
               </p>
             </div>
 
-            <Card>
+            <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+                    <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
                   {t('common.students')} ({students.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {students.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No students enrolled yet</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                      <Users className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400">No students enrolled yet</p>
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {students.map((enrollment) => {
                       const hasName = enrollment.student_profiles?.full_name;
                       const displayName = hasName
@@ -731,33 +847,34 @@ const ClassroomDetail = () => {
                         : 'Student (Onboarding Incomplete)';
                       const initials = hasName
                         ? enrollment.student_profiles.full_name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .toUpperCase()
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase()
                         : 'S';
 
                       return (
                         <div
                           key={enrollment.id}
-                          className="flex items-center gap-3 p-3 border rounded-lg"
+                          className="flex items-center gap-4 p-4 border border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-white dark:bg-slate-900/30"
                         >
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-12 w-12 border-2 border-white dark:border-slate-800 shadow-sm">
                             {enrollment.student_profiles?.avatar_url && (
                               <AvatarImage
                                 src={enrollment.student_profiles.avatar_url}
                                 alt={displayName}
                               />
                             )}
-                            <AvatarFallback>{initials}</AvatarFallback>
+                            <AvatarFallback className="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">{initials}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p
-                              className={`font-medium truncate ${!hasName ? 'text-muted-foreground italic' : ''}`}
+                              className={`font-bold text-slate-800 dark:text-slate-200 truncate ${!hasName ? 'text-slate-400 italic' : ''}`}
                             >
                               {displayName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                              <Calendar className="h-3 w-3" />
                               {t('classroomDetail.studentsTab.joined')}:{' '}
                               {new Date(enrollment.created_at).toLocaleDateString()}
                             </p>
@@ -771,23 +888,25 @@ const ClassroomDetail = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="submissions" className="space-y-4 md:space-y-6">
+          <TabsContent value="submissions" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold">
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
                 {t('classroomDetail.submissions.title')}
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
                 {t('classroomDetail.submissions.subtitle')}
               </p>
             </div>
             <SubmissionsTab classroomId={id!} />
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-4 md:space-y-6">
+          <TabsContent value="analytics" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 md:h-6 md:w-6" />
-                <h2 className="text-xl md:text-2xl font-bold">{t('classroomDetail.analytics')}</h2>
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                  <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">{t('classroomDetail.analytics')}</h2>
               </div>
               <RegenerateScoresButton classroomId={id!} onComplete={fetchClassroom} />
             </div>
@@ -820,7 +939,7 @@ const ClassroomDetail = () => {
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this classroom?</AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -843,18 +962,18 @@ const ClassroomDetail = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-full">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteClassroom}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full"
             >
               {isDeleting ? 'Deleting...' : 'Delete Classroom'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      </AlertDialog >
+    </BreathingBackground >
   );
 };
 

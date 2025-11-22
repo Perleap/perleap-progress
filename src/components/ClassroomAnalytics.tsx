@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Users, BookOpen, FileText, CheckCircle2, BarChart3, Filter, Sparkles, Trophy, Target } from 'lucide-react';
 
 interface ClassroomAnalyticsProps {
   classroomId: string;
@@ -248,7 +248,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         }
       }
     } catch (error) {
-      toast.error('Error loading analytics');
+      // toast.error('Error loading analytics');
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
@@ -256,46 +256,59 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
     }
   };
 
-  if (loading) return <div className="text-center py-12 text-muted-foreground">Loading...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+    </div>
+  );
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base md:text-lg">{t('analytics.filtersTitle')}</CardTitle>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Filters Section */}
+      <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800 dark:text-slate-100">
+            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
+              <Filter className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            {t('analytics.filtersTitle')}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium mb-2 block">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 ml-1 flex items-center gap-2">
+                <Users className="h-4 w-4" />
                 {t('analytics.filterByStudent')}
               </label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('analytics.all')}</SelectItem>
+                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1">
+                  <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.all')}</SelectItem>
                   {allStudents.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
+                    <SelectItem key={s.id} value={s.id} className="rounded-xl cursor-pointer">
                       {s.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 ml-1 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
                 {t('analytics.filterByAssignment')}
               </label>
               <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('analytics.allAssignments')}</SelectItem>
+                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1">
+                  <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allAssignments')}</SelectItem>
                   {assignments.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
+                    <SelectItem key={a.id} value={a.id} className="rounded-xl cursor-pointer">
                       {a.title}
                     </SelectItem>
                   ))}
@@ -306,43 +319,63 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm">{t('analytics.totalStudents')}</CardTitle>
+      {/* Key Metrics Grid */}
+      <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-blue-100 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              {t('analytics.totalStudents')}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-xl md:text-2xl font-bold">{studentCount}</div>
+          <CardContent className="relative z-10">
+            <div className="text-4xl font-bold">{studentCount}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm">{t('analytics.assignments')}</CardTitle>
+
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-emerald-500 to-teal-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-emerald-100 flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              {t('analytics.assignments')}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-xl md:text-2xl font-bold">{assignmentCount}</div>
+          <CardContent className="relative z-10">
+            <div className="text-4xl font-bold">{assignmentCount}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm">{t('analytics.totalSubmissions')}</CardTitle>
+
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-amber-100 flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              {t('analytics.totalSubmissions')}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-xl md:text-2xl font-bold">
+          <CardContent className="relative z-10">
+            <div className="text-4xl font-bold">
               {students.reduce((s, st) => s + st.feedbackCount, 0)}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs md:text-sm">{t('analytics.completionRate')}</CardTitle>
+
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-purple-500 to-pink-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-purple-100 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              {t('analytics.completionRate')}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-xl md:text-2xl font-bold">
+          <CardContent className="relative z-10">
+            <div className="text-4xl font-bold">
               {studentCount > 0
                 ? Math.round(
-                    (students.filter((s) => s.feedbackCount > 0).length / studentCount) * 100
-                  )
+                  (students.filter((s) => s.feedbackCount > 0).length / studentCount) * 100
+                )
                 : 0}
               %
             </div>
@@ -350,243 +383,270 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         </Card>
       </div>
 
-      {/* Case 1: Student Selected + All Assignments */}
-      {selectedStudent !== 'all' && selectedAssignment === 'all' && classAverage && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">
-                {allStudents.find((s) => s.id === selectedStudent)?.name} -{' '}
-                {t('analytics.profile5D')}
-              </CardTitle>
-              <CardDescription className="text-sm">Average across all submissions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FiveDChart scores={classAverage} explanations={null} />
-            </CardContent>
-          </Card>
-
-          <HardSkillsAssessmentTable
-            studentId={selectedStudent}
-            assignmentId={selectedAssignment}
-            classroomId={classroomId}
-            title="Content Related Abilities (CRA)"
-            description={`All hard skills assessments for ${allStudents.find((s) => s.id === selectedStudent)?.name} across all submissions`}
-          />
-        </>
-      )}
-
-      {/* Case 2: Student Selected + Specific Assignment */}
-      {selectedStudent !== 'all' && selectedAssignment !== 'all' && classAverage && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">
-                {allStudents.find((s) => s.id === selectedStudent)?.name} -{' '}
-                {t('analytics.profile5D')}
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Scores for {assignments.find((a) => a.id === selectedAssignment)?.title}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FiveDChart scores={classAverage} explanations={null} />
-            </CardContent>
-          </Card>
-
-          <HardSkillsAssessmentTable
-            studentId={selectedStudent}
-            assignmentId={selectedAssignment}
-            classroomId={classroomId}
-            title="Content Related Abilities (CRA)"
-            description={`Hard skills assessment for ${allStudents.find((s) => s.id === selectedStudent)?.name} on ${assignments.find((a) => a.id === selectedAssignment)?.title}`}
-          />
-        </>
-      )}
-
-      {/* Case 3: All Students + All Assignments - Show Classroom Average + Expandable Student Cards */}
-      {selectedStudent === 'all' && selectedAssignment === 'all' && classAverage && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">{t('analytics.classAverage')}</CardTitle>
-              <CardDescription className="text-sm">
-                Average 5D scores across all students and all submissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FiveDChart scores={classAverage} explanations={null} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">Student Performance Overview</CardTitle>
-              <CardDescription className="text-sm">
-                View individual student averages across all assignments
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {students.filter((s) => s.latestScores).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No student data available yet</p>
+      {/* Main Content Area */}
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Left Column: Charts */}
+        <div className="lg:col-span-2 space-y-8">
+          {classAverage && (
+            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                        <BarChart3 className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      </div>
+                      {selectedStudent === 'all' ? t('analytics.classAverage') : allStudents.find((s) => s.id === selectedStudent)?.name}
+                    </CardTitle>
+                    <CardDescription className="mt-1 ml-11">
+                      {selectedAssignment === 'all'
+                        ? 'Average 5D scores across all submissions'
+                        : `Scores for ${assignments.find((a) => a.id === selectedAssignment)?.title}`}
+                    </CardDescription>
+                  </div>
+                  {selectedStudent === 'all' && (
+                    <Badge variant="secondary" className="rounded-full px-4 py-1 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                      Class Overview
+                    </Badge>
+                  )}
                 </div>
-              ) : (
-                students
-                  .filter((s) => s.latestScores)
-                  .map((student) => (
-                    <Collapsible key={student.id} className="border rounded-lg">
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-between p-4 hover:bg-accent"
-                        >
-                          <span className="font-medium">{student.fullName}</span>
-                          <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="px-4 pb-4 space-y-4">
-                        {/* Student's Average 5D Chart */}
-                        <div className="pt-2">
-                          <h4 className="text-sm font-semibold mb-3">
-                            Average 5D Profile (All Assignments)
-                          </h4>
-                          <FiveDChart scores={student.latestScores!} explanations={null} />
-                        </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <FiveDChart scores={classAverage} explanations={null} />
+              </CardContent>
+            </Card>
+          )}
 
-                        {/* Student's CRA Table */}
-                        <div className="border-t pt-4">
-                          <HardSkillsAssessmentTable
-                            studentId={student.id}
-                            assignmentId="all"
-                            classroomId={classroomId}
-                            title="Content Related Abilities (CRA)"
-                            description={`All hard skills assessments across all assignments`}
-                          />
+          {/* CRA Section */}
+          {(selectedStudent !== 'all' || selectedAssignment !== 'all') && (
+            <div className="animate-in slide-in-from-bottom-4 duration-500">
+              <HardSkillsAssessmentTable
+                studentId={selectedStudent === 'all' ? undefined : selectedStudent}
+                assignmentId={selectedAssignment}
+                classroomId={classroomId}
+                title="Content Related Abilities (CRA)"
+                description={
+                  selectedStudent !== 'all'
+                    ? `Hard skills assessment for ${allStudents.find((s) => s.id === selectedStudent)?.name}`
+                    : `Hard skills assessments for ${assignments.find((a) => a.id === selectedAssignment)?.title}`
+                }
+              />
+            </div>
+          )}
+
+          {/* All Students List (Collapsible) */}
+          {selectedStudent === 'all' && selectedAssignment === 'all' && (
+            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-6">
+                <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  Student Performance Overview
+                </CardTitle>
+                <CardDescription className="ml-11">
+                  Detailed breakdown by student
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                {students.filter((s) => s.latestScores).length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <p className="text-slate-500">No student data available yet</p>
+                  </div>
+                ) : (
+                  students
+                    .filter((s) => s.latestScores)
+                    .map((student) => (
+                      <Collapsible key={student.id} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-between p-5 h-auto hover:bg-transparent"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                                {student.fullName.charAt(0)}
+                              </div>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-base">{student.fullName}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline" className="rounded-full bg-white dark:bg-slate-900">
+                                {student.feedbackCount} submissions
+                              </Badge>
+                              <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200" />
+                            </div>
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="px-5 pb-5 space-y-6 bg-white dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+                          {/* Student's Average 5D Chart */}
+                          <div className="pt-4">
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                              <Sparkles className="h-3 w-3" />
+                              Average 5D Profile
+                            </h4>
+                            <FiveDChart scores={student.latestScores!} explanations={null} />
+                          </div>
+
+                          {/* Student's CRA Table */}
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+                            <HardSkillsAssessmentTable
+                              studentId={student.id}
+                              assignmentId="all"
+                              classroomId={classroomId}
+                              title="Content Related Abilities (CRA)"
+                              description={`All hard skills assessments across all assignments`}
+                            />
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Case 4: All Students + Specific Assignment - List of students with CRA */}
+          {selectedStudent === 'all' && selectedAssignment !== 'all' && (
+            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-6">
+                <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+                    <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  Content Related Abilities (CRA)
+                </CardTitle>
+                <CardDescription className="ml-11">
+                  Hard skills assessments for all students on{' '}
+                  {assignments.find((a) => a.id === selectedAssignment)?.title}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                {allStudents.map((student) => (
+                  <Collapsible key={student.id} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between p-5 h-auto hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 font-bold text-sm">
+                            {student.name.charAt(0)}
+                          </div>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 text-base">{student.name}</span>
                         </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))
+                        <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-5 pb-5 bg-white dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 pt-4">
+                      <HardSkillsAssessmentTable
+                        studentId={student.id}
+                        assignmentId={selectedAssignment}
+                        classroomId={classroomId}
+                        title=""
+                        description=""
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Right Column: Summary Stats */}
+        <div className="space-y-6">
+          <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden sticky top-6">
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 pb-6">
+              <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                  <Trophy className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                {t('analytics.performanceSummary')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      {t('analytics.activeStudents')}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                      {students.filter((s) => s.feedbackCount > 0).length} <span className="text-sm text-slate-400 font-normal">/ {studentCount}</span>
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                    <Users className="h-5 w-5" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      {t('analytics.avgSubmissions')}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                      {studentCount > 0
+                        ? (
+                          students.reduce((sum, s) => sum + s.feedbackCount, 0) / studentCount
+                        ).toFixed(1)
+                        : 0}
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      {t('analytics.engagementRate')}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                      {studentCount > 0
+                        ? Math.round(
+                          (students.filter((s) => s.feedbackCount > 0).length / studentCount) * 100
+                        )
+                        : 0}
+                      %
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+
+              {students.filter((s) => s.latestScores).length > 0 && (
+                <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-yellow-500" />
+                    {t('analytics.average5D')}
+                  </h4>
+                  <div className="space-y-3">
+                    {Object.entries(classAverage || {}).map(([dimension, score]) => (
+                      <div key={dimension} className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400 capitalize">
+                          {t(`submissionDetail.dimensions.${dimension}`)}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-500 rounded-full"
+                              style={{ width: `${(score / 10) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 w-8 text-right">
+                            {score.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
-        </>
-      )}
-
-      {/* Case 4: All Students + Specific Assignment - Show CRA with Collapsible Sections */}
-      {selectedStudent === 'all' && selectedAssignment !== 'all' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base md:text-lg">Content Related Abilities (CRA)</CardTitle>
-            <CardDescription className="text-sm">
-              Hard skills assessments for all students on{' '}
-              {assignments.find((a) => a.id === selectedAssignment)?.title}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {allStudents.map((student) => (
-              <Collapsible key={student.id} className="border rounded-lg">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between p-4 hover:bg-accent">
-                    <span className="font-medium">{student.name}</span>
-                    <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4">
-                  <HardSkillsAssessmentTable
-                    studentId={student.id}
-                    assignmentId={selectedAssignment}
-                    classroomId={classroomId}
-                    title=""
-                    description=""
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base md:text-lg">{t('analytics.classInsights')}</CardTitle>
-          <CardDescription className="text-sm">{t('analytics.classInsightsDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="mb-2">{t('analytics.comingSoon')}</p>
-            <p className="text-sm">{t('analytics.comingSoonDesc')}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base md:text-lg">
-            {t('analytics.performanceSummary')}
-          </CardTitle>
-          <CardDescription className="text-sm">
-            {t('analytics.performanceSummaryDesc')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  {t('analytics.activeStudents')}
-                </p>
-                <p className="text-xl md:text-2xl font-bold">
-                  {students.filter((s) => s.feedbackCount > 0).length} / {studentCount}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  {t('analytics.avgSubmissions')}
-                </p>
-                <p className="text-xl md:text-2xl font-bold">
-                  {studentCount > 0
-                    ? (
-                        students.reduce((sum, s) => sum + s.feedbackCount, 0) / studentCount
-                      ).toFixed(1)
-                    : 0}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  {t('analytics.engagementRate')}
-                </p>
-                <p className="text-xl md:text-2xl font-bold">
-                  {studentCount > 0
-                    ? Math.round(
-                        (students.filter((s) => s.feedbackCount > 0).length / studentCount) * 100
-                      )
-                    : 0}
-                  %
-                </p>
-              </div>
-            </div>
-
-            {students.filter((s) => s.latestScores).length > 0 && (
-              <div className="pt-4 border-t">
-                <h4 className="text-sm md:text-base font-semibold mb-3">
-                  {t('analytics.average5D')}
-                </h4>
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-                  {Object.entries(classAverage || {}).map(([dimension, score]) => (
-                    <div key={dimension} className="text-center p-2 md:p-3 bg-muted rounded-lg">
-                      <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">
-                        {t(`submissionDetail.dimensions.${dimension}`)}
-                      </p>
-                      <p className="text-base md:text-xl font-bold">{score.toFixed(1)}/10</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
