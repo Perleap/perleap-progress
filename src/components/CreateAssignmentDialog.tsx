@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -18,12 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Sparkles, X, Upload, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Calendar, Target, FileText, Plus, Trash2 } from 'lucide-react';
 import { createBulkNotifications } from '@/lib/notificationService';
 import { useAuth } from '@/contexts/AuthContext';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CreateAssignmentDialogProps {
   open: boolean;
@@ -405,49 +404,65 @@ export function CreateAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto rounded-3xl">
-        <DialogHeader>
-          <DialogTitle>{initialData ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
+        <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+
+        <DialogHeader className="px-8 pt-8 pb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
+              <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              {initialData ? 'Edit Assignment' : 'Create New Assignment'}
+            </DialogTitle>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 ml-1">
             {initialData ? 'Update the assignment details below.' : 'Fill in the details to create a new assignment.'}
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+        <ScrollArea className="max-h-[calc(90vh-140px)] px-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+
+            {/* Assignment Basics */}
+            <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
+                <BookOpen className="h-5 w-5" />
+                <h3 className="font-semibold">Assignment Basics</h3>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title" className="text-slate-600 dark:text-slate-300">Title <span className="text-red-400">*</span></Label>
                 <Input
                   id="title"
                   placeholder="Assignment Title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
-                  className="rounded-xl"
+                  className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="instructions">Instructions</Label>
+                <Label htmlFor="instructions" className="text-slate-600 dark:text-slate-300">Instructions <span className="text-red-400">*</span></Label>
                 <Textarea
                   id="instructions"
                   placeholder="Detailed instructions for the students..."
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  className="min-h-[120px] rounded-xl"
+                  className="min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
+                  <Label htmlFor="type" className="text-slate-600 dark:text-slate-300">Type</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
                   >
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 h-11">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
@@ -461,24 +476,32 @@ export function CreateAssignmentDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="due_at">Due Date</Label>
-                  <Input
-                    id="due_at"
-                    type="datetime-local"
-                    value={formData.due_at}
-                    onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
-                    className="rounded-xl"
-                  />
+                  <Label htmlFor="due_at" className="text-slate-600 dark:text-slate-300">Due Date</Label>
+                  <div className="relative">
+                    <Input
+                      id="due_at"
+                      type="datetime-local"
+                      value={formData.due_at}
+                      onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 pl-10"
+                    />
+                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
+            {/* Skills & Domain */}
+            <div className="space-y-5 p-5 bg-purple-50/30 dark:bg-purple-900/10 rounded-3xl border border-purple-100 dark:border-purple-900/30">
+              <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2">
+                <Target className="h-5 w-5" />
+                <h3 className="font-semibold">Subject Area & Skills</h3>
+              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hard_skill_domain">Subject Area</Label>
+                <Label htmlFor="hard_skill_domain" className="text-slate-600 dark:text-slate-300">Subject Area</Label>
                 {classroomDomains.length > 0 ? (
-                  <>
+                  <div className="space-y-2">
                     <Select
                       value={selectedDomain}
                       onValueChange={(value) => {
@@ -491,10 +514,10 @@ export function CreateAssignmentDialog({
                         }
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11">
                         <SelectValue placeholder="Select from classroom domains" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl">
                         {classroomDomains.map((domain, index) => (
                           <SelectItem key={index} value={domain.name}>
                             {domain.name}
@@ -503,7 +526,7 @@ export function CreateAssignmentDialog({
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Or enter manually below</p>
-                  </>
+                  </div>
                 ) : null}
                 <Input
                   id="hard_skill_domain"
@@ -513,22 +536,16 @@ export function CreateAssignmentDialog({
                     setFormData({ ...formData, hard_skill_domain: e.target.value });
                     setSelectedDomain(''); // Clear dropdown selection
                   }}
+                  className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11"
                 />
-                <p className="text-xs text-muted-foreground">
-                  The subject area for hard skill assessment (required if adding skills)
-                </p>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-base">Skills to Assess</Label>
-                <p className="text-sm text-muted-foreground">
-                  Specific skills or topics that will be assessed in this assignment.
-                </p>
+                <Label className="text-slate-600 dark:text-slate-300">Skills to Assess</Label>
 
                 {/* Component selection dropdown if domain is selected */}
                 {selectedDomain && availableComponents.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm">Select from {selectedDomain} skills:</Label>
                     <Select
                       onValueChange={(value) => {
                         // Add component if not already in the list
@@ -540,10 +557,10 @@ export function CreateAssignmentDialog({
                         }
                       }}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a component to add" />
+                      <SelectTrigger className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11">
+                        <SelectValue placeholder={`Select from ${selectedDomain} skills`} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl">
                         {availableComponents.map((component, index) => (
                           <SelectItem key={index} value={component}>
                             {component}
@@ -555,7 +572,6 @@ export function CreateAssignmentDialog({
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-sm">Selected skills:</Label>
                   {formData.hard_skills.map((skill, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
@@ -566,7 +582,7 @@ export function CreateAssignmentDialog({
                           setFormData({ ...formData, hard_skills: newSkills });
                         }}
                         placeholder={`Skill ${index + 1}`}
-                        className="flex-1 bg-muted/50"
+                        className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-10"
                       />
                       <Button
                         type="button"
@@ -576,154 +592,154 @@ export function CreateAssignmentDialog({
                           const newSkills = formData.hard_skills.filter((_, i) => i !== index);
                           setFormData({ ...formData, hard_skills: newSkills });
                         }}
+                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setFormData({ ...formData, hard_skills: [...formData.hard_skills, ''] })
+                    }
+                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 text-xs font-medium"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Skill Manually
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Materials Section */}
+            <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
+                <FileText className="h-5 w-5" />
+                <h3 className="font-semibold">Assignment Materials</h3>
+              </div>
+
+              {/* Select from classroom materials */}
+              {classroomMaterials.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Select from classroom materials:</Label>
+                  <div className="border border-blue-100 dark:border-blue-900/30 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2 bg-white dark:bg-slate-900">
+                    {classroomMaterials.map((material, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`classroom-material-${index}`}
+                          checked={selectedMaterialIds.has(index)}
+                          onCheckedChange={() => toggleClassroomMaterial(index)}
+                        />
+                        <label
+                          htmlFor={`classroom-material-${index}`}
+                          className="flex-1 flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          {material.type === 'pdf' ? (
+                            <Upload className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <LinkIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <span className="truncate">{material.name}</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Upload PDF</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="pdf-upload"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePdfUpload}
+                      disabled={uploadingMaterial}
+                      className="h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Add Link</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://..."
+                      value={linkInput}
+                      onChange={(e) => setLinkInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddLink();
+                        }
+                      }}
+                      className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddLink}
+                      className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {formData.materials.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                  {formData.materials.map((material, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm group">
+                      <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                        {material.type === 'pdf' ? (
+                          <Upload className="h-4 w-4" />
+                        ) : (
+                          <LinkIcon className="h-4 w-4" />
+                        )}
+                      </div>
+                      <span className="flex-1 text-sm truncate font-medium text-slate-700 dark:text-slate-300">{material.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveMaterial(index)}
+                        className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setFormData({ ...formData, hard_skills: [...formData.hard_skills, ''] })
-                  }
-                >
-                  Add Skill Manually
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-base">Course Materials</Label>
-                <p className="text-xs text-muted-foreground">
-                  Add PDFs or links to course materials that will help students complete this assignment
-                </p>
-
-                {/* Select from classroom materials */}
-                {classroomMaterials.length > 0 ? (
-                  <div className="space-y-2">
-                    <Label className="text-sm">Select from classroom materials:</Label>
-                    <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
-                      {classroomMaterials.map((material, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`classroom-material-${index}`}
-                            checked={selectedMaterialIds.has(index)}
-                            onCheckedChange={() => toggleClassroomMaterial(index)}
-                          />
-                          <label
-                            htmlFor={`classroom-material-${index}`}
-                            className="flex-1 flex items-center gap-2 text-sm cursor-pointer"
-                          >
-                            {material.type === 'pdf' ? (
-                              <Upload className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            ) : (
-                              <LinkIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            )}
-                            <span className="truncate">{material.name}</span>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border rounded-md p-3 bg-muted/30">
-                    <p className="text-xs text-muted-foreground text-center">
-                      No materials available in this classroom. Add materials to the classroom first or add them manually below.
-                    </p>
-                  </div>
-                )}
-
-                {/* Display selected materials */}
-                {formData.materials.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-sm">Selected materials:</Label>
-                    {formData.materials.map((material, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-                        {material.type === 'pdf' ? (
-                          <Upload className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="flex-1 text-sm truncate">{material.name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveMaterial(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Manual addition section */}
-                <div className="border-t pt-3 space-y-3">
-                  <Label className="text-sm">Or add materials manually:</Label>
-
-                  {/* PDF Upload */}
-                  <div className="space-y-2">
-                    <Label htmlFor="pdf-upload" className="text-sm">
-                      Upload PDF
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="pdf-upload"
-                        type="file"
-                        accept="application/pdf"
-                        onChange={handlePdfUpload}
-                        disabled={uploadingMaterial}
-                        className="flex-1"
-                      />
-                      {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
-                    </div>
-                  </div>
-
-                  {/* Link Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="link-input" className="text-sm">
-                      Add Link
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="link-input"
-                        placeholder="https://..."
-                        value={linkInput}
-                        onChange={(e) => setLinkInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddLink();
-                          }
-                        }}
-                        className="flex-1"
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
-                        <LinkIcon className="h-4 w-4 mr-2" />
-                        Add Link
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+              )}
             </div>
-          </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Assignment
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="rounded-full px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {initialData ? 'Update Assignment' : 'Create Assignment'}
+              </Button>
+            </div>
+          </form>
+        </ScrollArea>
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 }

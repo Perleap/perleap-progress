@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -10,11 +10,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Filter, Download, Search } from 'lucide-react';
+import { FileText, Filter, Download, Search, ChevronDown, ChevronUp, Calendar as CalendarIcon, X } from 'lucide-react';
 import { SubmissionCard } from './SubmissionCard';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -31,6 +33,7 @@ interface SubmissionWithDetails {
   student_id: string;
   assignment_id: string;
   student_name: string;
+  student_avatar_url?: string;
   assignment_title: string;
   has_feedback: boolean;
   teacher_feedback?: string;
@@ -53,9 +56,16 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const [submissions, setSubmissions] = useState<SubmissionWithDetails[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+
+  // Filter states
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,6 +82,25 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
     if (selectedAssignment !== 'all') {
       filtered = filtered.filter((s) => s.assignment_id === selectedAssignment);
+    }
+
+    if (selectedStatus !== 'all') {
+      if (selectedStatus === 'completed') {
+        filtered = filtered.filter((s) => s.has_feedback);
+      } else if (selectedStatus === 'in_progress') {
+        filtered = filtered.filter((s) => !s.has_feedback);
+      }
+    }
+
+    if (startDate) {
+      filtered = filtered.filter(s => new Date(s.submitted_at) >= new Date(startDate));
+    }
+
+    if (endDate) {
+      // Add one day to include the end date fully
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1);
+      filtered = filtered.filter(s => new Date(s.submitted_at) < end);
     }
 
     if (searchQuery.trim()) {
@@ -99,7 +128,23 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     }
 
     return filtered;
-  }, [submissions, selectedStudent, selectedAssignment, searchQuery]);
+  }, [submissions, selectedStudent, selectedAssignment, selectedStatus, searchQuery, startDate, endDate]);
+
+  const activeFiltersCount = [
+    selectedStudent !== 'all',
+    selectedAssignment !== 'all',
+    selectedStatus !== 'all',
+    startDate !== '',
+    endDate !== ''
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setSelectedStudent('all');
+    setSelectedAssignment('all');
+    setStartDate('');
+    setEndDate('');
+    setSearchQuery('');
+  };
 
   const handleBulkExport = () => {
     if (submissions.length === 0) {
@@ -167,7 +212,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       // Fetch all student profiles in one query
       const { data: studentProfiles } = await supabase
         .from('student_profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, avatar_url')
         .in('user_id', studentIds);
 
       // Fetch all feedback in one query
@@ -177,7 +222,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
         .in('submission_id', submissionIds);
 
       // Create lookup maps for fast access
-      const studentMap = new Map(studentProfiles?.map((s) => [s.user_id, s.full_name]) || []);
+      const studentMap = new Map(studentProfiles?.map((s) => [s.user_id, { name: s.full_name, avatar: s.avatar_url }]) || []);
 
       const assignmentMap = new Map(assignData.map((a) => [a.id, a.title]));
 
@@ -186,15 +231,17 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       // Enrich submissions with all data in memory
       const enrichedSubmissions: SubmissionWithDetails[] = submissionsData.map((sub) => {
         const feedback = feedbackMap.get(sub.id);
+        const studentInfo = studentMap.get(sub.student_id);
 
         return {
           ...sub,
-          student_name: studentMap.get(sub.student_id) || 'Unknown',
+          student_name: studentInfo?.name || 'Unknown',
+          student_avatar_url: studentInfo?.avatar || undefined,
           assignment_title: assignmentMap.get(sub.assignment_id) || 'Unknown Assignment',
           has_feedback: !!feedback,
           teacher_feedback: feedback?.teacher_feedback || undefined,
           conversation_context: Array.isArray(feedback?.conversation_context)
-            ? feedback.conversation_context
+            ? (feedback.conversation_context as any) as ConversationMessage[]
             : [],
         };
       });
@@ -216,7 +263,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>;
+    return <div className="text-center py-12 text-muted-foreground animate-pulse">{t('common.loading')}</div>;
   }
 
   if (submissions.length === 0) {
@@ -237,79 +284,143 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
-                <Filter className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              {t('submissionsTab.filterTitle')}
-            </CardTitle>
-            <Button
-              onClick={handleBulkExport}
-              disabled={submissions.length === 0}
-              size="sm"
-              className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all"
-              variant="outline"
-            >
-              <Download className="h-4 w-4 me-2" />
-              {t('submissionsTab.exportAll')}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-5">
-            <div>
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">{t('submissionsTab.search')}</label>
-              <div className="relative">
+      <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            {/* Top Row: Search, Filter Toggle, Export */}
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="relative flex-1 w-full">
                 <Search
-                  className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400`}
+                  className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400`}
                 />
                 <Input
                   placeholder={t('submissionsTab.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`${isRTL ? 'pr-10' : 'pl-10'} rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all`}
+                  className={`${isRTL ? 'pr-12' : 'pl-12'} h-12 rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all text-base shadow-sm`}
                 />
               </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">{t('common.student')}</label>
-                <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                  <SelectTrigger className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700">
-                    <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
-                    {students.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
-                  {t('submissionsTab.assignment')}
-                </label>
-                <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                  <SelectTrigger className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700">
-                    <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
-                    {assignments.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="flex gap-2 w-full md:w-auto">
+                <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="w-full md:w-auto">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full md:w-auto rounded-full h-12 px-6 border-slate-200 dark:border-slate-700 ${isFiltersOpen || activeFiltersCount > 0 ? 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800' : 'bg-white dark:bg-slate-800'}`}
+                    >
+                      <Filter className="h-4 w-4 me-2" />
+                      Advanced Filters
+                      {activeFiltersCount > 0 && (
+                        <Badge variant="secondary" className="ml-2 bg-indigo-200 text-indigo-700 hover:bg-indigo-300 dark:bg-indigo-800 dark:text-indigo-200">
+                          {activeFiltersCount}
+                        </Badge>
+                      )}
+                      {isFiltersOpen ? <ChevronUp className="h-4 w-4 ms-2" /> : <ChevronDown className="h-4 w-4 ms-2" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                </Collapsible>
+
+                <Button
+                  onClick={handleBulkExport}
+                  disabled={submissions.length === 0}
+                  variant="outline"
+                  className="rounded-full h-12 px-4 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
               </div>
             </div>
+
+            {/* Collapsible Advanced Filters */}
+            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+              <CollapsibleContent className="animate-in slide-in-from-top-2 fade-in duration-300">
+                <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">{t('common.student')}</label>
+                    <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                      <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
+                        {students.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">{t('submissionsTab.assignment')}</label>
+                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                      <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
+                        {assignments.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">Status</label>
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                      <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">Date Range</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-xs px-2"
+                        />
+                      </div>
+                      <div className="relative flex-1 min-w-0">
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-xs px-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {activeFiltersCount > 0 && (
+                  <div className="flex justify-end mt-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1.5" />
+                      Clear filters
+                    </Button>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </CardContent>
       </Card>
@@ -322,10 +433,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
             </div>
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">{t('submissionsTab.noMatches')}</h3>
             <p className="text-slate-500 dark:text-slate-400">{t('submissionsTab.adjustFilters')}</p>
+            {activeFiltersCount > 0 && (
+              <Button variant="link" onClick={clearFilters} className="mt-2 text-indigo-600">
+                Clear all filters
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubmissions.map((submission) => (
             <SubmissionCard key={submission.id} submission={submission} />
           ))}

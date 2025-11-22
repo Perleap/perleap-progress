@@ -22,17 +22,14 @@ interface SubmissionCardProps {
     has_feedback: boolean;
     teacher_feedback?: string;
     conversation_context?: ConversationMessage[];
+    student_avatar_url?: string;
   };
 }
 
 export function SubmissionCard({ submission }: SubmissionCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [isConversationOpen, setIsConversationOpen] = useState(false);
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-
-  const hasConversation =
-    submission.conversation_context && submission.conversation_context.length > 0;
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const initials = submission.student_name
     .split(' ')
@@ -42,125 +39,95 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
     .slice(0, 2);
 
   return (
-    <Card className="group rounded-3xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shadow-sm">
-              <AvatarFallback className="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300 font-bold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-1 flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
-                  {submission.student_name}
-                </CardTitle>
-                <Badge
-                  variant={submission.has_feedback ? 'default' : 'secondary'}
-                  className={`rounded-full px-3 font-normal ${submission.has_feedback
-                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
-                    }`}
-                >
-                  {submission.has_feedback
-                    ? t('submissionCard.completed')
-                    : t('submissionCard.inProgress')}
-                </Badge>
-              </div>
-              <CardDescription className="text-slate-600 dark:text-slate-400 truncate">
-                {submission.assignment_title}
-              </CardDescription>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t('submissionCard.submitted')}: {new Date(submission.submitted_at).toLocaleString()}
-              </p>
-            </div>
-          </div>
+    <Card className="group rounded-3xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden flex flex-col h-[320px] relative">
+      {/* Status Badge - Absolute Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <Badge
+          variant={submission.has_feedback ? 'default' : 'secondary'}
+          className={`rounded-full px-2.5 py-0.5 font-medium text-[10px] shadow-sm backdrop-blur-sm ${submission.has_feedback
+            ? 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
+            : 'bg-amber-100/80 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
+            }`}
+        >
+          {submission.has_feedback
+            ? t('submissionCard.completed')
+            : t('submissionCard.inProgress')}
+        </Badge>
+      </div>
+
+      {/* Main Content */}
+      <div className={`flex-1 flex flex-col items-center text-center p-6 transition-opacity duration-300 ${showFeedback ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <Avatar className="h-24 w-24 border-4 border-white dark:border-slate-800 shadow-sm mb-4 ring-1 ring-slate-100 dark:ring-slate-800">
+          {submission.student_avatar_url ? (
+            <img src={submission.student_avatar_url} alt={submission.student_name} className="h-full w-full object-cover" />
+          ) : (
+            <AvatarFallback className="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300 font-bold text-2xl">
+              {initials}
+            </AvatarFallback>
+          )}
+        </Avatar>
+
+        <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 truncate w-full px-2 mb-1">
+          {submission.student_name}
+        </CardTitle>
+
+        <CardDescription className="text-slate-600 dark:text-slate-400 truncate w-full px-2 text-sm font-medium mb-4">
+          {submission.assignment_title}
+        </CardDescription>
+
+        <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+          {new Date(submission.submitted_at).toLocaleDateString()}
+        </p>
+
+        {submission.has_feedback && submission.teacher_feedback && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowFeedback(true)}
+            className="mt-auto text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 -mb-2"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            {t('submissionCard.teacherFeedback')}
+          </Button>
+        )}
+      </div>
+
+      {/* Feedback Overlay */}
+      <div
+        className={`absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-20 flex flex-col p-6 transition-all duration-300 transform ${showFeedback ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <User className="h-4 w-4 text-indigo-500" />
+            {t('submissionCard.teacherFeedback')}
+          </h4>
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors"
-            onClick={() => navigate(`/teacher/submission/${submission.id}`)}
+            className="h-8 w-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => setShowFeedback(false)}
           >
-            <Eye className="h-5 w-5" />
+            <ChevronDown className="h-5 w-5 text-slate-500" />
           </Button>
         </div>
-      </CardHeader>
 
-      {submission.has_feedback && (
-        <CardContent className="space-y-3 pt-0">
-          {hasConversation && (
-            <Collapsible open={isConversationOpen} onOpenChange={setIsConversationOpen} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between px-4 py-3 h-auto hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                  <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
-                    <MessageSquare className="h-4 w-4 text-slate-400" />
-                    {t('submissionCard.conversation')}
-                  </div>
-                  {isConversationOpen ? (
-                    <ChevronUp className="h-4 w-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
-                  {submission.conversation_context!.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
-                          ? 'bg-white dark:bg-slate-800 ml-8 shadow-sm border border-slate-100 dark:border-slate-700'
-                          : 'bg-indigo-50 dark:bg-indigo-900/20 mr-8'
-                        }`}
-                    >
-                      <div className="font-bold mb-1 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                        {msg.role === 'user' ? (
-                          <>
-                            <User className="h-3 w-3" />
-                            {submission.student_name}
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-indigo-500">✦</span>
-                            {t('submissionCard.ai')}
-                          </>
-                        )}
-                      </div>
-                      <div className="whitespace-pre-wrap text-slate-700 dark:text-slate-300">{msg.content}</div>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+          <div className="prose prose-sm max-w-none dark:prose-invert text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+            {submission.teacher_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
+          </div>
+        </div>
+      </div>
 
-          {submission.teacher_feedback && (
-            <Collapsible open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between px-4 py-3 h-auto hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                  <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
-                    <User className="h-4 w-4 text-slate-400" />
-                    {t('submissionCard.teacherFeedback')}
-                  </div>
-                  {isFeedbackOpen ? (
-                    <ChevronUp className="h-4 w-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0">
-                  <div className="prose prose-sm max-w-none dark:prose-invert text-slate-600 dark:text-slate-300 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm whitespace-pre-wrap">
-                    {submission.teacher_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-        </CardContent>
-      )}
+      {/* Footer Action */}
+      <div className="p-4 pt-0 z-30 bg-white dark:bg-slate-900">
+        <Button
+          onClick={() => navigate(`/teacher/submission/${submission.id}`)}
+          className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all h-11 text-sm font-medium"
+        >
+          Full Report
+        </Button>
+      </div>
     </Card>
   );
 }
