@@ -352,13 +352,13 @@ const ClassroomDetail = () => {
               value="overview"
               className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
             >
-              About
+              {t('studentClassroom.about')}
             </TabsTrigger>
             <TabsTrigger
               value="assignments"
               className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
             >
-              Assignments
+              {t('studentClassroom.assignments')}
             </TabsTrigger>
             <TabsTrigger
               value="students"
@@ -427,7 +427,7 @@ const ClassroomDetail = () => {
                       className="rounded-full hover:bg-white/50 dark:hover:bg-slate-800/50"
                       onClick={() => {
                         navigator.clipboard.writeText(classroom.invite_code);
-                        toast.success('Copied to clipboard!');
+                        toast.success(t('classroomDetail.copiedToClipboard'));
                       }}
                     >
                       <LinkIcon className="h-5 w-5 text-slate-500" />
@@ -497,7 +497,7 @@ const ClassroomDetail = () => {
                       <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
                         <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                       </div>
-                      Details
+                      {t('classroomDetail.details')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -584,9 +584,9 @@ const ClassroomDetail = () => {
                     <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
                       <BookOpen className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                     </div>
-                    Subject Areas & Skills
+                    {t('classroomDetail.subjectAreas')}
                   </CardTitle>
-                  <CardDescription>Subject areas and their specific skills</CardDescription>
+                  <CardDescription>{t('classroomDetail.subjectAreasDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {classroom.domains.map((domain, index) => (
@@ -604,7 +604,7 @@ const ClassroomDetail = () => {
                       </button>
                       {expandedDomains.has(index) && (
                         <div className="px-4 pb-4 pt-2 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Skills</p>
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{t('classroomDetail.skills')}</p>
                           <div className="flex flex-wrap gap-2">
                             {domain.components.map((component, compIndex) => (
                               <Badge key={compIndex} variant="secondary" className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 font-normal">
@@ -628,9 +628,9 @@ const ClassroomDetail = () => {
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
                       <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                     </div>
-                    Course Materials
+                    {t('classroomDetail.courseMaterials')}
                   </CardTitle>
-                  <CardDescription>PDFs and links available for this classroom</CardDescription>
+                  <CardDescription>{t('classroomDetail.courseMaterialsDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -641,7 +641,7 @@ const ClassroomDetail = () => {
                         className="justify-start h-auto py-4 px-4 rounded-2xl border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:bg-primary/5 transition-all group"
                         onClick={() => window.open(material.url, '_blank')}
                       >
-                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl mr-3 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl me-3 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
                           {material.type === 'pdf' ? (
                             <FileText className="h-5 w-5 text-slate-500 group-hover:text-primary transition-colors" />
                           ) : (
@@ -689,7 +689,7 @@ const ClassroomDetail = () => {
                     {t('classroomDetail.noAssignments')}
                   </h3>
                   <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
-                    Create your first assignment to get started
+                    {t('classroomDetail.noAssignmentsDesc')}
                   </p>
                   <Button onClick={() => setAssignmentDialogOpen(true)} className="rounded-full">
                     <Plus className="me-2 h-4 w-4" />
@@ -713,7 +713,7 @@ const ClassroomDetail = () => {
                                 variant="outline"
                                 className="rounded-full bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
                               >
-                                For: {assignment.student_profiles?.full_name || 'Student'}
+                                {t('classroomDetail.assignedTo')} {assignment.student_profiles?.full_name || 'Student'}
                               </Badge>
                             )}
                             <Badge
@@ -728,11 +728,11 @@ const ClassroomDetail = () => {
                           </div>
                           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                             <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
-                              Type: {assignment.type.replace('_', ' ')}
+                              {t('classroomDetail.type')} {assignment.type.replace('_', ' ')}
                             </span>
                             {assignment.due_at && (
                               <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
-                                Due: {new Date(assignment.due_at).toLocaleString()}
+                                {t('classroomDetail.due')} {new Date(assignment.due_at).toLocaleString()}
                               </span>
                             )}
                           </div>
@@ -776,7 +776,7 @@ const ClassroomDetail = () => {
                               return (
                                 <div className="pt-2">
                                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                    Attachments ({materials.length})
+                                    {t('classroomDetail.attachments')} ({materials.length})
                                   </p>
                                   <div className="flex flex-wrap gap-2">
                                     {materials.map((material, index) => (
@@ -836,7 +836,7 @@ const ClassroomDetail = () => {
                     <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
                       <Users className="h-6 w-6 text-slate-400" />
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400">No students enrolled yet</p>
+                    <p className="text-slate-500 dark:text-slate-400">{t('classroomDetail.studentsTab.noStudents')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -844,7 +844,7 @@ const ClassroomDetail = () => {
                       const hasName = enrollment.student_profiles?.full_name;
                       const displayName = hasName
                         ? enrollment.student_profiles.full_name
-                        : 'Student (Onboarding Incomplete)';
+                        : t('classroomDetail.studentsTab.studentIncomplete');
                       const initials = hasName
                         ? enrollment.student_profiles.full_name
                           .split(' ')
@@ -941,34 +941,32 @@ const ClassroomDetail = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this classroom?</AlertDialogTitle>
+            <AlertDialogTitle>{t('classroomDetail.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
-                <p>This action cannot be undone. This will permanently delete:</p>
+                <p>{t('classroomDetail.deleteDialog.description')}</p>
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   <li>
-                    <strong>{assignments.length}</strong> assignment
-                    {assignments.length !== 1 ? 's' : ''}
+                    <strong>{assignments.length}</strong> {assignments.length !== 1 ? t('classroomDetail.deleteDialog.assignmentCountPlural') : t('classroomDetail.deleteDialog.assignmentCount')}
                   </li>
                   <li>
-                    <strong>{students.length}</strong> enrolled student
-                    {students.length !== 1 ? 's' : ''}
+                    <strong>{students.length}</strong> {students.length !== 1 ? t('classroomDetail.deleteDialog.studentCountPlural') : t('classroomDetail.deleteDialog.studentCount')}
                   </li>
-                  <li>All submissions and feedback</li>
-                  <li>All analytics data</li>
+                  <li>{t('classroomDetail.deleteDialog.allSubmissions')}</li>
+                  <li>{t('classroomDetail.deleteDialog.allAnalytics')}</li>
                 </ul>
-                <p className="font-semibold text-destructive mt-4">Classroom: {classroom?.name}</p>
+                <p className="font-semibold text-destructive mt-4">{t('classroomDetail.deleteDialog.classroomLabel')} {classroom?.name}</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-full">{t('classroomDetail.deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteClassroom}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full"
             >
-              {isDeleting ? 'Deleting...' : 'Delete Classroom'}
+              {isDeleting ? t('classroomDetail.deleteDialog.deleting') : t('classroomDetail.deleteDialog.deleteButton')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

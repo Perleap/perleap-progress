@@ -136,13 +136,13 @@ const StudentSettings = () => {
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
+      toast.error(t('settings.fileSizeTooLarge'));
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      toast.error(t('settings.uploadImageFile'));
       return;
     }
 
@@ -157,7 +157,7 @@ const StudentSettings = () => {
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
-        toast.error('Failed to upload photo');
+        toast.error(t('settings.photoUploadFailed'));
         setUploading(false);
         return;
       }
@@ -176,10 +176,10 @@ const StudentSettings = () => {
       if (updateError) throw updateError;
 
       setProfile({ ...profile, avatar_url: publicUrl });
-      toast.success('Photo uploaded successfully!');
+      toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error('Error uploading photo');
+      toast.error(t('settings.photoUploadError'));
     } finally {
       setUploading(false);
     }
@@ -277,15 +277,15 @@ const StudentSettings = () => {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden sm:inline">{t('settings.profile')}</span>
             </TabsTrigger>
             <TabsTrigger value="questions" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Questions</span>
+              <span className="hidden sm:inline">{t('settings.questions.learningMethods').split(' ')[0]}</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
+              <span className="hidden sm:inline">{t('common.notifications')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -294,7 +294,7 @@ const StudentSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle>{t('settings.profile')}</CardTitle>
-                <CardDescription>Update your personal information</CardDescription>
+                <CardDescription>{t('settings.profileDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -327,10 +327,10 @@ const StudentSettings = () => {
                     />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{profile.full_name || 'No name set'}</p>
+                    <p className="text-sm font-medium">{profile.full_name || t('settings.noNameSet')}</p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Click camera to upload photo
+                      {t('settings.clickCameraUpload')}
                     </p>
                   </div>
                 </div>
@@ -346,7 +346,7 @@ const StudentSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('settings.email')}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -354,17 +354,17 @@ const StudentSettings = () => {
                     disabled
                     className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.emailCannotChange')}</p>
                 </div>
 
                 <Button onClick={handleSaveProfile} disabled={saving}>
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('settings.saving')}
                     </>
                   ) : (
-                    'Save Changes'
+                    t('settings.saveChanges')
                   )}
                 </Button>
               </CardContent>
@@ -373,17 +373,16 @@ const StudentSettings = () => {
             {/* Danger Zone */}
             <Card className="border-destructive">
               <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
                 <CardDescription>
-                  Permanently delete your account and all associated data
+                  {t('settings.dangerZoneDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg bg-destructive/10 p-4 space-y-2">
-                  <p className="text-sm font-medium">Delete your account</p>
+                  <p className="text-sm font-medium">{t('settings.deleteAccount')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Once you delete your account, there is no going back. All your enrollments,
-                    submissions, progress data, and settings will be permanently removed.
+                    {t('settings.deleteAccountWarning')}
                   </p>
                 </div>
                 <Button
@@ -392,7 +391,7 @@ const StudentSettings = () => {
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
+                  {t('settings.deleteAccountButton')}
                 </Button>
               </CardContent>
             </Card>
@@ -402,14 +401,14 @@ const StudentSettings = () => {
           <TabsContent value="questions" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Learning Preferences</CardTitle>
+                <CardTitle>{t('settings.learningPreferences')}</CardTitle>
                 <CardDescription>
-                  Update your learning style preferences from onboarding
+                  {t('settings.learningPreferencesDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label>What kinds of activities or methods help you learn best?</Label>
+                  <Label>{t('settings.questions.learningMethods')}</Label>
                   <RadioGroup
                     value={questions.learning_methods}
                     onValueChange={(v) => setQuestions({ ...questions, learning_methods: v })}
@@ -417,35 +416,32 @@ const StudentSettings = () => {
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="visual" id="edit-visual" className="mt-1" />
                       <Label htmlFor="edit-visual" className="cursor-pointer font-normal">
-                        <span className="font-medium">Visual Learning</span> - Reading, diagrams,
-                        charts
+                        <span className="font-medium">{t('settings.options.visualLearning')}</span> - {t('settings.options.visualLearningDesc')}
                       </Label>
                     </div>
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="auditory" id="edit-auditory" className="mt-1" />
                       <Label htmlFor="edit-auditory" className="cursor-pointer font-normal">
-                        <span className="font-medium">Auditory Learning</span> - Listening to
-                        explanations
+                        <span className="font-medium">{t('settings.options.auditoryLearning')}</span> - {t('settings.options.auditoryLearningDesc')}
                       </Label>
                     </div>
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="kinesthetic" id="edit-kinesthetic" className="mt-1" />
                       <Label htmlFor="edit-kinesthetic" className="cursor-pointer font-normal">
-                        <span className="font-medium">Kinesthetic Learning</span> - Hands-on
-                        practice
+                        <span className="font-medium">{t('settings.options.kinestheticLearning')}</span> - {t('settings.options.kinestheticLearningDesc')}
                       </Label>
                     </div>
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="video" id="edit-video" className="mt-1" />
                       <Label htmlFor="edit-video" className="cursor-pointer font-normal">
-                        <span className="font-medium">Video Learning</span> - Watching videos
+                        <span className="font-medium">{t('settings.options.videoLearning')}</span> - {t('settings.options.videoLearningDesc')}
                       </Label>
                     </div>
                   </RadioGroup>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Solo or group learning?</Label>
+                  <Label>{t('settings.questions.soloVsGroup')}</Label>
                   <RadioGroup
                     value={questions.solo_vs_group}
                     onValueChange={(v) => setQuestions({ ...questions, solo_vs_group: v })}
@@ -453,19 +449,19 @@ const StudentSettings = () => {
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="solo" id="edit-solo" className="mt-1" />
                       <Label htmlFor="edit-solo" className="cursor-pointer font-normal">
-                        <span className="font-medium">Solo Learning</span>
+                        <span className="font-medium">{t('settings.options.soloLearning')}</span>
                       </Label>
                     </div>
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="group" id="edit-group" className="mt-1" />
                       <Label htmlFor="edit-group" className="cursor-pointer font-normal">
-                        <span className="font-medium">Group Learning</span>
+                        <span className="font-medium">{t('settings.options.groupLearning')}</span>
                       </Label>
                     </div>
                     <div className="flex items-start space-x-2 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value="both" id="edit-both" className="mt-1" />
                       <Label htmlFor="edit-both" className="cursor-pointer font-normal">
-                        <span className="font-medium">Mix of Both</span>
+                        <span className="font-medium">{t('settings.options.mixOfBoth')}</span>
                       </Label>
                     </div>
                   </RadioGroup>
@@ -693,10 +689,10 @@ const StudentSettings = () => {
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('settings.saving')}
                     </>
                   ) : (
-                    'Save Changes'
+                    t('settings.saveChanges')
                   )}
                 </Button>
               </CardContent>
@@ -707,16 +703,16 @@ const StudentSettings = () => {
           <TabsContent value="notifications" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how you receive notifications</CardDescription>
+                <CardTitle>{t('settings.notificationPreferences')}</CardTitle>
+                <CardDescription>{t('settings.notificationPreferencesDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="assignment-notifications">Assignment Notifications</Label>
+                      <Label htmlFor="assignment-notifications">{t('settings.notifications.assignmentNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified when new assignments are posted
+                        {t('settings.notifications.assignmentNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -730,9 +726,9 @@ const StudentSettings = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="feedback-notifications">Feedback Notifications</Label>
+                      <Label htmlFor="feedback-notifications">{t('settings.notifications.feedbackNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified when you receive feedback on your work
+                        {t('settings.notifications.feedbackNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -746,9 +742,9 @@ const StudentSettings = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="classroom-updates">Classroom Updates</Label>
+                      <Label htmlFor="classroom-updates">{t('settings.notifications.classroomUpdates')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified about general classroom announcements
+                        {t('settings.notifications.classroomUpdatesDesc')}
                       </p>
                     </div>
                     <Switch
@@ -762,9 +758,9 @@ const StudentSettings = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                      <Label htmlFor="email-notifications">{t('settings.notifications.emailNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Receive notifications via email
+                        {t('settings.notifications.emailNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -777,7 +773,7 @@ const StudentSettings = () => {
                   </div>
                 </div>
 
-                <Button onClick={handleSaveNotifications}>Save Preferences</Button>
+                <Button onClick={handleSaveNotifications}>{t('settings.savePreferences')}</Button>
               </CardContent>
             </Card>
           </TabsContent>

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { createBulkNotifications } from '@/lib/notificationService';
 import { X, Upload, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,6 +48,7 @@ export function EditAssignmentDialog({
   assignment,
   onSuccess,
 }: EditAssignmentDialogProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [title, setTitle] = useState(assignment.title);
   const [instructions, setInstructions] = useState(assignment.instructions);
@@ -130,8 +132,8 @@ export function EditAssignmentDialog({
       if (data?.materials) {
         try {
           // Handle both JSONB (object) and old TEXT (string) formats
-          const parsed = typeof data.materials === 'string' 
-            ? JSON.parse(data.materials) 
+          const parsed = typeof data.materials === 'string'
+            ? JSON.parse(data.materials)
             : data.materials;
           setMaterials(Array.isArray(parsed) ? parsed : []);
         } catch {
@@ -143,7 +145,7 @@ export function EditAssignmentDialog({
 
       const domain = data?.hard_skill_domain || '';
       setHardSkillDomain(domain);
-      
+
       // If domain matches a classroom domain, set it as selected and load components
       if (domain) {
         const matchedDomain = classroomDomains.find(d => d.name === domain);
@@ -162,12 +164,12 @@ export function EditAssignmentDialog({
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+      toast.error(t('createAssignment.errors.creating'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size should be less than 10MB');
+      toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
 
@@ -187,10 +189,10 @@ export function EditAssignmentDialog({
       } = supabase.storage.from('assignment-materials').getPublicUrl(fileName);
 
       setMaterials([...materials, { type: 'pdf', url: publicUrl, name: file.name }]);
-      toast.success('PDF uploaded successfully');
+      toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = ''; // Reset file input
     } catch (error) {
-      toast.error('Failed to upload PDF');
+      toast.error(t('editAssignment.errors.saving'));
       console.error(error);
     } finally {
       setUploadingMaterial(false);
@@ -199,7 +201,7 @@ export function EditAssignmentDialog({
 
   const handleAddLink = () => {
     if (!linkInput.trim()) {
-      toast.error('Please enter a URL');
+      toast.error(t('createClassroom.errors.enterUrl'));
       return;
     }
 
@@ -218,9 +220,9 @@ export function EditAssignmentDialog({
         },
       ]);
       setLinkInput('');
-      toast.success('Link added');
+      toast.success(t('createClassroom.success.linkAdded'));
     } catch (error) {
-      toast.error('Please enter a valid URL');
+      toast.error(t('createClassroom.errors.validUrl'));
     }
   };
 
@@ -316,11 +318,11 @@ export function EditAssignmentDialog({
         }
       }
 
-      toast.success('Assignment updated successfully');
+      toast.success(t('editAssignment.success.saved'));
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      toast.error('Failed to update assignment');
+      toast.error(t('editAssignment.errors.saving'));
     } finally {
       setLoading(false);
     }
@@ -330,8 +332,8 @@ export function EditAssignmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Assignment</DialogTitle>
-          <DialogDescription>Update assignment details and publish status</DialogDescription>
+          <DialogTitle>{t('editAssignment.title')}</DialogTitle>
+          <DialogDescription>{t('editAssignment.description')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -446,7 +448,7 @@ export function EditAssignmentDialog({
             <p className="text-sm text-muted-foreground">
               Specific skills or topics that will be assessed in this assignment.
             </p>
-            
+
             {/* Component selection dropdown if domain is selected */}
             {selectedDomain && availableComponents.length > 0 && (
               <div className="space-y-2">
@@ -580,50 +582,50 @@ export function EditAssignmentDialog({
             {/* Manual addition section */}
             <div className="border-t pt-3 space-y-3">
               <Label className="text-sm">Or add materials manually:</Label>
-              
-              {/* PDF Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="pdf-upload-edit" className="text-sm">
-                Upload PDF
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="pdf-upload-edit"
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handlePdfUpload}
-                  disabled={uploadingMaterial}
-                  className="flex-1"
-                />
-                {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
-              </div>
-            </div>
 
-            {/* Link Input */}
-            <div className="space-y-2">
-              <Label htmlFor="link-input-edit" className="text-sm">
-                Add Link
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="link-input-edit"
-                  placeholder="https://..."
-                  value={linkInput}
-                  onChange={(e) => setLinkInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddLink();
-                    }
-                  }}
-                  className="flex-1"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
-                  <LinkIcon className="h-4 w-4 mr-2" />
-                  Add Link
-                </Button>
+              {/* PDF Upload */}
+              <div className="space-y-2">
+                <Label htmlFor="pdf-upload-edit" className="text-sm">
+                  Upload PDF
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="pdf-upload-edit"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfUpload}
+                    disabled={uploadingMaterial}
+                    className="flex-1"
+                  />
+                  {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
               </div>
-            </div>
+
+              {/* Link Input */}
+              <div className="space-y-2">
+                <Label htmlFor="link-input-edit" className="text-sm">
+                  Add Link
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="link-input-edit"
+                    placeholder="https://..."
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddLink();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
+                    <LinkIcon className="h-4 w-4 mr-2" />
+                    Add Link
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -634,10 +636,10 @@ export function EditAssignmentDialog({
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Cancel
+              {t('editAssignment.cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('editAssignment.saving') : t('editAssignment.saveButton')}
             </Button>
           </div>
         </form>

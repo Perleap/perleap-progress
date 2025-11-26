@@ -19,6 +19,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Calendar, Target, FileText, Plus, Trash2 } from 'lucide-react';
 import { createBulkNotifications } from '@/lib/notificationService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,6 +59,7 @@ export function CreateAssignmentDialog({
   assignedStudentId,
   studentName,
 }: CreateAssignmentDialogProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
@@ -212,12 +214,12 @@ export function CreateAssignmentDialog({
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+      toast.error(t('createAssignment.errors.creating'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size should be less than 10MB');
+      toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
 
@@ -241,10 +243,10 @@ export function CreateAssignmentDialog({
         materials: [...formData.materials, { type: 'pdf', url: publicUrl, name: file.name }],
       });
 
-      toast.success('PDF uploaded successfully');
+      toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = ''; // Reset file input
     } catch (error) {
-      toast.error('Failed to upload PDF');
+      toast.error(t('createAssignment.errors.creating'));
       console.error(error);
     } finally {
       setUploadingMaterial(false);
@@ -253,7 +255,7 @@ export function CreateAssignmentDialog({
 
   const handleAddLink = () => {
     if (!linkInput.trim()) {
-      toast.error('Please enter a URL');
+      toast.error(t('createClassroom.errors.enterUrl'));
       return;
     }
 
@@ -276,9 +278,9 @@ export function CreateAssignmentDialog({
         ],
       });
       setLinkInput('');
-      toast.success('Link added');
+      toast.success(t('createClassroom.success.linkAdded'));
     } catch (error) {
-      toast.error('Please enter a valid URL');
+      toast.error(t('createClassroom.errors.validUrl'));
     }
   };
 
@@ -391,12 +393,12 @@ export function CreateAssignmentDialog({
         }
       }
 
-      toast.success('Assignment created successfully');
+      toast.success(t('createAssignment.success.created'));
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating assignment:', error);
-      toast.error('Failed to create assignment');
+      toast.error(t('createAssignment.errors.creating'));
     } finally {
       setLoading(false);
     }
@@ -413,11 +415,11 @@ export function CreateAssignmentDialog({
               <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-              {initialData ? 'Edit Assignment' : 'Create New Assignment'}
+              {initialData ? t('editAssignment.title') : t('createAssignment.title')}
             </DialogTitle>
           </div>
           <p className="text-slate-500 dark:text-slate-400 ml-1">
-            {initialData ? 'Update the assignment details below.' : 'Fill in the details to create a new assignment.'}
+            {initialData ? t('editAssignment.description') : t('createAssignment.description')}
           </p>
         </DialogHeader>
 
@@ -428,7 +430,7 @@ export function CreateAssignmentDialog({
             <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
                 <BookOpen className="h-5 w-5" />
-                <h3 className="font-semibold">Assignment Basics</h3>
+                <h3 className="font-semibold">{t('createClassroom.courseBasics')}</h3>
               </div>
 
               <div className="space-y-2">
@@ -726,7 +728,7 @@ export function CreateAssignmentDialog({
                 onClick={() => onOpenChange(false)}
                 className="rounded-full px-6"
               >
-                Cancel
+                {t('createAssignment.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -734,7 +736,7 @@ export function CreateAssignmentDialog({
                 className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {initialData ? 'Update Assignment' : 'Create Assignment'}
+                {initialData ? t('editAssignment.saveButton') : t('createAssignment.createButton')}
               </Button>
             </div>
           </form>

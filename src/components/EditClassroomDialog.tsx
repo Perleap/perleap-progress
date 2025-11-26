@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Upload, X, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Domain, CourseMaterial } from '@/types/models';
@@ -45,6 +46,7 @@ export function EditClassroomDialog({
   classroom,
   onSuccess,
 }: EditClassroomDialogProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
@@ -134,11 +136,11 @@ export function EditClassroomDialog({
 
       if (error) throw error;
 
-      toast.success('Classroom updated successfully!');
+      toast.success(t('editClassroom.success.saved'));
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      toast.error('Error updating classroom');
+      toast.error(t('editClassroom.errors.saving'));
     } finally {
       setLoading(false);
     }
@@ -189,12 +191,12 @@ export function EditClassroomDialog({
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+      toast.error(t('createClassroom.errors.uploadPdf'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size should be less than 10MB');
+      toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
 
@@ -218,10 +220,10 @@ export function EditClassroomDialog({
         materials: [...formData.materials, { type: 'pdf', url: publicUrl, name: file.name }],
       });
 
-      toast.success('PDF uploaded successfully');
+      toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = ''; // Reset file input
     } catch (error) {
-      toast.error('Failed to upload PDF');
+      toast.error(t('editClassroom.errors.saving'));
       console.error(error);
     } finally {
       setUploadingMaterial(false);
@@ -230,7 +232,7 @@ export function EditClassroomDialog({
 
   const handleAddLink = () => {
     if (!linkInput.trim()) {
-      toast.error('Please enter a URL');
+      toast.error(t('createClassroom.errors.enterUrl'));
       return;
     }
 
@@ -252,9 +254,9 @@ export function EditClassroomDialog({
         ],
       });
       setLinkInput('');
-      toast.success('Link added');
+      toast.success(t('createClassroom.success.linkAdded'));
     } catch (error) {
-      toast.error('Please enter a valid URL');
+      toast.error(t('createClassroom.errors.validUrl'));
     }
   };
 
@@ -269,8 +271,8 @@ export function EditClassroomDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Classroom</DialogTitle>
-          <DialogDescription>Update your classroom information</DialogDescription>
+          <DialogTitle>{t('editClassroom.title')}</DialogTitle>
+          <DialogDescription>{t('editClassroom.description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -375,7 +377,7 @@ export function EditClassroomDialog({
             <p className="text-xs text-muted-foreground">
               Add subject areas (e.g., Algebra, Geometry) and their specific skills
             </p>
-            
+
             {formData.domains.map((domain, domainIndex) => (
               <div key={domainIndex} className="space-y-2 p-3 border rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
@@ -394,7 +396,7 @@ export function EditClassroomDialog({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2 ml-4">
                   <Label className="text-sm">Skills</Label>
                   {domain.components.map((component, componentIndex) => (
@@ -428,7 +430,7 @@ export function EditClassroomDialog({
                 </div>
               </div>
             ))}
-            
+
             <Button type="button" variant="outline" onClick={addDomain}>
               <Plus className="h-4 w-4 mr-2" />
               Add Subject Area
@@ -508,11 +510,11 @@ export function EditClassroomDialog({
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('editClassroom.cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              {t('editClassroom.saveButton')}
             </Button>
           </div>
         </form>

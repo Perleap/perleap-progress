@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +40,7 @@ interface NotificationSettings {
 }
 
 const TeacherSettings = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,7 +119,7 @@ const TeacherSettings = () => {
       }
     } catch (error) {
       console.error('Error loading settings:', error);
-      toast.error('Error loading settings');
+      toast.error(t('settings.errors.loading'));
     } finally {
       setLoading(false);
     }
@@ -129,13 +131,13 @@ const TeacherSettings = () => {
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
+      toast.error(t('settings.fileSizeTooLarge'));
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      toast.error(t('settings.uploadImageFile'));
       return;
     }
 
@@ -150,7 +152,7 @@ const TeacherSettings = () => {
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
-        toast.error('Failed to upload photo');
+        toast.error(t('settings.photoUploadFailed'));
         setUploading(false);
         return;
       }
@@ -169,10 +171,10 @@ const TeacherSettings = () => {
       if (updateError) throw updateError;
 
       setProfile({ ...profile, avatar_url: publicUrl });
-      toast.success('Photo uploaded successfully!');
+      toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error('Error uploading photo');
+      toast.error(t('settings.photoUploadError'));
     } finally {
       setUploading(false);
     }
@@ -196,10 +198,10 @@ const TeacherSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success('Profile updated successfully!');
+      toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Error updating profile');
+      toast.error(t('settings.errors.saving'));
     } finally {
       setSaving(false);
     }
@@ -221,10 +223,10 @@ const TeacherSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success('Teaching preferences updated successfully!');
+      toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating questions:', error);
-      toast.error('Error updating questions');
+      toast.error(t('settings.errors.saving'));
     } finally {
       setSaving(false);
     }
@@ -233,7 +235,7 @@ const TeacherSettings = () => {
   const handleSaveNotifications = () => {
     // In a real app, you would save to database
     localStorage.setItem('teacher_notifications', JSON.stringify(notifications));
-    toast.success('Notification settings updated!');
+    toast.success(t('settings.success.saved'));
   };
 
   const getInitials = () => {
@@ -257,7 +259,7 @@ const TeacherSettings = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
-        title="Settings"
+        title={t('settings.title')}
         userType="teacher"
         showBackButton
         onBackClick={() => navigate('/teacher/dashboard')}
@@ -268,15 +270,15 @@ const TeacherSettings = () => {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden sm:inline">{t('settings.profile')}</span>
             </TabsTrigger>
             <TabsTrigger value="questions" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Questions</span>
+              <span className="hidden sm:inline">{t('settings.teachingPreferences')}</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
+              <span className="hidden sm:inline">{t('common.notifications')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -284,8 +286,8 @@ const TeacherSettings = () => {
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your professional information</CardDescription>
+                <CardTitle>{t('settings.profile')}</CardTitle>
+                <CardDescription>{t('settings.profileDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -318,16 +320,16 @@ const TeacherSettings = () => {
                     />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{profile.full_name || 'No name set'}</p>
+                    <p className="text-sm font-medium">{profile.full_name || t('settings.noNameSet')}</p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Click camera to upload photo
+                      {t('settings.clickCameraUpload')}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName">{t('settings.fullName')}</Label>
                   <Input
                     id="fullName"
                     value={profile.full_name}
@@ -337,7 +339,7 @@ const TeacherSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('settings.email')}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -345,7 +347,7 @@ const TeacherSettings = () => {
                     disabled
                     className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.emailCannotChange')}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -425,17 +427,16 @@ const TeacherSettings = () => {
             {/* Danger Zone */}
             <Card className="border-destructive">
               <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
                 <CardDescription>
-                  Permanently delete your account and all associated data
+                  {t('settings.dangerZoneDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg bg-destructive/10 p-4 space-y-2">
-                  <p className="text-sm font-medium">Delete your account</p>
+                  <p className="text-sm font-medium">{t('settings.deleteAccount')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Once you delete your account, there is no going back. All your classrooms,
-                    assignments, student data, and settings will be permanently removed.
+                    {t('settings.deleteAccountWarning')}
                   </p>
                 </div>
                 <Button
@@ -444,7 +445,7 @@ const TeacherSettings = () => {
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
+                  {t('settings.deleteAccountButton')}
                 </Button>
               </CardContent>
             </Card>
@@ -454,8 +455,8 @@ const TeacherSettings = () => {
           <TabsContent value="questions" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Teaching Style & Approach</CardTitle>
-                <CardDescription>Update your teaching preferences from onboarding</CardDescription>
+                <CardTitle>{t('settings.teachingPreferences')}</CardTitle>
+                <CardDescription>{t('settings.teachingPreferencesDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -542,16 +543,16 @@ const TeacherSettings = () => {
           <TabsContent value="notifications" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how you receive notifications</CardDescription>
+                <CardTitle>{t('settings.notificationPreferences')}</CardTitle>
+                <CardDescription>{t('settings.notificationPreferencesDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="submission-notifications">Submission Notifications</Label>
+                      <Label htmlFor="submission-notifications">{t('settings.notifications.submissionNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified when students submit assignments
+                        {t('settings.notifications.submissionNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -565,9 +566,9 @@ const TeacherSettings = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="student-messages">Student Messages</Label>
+                      <Label htmlFor="student-messages">{t('settings.notifications.studentMessages')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified when students send you messages
+                        {t('settings.notifications.studentMessagesDesc')}
                       </p>
                     </div>
                     <Switch
@@ -581,9 +582,9 @@ const TeacherSettings = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="classroom-updates">Classroom Updates</Label>
+                      <Label htmlFor="classroom-updates">{t('settings.notifications.classroomUpdates')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified about system updates and announcements
+                        {t('settings.notifications.classroomUpdatesDesc')}
                       </p>
                     </div>
                     <Switch
@@ -597,9 +598,9 @@ const TeacherSettings = () => {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                      <Label htmlFor="email-notifications">{t('settings.notifications.emailNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Receive notifications via email
+                        {t('settings.notifications.emailNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -612,7 +613,7 @@ const TeacherSettings = () => {
                   </div>
                 </div>
 
-                <Button onClick={handleSaveNotifications}>Save Preferences</Button>
+                <Button onClick={handleSaveNotifications}>{t('settings.savePreferences')}</Button>
               </CardContent>
             </Card>
           </TabsContent>

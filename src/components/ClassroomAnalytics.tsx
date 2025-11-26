@@ -400,13 +400,13 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                     </CardTitle>
                     <CardDescription className="mt-1 ml-11">
                       {selectedAssignment === 'all'
-                        ? 'Average 5D scores across all submissions'
-                        : `Scores for ${assignments.find((a) => a.id === selectedAssignment)?.title}`}
+                        ? t('classroomAnalytics.averageScoresAcross')
+                        : t('classroomAnalytics.scoresFor', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })}
                     </CardDescription>
                   </div>
                   {selectedStudent === 'all' && (
                     <Badge variant="secondary" className="rounded-full px-4 py-1 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                      Class Overview
+                      {t('classroomAnalytics.classOverview')}
                     </Badge>
                   )}
                 </div>
@@ -424,11 +424,11 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                 studentId={selectedStudent === 'all' ? undefined : selectedStudent}
                 assignmentId={selectedAssignment}
                 classroomId={classroomId}
-                title="Content Related Abilities (CRA)"
+                title={t('cra.title')}
                 description={
                   selectedStudent !== 'all'
-                    ? `Hard skills assessment for ${allStudents.find((s) => s.id === selectedStudent)?.name}`
-                    : `Hard skills assessments for ${assignments.find((a) => a.id === selectedAssignment)?.title}`
+                    ? t('classroomAnalytics.hardSkillsFor', { student: allStudents.find((s) => s.id === selectedStudent)?.name })
+                    : t('classroomAnalytics.hardSkillsAssignmentFor', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })
                 }
               />
             </div>
@@ -442,16 +442,16 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                     <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  Student Performance Overview
+                  {t('classroomAnalytics.studentPerformanceOverview')}
                 </CardTitle>
                 <CardDescription className="ml-11">
-                  Detailed breakdown by student
+                  {t('classroomAnalytics.detailedBreakdown')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {students.filter((s) => s.latestScores).length === 0 ? (
                   <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
-                    <p className="text-slate-500">No student data available yet</p>
+                    <p className="text-slate-500">{t('classroomAnalytics.noStudentData')}</p>
                   </div>
                 ) : (
                   students
@@ -471,7 +471,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                             </div>
                             <div className="flex items-center gap-3">
                               <Badge variant="outline" className="rounded-full bg-white dark:bg-slate-900">
-                                {student.feedbackCount} submissions
+                                {student.feedbackCount} {t('classroomAnalytics.submissions')}
                               </Badge>
                               <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200" />
                             </div>
@@ -482,7 +482,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                           <div className="pt-4">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                               <Sparkles className="h-3 w-3" />
-                              Average 5D Profile
+                              {t('classroomAnalytics.average5DProfile')}
                             </h4>
                             <FiveDChart scores={student.latestScores!} explanations={null} />
                           </div>
@@ -493,8 +493,8 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                               studentId={student.id}
                               assignmentId="all"
                               classroomId={classroomId}
-                              title="Content Related Abilities (CRA)"
-                              description={`All hard skills assessments across all assignments`}
+                              title={t('cra.title')}
+                              description={t('classroomAnalytics.allHardSkills')}
                             />
                           </div>
                         </CollapsibleContent>
@@ -513,11 +513,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                   <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
                     <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  Content Related Abilities (CRA)
+                  {t('cra.title')}
                 </CardTitle>
                 <CardDescription className="ml-11">
-                  Hard skills assessments for all students on{' '}
-                  {assignments.find((a) => a.id === selectedAssignment)?.title}
+                  {t('classroomAnalytics.hardSkillsAllStudents', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">

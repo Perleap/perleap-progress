@@ -11,8 +11,10 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Navbar } from '@/components/layouts/Navbar';
 import { Footer } from '@/components/layouts/Footer';
+import { useTranslation } from 'react-i18next';
 
 const ContactUs = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -27,7 +29,7 @@ const ContactUs = () => {
 
     // Simulate API call
     setTimeout(() => {
-      toast.success("Message sent successfully! We'll get back to you soon.");
+      toast.success(t('contact.success'));
       setFormData({ firstName: '', lastName: '', email: '', message: '' });
       setLoading(false);
     }, 1500);
@@ -61,7 +63,7 @@ const ContactUs = () => {
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 mb-4 text-purple-600">
                 <Mail className="h-6 w-6" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">Email</h3>
+              <h3 className="font-semibold text-foreground mb-2">{t('contact.email')}</h3>
               <p className="text-sm text-muted-foreground">contact@perleap.com</p>
               <p className="text-sm text-muted-foreground">support@perleap.com</p>
             </CardContent>
@@ -72,7 +74,7 @@ const ContactUs = () => {
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-4 text-orange-600">
                 <Phone className="h-6 w-6" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">Phone</h3>
+              <h3 className="font-semibold text-foreground mb-2">{t('contact.phone')}</h3>
               <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
               <p className="text-sm text-muted-foreground">Mon-Fri 9am-5pm EST</p>
             </CardContent>
@@ -83,7 +85,7 @@ const ContactUs = () => {
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-4 text-blue-600">
                 <MapPin className="h-6 w-6" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">Office</h3>
+              <h3 className="font-semibold text-foreground mb-2">{t('contact.office')}</h3>
               <p className="text-sm text-muted-foreground">123 Education St.</p>
               <p className="text-sm text-muted-foreground">New York, NY 10001</p>
             </CardContent>

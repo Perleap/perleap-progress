@@ -235,7 +235,25 @@
     },
     "success": {
       "saved": "השינויים נשמרו בהצלחה!"
-    }
+    },
+    "courseBasics": "יסודות הקורס",
+    "courseTitle": "נושא ראשי או כותרת קורס",
+    "courseDuration": "משך הקורס",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "courseStructure": "מבנה הקורס",
+    "courseOutline": "מתווה הקורס",
+    "learningOutcomes": "תוצאות למידה",
+    "keyChallenges": "אתגרים מרכזיים",
+    "subjectAreas": "תחומי נושא ומיומנויות",
+    "addSubjectArea": "הוסף תחום נושא",
+    "skills": "מיומנויות",
+    "addSkill": "הוסף מיומנות",
+    "courseMaterials": "חומרי קורס",
+    "uploadPdf": "העלה PDF",
+    "addLink": "הוסף קישור",
+    "cancel": "ביטול",
+    "saveButton": "שמור שינויים"
   },
   "createAssignment": {
     "title": "צור משימה חדשה",
@@ -309,7 +327,9 @@
     "studentsTab": {
       "title": "תלמידים רשומים",
       "subtitle": "צפה ונהל את התלמידים שלך",
-      "joined": "הצטרף"
+      "joined": "הצטרף",
+      "noStudents": "אין תלמידים רשומים עדיין",
+      "studentIncomplete": "תלמיד (פרופיל לא שלם)"
     },
     "errors": {
       "loading": "שגיאה בטעינת כיתה",
@@ -318,6 +338,22 @@
     "success": {
       "deleted": "הכיתה נמחקה בהצלחה",
       "assignmentDeleted": "המשימה נמחקה בהצלחה"
+    },
+    "details": "פרטים",
+    "subjectAreas": "תחומי נושא",
+    "subjectAreasDesc": "נושאים ומיומנויות מרכזיים המכוסים בקורס זה",
+    "skills": "מיומנויות",
+    "courseMaterials": "חומרי קורס",
+    "courseMaterialsDesc": "משאבים וחומרים לקורס זה",
+    "copiedToClipboard": "הקוד הועתק ללוח!",
+    "noAssignmentsDesc": "צור את המשימה הראשונה שלך כדי להתחיל",
+    "assignedTo": "הוקצה ל",
+    "type": "סוג:",
+    "due": "יעד:",
+    "attachments": "קבצים מצורפים",
+    "deleteDialog": {
+      "title": "מחק כיתה",
+      "description": "האם אתה בטוח שברצונך למחוק את הכיתה הזו? פעולה זו אינה ניתנת לביטול."
     }
   },
   "submissionsTab": {
@@ -360,7 +396,9 @@
     "regenerateScores": "צור ציונים מחדש",
     "errors": {
       "loading": "שגיאה בטעינת הגשה"
-    }
+    },
+    "generateFollowup": "צור המשך",
+    "viewConversation": "צפה בשיחה"
   },
   "assignmentDetail": {
     "title": "פרטי משימה",
@@ -679,5 +717,29 @@
     "success": {
       "profileCreated": "הפרופיל נוצר בהצלחה!"
     }
+  },
+  "studentAnalytics": {
+    "title": "ניתוח תלמיד",
+    "noSubmissions": "לא נמצאו הגשות לתלמיד זה בכיתה זו",
+    "developmentAcross": "פיתוח מיומנויות רכות 5D על פני {{count}} הגשה",
+    "developmentAcrossPlural": "פיתוח מיומנויות רכות 5D על פני {{count}} הגשות",
+    "perSubmission": "לפי הגשה",
+    "allSubmissionsAverage": "ממוצע כל ההגשות",
+    "scoresFromSubmission": "ציונים מהגשה זו",
+    "averageAcrossAll": "ממוצע על פני כל {{count}} ההגשות"
+  },
+  "classroomAnalytics": {
+    "classOverview": "סקירת כיתה",
+    "averageScoresAcross": "ממוצע ציוני 5D על פני כל ההגשות",
+    "scoresFor": "ציונים עבור {{assignment}}",
+    "studentPerformanceOverview": "סקירת ביצועי תלמידים",
+    "detailedBreakdown": "פירוט מפורט לפי תלמיד",
+    "noStudentData": "אין נתוני תלמידים זמינים עדיין",
+    "submissions": "הגשות",
+    "average5DProfile": "פרופיל ממוצע 5D",
+    "allHardSkills": "כל הערכות המיומנויות הקשות על פני כל המשימות",
+    "hardSkillsFor": "הערכת מיומנויות קשות עבור {{student}}",
+    "hardSkillsAssignmentFor": "הערכות מיומנויות קשות עבור {{assignment}}",
+    "hardSkillsAllStudents": "הערכות מיומנויות קשות לכל התלמידים ב-{{assignment}}"
   }
 }

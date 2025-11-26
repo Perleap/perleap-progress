@@ -148,7 +148,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   const handleBulkExport = () => {
     if (submissions.length === 0) {
-      toast.error('No submissions to export');
+      toast.error(t('components.submissions.noSubmissions'));
       return;
     }
 
@@ -171,7 +171,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success('Report exported successfully');
+    toast.success(t('components.submissions.exportSuccess'));
   };
 
   const fetchSubmissions = async () => {
@@ -256,7 +256,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       );
       setStudents(uniqueStudents);
     } catch (error) {
-      toast.error('Error loading submissions');
+      toast.error(t('components.submissions.loadError'));
     } finally {
       setLoading(false);
     }

@@ -428,8 +428,8 @@ const SubmissionDetail = () => {
 
                 <HardSkillsAssessmentTable
                   submissionId={submission.id}
-                  title="Content Related Abilities (CRA)"
-                  description={`Hard skills assessment for ${studentName}'s performance`}
+                  title={t('cra.title')}
+                  description={t('classroomAnalytics.hardSkillsFor', { student: studentName })}
                 />
               </div>
             </div>

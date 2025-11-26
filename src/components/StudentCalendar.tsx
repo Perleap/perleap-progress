@@ -191,7 +191,7 @@ export function StudentCalendar({
       <div className="p-6 pb-0">
         <div className="flex items-center gap-2 mb-6">
           <CalendarIcon className="h-6 w-6" />
-          <h2 className="text-2xl font-bold">Calendar</h2>
+          <h2 className="text-2xl font-bold">{t('calendar.title')}</h2>
         </div>
       </div>
 
@@ -212,8 +212,8 @@ export function StudentCalendar({
               caption_label: "text-base font-bold uppercase tracking-wider",
               nav: "flex items-center gap-1",
               nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all",
-              nav_button_previous: "absolute left-1",
-              nav_button_next: "absolute right-1",
+              nav_button_previous: "absolute start-1",
+              nav_button_next: "absolute end-1",
               table: "w-full border-collapse space-y-1",
               head_row: "flex w-full justify-between mb-2",
               head_cell: "text-muted-foreground w-9 font-normal text-[10px] uppercase tracking-wider text-center",
@@ -262,7 +262,7 @@ export function StudentCalendar({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground pl-1">No active classes on this date</p>
+                <p className="text-xs text-muted-foreground ps-1">{t('calendar.noActiveClasses')}</p>
               )}
             </div>
 
@@ -273,7 +273,7 @@ export function StudentCalendar({
 
               {assignmentsForSelectedDate.length === 0 ? (
                 <p className="text-sm text-slate-400 dark:text-slate-500">
-                  No assignments due on this date
+                  {t('calendar.noAssignmentsDue')}
                 </p>
               ) : (
                 <div className="space-y-2">

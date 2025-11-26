@@ -1,41 +1,44 @@
 import { useEffect, useRef, useState } from "react";
 import { Brain, Users, Zap, Shield, BarChart3, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const features = [
-    {
-        icon: Brain,
-        title: "Cognitive Analysis",
-        description: "Deep understanding of student performance across cognitive dimensions. We analyze learning patterns to provide personalized study paths.",
-    },
-    {
-        icon: Users,
-        title: "Social Dynamics",
-        description: "Analyze and improve classroom interactions and social emotional learning. Foster a collaborative environment with AI-driven insights.",
-    },
-    {
-        icon: Zap,
-        title: "Real-time Feedback",
-        description: "Instant, automated grading and feedback for students and teachers. Reduce grading time by 90% and focus on teaching.",
-    },
-    {
-        icon: Shield,
-        title: "Secure & Private",
-        description: "Enterprise-grade security ensuring student data protection. Compliant with GDPR, FERPA, and COPPA standards.",
-    },
-    {
-        icon: BarChart3,
-        title: "Advanced Analytics",
-        description: "Comprehensive dashboards for tracking progress and identifying gaps. Make data-driven decisions at the district, school, and class level.",
-    },
-    {
-        icon: Globe,
-        title: "Global Accessibility",
-        description: "Multi-language support breaking down barriers in education. Translate content and feedback instantly for diverse classrooms.",
-    },
-];
+import { useTranslation } from 'react-i18next';
 
 export const Features = () => {
+    const { t } = useTranslation();
+
+    const features = [
+        {
+            icon: Brain,
+            title: t('landing.features.cognitive.title'),
+            description: t('landing.features.cognitive.description'),
+        },
+        {
+            icon: Users,
+            title: t('landing.features.social.title'),
+            description: t('landing.features.social.description'),
+        },
+        {
+            icon: Zap,
+            title: t('landing.features.realtime.title'),
+            description: t('landing.features.realtime.description'),
+        },
+        {
+            icon: Shield,
+            title: t('landing.features.secure.title'),
+            description: t('landing.features.secure.description'),
+        },
+        {
+            icon: BarChart3,
+            title: t('landing.features.analytics.title'),
+            description: t('landing.features.analytics.description'),
+        },
+        {
+            icon: Globe,
+            title: t('landing.features.global.title'),
+            description: t('landing.features.global.description'),
+        },
+    ];
+
     return (
         <section className="py-24 bg-white text-black" id="features">
             <div className="container mx-auto px-4 md:px-6">
@@ -45,10 +48,10 @@ export const Features = () => {
                     <div className="lg:w-1/3">
                         <div className="sticky top-32">
                             <h2 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
-                                Powerful Features for <span className="text-gray-400">Modern Education</span>
+                                {t('landing.features.heading1')} <span className="text-gray-400">{t('landing.features.heading2')}</span>
                             </h2>
                             <p className="text-lg text-gray-500 mb-8">
-                                Everything you need to manage your classroom, assess students, and personalize learning at scale.
+                                {t('landing.features.subtitle')}
                             </p>
                         </div>
                     </div>

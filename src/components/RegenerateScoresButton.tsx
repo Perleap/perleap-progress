@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 interface RegenerateScoresButtonProps {
@@ -10,6 +11,7 @@ interface RegenerateScoresButtonProps {
 }
 
 export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateScoresButtonProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const regenerateAllScores = async () => {
@@ -22,7 +24,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         .eq('classroom_id', classroomId);
 
       if (!assignments || assignments.length === 0) {
-        toast.info('No assignments found');
+        toast.info(t('components.analytics.noAssignments'));
         setLoading(false);
         return;
       }
@@ -36,7 +38,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         .in('assignment_id', assignmentIds);
 
       if (!submissions || submissions.length === 0) {
-        toast.info('No completed submissions found');
+        toast.info(t('components.analytics.noCompletedSubmissions'));
         setLoading(false);
         return;
       }
@@ -53,7 +55,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
       const completedSubmissionIds = feedbackData?.map((f) => f.submission_id) || [];
 
       if (completedSubmissionIds.length === 0) {
-        toast.info('No completed submissions found');
+        toast.info(t('components.analytics.noCompletedSubmissions'));
         setLoading(false);
         return;
       }
@@ -87,7 +89,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         toast.error(`Failed to regenerate ${failCount} profiles`);
       }
     } catch (error) {
-      toast.error('Failed to regenerate scores');
+      toast.error(t('components.analytics.regenerateError'));
     } finally {
       setLoading(false);
     }

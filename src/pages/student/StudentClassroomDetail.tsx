@@ -233,20 +233,20 @@ const StudentClassroomDetail = () => {
                       <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
                         <BookOpen className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                       </div>
-                      Course Information
+                      {t('studentClassroom.courseInfo')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {classroom.course_title && (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Course Title</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t('studentClassroom.courseTitle')}</h3>
                         <p className="text-lg font-medium text-slate-800 dark:text-slate-200">{classroom.course_title}</p>
                       </div>
                     )}
 
                     {classroom.course_outline && (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Course Outline</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t('studentClassroom.courseOutline')}</h3>
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
                           {classroom.course_outline}
                         </div>
@@ -255,7 +255,7 @@ const StudentClassroomDetail = () => {
 
                     {classroom.resources && (
                       <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Resources</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{t('studentClassroom.resources')}</h3>
                         <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed border border-blue-100 dark:border-blue-900/20">
                           {classroom.resources}
                         </div>
@@ -270,7 +270,7 @@ const StudentClassroomDetail = () => {
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-orange-500" />
-                        Schedule
+                        {t('studentClassroom.schedule')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -278,7 +278,7 @@ const StudentClassroomDetail = () => {
                         <div className="flex items-start gap-3">
                           <Clock className="h-5 w-5 text-slate-400 mt-0.5" />
                           <div>
-                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Duration</p>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('studentClassroom.duration')}</p>
                             <p className="font-medium">{classroom.course_duration}</p>
                           </div>
                         </div>
@@ -288,7 +288,7 @@ const StudentClassroomDetail = () => {
                         <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                           {classroom.start_date && (
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-slate-500">Start Date</span>
+                              <span className="text-sm text-slate-500">{t('studentClassroom.startDate')}</span>
                               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                                 {new Date(classroom.start_date).toLocaleDateString()}
                               </Badge>
@@ -296,7 +296,7 @@ const StudentClassroomDetail = () => {
                           )}
                           {classroom.end_date && (
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-slate-500">End Date</span>
+                              <span className="text-sm text-slate-500">{t('studentClassroom.endDate')}</span>
                               <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
                                 {new Date(classroom.end_date).toLocaleDateString()}
                               </Badge>
@@ -312,7 +312,7 @@ const StudentClassroomDetail = () => {
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
                           <CheckCircle2 className="h-5 w-5" />
-                          Learning Outcomes
+                          {t('studentClassroom.learningOutcomes')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -333,7 +333,7 @@ const StudentClassroomDetail = () => {
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2 text-amber-800 dark:text-amber-300">
                           <AlertCircle className="h-5 w-5" />
-                          Key Challenges
+                          {t('studentClassroom.keyChallenges')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -356,8 +356,8 @@ const StudentClassroomDetail = () => {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-white/60 dark:bg-slate-900/60 p-4 rounded-3xl backdrop-blur-sm shadow-sm">
                 <Tabs value={assignmentsSubTab} onValueChange={(v) => setAssignmentsSubTab(v as 'active' | 'finished')} className="w-full sm:w-auto">
                   <TabsList className="bg-slate-100 dark:bg-slate-800 rounded-full p-1 h-10">
-                    <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">Active</TabsTrigger>
-                    <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">Finished</TabsTrigger>
+                    <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">{t('common.active')}</TabsTrigger>
+                    <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">{t('common.finished')}</TabsTrigger>
                   </TabsList>
                 </Tabs>
 
@@ -389,7 +389,7 @@ const StudentClassroomDetail = () => {
                         {t('studentClassroom.noAssignments')}
                       </h3>
                       <p className="text-slate-500 dark:text-slate-400 max-w-md">
-                        You're all caught up! Check back later for new assignments.
+                        {t('studentClassroom.noAssignmentsDesc')}
                       </p>
                     </CardContent>
                   </Card>
@@ -427,7 +427,7 @@ const StudentClassroomDetail = () => {
                             </p>
 
                             <Button variant="outline" className="rounded-full group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-all">
-                              View Assignment
+                              {t('studentClassroom.viewAssignment')}
                             </Button>
                           </div>
 
@@ -445,10 +445,10 @@ const StudentClassroomDetail = () => {
                         <FileText className="h-8 w-8 text-slate-400" />
                       </div>
                       <h3 className="text-xl font-semibold mb-2 text-slate-800 dark:text-slate-200">
-                        No Finished Assignments
+                        {t('studentClassroom.noFinishedAssignments')}
                       </h3>
                       <p className="text-slate-500 dark:text-slate-400 max-w-md">
-                        Assignments you've submitted will appear here.
+                        {t('studentClassroom.noFinishedAssignmentsDesc')}
                       </p>
                     </CardContent>
                   </Card>
@@ -467,7 +467,7 @@ const StudentClassroomDetail = () => {
                             </Badge>
                             <Badge className="rounded-full bg-green-100 text-green-700 hover:bg-green-200 border-none flex items-center gap-1">
                               <CheckCircle2 className="h-3 w-3" />
-                              Completed
+                              {t('common.completed')}
                             </Badge>
                           </div>
 
@@ -477,7 +477,7 @@ const StudentClassroomDetail = () => {
 
                           <div className="flex items-center gap-2 text-sm text-slate-500">
                             <Calendar className="h-3.5 w-3.5" />
-                            <span>Due: {new Date(assignment.due_at).toLocaleDateString()}</span>
+                            <span>{t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </Card>

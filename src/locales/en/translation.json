@@ -235,7 +235,25 @@
     },
     "success": {
       "saved": "Changes saved successfully!"
-    }
+    },
+    "courseBasics": "Course Basics",
+    "courseTitle": "Main Subject or Course Title",
+    "courseDuration": "Course Duration",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "courseStructure": "Course Structure",
+    "courseOutline": "Course Outline",
+    "learningOutcomes": "Learning Outcomes",
+    "keyChallenges": "Key Challenges",
+    "subjectAreas": "Subject Areas & Skills",
+    "addSubjectArea": "Add Subject Area",
+    "skills": "Skills",
+    "addSkill": "Add Skill",
+    "courseMaterials": "Course Materials",
+    "uploadPdf": "Upload PDF",
+    "addLink": "Add Link",
+    "cancel": "Cancel",
+    "saveButton": "Save Changes"
   },
   "createAssignment": {
     "title": "Create New Assignment",
@@ -309,7 +327,9 @@
     "studentsTab": {
       "title": "Enrolled Students",
       "subtitle": "View and manage your students",
-      "joined": "Joined"
+      "joined": "Joined",
+      "noStudents": "No students enrolled yet",
+      "studentIncomplete": "Student (Incomplete Profile)"
     },
     "errors": {
       "loading": "Error loading classroom",
@@ -318,6 +338,22 @@
     "success": {
       "deleted": "Classroom deleted successfully",
       "assignmentDeleted": "Assignment deleted successfully"
+    },
+    "details": "Details",
+    "subjectAreas": "Subject Areas",
+    "subjectAreasDesc": "Key topics and skills covered in this course",
+    "skills": "Skills",
+    "courseMaterials": "Course Materials",
+    "courseMaterialsDesc": "Resources and materials for this course",
+    "copiedToClipboard": "Code copied to clipboard!",
+    "noAssignmentsDesc": "Create your first assignment to get started",
+    "assignedTo": "Assigned to",
+    "type": "Type:",
+    "due": "Due:",
+    "attachments": "Attachments",
+    "deleteDialog": {
+      "title": "Delete Classroom",
+      "description": "Are you sure you want to delete this classroom? This action cannot be undone."
     }
   },
   "submissionsTab": {
@@ -360,7 +396,9 @@
     "regenerateScores": "Regenerate Scores",
     "errors": {
       "loading": "Error loading submission"
-    }
+    },
+    "generateFollowup": "Generate Follow-up",
+    "viewConversation": "View Conversation"
   },
   "assignmentDetail": {
     "title": "Assignment Details",
@@ -692,5 +730,29 @@
     "success": {
       "profileCreated": "Profile created successfully!"
     }
+  },
+  "studentAnalytics": {
+    "title": "Student Analytics",
+    "noSubmissions": "No submissions found for this student in this classroom",
+    "developmentAcross": "5D soft skills development across {{count}} submission",
+    "developmentAcrossPlural": "5D soft skills development across {{count}} submissions",
+    "perSubmission": "Per Submission",
+    "allSubmissionsAverage": "All Submissions Average",
+    "scoresFromSubmission": "Scores from this submission",
+    "averageAcrossAll": "Average across all {{count}} submissions"
+  },
+  "classroomAnalytics": {
+    "classOverview": "Class Overview",
+    "averageScoresAcross": "Average 5D scores across all submissions",
+    "scoresFor": "Scores for {{assignment}}",
+    "studentPerformanceOverview": "Student Performance Overview",
+    "detailedBreakdown": "Detailed breakdown by student",
+    "noStudentData": "No student data available yet",
+    "submissions": "submissions",
+    "average5DProfile": "Average 5D Profile",
+    "allHardSkills": "All hard skills assessments across all assignments",
+    "hardSkillsFor": "Hard skills assessment for {{student}}",
+    "hardSkillsAssignmentFor": "Hard skills assessments for {{assignment}}",
+    "hardSkillsAllStudents": "Hard skills assessments for all students on {{assignment}}"
   }
 }

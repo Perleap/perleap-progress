@@ -86,7 +86,7 @@ export const CreateClassroomDialog = ({
 
       if (error) throw error;
 
-      toast.success('Classroom created successfully!');
+      toast.success(t('createClassroom.success.created'));
       onOpenChange(false);
       onSuccess(data.id);
 
@@ -105,7 +105,7 @@ export const CreateClassroomDialog = ({
       });
       setLinkInput('');
     } catch (error) {
-      toast.error(error.message || 'Error creating classroom');
+      toast.error(error.message || t('createClassroom.errors.creating'));
     } finally {
       setLoading(false);
     }
@@ -176,12 +176,12 @@ export const CreateClassroomDialog = ({
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+      toast.error(t('createClassroom.errors.uploadPdf'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size should be less than 10MB');
+      toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
 
@@ -205,10 +205,10 @@ export const CreateClassroomDialog = ({
         materials: [...formData.materials, { type: 'pdf', url: publicUrl, name: file.name }],
       });
 
-      toast.success('PDF uploaded successfully');
+      toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = ''; // Reset file input
     } catch (error) {
-      toast.error('Failed to upload PDF');
+      toast.error(t('createClassroom.errors.creating'));
       console.error(error);
     } finally {
       setUploadingMaterial(false);
@@ -217,7 +217,7 @@ export const CreateClassroomDialog = ({
 
   const handleAddLink = () => {
     if (!linkInput.trim()) {
-      toast.error('Please enter a URL');
+      toast.error(t('createClassroom.errors.enterUrl'));
       return;
     }
 
@@ -239,9 +239,9 @@ export const CreateClassroomDialog = ({
         ],
       });
       setLinkInput('');
-      toast.success('Link added');
+      toast.success(t('createClassroom.success.linkAdded'));
     } catch (error) {
-      toast.error('Please enter a valid URL');
+      toast.error(t('createClassroom.errors.validUrl'));
     }
   };
 
@@ -278,7 +278,7 @@ export const CreateClassroomDialog = ({
             <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
                 <BookOpen className="h-5 w-5" />
-                <h3 className="font-semibold">Course Basics</h3>
+                <h3 className="font-semibold">{t('createClassroom.courseBasics')}</h3>
               </div>
 
               <div className="space-y-2">
@@ -314,7 +314,7 @@ export const CreateClassroomDialog = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate" className="text-slate-600 dark:text-slate-300">Start Date</Label>
+                    <Label htmlFor="startDate" className="text-slate-600 dark:text-slate-300">{t('createClassroom.startDate')}</Label>
                     <Input
                       id="startDate"
                       type="date"
@@ -324,7 +324,7 @@ export const CreateClassroomDialog = ({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate" className="text-slate-600 dark:text-slate-300">End Date</Label>
+                    <Label htmlFor="endDate" className="text-slate-600 dark:text-slate-300">{t('createClassroom.endDate')}</Label>
                     <Input
                       id="endDate"
                       type="date"
@@ -338,11 +338,11 @@ export const CreateClassroomDialog = ({
 
               <div className="space-y-2">
                 <Label htmlFor="courseOutline" className="text-slate-600 dark:text-slate-300">
-                  Course Outline
+                  {t('createClassroom.courseOutline')}
                 </Label>
                 <Textarea
                   id="courseOutline"
-                  placeholder="Describe the main topics and how they flow..."
+                  placeholder={t('createClassroom.courseOutlinePlaceholder')}
                   value={formData.courseOutline}
                   onChange={(e) => setFormData({ ...formData, courseOutline: e.target.value })}
                   rows={4}
@@ -356,7 +356,7 @@ export const CreateClassroomDialog = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                   <Target className="h-5 w-5" />
-                  <h3 className="font-semibold">Subject Areas & Skills</h3>
+                  <h3 className="font-semibold">{t('createClassroom.subjectAreas')}</h3>
                 </div>
                 <Button
                   type="button"
@@ -366,13 +366,13 @@ export const CreateClassroomDialog = ({
                   size="sm"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Area
+                  {t('createClassroom.addArea')}
                 </Button>
               </div>
 
               {formData.domains.length === 0 && (
                 <div className="text-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50">
-                  <p className="text-slate-500 text-sm">Add subject areas to define what students will learn</p>
+                  <p className="text-slate-500 text-sm">{t('createClassroom.addAreaPrompt')}</p>
                 </div>
               )}
 
@@ -401,7 +401,7 @@ export const CreateClassroomDialog = ({
                     </div>
 
                     <div className="pl-11 space-y-3">
-                      <Label className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Skills</Label>
+                      <Label className="text-xs font-semibold text-purple-600 uppercase tracking-wider">{t('createClassroom.skills')}</Label>
                       <div className="grid gap-2">
                         {domain.components.map((component, componentIndex) => (
                           <div key={componentIndex} className="flex items-center gap-2">
@@ -432,7 +432,7 @@ export const CreateClassroomDialog = ({
                         className="text-purple-600 hover:text-purple-700 hover:bg-purple-100/50 text-xs font-medium"
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Add Skill
+                        {t('createClassroom.addSkill')}
                       </Button>
                     </div>
                   </div>
@@ -444,12 +444,12 @@ export const CreateClassroomDialog = ({
             <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                 <FileText className="h-5 w-5" />
-                <h3 className="font-semibold">Course Materials</h3>
+                <h3 className="font-semibold">{t('createClassroom.courseMaterials')}</h3>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Upload PDF</Label>
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('createClassroom.uploadPdf')}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="pdf-upload"
@@ -463,10 +463,10 @@ export const CreateClassroomDialog = ({
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Add Link</Label>
+                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('createClassroom.addLink')}</Label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="https://..."
+                      placeholder={t('createClassroom.linkPlaceholder')}
                       value={linkInput}
                       onChange={(e) => setLinkInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -519,7 +519,7 @@ export const CreateClassroomDialog = ({
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-emerald-700 dark:text-emerald-400 font-semibold">Learning Outcomes</Label>
+                  <Label className="text-emerald-700 dark:text-emerald-400 font-semibold">{t('createClassroom.learningOutcomes')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -527,7 +527,7 @@ export const CreateClassroomDialog = ({
                     onClick={addOutcome}
                     className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" /> Add
+                    <Plus className="h-3 w-3 mr-1" /> {t('createClassroom.add')}
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -545,7 +545,7 @@ export const CreateClassroomDialog = ({
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-amber-700 dark:text-amber-400 font-semibold">Key Challenges</Label>
+                  <Label className="text-amber-700 dark:text-amber-400 font-semibold">{t('createClassroom.keyChallenges')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -553,7 +553,7 @@ export const CreateClassroomDialog = ({
                     onClick={addChallenge}
                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" /> Add
+                    <Plus className="h-3 w-3 mr-1" /> {t('createClassroom.add')}
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -577,14 +577,14 @@ export const CreateClassroomDialog = ({
                 onClick={() => onOpenChange(false)}
                 className="rounded-full px-6"
               >
-                Cancel
+                {t('createClassroom.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
                 className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
               >
-                {loading ? 'Creating...' : 'Create Classroom'}
+                {loading ? t('createClassroom.creating') : t('createClassroom.createButton')}
               </Button>
             </div>
           </form>

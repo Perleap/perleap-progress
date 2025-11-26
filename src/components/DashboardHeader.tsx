@@ -94,6 +94,11 @@ export function DashboardHeader({
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   return (
     <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
@@ -101,8 +106,8 @@ export function DashboardHeader({
           {showBackButton && (
             <Button
               variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
+              size="sm"
+              className="gap-2"
               onClick={onBackClick || (() => navigate(-1))}
             >
               <svg
@@ -115,11 +120,12 @@ export function DashboardHeader({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-4 w-4"
+                className="h-4 w-4 rtl:rotate-180"
               >
                 <path d="m12 19-7-7 7-7" />
                 <path d="M19 12H5" />
               </svg>
+              {t('common.back')}
             </Button>
           )}
           <div className="min-w-0 flex-1">
@@ -209,28 +215,28 @@ export function DashboardHeader({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate(`/${userType}/settings`)}>
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="me-2 h-4 w-4" />
                 <span>{t('settings.title')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                 {theme === "dark" ? (
-                  <Sun className="mr-2 h-4 w-4" />
+                  <Sun className="me-2 h-4 w-4" />
                 ) : (
-                  <Moon className="mr-2 h-4 w-4" />
+                  <Moon className="me-2 h-4 w-4" />
                 )}
-                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                <span>{theme === "dark" ? t('common.lightMode') : t('common.darkMode')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 const newLang = i18n.language === 'en' ? 'he' : 'en';
                 i18n.changeLanguage(newLang);
               }}>
-                <Globe className="mr-2 h-4 w-4" />
+                <Globe className="me-2 h-4 w-4" />
                 <span>{i18n.language === 'en' ? 'עברית' : 'English'}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="me-2 h-4 w-4" />
+                <span>{t('common.logout')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
