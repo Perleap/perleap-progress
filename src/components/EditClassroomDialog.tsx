@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2, Upload, X, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Domain, CourseMaterial } from '@/types/models';
@@ -47,6 +48,7 @@ export function EditClassroomDialog({
   onSuccess,
 }: EditClassroomDialogProps) {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
@@ -284,6 +286,7 @@ export function EditClassroomDialog({
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
             </div>
 
@@ -294,6 +297,7 @@ export function EditClassroomDialog({
                 required
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
             </div>
           </div>
@@ -304,6 +308,7 @@ export function EditClassroomDialog({
               id="course_title"
               value={formData.course_title}
               onChange={(e) => setFormData({ ...formData, course_title: e.target.value })}
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -314,6 +319,7 @@ export function EditClassroomDialog({
               placeholder="e.g., 8 weeks, 1 semester"
               value={formData.course_duration}
               onChange={(e) => setFormData({ ...formData, course_duration: e.target.value })}
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -347,6 +353,7 @@ export function EditClassroomDialog({
               rows={4}
               value={formData.course_outline}
               onChange={(e) => setFormData({ ...formData, course_outline: e.target.value })}
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -358,6 +365,7 @@ export function EditClassroomDialog({
               rows={4}
               value={formData.learning_outcomes}
               onChange={(e) => setFormData({ ...formData, learning_outcomes: e.target.value })}
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -369,6 +377,7 @@ export function EditClassroomDialog({
               rows={3}
               value={formData.key_challenges}
               onChange={(e) => setFormData({ ...formData, key_challenges: e.target.value })}
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -386,6 +395,7 @@ export function EditClassroomDialog({
                     value={domain.name}
                     onChange={(e) => updateDomainName(domainIndex, e.target.value)}
                     className="flex-1"
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <Button
                     type="button"
@@ -407,6 +417,7 @@ export function EditClassroomDialog({
                         onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
                         className="flex-1 bg-background"
                         size="sm"
+                        dir={isRTL ? 'rtl' : 'ltr'}
                       />
                       <Button
                         type="button"
@@ -499,6 +510,7 @@ export function EditClassroomDialog({
                     }
                   }}
                   className="flex-1"
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
                 <Button type="button" variant="outline" onClick={handleAddLink}>
                   <LinkIcon className="h-4 w-4 mr-2" />

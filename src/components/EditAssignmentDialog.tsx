@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { createBulkNotifications } from '@/lib/notificationService';
 import { X, Upload, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +50,7 @@ export function EditAssignmentDialog({
   onSuccess,
 }: EditAssignmentDialogProps) {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const { user } = useAuth();
   const [title, setTitle] = useState(assignment.title);
   const [instructions, setInstructions] = useState(assignment.instructions);
@@ -344,6 +346,7 @@ export function EditAssignmentDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Essay on Photosynthesis"
               required
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -356,6 +359,7 @@ export function EditAssignmentDialog({
               placeholder="Provide detailed instructions for the assignment..."
               rows={6}
               required
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -437,6 +441,7 @@ export function EditAssignmentDialog({
                 setHardSkillDomain(e.target.value);
                 setSelectedDomain(''); // Clear dropdown selection
               }}
+              dir={isRTL ? 'rtl' : 'ltr'}
             />
             <p className="text-xs text-muted-foreground">
               The subject area for hard skill assessment (required if adding skills)
@@ -488,6 +493,7 @@ export function EditAssignmentDialog({
                     }}
                     placeholder={`Skill ${index + 1}`}
                     className="flex-1 bg-muted/50"
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <Button
                     type="button"
@@ -619,6 +625,7 @@ export function EditAssignmentDialog({
                       }
                     }}
                     className="flex-1"
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
                     <LinkIcon className="h-4 w-4 mr-2" />

@@ -11,14 +11,12 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 
 const Auth = () => {
   const { t } = useTranslation();
-  const { isRTL } = useLanguage();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
 
@@ -389,7 +387,6 @@ const Auth = () => {
                       required
                       autoComplete="username"
                       readOnly
-                      dir={isRTL ? 'rtl' : 'ltr'}
                       className="h-12 rounded-2xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
@@ -405,7 +402,6 @@ const Auth = () => {
                       required
                       autoComplete="new-password"
                       readOnly
-                      dir={isRTL ? 'rtl' : 'ltr'}
                       className="h-12 rounded-2xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
@@ -504,7 +500,6 @@ const Auth = () => {
                       required
                       autoComplete="username"
                       readOnly
-                      dir={isRTL ? 'rtl' : 'ltr'}
                       className="h-12 rounded-2xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
@@ -520,7 +515,6 @@ const Auth = () => {
                       required
                       autoComplete="new-password"
                       readOnly
-                      dir={isRTL ? 'rtl' : 'ltr'}
                       className="h-12 rounded-2xl bg-gray-50 border-gray-200 focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>

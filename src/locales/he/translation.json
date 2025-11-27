@@ -1,19 +1,25 @@
 {
   "landing": {
     "nav": {
-      "about": "אודות",
+      "product": "מוצר",
+      "solutions": "פתרונות",
       "pricing": "תמחור",
+      "about": "אודות",
       "contact": "צור קשר",
       "login": "התחבר",
-      "register": "הירשם"
+      "register": "הירשם",
+      "getStarted": "התחל"
     },
     "hero": {
       "title1": "שנה את החינוך עם",
       "title2": "למידה מונעת בינה מלאכותית",
       "subtitle": "העצם תלמידים להגיע למלוא הפוטנציאל שלהם באמצעות חוויות למידה מותאמות אישית ומודרכות שמפתחות גם מיומנויות אקדמיות וגם מיומנויות רכות.",
       "getStarted": "התחל בחינם",
+      "learnMore": "למד עוד",
+      "badge": "חדש: מסלולי למידה מבוססי AI",
       "contactUs": "צור קשר"
     },
+    "mission": "המשימה שלנו היא להנגיש חינוך מותאם אישית באמצעות בינה מלאכותית.",
     "features": {
       "title": "למה PerLeap?",
       "subtitle": "אנחנו משלבים בינה מלאכותית חדישה עם שיטות פדגוגיות מוכחות כדי ליצור חוויות למידה מהפכניות.",
@@ -65,6 +71,8 @@
   },
   "auth": {
     "welcome": "ברוכים הבאים ל-PerLeap",
+    "tagline": "שנה את החינוך עם הוראה מבוססת AI וחוויות למידה מותאמות אישית",
+    "backToHome": "חזרה לדף הבית",
     "subtitle": "היכנס לחשבון שלך או צור חשבון חדש",
     "signIn": "התחבר",
     "signUp": "הירשם",
@@ -204,15 +212,15 @@
     "title": "צור כיתה חדשה",
     "description": "הגדר כיתה חדשה לתלמידים שלך",
     "courseTitle": "נושא ראשי או כותרת קורס",
-    "courseDuration": "משך קורס",
+    "courseDuration": "משך הקורס",
     "courseDurationPlaceholder": "לדוגמה, 12 שבועות, סמסטר אחד",
     "startDate": "תאריך התחלה",
     "endDate": "תאריך סיום",
     "courseOutline": "מתווה קורס (נושאים + זרימה)",
-    "courseOutlinePlaceholder": "תאר את הנושאים העיקריים וכיצד הם זורמים...",
-    "resources": "משאבים שבדרך כלל אתה משתמש",
+    "courseOutlinePlaceholder": "תאר את הנושאים העיקריים ואיך הם זורמים...",
+    "resources": "משאבים שאתה בדרך כלל משתמש בהם",
     "resourcesPlaceholder": "ספרים, קישורים, קבצי PDF, כלים...",
-    "uploadPdf": "העלה PDF של קורס",
+    "uploadPdf": "העלה PDF של הקורס",
     "learningOutcomes": "תוצאות למידה (אופציונלי)",
     "addOutcome": "הוסף תוצאה",
     "creating": "יוצר...",
@@ -226,7 +234,7 @@
   },
   "editClassroom": {
     "title": "ערוך כיתה",
-    "description": "עדכן מידע על הכיתה",
+    "description": "עדכן פרטי כיתה",
     "saving": "שומר...",
     "save": "שמור שינויים",
     "errors": {
@@ -242,7 +250,7 @@
     "startDate": "תאריך התחלה",
     "endDate": "תאריך סיום",
     "courseStructure": "מבנה הקורס",
-    "courseOutline": "מתווה הקורס",
+    "courseOutline": "מתווה קורס",
     "learningOutcomes": "תוצאות למידה",
     "keyChallenges": "אתגרים מרכזיים",
     "subjectAreas": "תחומי נושא ומיומנויות",
@@ -257,8 +265,8 @@
   },
   "createAssignment": {
     "title": "צור משימה חדשה",
-    "description": "צור משימה לתלמידים שלך",
-    "assignmentTitle": "כותרת משימה",
+    "description": "צור משימה עבור התלמידים שלך",
+    "assignmentTitle": "כותרת המשימה",
     "assignmentInstructions": "הוראות",
     "dueDate": "תאריך יעד",
     "type": "סוג",
@@ -312,9 +320,9 @@
     "overview": {
       "title": "סקירת כיתה",
       "courseInfo": "מידע על הקורס",
-      "courseTitle": "שם הקורס",
+      "courseTitle": "כותרת הקורס",
       "duration": "משך",
-      "courseDates": "תאריכי קורס",
+      "courseDates": "תאריכי הקורס",
       "courseOutline": "מתווה הקורס",
       "resources": "משאבים",
       "learningOutcomes": "תוצאות למידה",
@@ -525,6 +533,7 @@
   },
   "common": {
     "loading": "טוען...",
+    "redirecting": "מעביר...",
     "teacher": "מורה",
     "student": "תלמיד",
     "due": "יעד",
@@ -547,7 +556,20 @@
     "noNotifications": "אין התראות חדשות",
     "markAllRead": "סמן הכל כנקרא",
     "notificationsRead": "כל ההתראות סומנו כנקראו",
-    "end": "סיום"
+    "end": "סיום",
+    "welcome": "ברוך הבא",
+    "settings": "הגדרות",
+    "darkMode": "מצב כהה",
+    "language": "שפה",
+    "logout": "התנתק",
+    "backToDashboard": "חזרה ללוח הבקרה",
+    "subject": "נושא",
+    "graded": "נבדק",
+    "submitted": "הוגש",
+    "missing": "חסר",
+    "assigned": "הוקצה",
+    "viewSubmission": "צפה בהגשה",
+    "startAssignment": "התחל משימה"
   },
   "dimensions": {
     "score": "ציון",
@@ -719,27 +741,71 @@
     }
   },
   "studentAnalytics": {
-    "title": "ניתוח תלמיד",
-    "noSubmissions": "לא נמצאו הגשות לתלמיד זה בכיתה זו",
-    "developmentAcross": "פיתוח מיומנויות רכות 5D על פני {{count}} הגשה",
-    "developmentAcrossPlural": "פיתוח מיומנויות רכות 5D על פני {{count}} הגשות",
-    "perSubmission": "לפי הגשה",
-    "allSubmissionsAverage": "ממוצע כל ההגשות",
-    "scoresFromSubmission": "ציונים מהגשה זו",
-    "averageAcrossAll": "ממוצע על פני כל {{count}} ההגשות"
+    "title": "Student Analytics",
+    "noSubmissions": "No submissions found for this student in this classroom",
+    "developmentAcross": "5D Soft Skills Development Across {{count}} Submission",
+    "developmentAcrossPlural": "5D Soft Skills Development Across {{count}} Submissions",
+    "perSubmission": "Per Submission",
+    "allSubmissionsAverage": "All Submissions Average",
+    "scoresFromSubmission": "Scores from this submission",
+    "averageAcrossAll": "Average across all {{count}} submissions"
   },
   "classroomAnalytics": {
-    "classOverview": "סקירת כיתה",
-    "averageScoresAcross": "ממוצע ציוני 5D על פני כל ההגשות",
-    "scoresFor": "ציונים עבור {{assignment}}",
-    "studentPerformanceOverview": "סקירת ביצועי תלמידים",
-    "detailedBreakdown": "פירוט מפורט לפי תלמיד",
-    "noStudentData": "אין נתוני תלמידים זמינים עדיין",
-    "submissions": "הגשות",
-    "average5DProfile": "פרופיל ממוצע 5D",
-    "allHardSkills": "כל הערכות המיומנויות הקשות על פני כל המשימות",
-    "hardSkillsFor": "הערכת מיומנויות קשות עבור {{student}}",
-    "hardSkillsAssignmentFor": "הערכות מיומנויות קשות עבור {{assignment}}",
-    "hardSkillsAllStudents": "הערכות מיומנויות קשות לכל התלמידים ב-{{assignment}}"
+    "classOverview": "Class Overview",
+    "averageScoresAcross": "Average 5D Scores Across All Submissions",
+    "scoresFor": "Scores for {{assignment}}",
+    "studentPerformanceOverview": "Student Performance Overview",
+    "detailedBreakdown": "Detailed Breakdown by Student",
+    "noStudentData": "No student data available yet",
+    "submissions": "Submissions",
+    "average5DProfile": "Average 5D Profile",
+    "allHardSkills": "All Hard Skills Assessments Across All Assignments",
+    "hardSkillsFor": "Hard Skills Assessment for {{student}}",
+    "hardSkillsAssignmentFor": "Hard Skills Assessments for {{assignment}}",
+    "hardSkillsAllStudents": "Hard Skills Assessments for All Students in {{assignment}}"
+  },
+  "aboutUs": {
+    "heroSubtitle": "We are a team of educators, technologists, and dreamers dedicated to reshaping the future of learning. We believe that every student deserves a personalized education tailored to their unique needs and potential.",
+    "mission": "Our Mission",
+    "missionText": "To democratize access to high-quality, personalized education by leveraging the power of AI to support teachers and empower students.",
+    "vision": "Our Vision",
+    "visionText": "A world where every learner has a dedicated AI companion that guides their growth, not just academically, but holistically—fostering critical thinking, empathy, and resilience.",
+    "storyTitle": "Our Story",
+    "story": {
+      "paragraph1": "PerLeap was born from a simple observation: while technology has transformed nearly every aspect of our lives, the fundamental model of the classroom has remained largely unchanged for a century.",
+      "paragraph2": "Our founders, a mix of former teachers and AI researchers, saw that educators were overwhelmed with administrative tasks and struggling to provide individual attention to every student in a crowded classroom.",
+      "paragraph3": "We asked ourselves: 'What if we could give every student a personal tutor and every teacher a superpower assistant?'",
+      "paragraph4": "Today, PerLeap is used by forward-thinking schools around the world to create engaging, effective, and human-centric learning environments."
+    },
+    "valuesTitle": "Our Core Values",
+    "values": {
+      "studentCentric": {
+        "title": "Student-Centric",
+        "description": "Every decision we make starts with the question: 'How does this help the learner?'"
+      },
+      "empathy": {
+        "title": "Empathy First",
+        "description": "We believe that emotional intelligence is just as important as academic intelligence."
+      },
+      "innovation": {
+        "title": "Bold Innovation",
+        "description": "We are not afraid to challenge the status quo to build a better future for education."
+      },
+      "excellence": {
+        "title": "Pursuit of Excellence",
+        "description": "We hold ourselves to the highest standards because our students deserve nothing less."
+      }
+    },
+    "stats": {
+      "studentsEmpowered": "Students Empowered",
+      "educators": "Educators Supported",
+      "satisfactionRate": "Satisfaction Rate"
+    },
+    "cta": {
+      "title": "Join Us on Our Journey",
+      "subtitle": "Whether you're a school leader, a teacher, or a parent, we'd love to show you how PerLeap can make a difference.",
+      "getStarted": "Get Started",
+      "contactTeam": "Contact Our Team"
+    }
   }
 }

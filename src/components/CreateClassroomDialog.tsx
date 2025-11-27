@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +31,7 @@ export const CreateClassroomDialog = ({
   onSuccess,
 }: CreateClassroomDialogProps) => {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
@@ -292,6 +294,7 @@ export const CreateClassroomDialog = ({
                   required
                   className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
                   placeholder="e.g. Advanced Mathematics"
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
 
@@ -307,6 +310,7 @@ export const CreateClassroomDialog = ({
                       value={formData.courseDuration}
                       onChange={(e) => setFormData({ ...formData, courseDuration: e.target.value })}
                       className="rounded-xl border-slate-200 dark:border-slate-700 h-11 pl-10"
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                     <Calendar className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
                   </div>
@@ -347,6 +351,7 @@ export const CreateClassroomDialog = ({
                   onChange={(e) => setFormData({ ...formData, courseOutline: e.target.value })}
                   rows={4}
                   className="rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
             </div>
@@ -388,6 +393,7 @@ export const CreateClassroomDialog = ({
                         value={domain.name}
                         onChange={(e) => updateDomainName(domainIndex, e.target.value)}
                         className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-10"
+                        dir={isRTL ? 'rtl' : 'ltr'}
                       />
                       <Button
                         type="button"
@@ -411,6 +417,7 @@ export const CreateClassroomDialog = ({
                               value={component}
                               onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
                               className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-9 text-sm"
+                              dir={isRTL ? 'rtl' : 'ltr'}
                             />
                             <Button
                               type="button"
@@ -476,6 +483,7 @@ export const CreateClassroomDialog = ({
                         }
                       }}
                       className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                     <Button
                       type="button"
@@ -538,6 +546,7 @@ export const CreateClassroomDialog = ({
                       value={outcome}
                       onChange={(e) => handleOutcomeChange(index, e.target.value)}
                       className="rounded-xl border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-900/10 focus-visible:ring-emerald-500"
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                   ))}
                 </div>
@@ -564,6 +573,7 @@ export const CreateClassroomDialog = ({
                       value={challenge}
                       onChange={(e) => handleChallengeChange(index, e.target.value)}
                       className="rounded-xl border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10 focus-visible:ring-amber-500"
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                   ))}
                 </div>

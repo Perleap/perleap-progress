@@ -1,19 +1,25 @@
 {
   "landing": {
     "nav": {
-      "about": "About",
+      "product": "Product",
+      "solutions": "Solutions",
       "pricing": "Pricing",
+      "about": "About",
       "contact": "Contact",
       "login": "Login",
-      "register": "Sign Up"
+      "register": "Sign Up",
+      "getStarted": "Get Started"
     },
     "hero": {
       "title1": "Transform Education with",
       "title2": "AI-Powered Learning",
       "subtitle": "Empower students to reach their full potential through personalized, guided learning experiences that develop both academic and soft skills.",
       "getStarted": "Get Started Free",
+      "learnMore": "Learn More",
+      "badge": "New: AI-Powered Learning Paths",
       "contactUs": "Contact Us"
     },
+    "mission": "Our mission is to democratize personalized education through AI.",
     "features": {
       "title": "Why PerLeap?",
       "subtitle": "We combine cutting-edge AI with proven pedagogical methods to create transformative learning experiences.",
@@ -65,6 +71,8 @@
   },
   "auth": {
     "welcome": "Welcome to PerLeap",
+    "tagline": "Transform education with AI-powered teaching and personalized learning experiences",
+    "backToHome": "Back to Home",
     "subtitle": "Sign in to your account or create a new one",
     "signIn": "Sign In",
     "signUp": "Sign Up",
@@ -329,7 +337,7 @@
       "subtitle": "View and manage your students",
       "joined": "Joined",
       "noStudents": "No students enrolled yet",
-      "studentIncomplete": "Student (Incomplete Profile)"
+      "studentIncomplete": "Student (Profile Incomplete)"
     },
     "errors": {
       "loading": "Error loading classroom",
@@ -360,11 +368,11 @@
     "filterTitle": "Filter & Search Submissions",
     "exportAll": "Export All",
     "search": "Search",
-    "searchPlaceholder": "Search in conversations, feedback, names...",
+    "searchPlaceholder": "Search conversations, feedback, names...",
     "assignment": "Assignment",
     "allStudents": "All Students",
     "allAssignments": "All Assignments",
-    "noMatches": "No submissions match filters",
+    "noMatches": "No submissions match your filters",
     "adjustFilters": "Try adjusting your filters"
   },
   "submissionCard": {
@@ -447,17 +455,17 @@
       "warning": "This action cannot be undone. Please read carefully:",
       "consequences": {
         "profile": "Your profile will be permanently deleted",
-        "data": "All your data will be removed from our systems",
+        "data": "All your data will be removed from our system",
         "classrooms": "All classrooms you created will be deleted",
         "assignments": "All assignments and student submissions will be deleted",
         "enrollments": "You will be removed from all classrooms",
         "submissions": "All your submissions will be permanently deleted",
-        "permanent": "This action is permanent and cannot be reversed"
+        "permanent": "This action is permanent and irreversible"
       },
       "confirmPrompt": "To confirm deletion, please type 'confirm' in the box below:",
       "typeConfirm": "Type 'confirm' to delete",
       "deleteButton": "Delete My Account",
-      "success": "Your account has been deleted successfully",
+      "success": "Your account has been successfully deleted",
       "errors": {
         "incorrectConfirmation": "Please type 'confirm' to proceed",
         "notAuthenticated": "You must be logged in to delete your account",
@@ -474,7 +482,7 @@
     "assignmentCompletion": "Assignment Completion",
     "participationRate": "Participation Rate",
     "averageScore": "Average Score",
-    "students": "students",
+    "students": "Students",
     "noData": "No data available yet",
     "filtersTitle": "Analytics Filters",
     "filterByStudent": "Filter by Student",
@@ -486,15 +494,15 @@
     "totalSubmissions": "Total Submissions",
     "completionRate": "Completion Rate",
     "averageScoresDesc": "Average soft skills scores across all students with data",
-    "individualProfile": "Individual student soft skills performance profile",
+    "individualProfile": "Individual Student Soft Skills Performance Profile",
     "classInsights": "Class Insights",
     "classInsightsDesc": "AI-generated insights about class performance",
     "comingSoon": "📊 Coming Soon",
-    "comingSoonDesc": "AI-powered analysis of your class's soft skills development trends and recommendations will appear here.",
+    "comingSoonDesc": "AI-driven analysis of your class's soft skill development trends and recommendations will appear here.",
     "performanceSummary": "Class Performance Summary",
-    "performanceSummaryDesc": "Overall statistics and completion rates",
+    "performanceSummaryDesc": "General statistics and completion rates",
     "activeStudents": "Active Students",
-    "avgSubmissions": "Average Submissions per Student",
+    "avgSubmissions": "Avg. Submissions per Student",
     "engagementRate": "Class Engagement Rate",
     "average5D": "Average 5D Scores"
   },
@@ -517,7 +525,7 @@
   },
   "onboarding": {
     "welcome": "Welcome to PerLeap",
-    "letsGetStarted": "Let's get started",
+    "letsGetStarted": "Let's Get Started",
     "next": "Next",
     "previous": "Previous",
     "finish": "Finish",
@@ -525,6 +533,7 @@
   },
   "common": {
     "loading": "Loading...",
+    "redirecting": "Redirecting...",
     "teacher": "Teacher",
     "student": "Student",
     "due": "Due",
@@ -552,7 +561,7 @@
     "settings": "Settings",
     "darkMode": "Dark Mode",
     "language": "Language",
-    "logout": "Log out",
+    "logout": "Logout",
     "backToDashboard": "Back to Dashboard",
     "subject": "Subject",
     "graded": "Graded",
@@ -566,11 +575,11 @@
     "score": "Score",
     "vision": {
       "label": "Vision",
-      "description": "Imagining new possibilities and bold ideas; creative, adaptive thinking"
+      "description": "Imagining new possibilities and bold ideas; creative and adaptive thinking"
     },
     "values": {
       "label": "Values",
-      "description": "Guided by ethics and integrity; building trust and understanding limits"
+      "description": "Guided by ethics and integrity; building trust and understanding boundaries"
     },
     "thinking": {
       "label": "Thinking",
@@ -586,7 +595,7 @@
     }
   },
   "cra": {
-    "title": "Content Related Abilities (CRA)",
+    "title": "Content-Related Abilities (CRA)",
     "description": "Assessment of hard skills based on student performance",
     "loading": "Loading...",
     "nextSteps": "Next Steps",
@@ -606,9 +615,9 @@
       "profilePicture": "Profile Picture (Optional)",
       "uploadPhoto": "Upload Photo",
       "fileSize": "PNG, JPG up to 5MB",
-      "learningMethodsQuestion": "What kinds of activities or methods help you learn best?",
+      "learningMethodsQuestion": "Which types of activities or methods help you learn best?",
       "visual": "Visual Learning",
-      "visualDesc": "I learn best by reading textbooks, looking at diagrams, charts, and pictures",
+      "visualDesc": "I learn best by reading textbooks, looking at diagrams, graphs, and pictures",
       "auditory": "Auditory Learning",
       "auditoryDesc": "I learn best by listening to explanations and discussions",
       "kinesthetic": "Kinesthetic Learning",
@@ -617,16 +626,16 @@
       "videoDesc": "I learn best by watching videos and demonstrations"
     },
     "step2": {
-      "soloVsGroupQuestion": "Do you learn better when you study on your own, or do you prefer learning with others?",
-      "solo": "Solo Learning",
-      "soloDesc": "I prefer working through material on my own",
+      "soloVsGroupQuestion": "Do you learn better when studying alone, or do you prefer learning with others?",
+      "solo": "Independent Learning",
+      "soloDesc": "I prefer working on material by myself",
       "group": "Group Learning",
-      "groupDesc": "I like group activities and discussions to help me understand",
+      "groupDesc": "I like group activities and discussions that help me understand",
       "both": "Flexible",
-      "bothDesc": "I like a mix of both solo and group learning",
-      "scheduledVsFlexibleQuestion": "Do you like to follow a set study schedule or plan, or do you prefer to be flexible?",
+      "bothDesc": "I like a mix of independent and group learning",
+      "scheduledVsFlexibleQuestion": "Do you like following a set schedule or plan, or do you prefer to be flexible?",
       "scheduled": "Structured Schedule",
-      "scheduledDesc": "I thrive with a set routine and plan",
+      "scheduledDesc": "I thrive with a routine and a set plan",
       "flexible": "Flexible Approach",
       "flexibleDesc": "I prefer to decide what to study as I go"
     },
@@ -635,20 +644,20 @@
       "curiosity": "Curiosity",
       "curiosityDesc": "I love learning about new topics that interest me",
       "grades": "Achievement",
-      "gradesDesc": "I want to achieve high grades and academic success",
+      "gradesDesc": "I want to get high grades and academic success",
       "encouragement": "Recognition",
-      "encouragementDesc": "I'm motivated by praise and encouragement from others",
+      "encouragementDesc": "I am motivated by praise and encouragement from others",
       "personalGoals": "Personal Goals",
-      "personalGoalsDesc": "I'm driven by my own goals and aspirations",
+      "personalGoalsDesc": "I am driven by my own goals and aspirations",
       "competition": "Competition",
-      "competitionDesc": "I'm motivated by friendly competition with peers"
+      "competitionDesc": "I am motivated by friendly competition with peers"
     },
     "step4": {
-      "helpQuestion": "If you're struggling to understand a concept or skill, what's the best way someone can help you?",
+      "helpQuestion": "If you're struggling to understand a concept or skill, what is the best way someone can help you?",
       "hints": "Give me hints or clues to figure it out myself",
       "differentWay": "Explain it in a different way or with different examples",
       "stepByStep": "Show me a step-by-step solution",
-      "moreTime": "Let me figure it out on my own with more time",
+      "moreTime": "Let me figure it out myself with more time",
       "teacherQuestion": "What do you look for in a teacher or coach?",
       "patient": "Someone who is patient and understanding",
       "challenging": "Someone who pushes me to achieve my best",
@@ -657,26 +666,26 @@
     },
     "step5": {
       "feedbackQuestion": "How do you prefer to receive feedback or corrections on your work?",
-      "immediate": "Immediate feedback as I practice",
-      "written": "Written comments or scores afterward",
-      "discussion": "A quick talk where the teacher goes over how I did",
+      "immediate": "Immediate feedback while I'm practicing",
+      "written": "Written comments or grades afterwards",
+      "discussion": "A short conversation where the teacher goes over how I did",
       "goalQuestion": "What is one goal you hope to achieve through this learning experience?",
       "goalPlaceholder": "e.g., Improve my grade, master a skill, gain confidence, prepare for college..."
     },
     "step6": {
       "specialNeedsQuestion": "Do you have any specific needs or preferences that help you learn better?",
       "specialNeedsPlaceholder": "e.g., Short breaks, visual aids, hands-on practice, quiet environment...",
-      "additionalNotesQuestion": "Is there anything else you'd like your teacher or the AI to know about how you like to learn or study?",
-      "additionalNotesPlaceholder": "Share any other comments, learning difficulties, anxieties, or preferences..."
+      "additionalNotesQuestion": "Is there anything else you'd like the teacher or AI to know about how you like to learn or study?",
+      "additionalNotesPlaceholder": "Share any other notes, learning difficulties, anxieties, or preferences..."
     },
     "back": "Back",
     "next": "Next",
     "completeSetup": "Complete Setup",
     "errors": {
       "fileSize": "File size should be less than 5MB",
-      "notAuthenticated": "User not authenticated. Please sign in again.",
-      "uploadAvatar": "Failed to upload avatar. Continuing without avatar.",
-      "profileExists": "A profile already exists for this account. Redirecting to dashboard...",
+      "notAuthenticated": "User not authenticated. Please log in again.",
+      "uploadAvatar": "Failed to upload profile picture. Continuing without profile picture.",
+      "profileExists": "Profile already exists for this account. Redirecting to dashboard...",
       "createProfile": "Error creating profile. Please try again."
     },
     "success": {
@@ -695,7 +704,7 @@
       "uploadPhoto": "Upload Photo",
       "fileSize": "PNG, JPG up to 5MB",
       "phoneNumber": "Phone Number",
-      "phoneNumberPlaceholder": "+1 (555) 123-4567",
+      "phoneNumberPlaceholder": "+1 555-123-4567",
       "subjects": "Subjects You Teach *",
       "subjectsPlaceholder": "e.g., Math, Physics, Chemistry",
       "subjectsHelp": "Separate multiple subjects with commas",
@@ -706,12 +715,12 @@
     },
     "step2": {
       "teachingGoalsQuestion": "What are your main teaching goals?",
-      "teachingGoalsPlaceholder": "Brief description (1-2 sentences)",
-      "teachingGoalsHelp": "e.g., \"Help students develop critical thinking skills and build confidence in problem-solving\"",
+      "teachingGoalsPlaceholder": "Short description (1-2 sentences)",
+      "teachingGoalsHelp": "e.g., \"To help students develop critical thinking skills and build confidence in problem-solving\"",
       "teachingStyleQuestion": "Describe your teaching style",
       "teachingStylePlaceholder": "How would you describe your approach to teaching?",
       "teachingStyleHelp": "Include your tone, personality, values, and approach (e.g., patient, structured, encourages questions, uses real-world examples)",
-      "teachingExampleQuestion": "Share a brief teaching example",
+      "teachingExampleQuestion": "Share a short teaching example",
       "teachingExamplePlaceholder": "How do you explain a concept or give feedback to students?",
       "teachingExampleHelp": "Write a short example that shows your natural teaching voice",
       "additionalNotesQuestion": "Anything else we should know? (Optional)",
@@ -722,9 +731,9 @@
     "completeSetup": "Complete Setup",
     "errors": {
       "fileSize": "File size should be less than 5MB",
-      "notAuthenticated": "User not authenticated. Please sign in again.",
-      "uploadAvatar": "Failed to upload avatar. Continuing without avatar.",
-      "profileExists": "A profile already exists for this account. Redirecting to dashboard...",
+      "notAuthenticated": "User not authenticated. Please log in again.",
+      "uploadAvatar": "Failed to upload profile picture. Continuing without profile picture.",
+      "profileExists": "Profile already exists for this account. Redirecting to dashboard...",
       "createProfile": "Error creating profile. Please try again."
     },
     "success": {
@@ -734,8 +743,8 @@
   "studentAnalytics": {
     "title": "Student Analytics",
     "noSubmissions": "No submissions found for this student in this classroom",
-    "developmentAcross": "5D soft skills development across {{count}} submission",
-    "developmentAcrossPlural": "5D soft skills development across {{count}} submissions",
+    "developmentAcross": "5D Soft Skills Development Across {{count}} Submission",
+    "developmentAcrossPlural": "5D Soft Skills Development Across {{count}} Submissions",
     "perSubmission": "Per Submission",
     "allSubmissionsAverage": "All Submissions Average",
     "scoresFromSubmission": "Scores from this submission",
@@ -743,16 +752,60 @@
   },
   "classroomAnalytics": {
     "classOverview": "Class Overview",
-    "averageScoresAcross": "Average 5D scores across all submissions",
+    "averageScoresAcross": "Average 5D Scores Across All Submissions",
     "scoresFor": "Scores for {{assignment}}",
     "studentPerformanceOverview": "Student Performance Overview",
-    "detailedBreakdown": "Detailed breakdown by student",
+    "detailedBreakdown": "Detailed Breakdown by Student",
     "noStudentData": "No student data available yet",
-    "submissions": "submissions",
+    "submissions": "Submissions",
     "average5DProfile": "Average 5D Profile",
-    "allHardSkills": "All hard skills assessments across all assignments",
-    "hardSkillsFor": "Hard skills assessment for {{student}}",
-    "hardSkillsAssignmentFor": "Hard skills assessments for {{assignment}}",
-    "hardSkillsAllStudents": "Hard skills assessments for all students on {{assignment}}"
+    "allHardSkills": "All Hard Skills Assessments Across All Assignments",
+    "hardSkillsFor": "Hard Skills Assessment for {{student}}",
+    "hardSkillsAssignmentFor": "Hard Skills Assessments for {{assignment}}",
+    "hardSkillsAllStudents": "Hard Skills Assessments for All Students in {{assignment}}"
+  },
+  "aboutUs": {
+    "heroSubtitle": "We are a team of educators, technologists, and dreamers dedicated to reshaping the future of learning. We believe that every student deserves a personalized education tailored to their unique needs and potential.",
+    "mission": "Our Mission",
+    "missionText": "To democratize access to high-quality, personalized education by leveraging the power of AI to support teachers and empower students.",
+    "vision": "Our Vision",
+    "visionText": "A world where every learner has a dedicated AI companion that guides their growth, not just academically, but holistically—fostering critical thinking, empathy, and resilience.",
+    "storyTitle": "Our Story",
+    "story": {
+      "paragraph1": "PerLeap was born from a simple observation: while technology has transformed nearly every aspect of our lives, the fundamental model of the classroom has remained largely unchanged for a century.",
+      "paragraph2": "Our founders, a mix of former teachers and AI researchers, saw that educators were overwhelmed with administrative tasks and struggling to provide individual attention to every student in a crowded classroom.",
+      "paragraph3": "We asked ourselves: 'What if we could give every student a personal tutor and every teacher a superpower assistant?'",
+      "paragraph4": "Today, PerLeap is used by forward-thinking schools around the world to create engaging, effective, and human-centric learning environments."
+    },
+    "valuesTitle": "Our Core Values",
+    "values": {
+      "studentCentric": {
+        "title": "Student-Centric",
+        "description": "Every decision we make starts with the question: 'How does this help the learner?'"
+      },
+      "empathy": {
+        "title": "Empathy First",
+        "description": "We believe that emotional intelligence is just as important as academic intelligence."
+      },
+      "innovation": {
+        "title": "Bold Innovation",
+        "description": "We are not afraid to challenge the status quo to build a better future for education."
+      },
+      "excellence": {
+        "title": "Pursuit of Excellence",
+        "description": "We hold ourselves to the highest standards because our students deserve nothing less."
+      }
+    },
+    "stats": {
+      "studentsEmpowered": "Students Empowered",
+      "educators": "Educators Supported",
+      "satisfactionRate": "Satisfaction Rate"
+    },
+    "cta": {
+      "title": "Join Us on Our Journey",
+      "subtitle": "Whether you're a school leader, a teacher, or a parent, we'd love to show you how PerLeap can make a difference.",
+      "getStarted": "Get Started",
+      "contactTeam": "Contact Our Team"
+    }
   }
 }
