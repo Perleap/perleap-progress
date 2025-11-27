@@ -14,7 +14,6 @@ import { Loader2, ArrowLeft, ArrowRight, Upload } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const StudentOnboarding = () => {
   const { t } = useTranslation();
@@ -139,7 +138,7 @@ const StudentOnboarding = () => {
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
-                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
               />
             </div>
 
@@ -168,7 +167,7 @@ const StudentOnboarding = () => {
                     accept="image/*"
                     onChange={handleAvatarChange}
                     className="hidden"
-                    dir={isRTL ? 'rtl' : 'ltr'}
+                    autoDirection
                   />
                   <Label htmlFor="avatar" className="cursor-pointer">
                     <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
@@ -449,7 +448,7 @@ const StudentOnboarding = () => {
                 value={formData.learningGoal}
                 onChange={(e) => setFormData({ ...formData, learningGoal: e.target.value })}
                 rows={3}
-                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
               />
             </div>
           </div>
@@ -468,7 +467,7 @@ const StudentOnboarding = () => {
                 value={formData.specialNeeds}
                 onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })}
                 rows={3}
-                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
               />
             </div>
             <div className="space-y-2">
@@ -481,7 +480,7 @@ const StudentOnboarding = () => {
                 value={formData.additionalNotes}
                 onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
                 rows={4}
-                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
               />
             </div>
           </div>
@@ -495,7 +494,6 @@ const StudentOnboarding = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="fixed top-4 right-4 z-50 flex gap-2">
-        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       <Card className="w-full max-w-3xl">

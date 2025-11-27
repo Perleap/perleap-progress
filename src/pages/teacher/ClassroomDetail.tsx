@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   ArrowLeft,
   Users,
@@ -99,6 +100,7 @@ const ClassroomDetail = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
+  const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -346,8 +348,8 @@ const ClassroomDetail = () => {
       />
 
       <main className="container py-6 md:py-8 px-4 max-w-7xl mx-auto">
-        <Tabs defaultValue="overview" className="space-y-6 md:space-y-8">
-          <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-full inline-flex h-auto w-full sm:w-auto overflow-x-auto justify-start">
+        <Tabs defaultValue="overview" className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
+          <TabsList className={`bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-full inline-flex h-auto w-full sm:w-auto overflow-x-auto justify-start`}>
             <TabsTrigger
               value="overview"
               className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
@@ -381,11 +383,8 @@ const ClassroomDetail = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
-                {t('classroomDetail.overview.title')}
-              </h2>
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRTL ? '' : ''}`}>
+              <div className={`flex flex-col sm:flex-row gap-3 w-full sm:w-auto ${isRTL ? 'sm:order-2' : 'sm:order-1'}`}>
                 <Button
                   onClick={() => setEditDialogOpen(true)}
                   size="sm"
@@ -405,17 +404,21 @@ const ClassroomDetail = () => {
                   {t('classroomDetail.deleteButton')}
                 </Button>
               </div>
+              <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right sm:order-1' : 'text-left sm:order-2'}`}>
+                {t('classroomDetail.overview.title')}
+              </h2>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {/* Invite Code Card */}
-              <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-900/20 dark:to-pink-900/20 overflow-hidden">
+              <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-900/20 dark:to-pink-900/20 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-slate-800 dark:text-slate-100">{t('classroomDetail.inviteCode')}</CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">{t('classroomDetail.shareCode')}</CardDescription>
+                  <CardTitle className={`text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('classroomDetail.inviteCode')}
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4">
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-4 justify-start">
                     <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm">
                       <code className="text-3xl font-mono font-bold text-indigo-600 dark:text-indigo-400 tracking-wider">
                         {classroom.invite_code}
@@ -433,12 +436,15 @@ const ClassroomDetail = () => {
                       <LinkIcon className="h-5 w-5 text-slate-500" />
                     </Button>
                   </div>
+                  <p className={`text-sm text-slate-600 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('classroomDetail.shareCode')}
+                  </p>
                 </CardContent>
               </Card>
 
               {/* Course Info */}
               {classroom.course_title && (
-                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -449,27 +455,27 @@ const ClassroomDetail = () => {
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                      <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('classroomDetail.overview.courseTitle')}
                       </h3>
-                      <p className="font-medium text-slate-800 dark:text-slate-200">{classroom.course_title}</p>
+                      <p className={`font-medium text-slate-800 dark:text-slate-200 ${isRTL ? 'text-right' : 'text-left'}`}>{classroom.course_title}</p>
                     </div>
 
                     {classroom.course_duration && (
                       <div>
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                        <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t('classroomDetail.overview.duration')}
                         </h3>
-                        <p className="font-medium text-slate-800 dark:text-slate-200">{classroom.course_duration}</p>
+                        <p className={`font-medium text-slate-800 dark:text-slate-200 ${isRTL ? 'text-right' : 'text-left'}`}>{classroom.course_duration}</p>
                       </div>
                     )}
 
                     {(classroom.start_date || classroom.end_date) && (
                       <div>
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                        <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t('classroomDetail.overview.courseDates')}
                         </h3>
-                        <div className="text-slate-700 dark:text-slate-300 space-y-1">
+                        <div className={`text-slate-700 dark:text-slate-300 space-y-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {classroom.start_date && (
                             <div className="flex items-center gap-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -491,7 +497,7 @@ const ClassroomDetail = () => {
 
               {/* Outline & Resources */}
               {(classroom.course_outline || classroom.resources) && (
-                <Card className="md:col-span-2 lg:col-span-2 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                <Card className="md:col-span-2 lg:col-span-2 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
@@ -503,10 +509,10 @@ const ClassroomDetail = () => {
                   <CardContent className="space-y-6">
                     {classroom.course_outline && (
                       <div>
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                        <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t('classroomDetail.overview.courseOutline')}
                         </h3>
-                        <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                        <p className={`text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
                           {classroom.course_outline}
                         </p>
                       </div>
@@ -514,10 +520,10 @@ const ClassroomDetail = () => {
 
                     {classroom.resources && (
                       <div>
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                        <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t('classroomDetail.overview.resources')}
                         </h3>
-                        <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                        <p className={`text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
                           {classroom.resources}
                         </p>
                       </div>
@@ -528,11 +534,11 @@ const ClassroomDetail = () => {
 
               {/* Learning Outcomes & Challenges */}
               {(classroom.learning_outcomes?.length || classroom.key_challenges?.length) ? (
-                <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardContent className="p-6 grid md:grid-cols-2 gap-8">
                     {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
                       <div>
-                        <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">
+                        <h3 className={`flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                           <span className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400">
                             <BarChart3 className="h-4 w-4" />
                           </span>
@@ -540,7 +546,7 @@ const ClassroomDetail = () => {
                         </h3>
                         <ul className="space-y-3">
                           {classroom.learning_outcomes.map((outcome: string, index: number) => (
-                            <li key={index} className="flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl">
+                            <li key={index} className={`flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl ${isRTL ? 'text-right' : 'text-left'}`}>
                               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold mt-0.5">
                                 {index + 1}
                               </span>
@@ -553,7 +559,7 @@ const ClassroomDetail = () => {
 
                     {classroom.key_challenges && classroom.key_challenges.length > 0 && (
                       <div>
-                        <h3 className="flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">
+                        <h3 className={`flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                           <span className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded-lg text-rose-600 dark:text-rose-400">
                             <Users className="h-4 w-4" />
                           </span>
@@ -561,7 +567,7 @@ const ClassroomDetail = () => {
                         </h3>
                         <ul className="space-y-3">
                           {classroom.key_challenges.map((challenge: string, index: number) => (
-                            <li key={index} className="flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl">
+                            <li key={index} className={`flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl ${isRTL ? 'text-right' : 'text-left'}`}>
                               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xs font-bold mt-0.5">
                                 !
                               </span>
@@ -578,7 +584,7 @@ const ClassroomDetail = () => {
 
             {/* Domains & Components Section */}
             {classroom.domains && classroom.domains.length > 0 && (
-              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
@@ -586,7 +592,7 @@ const ClassroomDetail = () => {
                     </div>
                     {t('classroomDetail.subjectAreas')}
                   </CardTitle>
-                  <CardDescription>{t('classroomDetail.subjectAreasDesc')}</CardDescription>
+                  <CardDescription className={isRTL ? 'text-right' : 'text-left'}>{t('classroomDetail.subjectAreasDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {classroom.domains.map((domain, index) => (
@@ -595,7 +601,9 @@ const ClassroomDetail = () => {
                         className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-white dark:bg-slate-900/30"
                         onClick={() => toggleDomain(index)}
                       >
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">{domain.name}</span>
+                        <span className={`font-semibold text-slate-800 dark:text-slate-200 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          {domain.name}
+                        </span>
                         {expandedDomains.has(index) ? (
                           <ChevronDown className="h-5 w-5 text-slate-400" />
                         ) : (
@@ -604,8 +612,8 @@ const ClassroomDetail = () => {
                       </button>
                       {expandedDomains.has(index) && (
                         <div className="px-4 pb-4 pt-2 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{t('classroomDetail.skills')}</p>
-                          <div className="flex flex-wrap gap-2">
+                          <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classroomDetail.skills')}</p>
+                          <div className={`flex flex-wrap gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                             {domain.components.map((component, compIndex) => (
                               <Badge key={compIndex} variant="secondary" className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 font-normal">
                                 {component}
@@ -630,7 +638,7 @@ const ClassroomDetail = () => {
                     </div>
                     {t('classroomDetail.courseMaterials')}
                   </CardTitle>
-                  <CardDescription>{t('classroomDetail.courseMaterialsDesc')}</CardDescription>
+                  <CardDescription className={isRTL ? 'text-right' : 'text-left'}>{t('classroomDetail.courseMaterialsDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -648,7 +656,7 @@ const ClassroomDetail = () => {
                             <LinkIcon className="h-5 w-5 text-slate-500 group-hover:text-primary transition-colors" />
                           )}
                         </div>
-                        <div className="flex-1 text-left overflow-hidden">
+                        <div className={`flex-1 overflow-hidden ${isRTL ? 'text-right' : 'text-left'}`}>
                           <span className="block font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">{material.name}</span>
                           <span className="text-xs text-slate-400 capitalize">{material.type}</span>
                         </div>
@@ -661,22 +669,22 @@ const ClassroomDetail = () => {
           </TabsContent>
 
           <TabsContent value="assignments" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
-                  {t('classroomDetail.assignments')}
-                </h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">
-                  {t('classroomDetail.assignmentsSubtitle')}
-                </p>
-              </div>
+            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRTL ? '' : ''}`}>
               <Button
                 onClick={() => setAssignmentDialogOpen(true)}
-                className="w-full sm:w-auto rounded-full shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90"
+                className={`w-full sm:w-auto rounded-full shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90 ${isRTL ? 'sm:order-2' : 'sm:order-1'}`}
               >
                 <Plus className="me-2 h-4 w-4" />
                 {t('classroomDetail.createAssignment')}
               </Button>
+              <div className={`${isRTL ? 'text-right sm:order-1' : 'text-left sm:order-2'}`}>
+                <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('classroomDetail.assignments')}
+                </h2>
+                <p className={`text-slate-500 dark:text-slate-400 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('classroomDetail.assignmentsSubtitle')}
+                </p>
+              </div>
             </div>
 
             {assignments.length === 0 ? (
@@ -703,9 +711,9 @@ const ClassroomDetail = () => {
                   <Card key={assignment.id} className="group rounded-3xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
+                        <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                           <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">
+                            <CardTitle className={`text-lg font-bold text-slate-800 dark:text-slate-100 truncate ${isRTL ? 'text-right' : 'text-left'}`}>
                               {assignment.title}
                             </CardTitle>
                             {assignment.assigned_student_id && (
@@ -761,7 +769,7 @@ const ClassroomDetail = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                      <p className={`text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
                         {assignment.instructions}
                       </p>
 
@@ -775,7 +783,7 @@ const ClassroomDetail = () => {
                             if (Array.isArray(materials) && materials.length > 0) {
                               return (
                                 <div className="pt-2">
-                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                  <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                                     {t('classroomDetail.attachments')} ({materials.length})
                                   </p>
                                   <div className="flex flex-wrap gap-2">
@@ -813,10 +821,10 @@ const ClassroomDetail = () => {
 
           <TabsContent value="students" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
+              <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('classroomDetail.studentsTab.title')}
               </h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
+              <p className={`text-slate-500 dark:text-slate-400 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('classroomDetail.studentsTab.subtitle')}
               </p>
             </div>
@@ -890,10 +898,10 @@ const ClassroomDetail = () => {
 
           <TabsContent value="submissions" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
+              <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('classroomDetail.submissions.title')}
               </h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
+              <p className={`text-slate-500 dark:text-slate-400 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('classroomDetail.submissions.subtitle')}
               </p>
             </div>
@@ -906,7 +914,9 @@ const ClassroomDetail = () => {
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                   <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">{t('classroomDetail.analytics')}</h2>
+                <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('classroomDetail.analytics')}
+                </h2>
               </div>
               <RegenerateScoresButton classroomId={id!} onComplete={fetchClassroom} />
             </div>

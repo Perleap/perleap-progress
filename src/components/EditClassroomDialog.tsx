@@ -271,7 +271,7 @@ export function EditClassroomDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('editClassroom.title')}</DialogTitle>
           <DialogDescription>{t('editClassroom.description')}</DialogDescription>
@@ -280,52 +280,52 @@ export function EditClassroomDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Classroom Name *</Label>
+              <Label htmlFor="name" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Classroom Name *</Label>
               <Input
                 id="name"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subject">Subject *</Label>
+              <Label htmlFor="subject" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Subject *</Label>
               <Input
                 id="subject"
                 required
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="course_title">Course Title</Label>
+            <Label htmlFor="course_title" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Course Title</Label>
             <Input
               id="course_title"
               value={formData.course_title}
               onChange={(e) => setFormData({ ...formData, course_title: e.target.value })}
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="course_duration">Course Duration</Label>
+            <Label htmlFor="course_duration" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Course Duration</Label>
             <Input
               id="course_duration"
               placeholder="e.g., 8 weeks, 1 semester"
               value={formData.course_duration}
               onChange={(e) => setFormData({ ...formData, course_duration: e.target.value })}
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="start_date" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Start Date</Label>
               <Input
                 id="start_date"
                 type="date"
@@ -335,7 +335,7 @@ export function EditClassroomDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date</Label>
+              <Label htmlFor="end_date" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>End Date</Label>
               <Input
                 id="end_date"
                 type="date"
@@ -346,43 +346,43 @@ export function EditClassroomDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="course_outline">Course Outline</Label>
+            <Label htmlFor="course_outline" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Course Outline</Label>
             <Textarea
               id="course_outline"
               placeholder="Topics and flow..."
               rows={4}
               value={formData.course_outline}
               onChange={(e) => setFormData({ ...formData, course_outline: e.target.value })}
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="learning_outcomes">Learning Outcomes (one per line)</Label>
+            <Label htmlFor="learning_outcomes" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Learning Outcomes (one per line)</Label>
             <Textarea
               id="learning_outcomes"
               placeholder="Outcome 1&#10;Outcome 2&#10;Outcome 3"
               rows={4}
               value={formData.learning_outcomes}
               onChange={(e) => setFormData({ ...formData, learning_outcomes: e.target.value })}
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="key_challenges">Key Challenges (one per line)</Label>
+            <Label htmlFor="key_challenges" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Key Challenges (one per line)</Label>
             <Textarea
               id="key_challenges"
               placeholder="Challenge 1&#10;Challenge 2"
               rows={3}
               value={formData.key_challenges}
               onChange={(e) => setFormData({ ...formData, key_challenges: e.target.value })}
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Subject Areas & Skills</Label>
+            <Label className={`text-base block ${isRTL ? 'text-right' : 'text-left'}`}>Subject Areas & Skills</Label>
             <p className="text-xs text-muted-foreground">
               Add subject areas (e.g., Algebra, Geometry) and their specific skills
             </p>
@@ -395,7 +395,7 @@ export function EditClassroomDialog({
                     value={domain.name}
                     onChange={(e) => updateDomainName(domainIndex, e.target.value)}
                     className="flex-1"
-                    dir={isRTL ? 'rtl' : 'ltr'}
+                    autoDirection
                   />
                   <Button
                     type="button"
@@ -407,8 +407,8 @@ export function EditClassroomDialog({
                   </Button>
                 </div>
 
-                <div className="space-y-2 ml-4">
-                  <Label className="text-sm">Skills</Label>
+                <div className="space-y-2 ms-4">
+                  <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Skills</Label>
                   {domain.components.map((component, componentIndex) => (
                     <div key={componentIndex} className="flex items-center gap-2">
                       <Input
@@ -417,7 +417,7 @@ export function EditClassroomDialog({
                         onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
                         className="flex-1 bg-background"
                         size="sm"
-                        dir={isRTL ? 'rtl' : 'ltr'}
+                        autoDirection
                       />
                       <Button
                         type="button"
@@ -435,7 +435,7 @@ export function EditClassroomDialog({
                     size="sm"
                     onClick={() => addComponent(domainIndex)}
                   >
-                    <Plus className="h-3 w-3 mr-1" />
+                    <Plus className="h-3 w-3 me-1" />
                     Add Skill
                   </Button>
                 </div>
@@ -443,13 +443,13 @@ export function EditClassroomDialog({
             ))}
 
             <Button type="button" variant="outline" onClick={addDomain}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 me-2" />
               Add Subject Area
             </Button>
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Course Materials</Label>
+            <Label className={`text-base block ${isRTL ? 'text-right' : 'text-left'}`}>Course Materials</Label>
             <p className="text-xs text-muted-foreground">
               Add PDFs and links that will be available for this classroom
             </p>
@@ -480,7 +480,7 @@ export function EditClassroomDialog({
 
             {/* PDF Upload */}
             <div className="space-y-2">
-              <Label htmlFor="pdf-upload" className="text-sm">
+              <Label htmlFor="pdf-upload" className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>
                 Upload PDF
               </Label>
               <Input
@@ -494,7 +494,7 @@ export function EditClassroomDialog({
 
             {/* Link Input */}
             <div className="space-y-2">
-              <Label htmlFor="link-input" className="text-sm">
+              <Label htmlFor="link-input" className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>
                 Add Link
               </Label>
               <div className="flex gap-2">
@@ -510,10 +510,10 @@ export function EditClassroomDialog({
                     }
                   }}
                   className="flex-1"
-                  dir={isRTL ? 'rtl' : 'ltr'}
+                  autoDirection
                 />
                 <Button type="button" variant="outline" onClick={handleAddLink}>
-                  <LinkIcon className="h-4 w-4 mr-2" />
+                  <LinkIcon className="h-4 w-4 me-2" />
                   Add
                 </Button>
               </div>
@@ -525,7 +525,7 @@ export function EditClassroomDialog({
               {t('editClassroom.cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('editClassroom.saveButton')}
             </Button>
           </div>

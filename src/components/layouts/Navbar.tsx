@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "react-i18next";
 
@@ -59,7 +58,6 @@ export const Navbar = () => {
                     </div>
 
                     <div className="hidden md:flex items-center gap-4">
-                        <LanguageSwitcher />
                         <ThemeToggle />
                         <Link to="/login" className="text-sm font-medium text-foreground hover:text-foreground/80 transition-colors">
                             {t('landing.nav.login')}
@@ -96,8 +94,7 @@ export const Navbar = () => {
                             </Link>
                         ))}
                         <div className="h-px bg-black/5 my-2" />
-                        <div className="flex items-center justify-between">
-                            <LanguageSwitcher />
+                        <div className="flex items-center justify-end">
                             <ThemeToggle />
                         </div>
                         <Link

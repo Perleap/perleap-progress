@@ -342,6 +342,7 @@ const StudentSettings = () => {
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="John Doe"
+                    autoDirection
                   />
                 </div>
 

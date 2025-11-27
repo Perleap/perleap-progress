@@ -36,6 +36,7 @@ export const CreateClassroomDialog = ({
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [linkInput, setLinkInput] = useState('');
+  const [selectedFileName, setSelectedFileName] = useState('');
 
   const [formData, setFormData] = useState({
     courseTitle: '',
@@ -106,6 +107,7 @@ export const CreateClassroomDialog = ({
         materials: [],
       });
       setLinkInput('');
+      setSelectedFileName('');
     } catch (error) {
       toast.error(error.message || t('createClassroom.errors.creating'));
     } finally {
@@ -256,7 +258,7 @@ export const CreateClassroomDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
         <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
 
         <DialogHeader className="px-8 pt-8 pb-4">
@@ -268,7 +270,7 @@ export const CreateClassroomDialog = ({
               {t('createClassroom.title')}
             </DialogTitle>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 ml-1">
+          <p className={`text-slate-500 dark:text-slate-400 ms-1 ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('createClassroom.description')}
           </p>
         </DialogHeader>
@@ -278,13 +280,13 @@ export const CreateClassroomDialog = ({
 
             {/* Basic Info Section */}
             <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
+              <div className={`flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <BookOpen className="h-5 w-5" />
-                <h3 className="font-semibold">{t('createClassroom.courseBasics')}</h3>
+                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseBasics')}</h3>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="courseTitle" className="text-slate-600 dark:text-slate-300">
+                <Label htmlFor="courseTitle" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('createClassroom.courseTitle')} <span className="text-red-400">*</span>
                 </Label>
                 <Input
@@ -293,32 +295,32 @@ export const CreateClassroomDialog = ({
                   onChange={(e) => setFormData({ ...formData, courseTitle: e.target.value })}
                   required
                   className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
-                  placeholder="e.g. Advanced Mathematics"
-                  dir={isRTL ? 'rtl' : 'ltr'}
+                  placeholder={t('createClassroom.courseTitlePlaceholder')}
+                  autoDirection
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <Label htmlFor="courseDuration" className="text-slate-600 dark:text-slate-300">
+                  <Label htmlFor="courseDuration" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('createClassroom.courseDuration')}
                   </Label>
                   <div className="relative">
                     <Input
                       id="courseDuration"
-                      placeholder="e.g., 12 weeks"
+                      placeholder={t('createClassroom.courseDurationPlaceholder')}
                       value={formData.courseDuration}
                       onChange={(e) => setFormData({ ...formData, courseDuration: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 pl-10"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10"
+                      autoDirection
                     />
-                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-slate-400" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate" className="text-slate-600 dark:text-slate-300">{t('createClassroom.startDate')}</Label>
+                    <Label htmlFor="startDate" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.startDate')}</Label>
                     <Input
                       id="startDate"
                       type="date"
@@ -328,7 +330,7 @@ export const CreateClassroomDialog = ({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate" className="text-slate-600 dark:text-slate-300">{t('createClassroom.endDate')}</Label>
+                    <Label htmlFor="endDate" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.endDate')}</Label>
                     <Input
                       id="endDate"
                       type="date"
@@ -341,7 +343,7 @@ export const CreateClassroomDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="courseOutline" className="text-slate-600 dark:text-slate-300">
+                <Label htmlFor="courseOutline" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('createClassroom.courseOutline')}
                 </Label>
                 <Textarea
@@ -351,17 +353,17 @@ export const CreateClassroomDialog = ({
                   onChange={(e) => setFormData({ ...formData, courseOutline: e.target.value })}
                   rows={4}
                   className="rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
-                  dir={isRTL ? 'rtl' : 'ltr'}
+                  autoDirection
                 />
               </div>
             </div>
 
             {/* Subject Areas Section */}
             <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-2 text-purple-600 dark:text-purple-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <Target className="h-5 w-5" />
-                  <h3 className="font-semibold">{t('createClassroom.subjectAreas')}</h3>
+                  <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.subjectAreas')}</h3>
                 </div>
                 <Button
                   type="button"
@@ -370,14 +372,14 @@ export const CreateClassroomDialog = ({
                   className="rounded-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
                   size="sm"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4 me-1" />
                   {t('createClassroom.addArea')}
                 </Button>
               </div>
 
               {formData.domains.length === 0 && (
-                <div className="text-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50">
-                  <p className="text-slate-500 text-sm">{t('createClassroom.addAreaPrompt')}</p>
+                <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50">
+                  <p className={`text-slate-500 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addAreaPrompt')}</p>
                 </div>
               )}
 
@@ -389,11 +391,11 @@ export const CreateClassroomDialog = ({
                         {domainIndex + 1}
                       </div>
                       <Input
-                        placeholder="Subject area name (e.g., Algebra)"
+                        placeholder={t('createClassroom.subjectAreaPlaceholder')}
                         value={domain.name}
                         onChange={(e) => updateDomainName(domainIndex, e.target.value)}
                         className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-10"
-                        dir={isRTL ? 'rtl' : 'ltr'}
+                        autoDirection
                       />
                       <Button
                         type="button"
@@ -406,18 +408,18 @@ export const CreateClassroomDialog = ({
                       </Button>
                     </div>
 
-                    <div className="pl-11 space-y-3">
-                      <Label className="text-xs font-semibold text-purple-600 uppercase tracking-wider">{t('createClassroom.skills')}</Label>
+                    <div className="ps-11 space-y-3">
+                      <Label className={`text-xs font-semibold text-purple-600 uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.skills')}</Label>
                       <div className="grid gap-2">
                         {domain.components.map((component, componentIndex) => (
                           <div key={componentIndex} className="flex items-center gap-2">
                             <div className="h-1.5 w-1.5 rounded-full bg-purple-300" />
                             <Input
-                              placeholder={`Skill ${componentIndex + 1}`}
+                              placeholder={t('createClassroom.skillPlaceholder', { number: componentIndex + 1 })}
                               value={component}
                               onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
                               className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-9 text-sm"
-                              dir={isRTL ? 'rtl' : 'ltr'}
+                              autoDirection
                             />
                             <Button
                               type="button"
@@ -438,7 +440,7 @@ export const CreateClassroomDialog = ({
                         onClick={() => addComponent(domainIndex)}
                         className="text-purple-600 hover:text-purple-700 hover:bg-purple-100/50 text-xs font-medium"
                       >
-                        <Plus className="h-3 w-3 mr-1" />
+                        <Plus className="h-3 w-3 me-1" />
                         {t('createClassroom.addSkill')}
                       </Button>
                     </div>
@@ -449,28 +451,44 @@ export const CreateClassroomDialog = ({
 
             {/* Materials Section */}
             <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
-              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <div className={`flex items-center gap-2 text-blue-600 dark:text-blue-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <FileText className="h-5 w-5" />
-                <h3 className="font-semibold">{t('createClassroom.courseMaterials')}</h3>
+                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseMaterials')}</h3>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('createClassroom.uploadPdf')}</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
+                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.uploadPdf')}</Label>
+                  <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <input
                       id="pdf-upload"
                       type="file"
                       accept="application/pdf"
-                      onChange={handlePdfUpload}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        setSelectedFileName(file?.name || '');
+                        handlePdfUpload(e);
+                      }}
                       disabled={uploadingMaterial}
-                      className="h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      className="hidden"
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('pdf-upload')?.click()}
+                      disabled={uploadingMaterial}
+                      className="rounded-full border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+                    >
+                      {t('createClassroom.chooseFile')}
+                    </Button>
+                    <span className={`text-sm text-slate-500 dark:text-slate-400 truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {selectedFileName || t('createClassroom.noFileChosen')}
+                    </span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('createClassroom.addLink')}</Label>
+                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addLink')}</Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder={t('createClassroom.linkPlaceholder')}
@@ -483,7 +501,7 @@ export const CreateClassroomDialog = ({
                         }
                       }}
                       className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      autoDirection
                     />
                     <Button
                       type="button"
@@ -526,8 +544,8 @@ export const CreateClassroomDialog = ({
             {/* Outcomes & Challenges */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-emerald-700 dark:text-emerald-400 font-semibold">{t('createClassroom.learningOutcomes')}</Label>
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <Label className={`text-emerald-700 dark:text-emerald-400 font-semibold block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.learningOutcomes')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -535,26 +553,26 @@ export const CreateClassroomDialog = ({
                     onClick={addOutcome}
                     className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" /> {t('createClassroom.add')}
+                    <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add')}
                   </Button>
                 </div>
                 <div className="space-y-2">
                   {formData.learningOutcomes.map((outcome, index) => (
                     <Input
                       key={index}
-                      placeholder={`Outcome ${index + 1}`}
+                      placeholder={t('createClassroom.outcomePlaceholder', { number: index + 1 })}
                       value={outcome}
                       onChange={(e) => handleOutcomeChange(index, e.target.value)}
                       className="rounded-xl border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-900/10 focus-visible:ring-emerald-500"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      autoDirection
                     />
                   ))}
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-amber-700 dark:text-amber-400 font-semibold">{t('createClassroom.keyChallenges')}</Label>
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <Label className={`text-amber-700 dark:text-amber-400 font-semibold block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.keyChallenges')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -562,18 +580,18 @@ export const CreateClassroomDialog = ({
                     onClick={addChallenge}
                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" /> {t('createClassroom.add')}
+                    <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add')}
                   </Button>
                 </div>
                 <div className="space-y-2">
                   {formData.keyChallenges.map((challenge, index) => (
                     <Input
                       key={index}
-                      placeholder={`Challenge ${index + 1}`}
+                      placeholder={t('createClassroom.challengePlaceholder', { number: index + 1 })}
                       value={challenge}
                       onChange={(e) => handleChallengeChange(index, e.target.value)}
                       className="rounded-xl border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10 focus-visible:ring-amber-500"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      autoDirection
                     />
                   ))}
                 </div>

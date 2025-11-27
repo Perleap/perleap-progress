@@ -335,6 +335,7 @@ const TeacherSettings = () => {
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="Jane Smith"
+                    autoDirection
                   />
                 </div>
 
@@ -376,6 +377,7 @@ const TeacherSettings = () => {
                       })
                     }
                     placeholder="Math, Physics, Chemistry"
+                    autoDirection
                   />
                   <p className="text-xs text-muted-foreground">
                     Separate multiple subjects with commas
@@ -408,6 +410,7 @@ const TeacherSettings = () => {
                       setProfile({ ...profile, student_education_level: e.target.value })
                     }
                     placeholder="e.g., Middle School, High School, University"
+                    autoDirection
                   />
                 </div>
 

@@ -88,6 +88,9 @@
     "iAmA": "I am a...",
     "teacher": "Teacher",
     "student": "Student",
+    "selectLanguage": "Select your preferred language",
+    "english": "English",
+    "hebrew": "עברית (Hebrew)",
     "errors": {
       "invalidEmail": "Please enter a valid email address",
       "passwordTooShort": "Password must be at least 6 characters",
@@ -205,13 +208,17 @@
     "dueDate": "Due date",
     "activeClasses": "Active Classes",
     "assignmentsDue": "Assignments Due",
+    "noActiveClasses": "No active classes on this date",
+    "noAssignmentsDue": "No assignments due on this date",
     "noAssignments": "No assignments due on this date",
     "upcomingAssignments": "Upcoming Assignments"
   },
   "createClassroom": {
     "title": "Create New Classroom",
     "description": "Set up a new classroom for your students",
+    "courseBasics": "Course Basics",
     "courseTitle": "Main Subject or Course Title",
+    "courseTitlePlaceholder": "e.g. Advanced Mathematics",
     "courseDuration": "Course Duration",
     "courseDurationPlaceholder": "e.g., 12 weeks, 1 semester",
     "startDate": "Start Date",
@@ -220,16 +227,40 @@
     "courseOutlinePlaceholder": "Describe the main topics and how they flow...",
     "resources": "Resources You Typically Use",
     "resourcesPlaceholder": "Books, links, PDFs, tools...",
+    "subjectAreas": "Subject Areas & Skills",
+    "addArea": "Add Subject Area",
+    "addAreaPrompt": "Click 'Add Subject Area' to define topics and skills for your course",
+    "subjectAreaPlaceholder": "Subject area name (e.g., Algebra)",
+    "skills": "Skills",
+    "skillPlaceholder": "Skill {{number}}",
+    "addSkill": "Add Skill",
+    "courseMaterials": "Course Materials",
     "uploadPdf": "Upload course PDF",
+    "chooseFile": "Choose file",
+    "noFileChosen": "No file chosen",
+    "addLink": "Add Link",
+    "linkPlaceholder": "https://example.com/resource",
     "learningOutcomes": "Learning Outcomes (optional)",
+    "outcomePlaceholder": "Outcome {{number}}",
+    "keyChallenges": "Key Challenges",
+    "challengePlaceholder": "Challenge {{number}}",
     "addOutcome": "Add outcome",
+    "add": "Add",
     "creating": "Creating...",
     "create": "Create Classroom",
+    "cancel": "Cancel",
+    "createButton": "Create Classroom",
     "errors": {
-      "creatingClassroom": "Error creating classroom"
+      "creatingClassroom": "Error creating classroom",
+      "uploadPdf": "Please upload a PDF file",
+      "fileSize": "File size must be less than 10MB",
+      "enterUrl": "Please enter a URL",
+      "validUrl": "Please enter a valid URL"
     },
     "success": {
-      "created": "Classroom created successfully!"
+      "created": "Classroom created successfully!",
+      "pdfUploaded": "PDF uploaded successfully!",
+      "linkAdded": "Link added successfully!"
     }
   },
   "editClassroom": {

@@ -269,13 +269,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   if (submissions.length === 0) {
     return (
       <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
-        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4">
             <FileText className="h-8 w-8 text-slate-400" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">No submissions yet</h3>
-          <p className="text-slate-500 dark:text-slate-400 max-w-md">
-            Student submissions will appear here when they complete assignments
+          <h3 className={`text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            {t('submissionsTab.noSubmissionsYet')}
+          </h3>
+          <p className={`text-slate-500 dark:text-slate-400 max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
+            {t('submissionsTab.noSubmissionsDesc')}
           </p>
         </CardContent>
       </Card>
@@ -336,7 +338,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
               <CollapsibleContent className="animate-in slide-in-from-top-2 fade-in duration-300">
                 <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">{t('common.student')}</label>
+                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                       <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
                         <SelectValue />
@@ -353,7 +355,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">{t('submissionsTab.assignment')}</label>
+                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
                     <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
                       <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
                         <SelectValue />
@@ -370,21 +372,21 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">Status</label>
+                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
                     <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                       <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="all">{t('submissionsTab.allStatuses')}</SelectItem>
+                        <SelectItem value="completed">{t('common.completed')}</SelectItem>
+                        <SelectItem value="in_progress">{t('submissionsTab.inProgress')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">Date Range</label>
+                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.dateRange')}</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1 min-w-0">
                         <Input
@@ -407,15 +409,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                 </div>
 
                 {activeFiltersCount > 0 && (
-                  <div className="flex justify-end mt-4">
+                  <div className={`flex mt-4 ${isRTL ? 'justify-start' : 'justify-end'}`}>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={clearFilters}
                       className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full"
                     >
-                      <X className="h-3.5 w-3.5 mr-1.5" />
-                      Clear filters
+                      <X className="h-3.5 w-3.5 me-1.5" />
+                      {t('submissionsTab.clearFilters')}
                     </Button>
                   </div>
                 )}
@@ -427,15 +429,19 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
       {filteredSubmissions.length === 0 ? (
         <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-3">
               <Search className="h-6 w-6 text-slate-400" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">{t('submissionsTab.noMatches')}</h3>
-            <p className="text-slate-500 dark:text-slate-400">{t('submissionsTab.adjustFilters')}</p>
+            <h3 className={`text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('submissionsTab.noMatches')}
+            </h3>
+            <p className={`text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('submissionsTab.adjustFilters')}
+            </p>
             {activeFiltersCount > 0 && (
               <Button variant="link" onClick={clearFilters} className="mt-2 text-indigo-600">
-                Clear all filters
+                {t('submissionsTab.clearAllFilters')}
               </Button>
             )}
           </CardContent>

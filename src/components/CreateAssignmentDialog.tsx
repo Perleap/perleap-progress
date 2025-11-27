@@ -408,7 +408,7 @@ export function CreateAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
         <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
 
         <DialogHeader className="px-8 pt-8 pb-4">
@@ -420,7 +420,7 @@ export function CreateAssignmentDialog({
               {initialData ? t('editAssignment.title') : t('createAssignment.title')}
             </DialogTitle>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 ml-1">
+          <p className={`text-slate-500 dark:text-slate-400 ms-1 ${isRTL ? 'text-right' : 'text-left'}`}>
             {initialData ? t('editAssignment.description') : t('createAssignment.description')}
           </p>
         </DialogHeader>
@@ -430,40 +430,46 @@ export function CreateAssignmentDialog({
 
             {/* Assignment Basics */}
             <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2">
+              <div className={`flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <BookOpen className="h-5 w-5" />
-                <h3 className="font-semibold">{t('createClassroom.courseBasics')}</h3>
+                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseBasics')}</h3>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-slate-600 dark:text-slate-300">Title <span className="text-red-400">*</span></Label>
+                <Label htmlFor="title" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createAssignment.titleLabel')} <span className="text-red-400">*</span>
+                </Label>
                 <Input
                   id="title"
-                  placeholder="Assignment Title"
+                  placeholder={t('createAssignment.titlePlaceholder')}
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                   className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
-                  dir={isRTL ? 'rtl' : 'ltr'}
+                  autoDirection
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="instructions" className="text-slate-600 dark:text-slate-300">Instructions <span className="text-red-400">*</span></Label>
+                <Label htmlFor="instructions" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createAssignment.instructionsLabel')} <span className="text-red-400">*</span>
+                </Label>
                 <Textarea
                   id="instructions"
-                  placeholder="Detailed instructions for the students..."
+                  placeholder={t('createAssignment.instructionsPlaceholder')}
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
                   className="min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
                   required
-                  dir={isRTL ? 'rtl' : 'ltr'}
+                  autoDirection
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <Label htmlFor="type" className="text-slate-600 dark:text-slate-300">Type</Label>
+                  <Label htmlFor="type" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.type')}
+                  </Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
@@ -472,27 +478,29 @@ export function CreateAssignmentDialog({
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      <SelectItem value="text_essay">Essay / Text</SelectItem>
-                      <SelectItem value="quiz">Quiz</SelectItem>
-                      <SelectItem value="project">Project</SelectItem>
-                      <SelectItem value="presentation">Presentation</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="text_essay">{t('createAssignment.typeOptions.text_essay')}</SelectItem>
+                      <SelectItem value="quiz">{t('createAssignment.typeOptions.quiz')}</SelectItem>
+                      <SelectItem value="project">{t('createAssignment.typeOptions.project')}</SelectItem>
+                      <SelectItem value="presentation">{t('createAssignment.typeOptions.presentation')}</SelectItem>
+                      <SelectItem value="other">{t('createAssignment.typeOptions.other')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="due_at" className="text-slate-600 dark:text-slate-300">Due Date</Label>
+                  <Label htmlFor="due_at" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.dueDate')}
+                  </Label>
                   <div className="relative">
                     <Input
                       id="due_at"
                       type="datetime-local"
                       value={formData.due_at}
                       onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 pl-10"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10"
+                      autoDirection
                     />
-                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-slate-400" />
                   </div>
                 </div>
               </div>
@@ -500,13 +508,17 @@ export function CreateAssignmentDialog({
 
             {/* Skills & Domain */}
             <div className="space-y-5 p-5 bg-purple-50/30 dark:bg-purple-900/10 rounded-3xl border border-purple-100 dark:border-purple-900/30">
-              <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2">
+              <div className={`flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <Target className="h-5 w-5" />
-                <h3 className="font-semibold">Subject Area & Skills</h3>
+                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createAssignment.subjectAreaAndSkills')}
+                </h3>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hard_skill_domain" className="text-slate-600 dark:text-slate-300">Subject Area</Label>
+                <Label htmlFor="hard_skill_domain" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createAssignment.subjectAreaLabel')}
+                </Label>
                 {classroomDomains.length > 0 ? (
                   <div className="space-y-2">
                     <Select
@@ -522,7 +534,7 @@ export function CreateAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11">
-                        <SelectValue placeholder="Select from classroom domains" />
+                        <SelectValue placeholder={t('createAssignment.selectFromDomains')} />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
                         {classroomDomains.map((domain, index) => (
@@ -532,24 +544,28 @@ export function CreateAssignmentDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">Or enter manually below</p>
+                    <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t('createAssignment.orEnterManually')}
+                    </p>
                   </div>
                 ) : null}
                 <Input
                   id="hard_skill_domain"
-                  placeholder="e.g., Algebra, Geometry, Calculus, Literature"
+                  placeholder={t('createAssignment.subjectAreaPlaceholder')}
                   value={formData.hard_skill_domain}
                   onChange={(e) => {
                     setFormData({ ...formData, hard_skill_domain: e.target.value });
                     setSelectedDomain(''); // Clear dropdown selection
                   }}
                   className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11"
-                  dir={isRTL ? 'rtl' : 'ltr'}
+                  autoDirection
                 />
               </div>
 
               <div className="space-y-3">
-                <Label className="text-slate-600 dark:text-slate-300">Skills to Assess</Label>
+                <Label className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createAssignment.skillsToAssess')}
+                </Label>
 
                 {/* Component selection dropdown if domain is selected */}
                 {selectedDomain && availableComponents.length > 0 && (
@@ -591,7 +607,7 @@ export function CreateAssignmentDialog({
                         }}
                         placeholder={`Skill ${index + 1}`}
                         className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-10"
-                        dir={isRTL ? 'rtl' : 'ltr'}
+                        autoDirection
                       />
                       <Button
                         type="button"
@@ -616,8 +632,8 @@ export function CreateAssignmentDialog({
                     }
                     className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 text-xs font-medium"
                   >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add Skill Manually
+                    <Plus className="h-3 w-3 me-1" />
+                    {t('createAssignment.addSkillManually')}
                   </Button>
                 </div>
               </div>
@@ -625,15 +641,19 @@ export function CreateAssignmentDialog({
 
             {/* Materials Section */}
             <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
-              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
+              <div className={`flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <FileText className="h-5 w-5" />
-                <h3 className="font-semibold">Assignment Materials</h3>
+                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createAssignment.assignmentMaterials')}
+                </h3>
               </div>
 
               {/* Select from classroom materials */}
               {classroomMaterials.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Select from classroom materials:</Label>
+                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.selectFromClassroomMaterials')}:
+                  </Label>
                   <div className="border border-blue-100 dark:border-blue-900/30 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2 bg-white dark:bg-slate-900">
                     {classroomMaterials.map((material, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -661,7 +681,9 @@ export function CreateAssignmentDialog({
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Upload PDF</Label>
+                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.uploadPDF')}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="pdf-upload"
@@ -669,15 +691,17 @@ export function CreateAssignmentDialog({
                       accept="application/pdf"
                       onChange={handlePdfUpload}
                       disabled={uploadingMaterial}
-                      className="h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      className="h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:me-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      autoDirection
                     />
                     {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-slate-600 dark:text-slate-300">Add Link</Label>
+                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.addLink')}
+                  </Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder="https://..."
@@ -690,7 +714,7 @@ export function CreateAssignmentDialog({
                         }
                       }}
                       className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                      dir={isRTL ? 'rtl' : 'ltr'}
+                      autoDirection
                     />
                     <Button
                       type="button"
@@ -706,7 +730,7 @@ export function CreateAssignmentDialog({
               {formData.materials.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                   {formData.materials.map((material, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm group">
+                    <div key={index} className={`flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm group ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
                         {material.type === 'pdf' ? (
                           <Upload className="h-4 w-4" />
@@ -714,7 +738,9 @@ export function CreateAssignmentDialog({
                           <LinkIcon className="h-4 w-4" />
                         )}
                       </div>
-                      <span className="flex-1 text-sm truncate font-medium text-slate-700 dark:text-slate-300">{material.name}</span>
+                      <span className={`flex-1 text-sm truncate font-medium text-slate-700 dark:text-slate-300 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                        {material.name}
+                      </span>
                       <Button
                         type="button"
                         variant="ghost"
@@ -730,12 +756,13 @@ export function CreateAssignmentDialog({
               )}
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className={`flex gap-3 pt-4 border-t ${isRTL ? 'justify-start flex-row-reverse' : 'justify-end'}`}>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 className="rounded-full px-6"
+                dir={isRTL ? 'rtl' : 'ltr'}
               >
                 {t('createAssignment.cancel')}
               </Button>
@@ -743,8 +770,9 @@ export function CreateAssignmentDialog({
                 type="submit"
                 disabled={loading}
                 className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
+                dir={isRTL ? 'rtl' : 'ltr'}
               >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 {initialData ? t('editAssignment.saveButton') : t('createAssignment.createButton')}
               </Button>
             </div>

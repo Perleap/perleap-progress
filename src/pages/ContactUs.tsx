@@ -114,6 +114,7 @@ const ContactUs = () => {
                       value={formData.firstName}
                       onChange={handleChange}
                       required
+                      autoDirection
                       className="rounded-xl bg-white/50 border-black/10 focus:bg-white transition-colors"
                     />
                   </div>
@@ -127,6 +128,7 @@ const ContactUs = () => {
                       value={formData.lastName}
                       onChange={handleChange}
                       required
+                      autoDirection
                       className="rounded-xl bg-white/50 border-black/10 focus:bg-white transition-colors"
                     />
                   </div>

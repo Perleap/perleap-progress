@@ -332,26 +332,26 @@ export function EditAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('editAssignment.title')}</DialogTitle>
           <DialogDescription>{t('editAssignment.description')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Assignment Title</Label>
+            <Label htmlFor="title" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Assignment Title</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Essay on Photosynthesis"
               required
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="instructions">Instructions</Label>
+            <Label htmlFor="instructions" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Instructions</Label>
             <Textarea
               id="instructions"
               value={instructions}
@@ -359,13 +359,13 @@ export function EditAssignmentDialog({
               placeholder="Provide detailed instructions for the assignment..."
               rows={6}
               required
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Assignment Type</Label>
+              <Label htmlFor="type" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Assignment Type</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger>
                   <SelectValue />
@@ -379,7 +379,7 @@ export function EditAssignmentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Status</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger>
                   <SelectValue />
@@ -393,7 +393,7 @@ export function EditAssignmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dueDate">Due Date (Optional)</Label>
+            <Label htmlFor="dueDate" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Due Date (Optional)</Label>
             <Input
               id="dueDate"
               type="datetime-local"
@@ -403,7 +403,7 @@ export function EditAssignmentDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hard_skill_domain">Subject Area</Label>
+            <Label htmlFor="hard_skill_domain" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Subject Area</Label>
             {classroomDomains.length > 0 ? (
               <>
                 <Select
@@ -441,7 +441,7 @@ export function EditAssignmentDialog({
                 setHardSkillDomain(e.target.value);
                 setSelectedDomain(''); // Clear dropdown selection
               }}
-              dir={isRTL ? 'rtl' : 'ltr'}
+              autoDirection
             />
             <p className="text-xs text-muted-foreground">
               The subject area for hard skill assessment (required if adding skills)
@@ -449,7 +449,7 @@ export function EditAssignmentDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">Skills to Assess</Label>
+            <Label className={`text-base block ${isRTL ? 'text-right' : 'text-left'}`}>Skills to Assess</Label>
             <p className="text-sm text-muted-foreground">
               Specific skills or topics that will be assessed in this assignment.
             </p>
@@ -457,7 +457,7 @@ export function EditAssignmentDialog({
             {/* Component selection dropdown if domain is selected */}
             {selectedDomain && availableComponents.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm">Select from {selectedDomain} skills:</Label>
+                <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Select from {selectedDomain} skills:</Label>
                 <Select
                   onValueChange={(value) => {
                     // Add component if not already in the list
@@ -481,7 +481,7 @@ export function EditAssignmentDialog({
             )}
 
             <div className="space-y-2">
-              <Label className="text-sm">Selected skills:</Label>
+              <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Selected skills:</Label>
               {hardSkills.map((skill, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <Input
@@ -493,7 +493,7 @@ export function EditAssignmentDialog({
                     }}
                     placeholder={`Skill ${index + 1}`}
                     className="flex-1 bg-muted/50"
-                    dir={isRTL ? 'rtl' : 'ltr'}
+                    autoDirection
                   />
                   <Button
                     type="button"
@@ -520,7 +520,7 @@ export function EditAssignmentDialog({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">Course Materials</Label>
+            <Label className={`text-base block ${isRTL ? 'text-right' : 'text-left'}`}>Course Materials</Label>
             <p className="text-xs text-muted-foreground">
               Add PDFs or links to course materials that will help students complete this assignment
             </p>
@@ -528,7 +528,7 @@ export function EditAssignmentDialog({
             {/* Select from classroom materials */}
             {classroomMaterials.length > 0 ? (
               <div className="space-y-2">
-                <Label className="text-sm">Select from classroom materials:</Label>
+                <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Select from classroom materials:</Label>
                 <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                   {classroomMaterials.map((material, index) => (
                     <div key={index} className="flex items-center gap-2">
@@ -563,7 +563,7 @@ export function EditAssignmentDialog({
             {/* Display existing materials */}
             {materials.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm">Selected materials:</Label>
+                <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Selected materials:</Label>
                 {materials.map((material, index) => (
                   <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
                     {material.type === 'pdf' ? (
@@ -587,11 +587,11 @@ export function EditAssignmentDialog({
 
             {/* Manual addition section */}
             <div className="border-t pt-3 space-y-3">
-              <Label className="text-sm">Or add materials manually:</Label>
+              <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Or add materials manually:</Label>
 
               {/* PDF Upload */}
               <div className="space-y-2">
-                <Label htmlFor="pdf-upload-edit" className="text-sm">
+                <Label htmlFor="pdf-upload-edit" className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>
                   Upload PDF
                 </Label>
                 <div className="flex gap-2">
@@ -609,7 +609,7 @@ export function EditAssignmentDialog({
 
               {/* Link Input */}
               <div className="space-y-2">
-                <Label htmlFor="link-input-edit" className="text-sm">
+                <Label htmlFor="link-input-edit" className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>
                   Add Link
                 </Label>
                 <div className="flex gap-2">
@@ -625,10 +625,10 @@ export function EditAssignmentDialog({
                       }
                     }}
                     className="flex-1"
-                    dir={isRTL ? 'rtl' : 'ltr'}
+                    autoDirection
                   />
                   <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
-                    <LinkIcon className="h-4 w-4 mr-2" />
+                    <LinkIcon className="h-4 w-4 me-2" />
                     Add Link
                   </Button>
                 </div>

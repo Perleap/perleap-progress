@@ -12,7 +12,6 @@ import { CreateClassroomDialog } from '@/components/CreateClassroomDialog';
 import { NotificationDropdown } from '@/components/common';
 import { TeacherCalendar } from '@/components/TeacherCalendar';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import {

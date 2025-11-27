@@ -88,6 +88,9 @@
     "iAmA": "אני...",
     "teacher": "מורה",
     "student": "תלמיד",
+    "selectLanguage": "בחר את השפה המועדפת עליך",
+    "english": "English (אנגלית)",
+    "hebrew": "עברית",
     "errors": {
       "invalidEmail": "אנא הזן כתובת אימייל תקינה",
       "passwordTooShort": "הסיסמה חייבת להכיל לפחות 6 תווים",
@@ -205,13 +208,17 @@
     "dueDate": "תאריך יעד",
     "activeClasses": "שיעורים פעילים",
     "assignmentsDue": "משימות לביצוע",
+    "noActiveClasses": "אין שיעורים פעילים במועד זה",
+    "noAssignmentsDue": "אין משימות לביצוע במועד זה",
     "noAssignments": "אין משימות במועד זה",
     "upcomingAssignments": "משימות קרובות"
   },
   "createClassroom": {
     "title": "צור כיתה חדשה",
     "description": "הגדר כיתה חדשה לתלמידים שלך",
+    "courseBasics": "יסודות הקורס",
     "courseTitle": "נושא ראשי או כותרת קורס",
+    "courseTitlePlaceholder": "לדוגמה, מתמטיקה מתקדמת",
     "courseDuration": "משך הקורס",
     "courseDurationPlaceholder": "לדוגמה, 12 שבועות, סמסטר אחד",
     "startDate": "תאריך התחלה",
@@ -220,16 +227,40 @@
     "courseOutlinePlaceholder": "תאר את הנושאים העיקריים ואיך הם זורמים...",
     "resources": "משאבים שאתה בדרך כלל משתמש בהם",
     "resourcesPlaceholder": "ספרים, קישורים, קבצי PDF, כלים...",
+    "subjectAreas": "תחומי נושא ומיומנויות",
+    "addArea": "הוסף תחום נושא",
+    "addAreaPrompt": "לחץ על 'הוסף תחום נושא' כדי להגדיר נושאים ומיומנויות לקורס שלך",
+    "subjectAreaPlaceholder": "שם תחום נושא (לדוגמה, אלגברה)",
+    "skills": "מיומנויות",
+    "skillPlaceholder": "מיומנות {{number}}",
+    "addSkill": "הוסף מיומנות",
+    "courseMaterials": "חומרי קורס",
     "uploadPdf": "העלה PDF של הקורס",
+    "chooseFile": "בחר קובץ",
+    "noFileChosen": "לא נבחר קובץ",
+    "addLink": "הוסף קישור",
+    "linkPlaceholder": "https://example.com/resource",
     "learningOutcomes": "תוצאות למידה (אופציונלי)",
+    "outcomePlaceholder": "תוצאה {{number}}",
+    "keyChallenges": "אתגרים מרכזיים",
+    "challengePlaceholder": "אתגר {{number}}",
     "addOutcome": "הוסף תוצאה",
+    "add": "הוסף",
     "creating": "יוצר...",
     "create": "צור כיתה",
+    "cancel": "ביטול",
+    "createButton": "צור כיתה",
     "errors": {
-      "creatingClassroom": "שגיאה ביצירת כיתה"
+      "creatingClassroom": "שגיאה ביצירת כיתה",
+      "uploadPdf": "אנא העלה קובץ PDF",
+      "fileSize": "גודל הקובץ חייב להיות פחות מ-10MB",
+      "enterUrl": "אנא הזן כתובת URL",
+      "validUrl": "אנא הזן כתובת URL תקינה"
     },
     "success": {
-      "created": "הכיתה נוצרה בהצלחה!"
+      "created": "הכיתה נוצרה בהצלחה!",
+      "pdfUploaded": "קובץ PDF הועלה בהצלחה!",
+      "linkAdded": "הקישור נוסף בהצלחה!"
     }
   },
   "editClassroom": {
@@ -278,6 +309,30 @@
     },
     "creating": "יוצר...",
     "create": "צור משימה",
+    "titleLabel": "כותרת",
+    "instructionsLabel": "הוראות",
+    "subjectAreaLabel": "תחום נושא",
+    "assignmentMaterials": "חומרי משימה",
+    "titlePlaceholder": "כותרת המשימה",
+    "instructionsPlaceholder": "הוראות מפורטות לתלמידים...",
+    "subjectAreaPlaceholder": "לדוגמה, אלגברה, גאומטריה, חשבון, ספרות",
+    "selectFromDomains": "בחר מתחומי הכיתה",
+    "selectFromClassroomMaterials": "בחר מחומרי הכיתה",
+    "orEnterManually": "או הזן ידנית למטה",
+    "cancel": "ביטול",
+    "createButton": "צור משימה",
+    "subjectAreaAndSkills": "תחומי נושא ומיומנויות",
+    "skillsToAssess": "מיומנויות להערכה",
+    "addSkillManually": "הוסף מיומנות ידנית",
+    "uploadPDF": "העלה PDF",
+    "addLink": "הוסף קישור",
+    "typeOptions": {
+      "text_essay": "חיבור / טקסט",
+      "quiz": "בוחן",
+      "project": "פרויקט",
+      "presentation": "מצגת",
+      "other": "אחר"
+    },
     "errors": {
       "creating": "שגיאה ביצירת משימה"
     },
@@ -373,7 +428,14 @@
     "allStudents": "כל התלמידים",
     "allAssignments": "כל המשימות",
     "noMatches": "אין הגשות שתואמות למסננים",
-    "adjustFilters": "נסה להתאים את המסננים"
+    "adjustFilters": "נסה להתאים את המסננים",
+    "noSubmissionsYet": "אין הגשות עדיין",
+    "noSubmissionsDesc": "הגשות התלמידים יופיעו כאן כשהם ישלימו משימות",
+    "allStatuses": "כל הסטטוסים",
+    "inProgress": "בתהליך",
+    "dateRange": "טווח תאריכים",
+    "clearFilters": "נקה מסננים",
+    "clearAllFilters": "נקה את כל המסננים"
   },
   "submissionCard": {
     "submitted": "הוגש",
@@ -751,18 +813,18 @@
     "averageAcrossAll": "Average across all {{count}} submissions"
   },
   "classroomAnalytics": {
-    "classOverview": "Class Overview",
-    "averageScoresAcross": "Average 5D Scores Across All Submissions",
-    "scoresFor": "Scores for {{assignment}}",
-    "studentPerformanceOverview": "Student Performance Overview",
-    "detailedBreakdown": "Detailed Breakdown by Student",
-    "noStudentData": "No student data available yet",
-    "submissions": "Submissions",
-    "average5DProfile": "Average 5D Profile",
-    "allHardSkills": "All Hard Skills Assessments Across All Assignments",
-    "hardSkillsFor": "Hard Skills Assessment for {{student}}",
-    "hardSkillsAssignmentFor": "Hard Skills Assessments for {{assignment}}",
-    "hardSkillsAllStudents": "Hard Skills Assessments for All Students in {{assignment}}"
+    "classOverview": "סקירת כיתה",
+    "averageScoresAcross": "ציוני 5D ממוצעים בכל ההגשות",
+    "scoresFor": "ציונים עבור {{assignment}}",
+    "studentPerformanceOverview": "סקירת ביצועי תלמידים",
+    "detailedBreakdown": "פירוט מפורט לפי תלמיד",
+    "noStudentData": "אין עדיין נתוני תלמידים זמינים",
+    "submissions": "הגשות",
+    "average5DProfile": "פרופיל 5D ממוצע",
+    "allHardSkills": "כל הערכות המיומנויות הקשות בכל המשימות",
+    "hardSkillsFor": "הערכת מיומנויות קשות עבור {{student}}",
+    "hardSkillsAssignmentFor": "הערכות מיומנויות קשות עבור {{assignment}}",
+    "hardSkillsAllStudents": "הערכות מיומנויות קשות עבור כל התלמידים ב-{{assignment}}"
   },
   "aboutUs": {
     "heroSubtitle": "We are a team of educators, technologists, and dreamers dedicated to reshaping the future of learning. We believe that every student deserves a personalized education tailored to their unique needs and potential.",
