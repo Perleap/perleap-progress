@@ -94,6 +94,11 @@ export function DashboardHeader({
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   return (
     <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
@@ -101,8 +106,8 @@ export function DashboardHeader({
           {showBackButton && (
             <Button
               variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
+              size="sm"
+              className="gap-2"
               onClick={onBackClick || (() => navigate(-1))}
             >
               <svg
@@ -115,11 +120,12 @@ export function DashboardHeader({
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-4 w-4"
+                className="h-4 w-4 rtl:rotate-180"
               >
                 <path d="m12 19-7-7 7-7" />
                 <path d="M19 12H5" />
               </svg>
+              {t('common.back')}
             </Button>
           )}
           <div className="min-w-0 flex-1">
@@ -172,9 +178,35 @@ export function DashboardHeader({
                         key={notification.id}
                         className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
                         onClick={() => handleNotificationClick(notification)}
+                        dir={i18n.dir()}
                       >
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground">{notification.message}</p>
+                        <p className="font-medium">
+                          {(() => {
+                            const titleMap: Record<string, string> = {
+                              'Feedback Received': 'notifications.titles.feedbackReceived',
+                              'Successfully Enrolled': 'notifications.titles.successfullyEnrolled',
+                              'New Personalized Assignment': 'notifications.titles.newAssignment',
+                              'New Student Enrolled': 'notifications.titles.studentEnrolled',
+                            };
+                            return titleMap[notification.title] ? t(titleMap[notification.title]) : notification.title;
+                          })()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(() => {
+                            // Simple heuristic to translate common notification bodies
+                            if (notification.message.startsWith("You've joined")) {
+                              const classroomName = notification.message.replace("You've joined ", "");
+                              return i18n.language === 'he' ? `הצטרפת ל${classroomName}` : notification.message;
+                            }
+                            if (notification.message.includes("is ready")) {
+                              return i18n.language === 'he' ? "המשוב שלך מוכן" : notification.message;
+                            }
+                            if (notification.message.includes("has been created for you")) {
+                              return i18n.language === 'he' ? "נוצרה עבורך מטלת המשך" : notification.message;
+                            }
+                            return notification.message;
+                          })()}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Date(notification.created_at).toLocaleDateString()}
                         </p>
@@ -209,28 +241,22 @@ export function DashboardHeader({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate(`/${userType}/settings`)}>
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="me-2 h-4 w-4" />
                 <span>{t('settings.title')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                 {theme === "dark" ? (
-                  <Sun className="mr-2 h-4 w-4" />
+                  <Sun className="me-2 h-4 w-4" />
                 ) : (
-                  <Moon className="mr-2 h-4 w-4" />
+                  <Moon className="me-2 h-4 w-4" />
                 )}
-                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                <span>{theme === "dark" ? t('common.lightMode') : t('common.darkMode')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                const newLang = i18n.language === 'en' ? 'he' : 'en';
-                i18n.changeLanguage(newLang);
-              }}>
-                <Globe className="mr-2 h-4 w-4" />
-                <span>{i18n.language === 'en' ? 'עברית' : 'English'}</span>
-              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="me-2 h-4 w-4" />
+                <span>{t('common.logout')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -3,8 +3,12 @@ import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const Navbar = () => {
+    const { t } = useTranslation();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -17,10 +21,10 @@ export const Navbar = () => {
     }, []);
 
     const navLinks = [
-        { name: "Product", href: "/product" },
-        { name: "Solutions", href: "/solutions" },
-        { name: "Pricing", href: "/pricing" },
-        { name: "About", href: "/about" },
+        { name: t('landing.nav.product'), href: "/product" },
+        { name: t('landing.nav.solutions'), href: "/solutions" },
+        { name: t('landing.nav.pricing'), href: "/pricing" },
+        { name: t('landing.nav.about'), href: "/about" },
     ];
 
     return (
@@ -55,12 +59,14 @@ export const Navbar = () => {
                     </div>
 
                     <div className="hidden md:flex items-center gap-4">
+                        <LanguageSwitcher />
+                        <ThemeToggle />
                         <Link to="/login" className="text-sm font-medium text-foreground hover:text-foreground/80 transition-colors">
-                            Log in
+                            {t('landing.nav.login')}
                         </Link>
                         <Link to="/register">
                             <Button className="bg-black text-white hover:bg-black/90 rounded-full px-6">
-                                Get Started
+                                {t('landing.nav.getStarted')}
                             </Button>
                         </Link>
                     </div>
@@ -90,15 +96,19 @@ export const Navbar = () => {
                             </Link>
                         ))}
                         <div className="h-px bg-black/5 my-2" />
+                        <div className="flex items-center justify-end gap-2">
+                            <LanguageSwitcher />
+                            <ThemeToggle />
+                        </div>
                         <Link
                             to="/login"
                             className="text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
-                            Log in
+                            {t('landing.nav.login')}
                         </Link>
                         <Button className="w-full bg-black text-white hover:bg-black/90 rounded-full">
-                            Get Started
+                            {t('landing.nav.getStarted')}
                         </Button>
                     </div>
                 </div>

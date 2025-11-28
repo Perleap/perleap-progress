@@ -12,7 +12,6 @@ import { CreateClassroomDialog } from '@/components/CreateClassroomDialog';
 import { NotificationDropdown } from '@/components/common';
 import { TeacherCalendar } from '@/components/TeacherCalendar';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import {
@@ -170,7 +169,7 @@ const TeacherDashboard = () => {
         <div className="mb-10 relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-100 via-purple-50 to-blue-50 dark:from-violet-950/40 dark:via-purple-900/20 dark:to-blue-900/20 p-8 md:p-10 shadow-sm border border-white/20">
           <div className="relative z-10">
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-3">
-              {t('teacherDashboard.welcome', { name: profile.full_name?.split(' ')[0] || 'Teacher' })}
+              {t('teacherDashboard.welcome', { name: profile.full_name?.split(' ')[0] || t('common.teacher') })}
             </h1>
             <p className="text-slate-600 dark:text-slate-300 text-lg max-w-2xl">
               {t('teacherDashboard.subtitle')}
@@ -233,7 +232,7 @@ const TeacherDashboard = () => {
                     onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
                   >
                     <div className={`h-16 bg-gradient-to-br ${getGradient(classroom.id)} p-4 relative overflow-hidden`}>
-                      <div className="absolute right-4 top-2 opacity-20 group-hover:opacity-40 transition-opacity transform group-hover:scale-110 duration-500">
+                      <div className="absolute end-4 top-2 opacity-20 group-hover:opacity-40 transition-opacity transform group-hover:scale-110 duration-500">
                         <BookOpen className="h-12 w-12" />
                       </div>
                       <Badge className="bg-white/90 dark:bg-black/50 text-slate-800 dark:text-slate-100 hover:bg-white dark:hover:bg-black/70 backdrop-blur-sm border-0 shadow-sm">

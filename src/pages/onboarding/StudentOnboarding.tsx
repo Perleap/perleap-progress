@@ -13,10 +13,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, ArrowLeft, ArrowRight, Upload } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const StudentOnboarding = () => {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -137,6 +138,7 @@ const StudentOnboarding = () => {
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
+                autoDirection
               />
             </div>
 
@@ -165,6 +167,7 @@ const StudentOnboarding = () => {
                     accept="image/*"
                     onChange={handleAvatarChange}
                     className="hidden"
+                    autoDirection
                   />
                   <Label htmlFor="avatar" className="cursor-pointer">
                     <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
@@ -445,6 +448,7 @@ const StudentOnboarding = () => {
                 value={formData.learningGoal}
                 onChange={(e) => setFormData({ ...formData, learningGoal: e.target.value })}
                 rows={3}
+                autoDirection
               />
             </div>
           </div>
@@ -463,6 +467,7 @@ const StudentOnboarding = () => {
                 value={formData.specialNeeds}
                 onChange={(e) => setFormData({ ...formData, specialNeeds: e.target.value })}
                 rows={3}
+                autoDirection
               />
             </div>
             <div className="space-y-2">
@@ -475,6 +480,7 @@ const StudentOnboarding = () => {
                 value={formData.additionalNotes}
                 onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
                 rows={4}
+                autoDirection
               />
             </div>
           </div>
@@ -488,7 +494,6 @@ const StudentOnboarding = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="fixed top-4 right-4 z-50 flex gap-2">
-        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       <Card className="w-full max-w-3xl">

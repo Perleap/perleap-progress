@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronDown, Users, BookOpen, FileText, CheckCircle2, BarChart3, Filter, Sparkles, Trophy, Target } from 'lucide-react';
 
 interface ClassroomAnalyticsProps {
@@ -45,6 +46,7 @@ interface AllStudentsInfo {
 
 export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [studentCount, setStudentCount] = useState(0);
   const [assignmentCount, setAssignmentCount] = useState(0);
@@ -265,10 +267,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Filters Section */}
-      <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+      <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800 dark:text-slate-100">
+          <CardTitle className={`flex items-center gap-3 text-xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
             <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
               <Filter className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
@@ -278,15 +280,15 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         <CardContent>
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 ml-1 flex items-center gap-2">
+              <label className={`text-sm font-semibold text-slate-600 dark:text-slate-300 ms-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 <Users className="h-4 w-4" />
                 {t('analytics.filterByStudent')}
               </label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger className="h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                <SelectTrigger className={`h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1">
+                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.all')}</SelectItem>
                   {allStudents.map((s) => (
                     <SelectItem key={s.id} value={s.id} className="rounded-xl cursor-pointer">
@@ -297,15 +299,15 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-600 dark:text-slate-300 ml-1 flex items-center gap-2">
+              <label className={`text-sm font-semibold text-slate-600 dark:text-slate-300 ms-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 <BookOpen className="h-4 w-4" />
                 {t('analytics.filterByAssignment')}
               </label>
               <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                <SelectTrigger className="h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                <SelectTrigger className={`h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1">
+                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allAssignments')}</SelectItem>
                   {assignments.map((a) => (
                     <SelectItem key={a.id} value={a.id} className="rounded-xl cursor-pointer">
@@ -321,10 +323,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
       {/* Key Metrics Grid */}
       <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-blue-100 flex items-center gap-2">
+            <CardTitle className={`text-sm font-medium text-blue-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <Users className="h-4 w-4" />
               {t('analytics.totalStudents')}
             </CardTitle>
@@ -334,10 +336,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-emerald-500 to-teal-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-emerald-500 to-teal-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-emerald-100 flex items-center gap-2">
+            <CardTitle className={`text-sm font-medium text-emerald-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <BookOpen className="h-4 w-4" />
               {t('analytics.assignments')}
             </CardTitle>
@@ -347,10 +349,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-amber-100 flex items-center gap-2">
+            <CardTitle className={`text-sm font-medium text-amber-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <FileText className="h-4 w-4" />
               {t('analytics.totalSubmissions')}
             </CardTitle>
@@ -362,10 +364,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-purple-500 to-pink-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-purple-500 to-pink-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className="text-sm font-medium text-purple-100 flex items-center gap-2">
+            <CardTitle className={`text-sm font-medium text-purple-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <CheckCircle2 className="h-4 w-4" />
               {t('analytics.completionRate')}
             </CardTitle>
@@ -388,25 +390,25 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         {/* Left Column: Charts */}
         <div className="lg:col-span-2 space-y-8">
           {classAverage && (
-            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
               <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <CardTitle className={`text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                       <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
                         <BarChart3 className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                       </div>
                       {selectedStudent === 'all' ? t('analytics.classAverage') : allStudents.find((s) => s.id === selectedStudent)?.name}
                     </CardTitle>
-                    <CardDescription className="mt-1 ml-11">
+                    <CardDescription className={`mt-1 ms-11 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {selectedAssignment === 'all'
-                        ? 'Average 5D scores across all submissions'
-                        : `Scores for ${assignments.find((a) => a.id === selectedAssignment)?.title}`}
+                        ? t('classroomAnalytics.averageScoresAcross')
+                        : t('classroomAnalytics.scoresFor', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })}
                     </CardDescription>
                   </div>
                   {selectedStudent === 'all' && (
                     <Badge variant="secondary" className="rounded-full px-4 py-1 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                      Class Overview
+                      {t('classroomAnalytics.classOverview')}
                     </Badge>
                   )}
                 </div>
@@ -424,11 +426,11 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                 studentId={selectedStudent === 'all' ? undefined : selectedStudent}
                 assignmentId={selectedAssignment}
                 classroomId={classroomId}
-                title="Content Related Abilities (CRA)"
+                title={t('cra.title')}
                 description={
                   selectedStudent !== 'all'
-                    ? `Hard skills assessment for ${allStudents.find((s) => s.id === selectedStudent)?.name}`
-                    : `Hard skills assessments for ${assignments.find((a) => a.id === selectedAssignment)?.title}`
+                    ? t('classroomAnalytics.hardSkillsFor', { student: allStudents.find((s) => s.id === selectedStudent)?.name })
+                    : t('classroomAnalytics.hardSkillsAssignmentFor', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })
                 }
               />
             </div>
@@ -436,22 +438,22 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
           {/* All Students List (Collapsible) */}
           {selectedStudent === 'all' && selectedAssignment === 'all' && (
-            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
               <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-6">
-                <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <CardTitle className={`text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                     <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  Student Performance Overview
+                  {t('classroomAnalytics.studentPerformanceOverview')}
                 </CardTitle>
-                <CardDescription className="ml-11">
-                  Detailed breakdown by student
+                <CardDescription className={`ms-11 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('classroomAnalytics.detailedBreakdown')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {students.filter((s) => s.latestScores).length === 0 ? (
-                  <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
-                    <p className="text-slate-500">No student data available yet</p>
+                  <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <p className={`text-slate-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classroomAnalytics.noStudentData')}</p>
                   </div>
                 ) : (
                   students
@@ -467,11 +469,13 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                               <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 font-bold text-sm">
                                 {student.fullName.charAt(0)}
                               </div>
-                              <span className="font-semibold text-slate-700 dark:text-slate-300 text-base">{student.fullName}</span>
+                              <span className={`font-semibold text-slate-700 dark:text-slate-300 text-base ${isRTL ? 'text-right' : 'text-left'}`}>
+                                {student.fullName}
+                              </span>
                             </div>
                             <div className="flex items-center gap-3">
                               <Badge variant="outline" className="rounded-full bg-white dark:bg-slate-900">
-                                {student.feedbackCount} submissions
+                                {student.feedbackCount} {t('classroomAnalytics.submissions')}
                               </Badge>
                               <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200" />
                             </div>
@@ -480,9 +484,9 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                         <CollapsibleContent className="px-5 pb-5 space-y-6 bg-white dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
                           {/* Student's Average 5D Chart */}
                           <div className="pt-4">
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <h4 className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                               <Sparkles className="h-3 w-3" />
-                              Average 5D Profile
+                              {t('classroomAnalytics.average5DProfile')}
                             </h4>
                             <FiveDChart scores={student.latestScores!} explanations={null} />
                           </div>
@@ -493,8 +497,8 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                               studentId={student.id}
                               assignmentId="all"
                               classroomId={classroomId}
-                              title="Content Related Abilities (CRA)"
-                              description={`All hard skills assessments across all assignments`}
+                              title={t('cra.title')}
+                              description={t('classroomAnalytics.allHardSkills')}
                             />
                           </div>
                         </CollapsibleContent>
@@ -507,17 +511,16 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
           {/* Case 4: All Students + Specific Assignment - List of students with CRA */}
           {selectedStudent === 'all' && selectedAssignment !== 'all' && (
-            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+            <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
               <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-6">
-                <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <CardTitle className={`text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                   <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
                     <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  Content Related Abilities (CRA)
+                  {t('cra.title')}
                 </CardTitle>
-                <CardDescription className="ml-11">
-                  Hard skills assessments for all students on{' '}
-                  {assignments.find((a) => a.id === selectedAssignment)?.title}
+                <CardDescription className={`ms-11 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('classroomAnalytics.hardSkillsAllStudents', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
@@ -529,7 +532,9 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                           <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 font-bold text-sm">
                             {student.name.charAt(0)}
                           </div>
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 text-base">{student.name}</span>
+                          <span className={`font-semibold text-slate-700 dark:text-slate-300 text-base ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {student.name}
+                          </span>
                         </div>
                         <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200" />
                       </Button>
@@ -552,9 +557,9 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
         {/* Right Column: Summary Stats */}
         <div className="space-y-6">
-          <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden sticky top-6">
+          <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden sticky top-6" dir={isRTL ? 'rtl' : 'ltr'}>
             <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 pb-6">
-              <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <CardTitle className={`text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
                   <Trophy className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 </div>
@@ -565,10 +570,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               <div className="space-y-6">
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {t('analytics.activeStudents')}
                     </p>
-                    <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                    <p className={`text-2xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {students.filter((s) => s.feedbackCount > 0).length} <span className="text-sm text-slate-400 font-normal">/ {studentCount}</span>
                     </p>
                   </div>
@@ -579,10 +584,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {t('analytics.avgSubmissions')}
                     </p>
-                    <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                    <p className={`text-2xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {studentCount > 0
                         ? (
                           students.reduce((sum, s) => sum + s.feedbackCount, 0) / studentCount
@@ -597,10 +602,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {t('analytics.engagementRate')}
                     </p>
-                    <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                    <p className={`text-2xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {studentCount > 0
                         ? Math.round(
                           (students.filter((s) => s.feedbackCount > 0).length / studentCount) * 100
@@ -617,14 +622,14 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
               {students.filter((s) => s.latestScores).length > 0 && (
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <h4 className={`text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <Sparkles className="h-4 w-4 text-yellow-500" />
                     {t('analytics.average5D')}
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(classAverage || {}).map(([dimension, score]) => (
                       <div key={dimension} className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-600 dark:text-slate-400 capitalize">
+                        <span className={`text-sm font-medium text-slate-600 dark:text-slate-400 capitalize ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t(`submissionDetail.dimensions.${dimension}`)}
                         </span>
                         <div className="flex items-center gap-3">

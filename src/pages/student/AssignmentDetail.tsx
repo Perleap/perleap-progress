@@ -224,7 +224,7 @@ const AssignmentDetail = () => {
                       `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
                   </CardDescription>
                 </div>
-                <Badge variant="secondary">{assignment.type.replace('_', ' ')}</Badge>
+                <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -237,7 +237,7 @@ const AssignmentDetail = () => {
 
               {targetDimensions.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-2">Learning Dimensions</h3>
+                  <h3 className="font-semibold mb-2">{t('assignmentDetail.learningDimensions')}</h3>
                   <div className="flex flex-wrap gap-2">
                     {targetDimensions.map((dimension) => (
                       <Badge key={dimension} variant="outline" className="capitalize">
@@ -259,7 +259,7 @@ const AssignmentDetail = () => {
                     if (Array.isArray(materials) && materials.length > 0) {
                       return (
                         <div>
-                          <h3 className="font-semibold mb-2">Course Materials</h3>
+                          <h3 className="font-semibold mb-2">{t('assignmentDetail.courseMaterials')}</h3>
                           <div className="space-y-2">
                             {materials.map((material, index) => (
                               <div
@@ -282,7 +282,7 @@ const AssignmentDetail = () => {
                                     className="gap-2"
                                   >
                                     <Download className="h-4 w-4" />
-                                    Download
+                                    {t('assignmentDetail.download')}
                                   </Button>
                                 ) : (
                                   <Button
@@ -292,7 +292,7 @@ const AssignmentDetail = () => {
                                     className="gap-2"
                                   >
                                     <LinkIcon className="h-4 w-4" />
-                                    Open
+                                    {t('assignmentDetail.open')}
                                   </Button>
                                 )}
                               </div>

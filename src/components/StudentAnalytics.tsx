@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FiveDChart } from './FiveDChart';
 import { LoadingSpinner } from './common/LoadingSpinner';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import type { FiveDScores, FiveDSnapshot } from '@/types/models';
 
 interface StudentAnalyticsProps {
@@ -24,6 +25,7 @@ export function StudentAnalytics({
   classroomId,
   currentSubmissionId,
 }: StudentAnalyticsProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'average' | 'perSubmission'>('perSubmission');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(currentSubmissionId || '');
@@ -122,7 +124,7 @@ export function StudentAnalytics({
         }
       }
     } catch (error) {
-      toast.error('Error loading student analytics');
+      toast.error(t('components.analytics.loadError'));
     } finally {
       setLoading(false);
     }
@@ -142,13 +144,13 @@ export function StudentAnalytics({
       setPerSubmissionScores(
         data
           ? {
-              scores: data.scores as FiveDScores,
-              score_explanations: data.score_explanations as any,
-            }
+            scores: data.scores as FiveDScores,
+            score_explanations: data.score_explanations as any,
+          }
           : null
       );
     } catch {
-      toast.error('Error loading submission scores');
+      toast.error(t('components.analytics.scoresError'));
     }
   };
 
@@ -166,8 +168,8 @@ export function StudentAnalytics({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Student Analytics</CardTitle>
-          <CardDescription>No submissions found for this student in this classroom</CardDescription>
+          <CardTitle>{t('studentAnalytics.title')}</CardTitle>
+          <CardDescription>{t('studentAnalytics.noSubmissions')}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -176,23 +178,24 @@ export function StudentAnalytics({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Student Analytics</CardTitle>
+        <CardTitle>{t('studentAnalytics.title')}</CardTitle>
         <CardDescription>
-          5D soft skills development across {submissions.length} submission
-          {submissions.length !== 1 ? 's' : ''}
+          {submissions.length === 1
+            ? t('studentAnalytics.developmentAcross', { count: submissions.length })
+            : t('studentAnalytics.developmentAcrossPlural', { count: submissions.length })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'average' | 'perSubmission')}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="perSubmission">Per Submission</TabsTrigger>
-            <TabsTrigger value="average">All Submissions Average</TabsTrigger>
+            <TabsTrigger value="perSubmission">{t('studentAnalytics.perSubmission')}</TabsTrigger>
+            <TabsTrigger value="average">{t('studentAnalytics.allSubmissionsAverage')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="perSubmission" className="mt-6">
             {perSubmissionScores ? (
               <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">Scores from this submission</div>
+                <div className="text-sm text-muted-foreground">{t('studentAnalytics.scoresFromSubmission')}</div>
                 <FiveDChart
                   scores={perSubmissionScores.scores}
                   explanations={perSubmissionScores.score_explanations}

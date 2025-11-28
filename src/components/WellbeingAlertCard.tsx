@@ -66,10 +66,10 @@ export function WellbeingAlertCard({
 
       if (error) throw error;
 
-      toast.success('Alert acknowledged');
+      toast.success(t('components.wellbeingAlert.success'));
       onAcknowledge?.();
     } catch (error) {
-      toast.error('Failed to acknowledge alert');
+      toast.error(t('components.wellbeingAlert.error'));
     } finally {
       setAcknowledging(null);
     }
@@ -94,10 +94,10 @@ export function WellbeingAlertCard({
 
       if (error) throw error;
 
-      toast.success('All alerts acknowledged');
+      toast.success(t('components.wellbeingAlert.successAll'));
       onAcknowledge?.();
     } catch (error) {
-      toast.error('Failed to acknowledge alerts');
+      toast.error(t('components.wellbeingAlert.errorAll'));
     } finally {
       setAcknowledging(null);
     }
@@ -135,7 +135,7 @@ export function WellbeingAlertCard({
               ) : (
                 <>
                   <CheckCircle className="h-4 w-4 me-2" />
-                  Acknowledge All
+                  {t('components.wellbeingAlert.acknowledgeAll')}
                 </>
               )}
             </Button>

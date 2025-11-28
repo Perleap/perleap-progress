@@ -519,7 +519,7 @@ const StudentDashboard = () => {
                           </h3>
                           <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 gap-2 mt-3">
                             <Clock className="h-3.5 w-3.5" />
-                            <span>Active Course</span>
+                            <span>{t('studentDashboard.activeCourse')}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -542,8 +542,8 @@ const StudentDashboard = () => {
                 <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-800">
                   <Tabs value={assignmentsTab} onValueChange={(v) => setAssignmentsTab(v as 'active' | 'finished')} className="w-auto">
                     <TabsList className="h-9 bg-transparent p-0">
-                      <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">Active</TabsTrigger>
-                      <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">Finished</TabsTrigger>
+                      <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">{t('common.active')}</TabsTrigger>
+                      <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">{t('common.finished')}</TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>
@@ -618,8 +618,8 @@ const StudentDashboard = () => {
                                 </h3>
                               </div>
 
-                              <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-l border-slate-100 dark:border-slate-800 sm:pl-6">
-                                <div className="text-right hidden sm:block">
+                              <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-s border-slate-100 dark:border-slate-800 sm:ps-6">
+                                <div className="text-end hidden sm:block">
                                   <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.teacher')}</p>
                                   <p className="text-sm font-medium truncate max-w-[100px]">
                                     {assignment.classrooms.teacher_profiles?.full_name || t('common.teacher')}
@@ -649,8 +649,8 @@ const StudentDashboard = () => {
                         <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
                           <BookOpen className="h-6 w-6 text-slate-400" />
                         </div>
-                        <h3 className="text-lg font-semibold mb-1">No Finished Assignments</h3>
-                        <p className="text-sm text-muted-foreground">Assignments you've submitted will appear here</p>
+                        <h3 className="text-lg font-semibold mb-1">{t('studentDashboard.noFinishedAssignments')}</h3>
+                        <p className="text-sm text-muted-foreground">{t('studentDashboard.noFinishedAssignmentsDesc')}</p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -676,7 +676,7 @@ const StudentDashboard = () => {
                                     {assignment.classrooms.name}
                                   </Badge>
                                   <Badge className="rounded-full bg-green-100 text-green-700 hover:bg-green-200 border-none">
-                                    Completed
+                                    {t('common.completed')}
                                   </Badge>
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">
@@ -684,7 +684,7 @@ const StudentDashboard = () => {
                                 </h3>
                               </div>
 
-                              <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-l border-slate-200 dark:border-slate-800 sm:pl-6">
+                              <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-s border-slate-200 dark:border-slate-800 sm:ps-6">
                                 <Avatar className="h-8 w-8 grayscale opacity-70">
                                   {assignment.classrooms.teacher_profiles?.avatar_url && (
                                     <AvatarImage

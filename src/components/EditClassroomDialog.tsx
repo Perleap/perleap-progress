@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2, Upload, X, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Domain, CourseMaterial } from '@/types/models';
@@ -45,6 +47,8 @@ export function EditClassroomDialog({
   classroom,
   onSuccess,
 }: EditClassroomDialogProps) {
+  const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
@@ -134,11 +138,11 @@ export function EditClassroomDialog({
 
       if (error) throw error;
 
-      toast.success('Classroom updated successfully!');
+      toast.success(t('editClassroom.success.saved'));
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      toast.error('Error updating classroom');
+      toast.error(t('editClassroom.errors.saving'));
     } finally {
       setLoading(false);
     }
@@ -189,12 +193,12 @@ export function EditClassroomDialog({
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+      toast.error(t('createClassroom.errors.uploadPdf'));
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size should be less than 10MB');
+      toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
 
@@ -218,10 +222,10 @@ export function EditClassroomDialog({
         materials: [...formData.materials, { type: 'pdf', url: publicUrl, name: file.name }],
       });
 
-      toast.success('PDF uploaded successfully');
+      toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = ''; // Reset file input
     } catch (error) {
-      toast.error('Failed to upload PDF');
+      toast.error(t('editClassroom.errors.saving'));
       console.error(error);
     } finally {
       setUploadingMaterial(false);
@@ -230,7 +234,7 @@ export function EditClassroomDialog({
 
   const handleAddLink = () => {
     if (!linkInput.trim()) {
-      toast.error('Please enter a URL');
+      toast.error(t('createClassroom.errors.enterUrl'));
       return;
     }
 
@@ -252,9 +256,9 @@ export function EditClassroomDialog({
         ],
       });
       setLinkInput('');
-      toast.success('Link added');
+      toast.success(t('createClassroom.success.linkAdded'));
     } catch (error) {
-      toast.error('Please enter a valid URL');
+      toast.error(t('createClassroom.errors.validUrl'));
     }
   };
 
@@ -267,57 +271,61 @@ export function EditClassroomDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Classroom</DialogTitle>
-          <DialogDescription>Update your classroom information</DialogDescription>
+          <DialogTitle>{t('editClassroom.title')}</DialogTitle>
+          <DialogDescription>{t('editClassroom.description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Classroom Name *</Label>
+              <Label htmlFor="name" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Classroom Name *</Label>
               <Input
                 id="name"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                autoDirection
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subject">Subject *</Label>
+              <Label htmlFor="subject" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Subject *</Label>
               <Input
                 id="subject"
                 required
                 value={formData.subject}
                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                autoDirection
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="course_title">Course Title</Label>
+            <Label htmlFor="course_title" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Course Title</Label>
             <Input
               id="course_title"
               value={formData.course_title}
               onChange={(e) => setFormData({ ...formData, course_title: e.target.value })}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="course_duration">Course Duration</Label>
+            <Label htmlFor="course_duration" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Course Duration</Label>
             <Input
               id="course_duration"
               placeholder="e.g., 8 weeks, 1 semester"
               value={formData.course_duration}
               onChange={(e) => setFormData({ ...formData, course_duration: e.target.value })}
+              autoDirection
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="start_date" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Start Date</Label>
               <Input
                 id="start_date"
                 type="date"
@@ -327,7 +335,7 @@ export function EditClassroomDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date</Label>
+              <Label htmlFor="end_date" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>End Date</Label>
               <Input
                 id="end_date"
                 type="date"
@@ -338,44 +346,47 @@ export function EditClassroomDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="course_outline">Course Outline</Label>
+            <Label htmlFor="course_outline" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Course Outline</Label>
             <Textarea
               id="course_outline"
               placeholder="Topics and flow..."
               rows={4}
               value={formData.course_outline}
               onChange={(e) => setFormData({ ...formData, course_outline: e.target.value })}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="learning_outcomes">Learning Outcomes (one per line)</Label>
+            <Label htmlFor="learning_outcomes" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Learning Outcomes (one per line)</Label>
             <Textarea
               id="learning_outcomes"
               placeholder="Outcome 1&#10;Outcome 2&#10;Outcome 3"
               rows={4}
               value={formData.learning_outcomes}
               onChange={(e) => setFormData({ ...formData, learning_outcomes: e.target.value })}
+              autoDirection
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="key_challenges">Key Challenges (one per line)</Label>
+            <Label htmlFor="key_challenges" className={`block ${isRTL ? 'text-right' : 'text-left'}`}>Key Challenges (one per line)</Label>
             <Textarea
               id="key_challenges"
               placeholder="Challenge 1&#10;Challenge 2"
               rows={3}
               value={formData.key_challenges}
               onChange={(e) => setFormData({ ...formData, key_challenges: e.target.value })}
+              autoDirection
             />
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Subject Areas & Skills</Label>
+            <Label className={`text-base block ${isRTL ? 'text-right' : 'text-left'}`}>Subject Areas & Skills</Label>
             <p className="text-xs text-muted-foreground">
               Add subject areas (e.g., Algebra, Geometry) and their specific skills
             </p>
-            
+
             {formData.domains.map((domain, domainIndex) => (
               <div key={domainIndex} className="space-y-2 p-3 border rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
@@ -384,6 +395,7 @@ export function EditClassroomDialog({
                     value={domain.name}
                     onChange={(e) => updateDomainName(domainIndex, e.target.value)}
                     className="flex-1"
+                    autoDirection
                   />
                   <Button
                     type="button"
@@ -394,9 +406,9 @@ export function EditClassroomDialog({
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                
-                <div className="space-y-2 ml-4">
-                  <Label className="text-sm">Skills</Label>
+
+                <div className="space-y-2 ms-4">
+                  <Label className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>Skills</Label>
                   {domain.components.map((component, componentIndex) => (
                     <div key={componentIndex} className="flex items-center gap-2">
                       <Input
@@ -405,6 +417,7 @@ export function EditClassroomDialog({
                         onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
                         className="flex-1 bg-background"
                         size="sm"
+                        autoDirection
                       />
                       <Button
                         type="button"
@@ -422,21 +435,21 @@ export function EditClassroomDialog({
                     size="sm"
                     onClick={() => addComponent(domainIndex)}
                   >
-                    <Plus className="h-3 w-3 mr-1" />
+                    <Plus className="h-3 w-3 me-1" />
                     Add Skill
                   </Button>
                 </div>
               </div>
             ))}
-            
+
             <Button type="button" variant="outline" onClick={addDomain}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 me-2" />
               Add Subject Area
             </Button>
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <Label className="text-base">Course Materials</Label>
+            <Label className={`text-base block ${isRTL ? 'text-right' : 'text-left'}`}>Course Materials</Label>
             <p className="text-xs text-muted-foreground">
               Add PDFs and links that will be available for this classroom
             </p>
@@ -467,7 +480,7 @@ export function EditClassroomDialog({
 
             {/* PDF Upload */}
             <div className="space-y-2">
-              <Label htmlFor="pdf-upload" className="text-sm">
+              <Label htmlFor="pdf-upload" className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>
                 Upload PDF
               </Label>
               <Input
@@ -481,7 +494,7 @@ export function EditClassroomDialog({
 
             {/* Link Input */}
             <div className="space-y-2">
-              <Label htmlFor="link-input" className="text-sm">
+              <Label htmlFor="link-input" className={`text-sm block ${isRTL ? 'text-right' : 'text-left'}`}>
                 Add Link
               </Label>
               <div className="flex gap-2">
@@ -497,9 +510,10 @@ export function EditClassroomDialog({
                     }
                   }}
                   className="flex-1"
+                  autoDirection
                 />
                 <Button type="button" variant="outline" onClick={handleAddLink}>
-                  <LinkIcon className="h-4 w-4 mr-2" />
+                  <LinkIcon className="h-4 w-4 me-2" />
                   Add
                 </Button>
               </div>
@@ -508,11 +522,11 @@ export function EditClassroomDialog({
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('editClassroom.cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {t('editClassroom.saveButton')}
             </Button>
           </div>
         </form>

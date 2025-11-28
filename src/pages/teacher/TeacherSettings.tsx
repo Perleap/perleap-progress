@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +16,7 @@ import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'l
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TeacherProfile {
   full_name: string;
@@ -39,7 +42,9 @@ interface NotificationSettings {
 }
 
 const TeacherSettings = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
+  const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -117,7 +122,7 @@ const TeacherSettings = () => {
       }
     } catch (error) {
       console.error('Error loading settings:', error);
-      toast.error('Error loading settings');
+      toast.error(t('settings.errors.loading'));
     } finally {
       setLoading(false);
     }
@@ -129,13 +134,13 @@ const TeacherSettings = () => {
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
+      toast.error(t('settings.fileSizeTooLarge'));
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      toast.error(t('settings.uploadImageFile'));
       return;
     }
 
@@ -150,7 +155,7 @@ const TeacherSettings = () => {
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
-        toast.error('Failed to upload photo');
+        toast.error(t('settings.photoUploadFailed'));
         setUploading(false);
         return;
       }
@@ -169,10 +174,10 @@ const TeacherSettings = () => {
       if (updateError) throw updateError;
 
       setProfile({ ...profile, avatar_url: publicUrl });
-      toast.success('Photo uploaded successfully!');
+      toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
-      toast.error('Error uploading photo');
+      toast.error(t('settings.photoUploadError'));
     } finally {
       setUploading(false);
     }
@@ -196,10 +201,10 @@ const TeacherSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success('Profile updated successfully!');
+      toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Error updating profile');
+      toast.error(t('settings.errors.saving'));
     } finally {
       setSaving(false);
     }
@@ -221,10 +226,10 @@ const TeacherSettings = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      toast.success('Teaching preferences updated successfully!');
+      toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating questions:', error);
-      toast.error('Error updating questions');
+      toast.error(t('settings.errors.saving'));
     } finally {
       setSaving(false);
     }
@@ -233,7 +238,7 @@ const TeacherSettings = () => {
   const handleSaveNotifications = () => {
     // In a real app, you would save to database
     localStorage.setItem('teacher_notifications', JSON.stringify(notifications));
-    toast.success('Notification settings updated!');
+    toast.success(t('settings.success.saved'));
   };
 
   const getInitials = () => {
@@ -255,9 +260,13 @@ const TeacherSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={cn("min-h-screen bg-background", isRTL && "text-right")}
+      dir={isRTL ? 'rtl' : 'ltr'}
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+    >
       <DashboardHeader
-        title="Settings"
+        title={t('settings.title')}
         userType="teacher"
         showBackButton
         onBackClick={() => navigate('/teacher/dashboard')}
@@ -265,18 +274,21 @@ const TeacherSettings = () => {
 
       <main className="container py-8 px-4 max-w-4xl">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList
+            className="grid w-full grid-cols-3"
+            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+          >
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden sm:inline">{t('settings.profile')}</span>
             </TabsTrigger>
             <TabsTrigger value="questions" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Questions</span>
+              <span className="hidden sm:inline">{t('settings.teachingPreferences')}</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
+              <span className="hidden sm:inline">{t('common.notifications')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -284,11 +296,14 @@ const TeacherSettings = () => {
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your professional information</CardDescription>
+                <CardTitle>{t('settings.profile')}</CardTitle>
+                <CardDescription>{t('settings.profileDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center gap-4">
+                <div
+                  className="flex items-center gap-4"
+                  style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                >
                   <div className="relative">
                     <Avatar className="h-20 w-20">
                       {profile.avatar_url ? (
@@ -317,50 +332,53 @@ const TeacherSettings = () => {
                       className="hidden"
                     />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{profile.full_name || 'No name set'}</p>
+                  <div className={cn(isRTL && "text-right")}>
+                    <p className="text-sm font-medium">{profile.full_name || t('settings.noNameSet')}</p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Click camera to upload photo
+                      {t('settings.clickCameraUpload')}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName">{t('settings.fullName')}</Label>
                   <Input
                     id="fullName"
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="Jane Smith"
+                    autoDirection
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('settings.email')}</Label>
                   <Input
                     id="email"
                     type="email"
                     value={user?.email || ''}
                     disabled
-                    className="bg-muted"
+                    className={cn("bg-muted", isRTL && "text-right")}
                   />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                  <p className="text-xs text-muted-foreground">{t('settings.emailCannotChange')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Label htmlFor="phoneNumber">{t('settings.phoneNumber')}</Label>
                   <Input
                     id="phoneNumber"
                     type="tel"
                     value={profile.phone_number}
                     onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
                     placeholder="+1 (555) 123-4567"
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subjects">Subjects You Teach</Label>
+                  <Label htmlFor="subjects">{t('settings.subjects')}</Label>
                   <Input
                     id="subjects"
                     value={profile.subjects.join(', ')}
@@ -374,14 +392,16 @@ const TeacherSettings = () => {
                       })
                     }
                     placeholder="Math, Physics, Chemistry"
+                    autoDirection
+                    className={cn(isRTL && "text-right")}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Separate multiple subjects with commas
+                    {t('settings.subjectsHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="yearsExperience">Years of Teaching Experience</Label>
+                  <Label htmlFor="yearsExperience">{t('settings.yearsExperience')}</Label>
                   <Input
                     id="yearsExperience"
                     type="number"
@@ -394,11 +414,12 @@ const TeacherSettings = () => {
                       })
                     }
                     placeholder="5"
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="studentLevel">Student Level</Label>
+                  <Label htmlFor="studentLevel">{t('settings.studentLevel')}</Label>
                   <Input
                     id="studentLevel"
                     value={profile.student_education_level}
@@ -406,6 +427,8 @@ const TeacherSettings = () => {
                       setProfile({ ...profile, student_education_level: e.target.value })
                     }
                     placeholder="e.g., Middle School, High School, University"
+                    autoDirection
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
@@ -413,10 +436,10 @@ const TeacherSettings = () => {
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('settings.saving')}
                     </>
                   ) : (
-                    'Save Changes'
+                    t('settings.save')
                   )}
                 </Button>
               </CardContent>
@@ -425,17 +448,16 @@ const TeacherSettings = () => {
             {/* Danger Zone */}
             <Card className="border-destructive">
               <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
                 <CardDescription>
-                  Permanently delete your account and all associated data
+                  {t('settings.dangerZoneDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg bg-destructive/10 p-4 space-y-2">
-                  <p className="text-sm font-medium">Delete your account</p>
+                  <p className="text-sm font-medium">{t('settings.deleteAccount.title')}</p>
                   <p className="text-sm text-muted-foreground">
-                    Once you delete your account, there is no going back. All your classrooms,
-                    assignments, student data, and settings will be permanently removed.
+                    {t('settings.deleteAccountWarning')}
                   </p>
                 </div>
                 <Button
@@ -444,7 +466,7 @@ const TeacherSettings = () => {
                   className="w-full sm:w-auto"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
+                  {t('settings.deleteAccountButton')}
                 </Button>
               </CardContent>
             </Card>
@@ -454,24 +476,25 @@ const TeacherSettings = () => {
           <TabsContent value="questions" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Teaching Style & Approach</CardTitle>
-                <CardDescription>Update your teaching preferences from onboarding</CardDescription>
+                <CardTitle>{t('settings.teachingPreferences')}</CardTitle>
+                <CardDescription>{t('settings.teachingPreferencesDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="teachingGoals">What are your main teaching goals?</Label>
+                  <Label htmlFor="teachingGoals">{t('settings.teachingGoalsQuestion')}</Label>
                   <Textarea
                     id="teachingGoals"
                     value={questions.teaching_goals}
                     onChange={(e) => setQuestions({ ...questions, teaching_goals: e.target.value })}
                     placeholder={questions.teaching_goals || 'Brief description (1-2 sentences)'}
                     rows={3}
-                    className={!questions.teaching_goals ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.teaching_goals ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="teachingStyle">Describe your teaching style</Label>
+                  <Label htmlFor="teachingStyle">{t('settings.teachingStyleQuestion')}</Label>
                   <Textarea
                     id="teachingStyle"
                     value={questions.style_notes}
@@ -480,15 +503,16 @@ const TeacherSettings = () => {
                       questions.style_notes || 'How would you describe your approach to teaching?'
                     }
                     rows={4}
-                    className={!questions.style_notes ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.style_notes ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                   <p className="text-xs text-muted-foreground">
-                    Include your tone, personality, values, and approach
+                    {t('settings.teachingStyleHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="teachingExample">Share a brief teaching example</Label>
+                  <Label htmlFor="teachingExample">{t('settings.teachingExampleQuestion')}</Label>
                   <Textarea
                     id="teachingExample"
                     value={questions.teaching_examples}
@@ -500,15 +524,16 @@ const TeacherSettings = () => {
                       'How do you explain a concept or give feedback to students?'
                     }
                     rows={4}
-                    className={!questions.teaching_examples ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.teaching_examples ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                   <p className="text-xs text-muted-foreground">
-                    Write a short example that shows your natural teaching voice
+                    {t('settings.teachingExampleHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="additionalNotes">Anything else we should know?</Label>
+                  <Label htmlFor="additionalNotes">{t('settings.additionalNotesQuestion')}</Label>
                   <Textarea
                     id="additionalNotes"
                     value={questions.sample_explanation}
@@ -520,7 +545,8 @@ const TeacherSettings = () => {
                       'Any specific preferences or additional context...'
                     }
                     rows={3}
-                    className={!questions.sample_explanation ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.sample_explanation ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                 </div>
 
@@ -528,10 +554,10 @@ const TeacherSettings = () => {
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('settings.saving')}
                     </>
                   ) : (
-                    'Save Changes'
+                    t('settings.save')
                   )}
                 </Button>
               </CardContent>
@@ -542,16 +568,19 @@ const TeacherSettings = () => {
           <TabsContent value="notifications" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how you receive notifications</CardDescription>
+                <CardTitle>{t('settings.notificationPreferences')}</CardTitle>
+                <CardDescription>{t('settings.notificationPreferencesDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="submission-notifications">Submission Notifications</Label>
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
+                      <Label htmlFor="submission-notifications">{t('settings.notifications.submissionNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified when students submit assignments
+                        {t('settings.notifications.submissionNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -563,11 +592,14 @@ const TeacherSettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="student-messages">Student Messages</Label>
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
+                      <Label htmlFor="student-messages">{t('settings.notifications.studentMessages')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified when students send you messages
+                        {t('settings.notifications.studentMessagesDesc')}
                       </p>
                     </div>
                     <Switch
@@ -579,11 +611,14 @@ const TeacherSettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="classroom-updates">Classroom Updates</Label>
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
+                      <Label htmlFor="classroom-updates">{t('settings.notifications.classroomUpdates')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified about system updates and announcements
+                        {t('settings.notifications.classroomUpdatesDesc')}
                       </p>
                     </div>
                     <Switch
@@ -595,11 +630,14 @@ const TeacherSettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
+                      <Label htmlFor="email-notifications">{t('settings.notifications.emailNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
-                        Receive notifications via email
+                        {t('settings.notifications.emailNotificationsDesc')}
                       </p>
                     </div>
                     <Switch
@@ -612,7 +650,7 @@ const TeacherSettings = () => {
                   </div>
                 </div>
 
-                <Button onClick={handleSaveNotifications}>Save Preferences</Button>
+                <Button onClick={handleSaveNotifications}>{t('settings.savePreferences')}</Button>
               </CardContent>
             </Card>
           </TabsContent>

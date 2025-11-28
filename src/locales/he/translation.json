@@ -1,19 +1,25 @@
 {
   "landing": {
     "nav": {
-      "about": "אודות",
+      "product": "מוצר",
+      "solutions": "פתרונות",
       "pricing": "תמחור",
+      "about": "אודות",
       "contact": "צור קשר",
       "login": "התחבר",
-      "register": "הירשם"
+      "register": "הירשם",
+      "getStarted": "התחל"
     },
     "hero": {
       "title1": "שנה את החינוך עם",
       "title2": "למידה מונעת בינה מלאכותית",
       "subtitle": "העצם תלמידים להגיע למלוא הפוטנציאל שלהם באמצעות חוויות למידה מותאמות אישית ומודרכות שמפתחות גם מיומנויות אקדמיות וגם מיומנויות רכות.",
       "getStarted": "התחל בחינם",
+      "learnMore": "למד עוד",
+      "badge": "חדש: מסלולי למידה מבוססי AI",
       "contactUs": "צור קשר"
     },
+    "mission": "המשימה שלנו היא להנגיש חינוך מותאם אישית באמצעות בינה מלאכותית.",
     "features": {
       "title": "למה PerLeap?",
       "subtitle": "אנחנו משלבים בינה מלאכותית חדישה עם שיטות פדגוגיות מוכחות כדי ליצור חוויות למידה מהפכניות.",
@@ -65,6 +71,8 @@
   },
   "auth": {
     "welcome": "ברוכים הבאים ל-PerLeap",
+    "tagline": "שנה את החינוך עם הוראה מבוססת AI וחוויות למידה מותאמות אישית",
+    "backToHome": "חזרה לדף הבית",
     "subtitle": "היכנס לחשבון שלך או צור חשבון חדש",
     "signIn": "התחבר",
     "signUp": "הירשם",
@@ -80,6 +88,9 @@
     "iAmA": "אני...",
     "teacher": "מורה",
     "student": "תלמיד",
+    "selectLanguage": "בחר את השפה המועדפת עליך",
+    "english": "English (אנגלית)",
+    "hebrew": "עברית",
     "errors": {
       "invalidEmail": "אנא הזן כתובת אימייל תקינה",
       "passwordTooShort": "הסיסמה חייבת להכיל לפחות 6 תווים",
@@ -142,7 +153,8 @@
     "success": {
       "joinedClassroom": "הצטרפת בהצלחה ל-{{name}}!",
       "markedRead": "ההתראות סומנו כנקראו"
-    }
+    },
+    "activeCourse": "קורס פעיל"
   },
   "teacherDashboard": {
     "title": "לוח מורה",
@@ -197,36 +209,64 @@
     "dueDate": "תאריך יעד",
     "activeClasses": "שיעורים פעילים",
     "assignmentsDue": "משימות לביצוע",
+    "noActiveClasses": "אין שיעורים פעילים במועד זה",
+    "noAssignmentsDue": "אין משימות לביצוע במועד זה",
     "noAssignments": "אין משימות במועד זה",
     "upcomingAssignments": "משימות קרובות"
   },
   "createClassroom": {
     "title": "צור כיתה חדשה",
     "description": "הגדר כיתה חדשה לתלמידים שלך",
+    "courseBasics": "יסודות הקורס",
     "courseTitle": "נושא ראשי או כותרת קורס",
-    "courseDuration": "משך קורס",
+    "courseTitlePlaceholder": "לדוגמה, מתמטיקה מתקדמת",
+    "courseDuration": "משך הקורס",
     "courseDurationPlaceholder": "לדוגמה, 12 שבועות, סמסטר אחד",
     "startDate": "תאריך התחלה",
     "endDate": "תאריך סיום",
     "courseOutline": "מתווה קורס (נושאים + זרימה)",
-    "courseOutlinePlaceholder": "תאר את הנושאים העיקריים וכיצד הם זורמים...",
-    "resources": "משאבים שבדרך כלל אתה משתמש",
+    "courseOutlinePlaceholder": "תאר את הנושאים העיקריים ואיך הם זורמים...",
+    "resources": "משאבים שאתה בדרך כלל משתמש בהם",
     "resourcesPlaceholder": "ספרים, קישורים, קבצי PDF, כלים...",
-    "uploadPdf": "העלה PDF של קורס",
+    "subjectAreas": "תחומי נושא ומיומנויות",
+    "addArea": "הוסף תחום נושא",
+    "addAreaPrompt": "לחץ על 'הוסף תחום נושא' כדי להגדיר נושאים ומיומנויות לקורס שלך",
+    "subjectAreaPlaceholder": "שם תחום נושא (לדוגמה, אלגברה)",
+    "skills": "מיומנויות",
+    "skillPlaceholder": "מיומנות {{number}}",
+    "addSkill": "הוסף מיומנות",
+    "courseMaterials": "חומרי קורס",
+    "uploadPdf": "העלה PDF של הקורס",
+    "chooseFile": "בחר קובץ",
+    "noFileChosen": "לא נבחר קובץ",
+    "addLink": "הוסף קישור",
+    "linkPlaceholder": "https://example.com/resource",
     "learningOutcomes": "תוצאות למידה (אופציונלי)",
+    "outcomePlaceholder": "תוצאה {{number}}",
+    "keyChallenges": "אתגרים מרכזיים",
+    "challengePlaceholder": "אתגר {{number}}",
     "addOutcome": "הוסף תוצאה",
+    "add": "הוסף",
     "creating": "יוצר...",
     "create": "צור כיתה",
+    "cancel": "ביטול",
+    "createButton": "צור כיתה",
     "errors": {
-      "creatingClassroom": "שגיאה ביצירת כיתה"
+      "creatingClassroom": "שגיאה ביצירת כיתה",
+      "uploadPdf": "אנא העלה קובץ PDF",
+      "fileSize": "גודל הקובץ חייב להיות פחות מ-10MB",
+      "enterUrl": "אנא הזן כתובת URL",
+      "validUrl": "אנא הזן כתובת URL תקינה"
     },
     "success": {
-      "created": "הכיתה נוצרה בהצלחה!"
+      "created": "הכיתה נוצרה בהצלחה!",
+      "pdfUploaded": "קובץ PDF הועלה בהצלחה!",
+      "linkAdded": "הקישור נוסף בהצלחה!"
     }
   },
   "editClassroom": {
     "title": "ערוך כיתה",
-    "description": "עדכן מידע על הכיתה",
+    "description": "עדכן פרטי כיתה",
     "saving": "שומר...",
     "save": "שמור שינויים",
     "errors": {
@@ -235,12 +275,30 @@
     },
     "success": {
       "saved": "השינויים נשמרו בהצלחה!"
-    }
+    },
+    "courseBasics": "יסודות הקורס",
+    "courseTitle": "נושא ראשי או כותרת קורס",
+    "courseDuration": "משך הקורס",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "courseStructure": "מבנה הקורס",
+    "courseOutline": "מתווה קורס",
+    "learningOutcomes": "תוצאות למידה",
+    "keyChallenges": "אתגרים מרכזיים",
+    "subjectAreas": "תחומי נושא ומיומנויות",
+    "addSubjectArea": "הוסף תחום נושא",
+    "skills": "מיומנויות",
+    "addSkill": "הוסף מיומנות",
+    "courseMaterials": "חומרי קורס",
+    "uploadPdf": "העלה PDF",
+    "addLink": "הוסף קישור",
+    "cancel": "ביטול",
+    "saveButton": "שמור שינויים"
   },
   "createAssignment": {
     "title": "צור משימה חדשה",
-    "description": "צור משימה לתלמידים שלך",
-    "assignmentTitle": "כותרת משימה",
+    "description": "צור משימה עבור התלמידים שלך",
+    "assignmentTitle": "כותרת המשימה",
     "assignmentInstructions": "הוראות",
     "dueDate": "תאריך יעד",
     "type": "סוג",
@@ -252,6 +310,32 @@
     },
     "creating": "יוצר...",
     "create": "צור משימה",
+    "titleLabel": "כותרת",
+    "instructionsLabel": "הוראות",
+    "subjectAreaLabel": "תחום נושא",
+    "assignmentMaterials": "חומרי משימה",
+    "titlePlaceholder": "כותרת המשימה",
+    "instructionsPlaceholder": "הוראות מפורטות לתלמידים...",
+    "subjectAreaPlaceholder": "לדוגמה, אלגברה, גאומטריה, חשבון, ספרות",
+    "selectFromDomains": "בחר מתחומי הכיתה",
+    "selectFromClassroomMaterials": "בחר מחומרי הכיתה",
+    "selectFromSkills": "בחר ממיומנויות {{domain}}",
+    "skillPlaceholder": "מיומנות {{number}}",
+    "orEnterManually": "או הזן ידנית למטה",
+    "cancel": "ביטול",
+    "createButton": "צור משימה",
+    "subjectAreaAndSkills": "תחומי נושא ומיומנויות",
+    "skillsToAssess": "מיומנויות להערכה",
+    "addSkillManually": "הוסף מיומנות ידנית",
+    "uploadPDF": "העלה PDF",
+    "addLink": "הוסף קישור",
+    "typeOptions": {
+      "text_essay": "חיבור / טקסט",
+      "quiz": "בוחן",
+      "project": "פרויקט",
+      "presentation": "מצגת",
+      "other": "אחר"
+    },
     "errors": {
       "creating": "שגיאה ביצירת משימה"
     },
@@ -294,9 +378,9 @@
     "overview": {
       "title": "סקירת כיתה",
       "courseInfo": "מידע על הקורס",
-      "courseTitle": "שם הקורס",
+      "courseTitle": "כותרת הקורס",
       "duration": "משך",
-      "courseDates": "תאריכי קורס",
+      "courseDates": "תאריכי הקורס",
       "courseOutline": "מתווה הקורס",
       "resources": "משאבים",
       "learningOutcomes": "תוצאות למידה",
@@ -309,7 +393,9 @@
     "studentsTab": {
       "title": "תלמידים רשומים",
       "subtitle": "צפה ונהל את התלמידים שלך",
-      "joined": "הצטרף"
+      "joined": "הצטרף",
+      "noStudents": "אין תלמידים רשומים עדיין",
+      "studentIncomplete": "תלמיד (פרופיל לא שלם)"
     },
     "errors": {
       "loading": "שגיאה בטעינת כיתה",
@@ -318,6 +404,22 @@
     "success": {
       "deleted": "הכיתה נמחקה בהצלחה",
       "assignmentDeleted": "המשימה נמחקה בהצלחה"
+    },
+    "details": "פרטים",
+    "subjectAreas": "תחומי נושא",
+    "subjectAreasDesc": "נושאים ומיומנויות מרכזיים המכוסים בקורס זה",
+    "skills": "מיומנויות",
+    "courseMaterials": "חומרי קורס",
+    "courseMaterialsDesc": "משאבים וחומרים לקורס זה",
+    "copiedToClipboard": "הקוד הועתק ללוח!",
+    "noAssignmentsDesc": "צור את המשימה הראשונה שלך כדי להתחיל",
+    "assignedTo": "הוקצה ל",
+    "type": "סוג:",
+    "due": "יעד:",
+    "attachments": "קבצים מצורפים",
+    "deleteDialog": {
+      "title": "מחק כיתה",
+      "description": "האם אתה בטוח שברצונך למחוק את הכיתה הזו? פעולה זו אינה ניתנת לביטול."
     }
   },
   "submissionsTab": {
@@ -329,7 +431,14 @@
     "allStudents": "כל התלמידים",
     "allAssignments": "כל המשימות",
     "noMatches": "אין הגשות שתואמות למסננים",
-    "adjustFilters": "נסה להתאים את המסננים"
+    "adjustFilters": "נסה להתאים את המסננים",
+    "noSubmissionsYet": "אין הגשות עדיין",
+    "noSubmissionsDesc": "הגשות התלמידים יופיעו כאן כשהם ישלימו משימות",
+    "allStatuses": "כל הסטטוסים",
+    "inProgress": "בתהליך",
+    "dateRange": "טווח תאריכים",
+    "clearFilters": "נקה מסננים",
+    "clearAllFilters": "נקה את כל המסננים"
   },
   "submissionCard": {
     "submitted": "הוגש",
@@ -360,7 +469,15 @@
     "regenerateScores": "צור ציונים מחדש",
     "errors": {
       "loading": "שגיאה בטעינת הגשה"
-    }
+    },
+    "generateFollowup": "צור המשך",
+    "viewConversation": "צפה בשיחה",
+    "generateFollowUp": "צור מטלת המשך",
+    "teacherFeedbackDesc": "ניתוח והמלצות מבוססי AI על סמך שיחת הלמידה",
+    "studentFeedbackDesc": "מה {{student}} ראה לאחר השלמת המטלה",
+    "conversationHistory": "היסטוריית שיחה",
+    "conversationHistoryDesc": "תמליל מלא בין {{student}} ל-Perleap",
+    "noFeedbackDesc": "התלמיד טרם השלים את המטלה, או שהמשוב עדיין בתהליך יצירה."
   },
   "assignmentDetail": {
     "title": "פרטי משימה",
@@ -386,7 +503,16 @@
     "learningOutcomes": "תוצאות למידה",
     "errors": {
       "loading": "שגיאה בטעינת כיתה"
-    }
+    },
+    "schedule": "לוח זמנים",
+    "duration": "משך הקורס",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "viewAssignment": "צפה במטלה",
+    "courseInfo": "מידע על הקורס",
+    "courseTitle": "שם הקורס",
+    "keyChallenges": "אתגרים מרכזיים",
+    "noAssignmentsDesc": "לא הוקצו עדיין מטלות לכיתה זו."
   },
   "settings": {
     "title": "הגדרות",
@@ -425,6 +551,63 @@
         "notAuthenticated": "עליך להיות מחובר כדי למחוק את החשבון שלך",
         "deleteFailed": "נכשל במחיקת החשבון. אנא נסה שוב או פנה לתמיכה."
       }
+    },
+    "profileDesc": "נהל את המידע האישי שלך והגדרות החשבון",
+    "phoneNumber": "מספר טלפון",
+    "subjects": "נושאים שאתה מלמד",
+    "subjectsHelp": "הפרד נושאים מרובים בפסיקים",
+    "yearsExperience": "שנות נסיון בהוראה",
+    "studentLevel": "רמת התלמידים",
+    "noNameSet": "לא הוגדר שם",
+    "emailCannotChange": "לא ניתן לשנות את האימייל",
+    "clickCameraUpload": "לחץ על אייקון המצלמה להעלאה",
+    "fileSizeTooLarge": "גודל הקובץ גדול מדי (מקסימום 5MB)",
+    "uploadImageFile": "אנא העלה קובץ תמונה",
+    "photoUploadFailed": "העלאת התמונה נכשלה",
+    "photoUploadSuccess": "תמונת הפרופיל עודכנה בהצלחה!",
+    "photoUploadError": "שגיאה בהעלאת התמונה",
+    "teachingPreferences": "העדפות הוראה",
+    "teachingPreferencesDesc": "עזור לנו להבין את סגנון ההוראה שלך",
+    "teachingGoals": "מטרות הוראה",
+    "teachingGoalsQuestion": "מהן מטרות ההוראה העיקריות שלך?",
+    "teachingGoalsPlaceholder": "תיאור קצר (1-2 משפטים)",
+    "teachingStyle": "סגנון הוראה",
+    "teachingStyleQuestion": "תאר את סגנון ההוראה שלך",
+    "teachingStylePlaceholder": "איך היית מתאר את הגישה שלך להוראה?",
+    "teachingStyleHelp": "כלול את הטון, האישיות, הערכים והגישה שלך",
+    "teachingExample": "דוגמת הוראה",
+    "teachingExampleQuestion": "שתף דוגמת הוראה קצרה",
+    "teachingExamplePlaceholder": "כיצד אתה מסביר מושג או נותן משוב לתלמידים?",
+    "teach ingExampleHelp": "כתוב דוגמה קצרה שמראה את קול ההוראה הטבעי שלך",
+    "additionalNotes": "הערות נוספות",
+    "additionalNotesQuestion": "יש משהו נוסף שכדאי שנדע?",
+    "additionalNotesPlaceholder": "כל העדפה נוספת או הקשר...",
+    "notificationPreferences": "העדפות התראות",
+    "notificationPreferencesDesc": "בחר אילו התראות תרצה לקבל",
+    "savePreferences": "שמור שינויים",
+    "saveChanges": "שמור שינויים",
+    "dangerZone": "אזור מסוכן",
+    "dangerZoneDesc": "פעולות בלתי הפיכות והרסניות",
+    "deleteAccountWarning": "ברגע שתמחק את החשבון שלך, אין דרך חזרה. אנא היה בטוח.",
+    "deleteAccountButton": "מחק חשבון",
+    "notifications": {
+      "submissionNotifications": "התראות הגשות",
+      "submissionNotificationsDesc": "קבל התראות כאשר תלמידים מגישים מטלות",
+      "studentMessages": "הודעות תלמידים",
+      "studentMessagesDesc": "קבל התראות עבור הודעות תלמידים",
+      "classroomUpdates": "עדכוני כיתה",
+      "classroomUpdatesDesc": "הישאר מעודכן לגבי שינויים בכיתה",
+      "emailNotifications": "התראות אימייל",
+      "emailNotificationsDesc": "קבל סיכום התראות באימייל",
+      "assignmentNotifications": "התראות על מטלות",
+      "assignmentNotificationsDesc": "קבל התראה כאשר מטלות חדשות מתפרסמות",
+      "feedbackNotifications": "התראות משוב",
+      "feedbackNotificationsDesc": "קבל התראה כאשר אתה מקבל משוב"
+    },
+    "learningPreferences": "העדפות למידה",
+    "learningPreferencesDesc": "ספר לנו על סגנון הלמידה וההעדפות שלך",
+    "questions": {
+      "learningMethods": "העדפות למידה"
     }
   },
   "analytics": {
@@ -487,6 +670,7 @@
   },
   "common": {
     "loading": "טוען...",
+    "redirecting": "מעביר...",
     "teacher": "מורה",
     "student": "תלמיד",
     "due": "יעד",
@@ -509,7 +693,26 @@
     "noNotifications": "אין התראות חדשות",
     "markAllRead": "סמן הכל כנקרא",
     "notificationsRead": "כל ההתראות סומנו כנקראו",
-    "end": "סיום"
+    "end": "סיום",
+    "welcome": "ברוך הבא",
+    "settings": "הגדרות",
+    "darkMode": "מצב כהה",
+    "language": "שפה",
+    "logout": "התנתק",
+    "backToDashboard": "חזרה ללוח הבקרה",
+    "subject": "נושא",
+    "graded": "נבדק",
+    "submitted": "הוגש",
+    "missing": "חסר",
+    "assigned": "הוקצה",
+    "viewSubmission": "צפה בהגשה",
+    "startAssignment": "התחל משימה",
+    "advancedFilters": "סינון מתקדם",
+    "status": "סטטוס",
+    "lightMode": "מצב בהיר",
+    "active": "פעיל",
+    "finished": "הסתיים",
+    "completed": "הושלם"
   },
   "dimensions": {
     "score": "ציון",
@@ -679,5 +882,106 @@
     "success": {
       "profileCreated": "הפרופיל נוצר בהצלחה!"
     }
+  },
+  "studentAnalytics": {
+    "title": "ניתוח תלמיד",
+    "noSubmissions": "אין הגשות זמינות לניתוח",
+    "developmentAcross": "התפתחות מיומנויות רכות 5D לאורך הגשה אחת",
+    "developmentAcrossPlural": "התפתחות מיומנויות רכות 5D לאורך {{count}} הגשות",
+    "perSubmission": "לפי הגשה",
+    "allSubmissionsAverage": "ממוצע כל ההגשות",
+    "scoresFromSubmission": "ציונים מהגשה זו",
+    "averageAcrossAll": "Average across all {{count}} submissions",
+    "averageAcross": "ממוצע לאורך כל {{count}} ההגשות בכיתה זו",
+    "noDataSubmission": "אין נתוני ציון זמינים להגשה זו",
+    "noDataAverage": "אין נתוני ציון זמינים"
+  },
+  "classroomAnalytics": {
+    "classOverview": "סקירת כיתה",
+    "averageScoresAcross": "ציוני 5D ממוצעים בכל ההגשות",
+    "scoresFor": "ציונים עבור {{assignment}}",
+    "studentPerformanceOverview": "סקירת ביצועי תלמידים",
+    "detailedBreakdown": "פירוט מפורט לפי תלמיד",
+    "noStudentData": "אין עדיין נתוני תלמידים זמינים",
+    "submissions": "הגשות",
+    "average5DProfile": "פרופיל 5D ממוצע",
+    "allHardSkills": "כל הערכות המיומנויות הקשות בכל המשימות",
+    "hardSkillsFor": "הערכת מיומנויות קשות עבור {{student}}",
+    "hardSkillsAssignmentFor": "הערכות מיומנויות קשות עבור {{assignment}}",
+    "hardSkillsAllStudents": "הערכות מיומנויות קשות עבור כל התלמידים ב-{{assignment}}"
+  },
+  "aboutUs": {
+    "heroSubtitle": "We are a team of educators, technologists, and dreamers dedicated to reshaping the future of learning. We believe that every student deserves a personalized education tailored to their unique needs and potential.",
+    "mission": "Our Mission",
+    "missionText": "To democratize access to high-quality, personalized education by leveraging the power of AI to support teachers and empower students.",
+    "vision": "Our Vision",
+    "visionText": "A world where every learner has a dedicated AI companion that guides their growth, not just academically, but holistically—fostering critical thinking, empathy, and resilience.",
+    "storyTitle": "Our Story",
+    "story": {
+      "paragraph1": "PerLeap was born from a simple observation: while technology has transformed nearly every aspect of our lives, the fundamental model of the classroom has remained largely unchanged for a century.",
+      "paragraph2": "Our founders, a mix of former teachers and AI researchers, saw that educators were overwhelmed with administrative tasks and struggling to provide individual attention to every student in a crowded classroom.",
+      "paragraph3": "We asked ourselves: 'What if we could give every student a personal tutor and every teacher a superpower assistant?'",
+      "paragraph4": "Today, PerLeap is used by forward-thinking schools around the world to create engaging, effective, and human-centric learning environments."
+    },
+    "valuesTitle": "Our Core Values",
+    "values": {
+      "studentCentric": {
+        "title": "Student-Centric",
+        "description": "Every decision we make starts with the question: 'How does this help the learner?'"
+      },
+      "empathy": {
+        "title": "Empathy First",
+        "description": "We believe that emotional intelligence is just as important as academic intelligence."
+      },
+      "innovation": {
+        "title": "Bold Innovation",
+        "description": "We are not afraid to challenge the status quo to build a better future for education."
+      },
+      "excellence": {
+        "title": "Pursuit of Excellence",
+        "description": "We hold ourselves to the highest standards because our students deserve nothing less."
+      }
+    },
+    "stats": {
+      "studentsEmpowered": "Students Empowered",
+      "educators": "Educators Supported",
+      "satisfactionRate": "Satisfaction Rate"
+    },
+    "cta": {
+      "title": "Join Us on Our Journey",
+      "subtitle": "Whether you're a school leader, a teacher, or a parent, we'd love to show you how PerLeap can make a difference.",
+      "getStarted": "Get Started",
+      "contactTeam": "Contact Our Team"
+    }
+  },
+  "assignments": {
+    "status": {
+      "label": "סטטוס",
+      "published": "פורסם",
+      "draft": "טיוטה",
+      "archived": "בארכיון"
+    },
+    "types": {
+      "text_essay": "חיבור טקסט",
+      "file_upload": "העלאת קובץ",
+      "quiz": "בוחן",
+      "project": "פרויקט",
+      "interactive": "אינטראקטיבי"
+    }
+  },
+  "notifications": {
+    "titles": {
+      "feedbackReceived": "משוב התקבל",
+      "successfullyEnrolled": "נרשמת בהצלחה",
+      "newAssignment": "מטלה אישית חדשה",
+      "studentEnrolled": "תלמיד חדש נרשם"
+    }
+  },
+  "assignmentTypes": {
+    "text_essay": "חיבור טקסט",
+    "file_upload": "העלאת קובץ",
+    "quiz": "חידון",
+    "project": "פרויקט",
+    "interactive": "אינטראקטיבי"
   }
 }

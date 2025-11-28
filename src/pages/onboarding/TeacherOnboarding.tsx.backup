@@ -1,0 +1,366 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, ArrowLeft, ArrowRight, Upload } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+
+const TeacherOnboarding = () => {
+  const { t } = useTranslation();
+  const { isRTL } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
+  const totalSteps = 2;
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+
+  const [formData, setFormData] = useState({
+    // Page 1: Essential Profile
+    fullName: '',
+    phoneNumber: '',
+    subjects: '',
+    yearsExperience: '',
+    studentEducationLevel: '',
+
+    // Page 2: Teaching Voice
+    teachingGoals: '',
+    teachingStyle: '',
+    teachingExample: '',
+    additionalNotes: '',
+  });
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(t('teacherOnboarding.errors.fileSize'));
+        return;
+      }
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error(t('teacherOnboarding.errors.notAuthenticated'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let avatarUrl = '';
+
+      // Upload avatar if provided
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('teacher-avatars')
+          .upload(fileName, avatarFile);
+
+        if (!uploadError) {
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from('teacher-avatars').getPublicUrl(fileName);
+          avatarUrl = publicUrl;
+        } else {
+          toast.error(t('teacherOnboarding.errors.uploadAvatar'));
+        }
+      }
+
+      const { error } = await supabase.from('teacher_profiles').insert({
+        user_id: user.id,
+        email: user.email,
+        full_name: formData.fullName,
+        avatar_url: avatarUrl || null,
+        phone_number: formData.phoneNumber,
+        subjects: formData.subjects.split(',').map((s) => s.trim()),
+        years_experience: parseInt(formData.yearsExperience) || 0,
+        student_education_level: formData.studentEducationLevel,
+        teaching_goals: formData.teachingGoals,
+        style_notes: formData.teachingStyle,
+        teaching_examples: formData.teachingExample,
+        sample_explanation: formData.additionalNotes,
+      });
+
+      if (error) throw error;
+
+      toast.success(t('teacherOnboarding.success.profileCreated'));
+      navigate('/teacher/dashboard');
+    } catch (error) {
+      if (error.code === '23505') {
+        toast.error(t('teacherOnboarding.errors.profileExists'));
+        setTimeout(() => navigate('/teacher/dashboard'), 2000);
+      } else {
+        toast.error(error.message || t('teacherOnboarding.errors.createProfile'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">{t('teacherOnboarding.step1.fullName')}</Label>
+              <Input
+                id="fullName"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                required
+                placeholder={t('teacherOnboarding.step1.fullNamePlaceholder')}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('teacherOnboarding.step1.profilePicture')}</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  {avatarPreview ? (
+                    <AvatarImage src={avatarPreview} alt="Preview" />
+                  ) : (
+                    <AvatarFallback>
+                      {formData.fullName
+                        ? formData.fullName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'T'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="flex-1">
+                  <Input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  />
+                  <Label htmlFor="avatar" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
+                      <Upload className="h-4 w-4" />
+                      <span className="text-sm">{t('teacherOnboarding.step1.uploadPhoto')}</span>
+                    </div>
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {t('teacherOnboarding.step1.fileSize')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">{t('teacherOnboarding.step1.phoneNumber')}</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                placeholder={t('teacherOnboarding.step1.phoneNumberPlaceholder')}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subjects">{t('teacherOnboarding.step1.subjects')}</Label>
+              <Input
+                id="subjects"
+                placeholder={t('teacherOnboarding.step1.subjectsPlaceholder')}
+                value={formData.subjects}
+                onChange={(e) => setFormData({ ...formData, subjects: e.target.value })}
+                required
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('teacherOnboarding.step1.subjectsHelp')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="yearsExperience">
+                {t('teacherOnboarding.step1.yearsExperience')}
+              </Label>
+              <Input
+                id="yearsExperience"
+                type="number"
+                min="0"
+                value={formData.yearsExperience}
+                onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
+                required
+                placeholder={t('teacherOnboarding.step1.yearsExperiencePlaceholder')}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="studentEducationLevel">
+                {t('teacherOnboarding.step1.studentLevel')}
+              </Label>
+              <Input
+                id="studentEducationLevel"
+                placeholder={t('teacherOnboarding.step1.studentLevelPlaceholder')}
+                value={formData.studentEducationLevel}
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                onChange={(e) =>
+                  setFormData({ ...formData, studentEducationLevel: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="teachingGoals">
+                {t('teacherOnboarding.step2.teachingGoalsQuestion')}
+              </Label>
+              <Textarea
+                id="teachingGoals"
+                placeholder={t('teacherOnboarding.step2.teachingGoalsPlaceholder')}
+                value={formData.teachingGoals}
+                onChange={(e) => setFormData({ ...formData, teachingGoals: e.target.value })}
+                rows={3}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('teacherOnboarding.step2.teachingGoalsHelp')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="teachingStyle">
+                {t('teacherOnboarding.step2.teachingStyleQuestion')}
+              </Label>
+              <Textarea
+                id="teachingStyle"
+                placeholder={t('teacherOnboarding.step2.teachingStylePlaceholder')}
+                value={formData.teachingStyle}
+                onChange={(e) => setFormData({ ...formData, teachingStyle: e.target.value })}
+                rows={4}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('teacherOnboarding.step2.teachingStyleHelp')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="teachingExample">
+                {t('teacherOnboarding.step2.teachingExampleQuestion')}
+              </Label>
+              <Textarea
+                id="teachingExample"
+                placeholder={t('teacherOnboarding.step2.teachingExamplePlaceholder')}
+                value={formData.teachingExample}
+                onChange={(e) => setFormData({ ...formData, teachingExample: e.target.value })}
+                rows={4}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('teacherOnboarding.step2.teachingExampleHelp')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="additionalNotes">
+                {t('teacherOnboarding.step2.additionalNotesQuestion')}
+              </Label>
+              <Textarea
+                id="additionalNotes"
+                placeholder={t('teacherOnboarding.step2.additionalNotesPlaceholder')}
+                value={formData.additionalNotes}
+                onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
+                rows={3}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </div>
+      <Card className="w-full max-w-3xl">
+        <CardHeader>
+          <CardTitle>{t('teacherOnboarding.title')}</CardTitle>
+          <CardDescription>
+            {t('teacherOnboarding.stepOf', { current: step, total: totalSteps })}{' '}
+            {step === 1 ? t('teacherOnboarding.step1Title') : t('teacherOnboarding.step2Title')}
+          </CardDescription>
+          <div className="w-full bg-secondary rounded-full h-2 mt-4">
+            <div
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(step / totalSteps) * 100}%` }}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-[60vh] overflow-y-auto px-1">{renderStep()}</div>
+
+          <div className="flex gap-4 mt-6">
+            {step > 1 && (
+              <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {t('teacherOnboarding.back')}
+              </Button>
+            )}
+            {step < totalSteps ? (
+              <Button onClick={() => setStep(step + 1)} className="flex-1">
+                {t('teacherOnboarding.next')}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                className="flex-1"
+                disabled={
+                  loading || !formData.fullName || !formData.subjects || !formData.yearsExperience
+                }
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t('teacherOnboarding.completeSetup')}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default TeacherOnboarding;
