@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, BookOpen } from 'lucide-react';
 import { EmptyState } from '@/components/common';
 import type { Assignment } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface ClassroomAssignmentsProps {
   assignments: Assignment[];
@@ -26,6 +27,7 @@ export const ClassroomAssignments = ({
   onEditAssignment,
   onDeleteAssignment,
 }: ClassroomAssignmentsProps) => {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -58,13 +60,13 @@ export const ClassroomAssignments = ({
                   <div>
                     <CardTitle>{assignment.title}</CardTitle>
                     <CardDescription className="mt-2">
-                      Type: {assignment.type.replace('_', ' ')} •
+                      Type: {t(`assignments.types.${assignment.type}`)} •
                       {assignment.due_at && ` Due: ${new Date(assignment.due_at).toLocaleString()}`}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
-                      {assignment.status}
+                      {t(`assignments.status.${assignment.status}`)}
                     </Badge>
                     <Button variant="ghost" size="sm" onClick={() => onEditAssignment(assignment)}>
                       <Edit className="h-4 w-4" />

@@ -153,7 +153,8 @@
     "success": {
       "joinedClassroom": "הצטרפת בהצלחה ל-{{name}}!",
       "markedRead": "ההתראות סומנו כנקראו"
-    }
+    },
+    "activeCourse": "קורס פעיל"
   },
   "teacherDashboard": {
     "title": "לוח מורה",
@@ -468,7 +469,13 @@
       "loading": "שגיאה בטעינת הגשה"
     },
     "generateFollowup": "צור המשך",
-    "viewConversation": "צפה בשיחה"
+    "viewConversation": "צפה בשיחה",
+    "generateFollowUp": "צור מטלת המשך",
+    "teacherFeedbackDesc": "ניתוח והמלצות מבוססי AI על סמך שיחת הלמידה",
+    "studentFeedbackDesc": "מה {{student}} ראה לאחר השלמת המטלה",
+    "conversationHistory": "היסטוריית שיחה",
+    "conversationHistoryDesc": "תמליל מלא בין {{student}} ל-Perleap",
+    "noFeedbackDesc": "התלמיד טרם השלים את המטלה, או שהמשוב עדיין בתהליך יצירה."
   },
   "assignmentDetail": {
     "title": "פרטי משימה",
@@ -494,7 +501,16 @@
     "learningOutcomes": "תוצאות למידה",
     "errors": {
       "loading": "שגיאה בטעינת כיתה"
-    }
+    },
+    "schedule": "לוח זמנים",
+    "duration": "משך הקורס",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "viewAssignment": "צפה במטלה",
+    "courseInfo": "מידע על הקורס",
+    "courseTitle": "שם הקורס",
+    "keyChallenges": "אתגרים מרכזיים",
+    "noAssignmentsDesc": "לא הוקצו עדיין מטלות לכיתה זו."
   },
   "settings": {
     "title": "הגדרות",
@@ -533,7 +549,60 @@
         "notAuthenticated": "עליך להיות מחובר כדי למחוק את החשבון שלך",
         "deleteFailed": "נכשל במחיקת החשבון. אנא נסה שוב או פנה לתמיכה."
       }
-    }
+    },
+    "profileDesc": "נהל את המידע האישי שלך והגדרות החשבון",
+    "phoneNumber": "מספר טלפון",
+    "subjects": "נושאים שאתה מלמד",
+    "subjectsHelp": "הפרד נושאים מרובים בפסיקים",
+    "yearsExperience": "שנות נסיון בהוראה",
+    "studentLevel": "רמת התלמידים",
+    "noNameSet": "לא הוגדר שם",
+    "emailCannotChange": "לא ניתן לשנות את האימייל",
+    "clickCameraUpload": "לחץ על אייקון המצלמה להעלאה",
+    "fileSizeTooLarge": "גודל הקובץ גדול מדי (מקסימום 5MB)",
+    "uploadImageFile": "אנא העלה קובץ תמונה",
+    "photoUploadFailed": "העלאת התמונה נכשלה",
+    "photoUploadSuccess": "תמונת הפרופיל עודכנה בהצלחה!",
+    "photoUploadError": "שגיאה בהעלאת התמונה",
+    "teachingPreferences": "העדפות הוראה",
+    "teachingPreferencesDesc": "עזור לנו להבין את סגנון ההוראה שלך",
+    "teachingGoals": "מטרות הוראה",
+    "teachingGoalsQuestion": "מהן מטרות ההוראה העיקריות שלך?",
+    "teachingGoalsPlaceholder": "תיאור קצר (1-2 משפטים)",
+    "teachingStyle": "סגנון הוראה",
+    "teachingStyleQuestion": "תאר את סגנון ההוראה שלך",
+    "teachingStylePlaceholder": "איך היית מתאר את הגישה שלך להוראה?",
+    "teachingStyleHelp": "כלול את הטון, האישיות, הערכים והגישה שלך",
+    "teachingExample": "דוגמת הוראה",
+    "teachingExampleQuestion": "שתף דוגמת הוראה קצרה",
+    "teachingExamplePlaceholder": "כיצד אתה מסביר מושג או נותן משוב לתלמידים?",
+    "teach ingExampleHelp": "כתוב דוגמה קצרה שמראה את קול ההוראה הטבעי שלך",
+    "additionalNotes": "הערות נוספות",
+    "additionalNotesQuestion": "יש משהו נוסף שכדאי שנדע?",
+    "additionalNotesPlaceholder": "כל העדפה נוספת או הקשר...",
+    "notificationPreferences": "העדפות התראות",
+    "notificationPreferencesDesc": "בחר אילו התראות תרצה לקבל",
+    "savePreferences": "שמור שינויים",
+    "dangerZone": "אזור מסוכן",
+    "dangerZoneDesc": "פעולות בלתי הפיכות והרסניות",
+    "deleteAccountWarning": "ברגע שתמחק את החשבון שלך, אין דרך חזרה. אנא היה בטוח.",
+    "deleteAccountButton": "מחק חשבון",
+    "notifications": {
+      "submissionNotifications": "התראות הגשות",
+      "submissionNotificationsDesc": "קבל התראות כאשר תלמידים מגישים מטלות",
+      "studentMessages": "הודעות תלמידים",
+      "studentMessagesDesc": "קבל התראות עבור הודעות תלמידים",
+      "classroomUpdates": "עדכוני כיתה",
+      "classroomUpdatesDesc": "הישאר מעודכן לגבי שינויים בכיתה",
+      "emailNotifications": "התראות אימייל",
+      "emailNotificationsDesc": "קבל סיכום התראות באימייל",
+      "assignmentNotifications": "התראות על מטלות",
+      "assignmentNotificationsDesc": "קבל התראה כאשר מטלות חדשות מתפרסמות",
+      "feedbackNotifications": "התראות משוב",
+      "feedbackNotificationsDesc": "קבל התראה כאשר אתה מקבל משוב"
+    },
+    "learningPreferences": "העדפות למידה",
+    "learningPreferencesDesc": "ספר לנו על סגנון הלמידה וההעדפות שלך"
   },
   "analytics": {
     "overview": "סקירה כללית",
@@ -631,7 +700,13 @@
     "missing": "חסר",
     "assigned": "הוקצה",
     "viewSubmission": "צפה בהגשה",
-    "startAssignment": "התחל משימה"
+    "startAssignment": "התחל משימה",
+    "advancedFilters": "סינון מתקדם",
+    "status": "סטטוס",
+    "lightMode": "מצב בהיר",
+    "active": "פעיל",
+    "finished": "הסתיים",
+    "completed": "הושלם"
   },
   "dimensions": {
     "score": "ציון",
@@ -803,14 +878,17 @@
     }
   },
   "studentAnalytics": {
-    "title": "Student Analytics",
-    "noSubmissions": "No submissions found for this student in this classroom",
-    "developmentAcross": "5D Soft Skills Development Across {{count}} Submission",
-    "developmentAcrossPlural": "5D Soft Skills Development Across {{count}} Submissions",
-    "perSubmission": "Per Submission",
-    "allSubmissionsAverage": "All Submissions Average",
-    "scoresFromSubmission": "Scores from this submission",
-    "averageAcrossAll": "Average across all {{count}} submissions"
+    "title": "ניתוח תלמיד",
+    "noSubmissions": "אין הגשות זמינות לניתוח",
+    "developmentAcross": "התפתחות מיומנויות רכות 5D לאורך הגשה אחת",
+    "developmentAcrossPlural": "התפתחות מיומנויות רכות 5D לאורך {{count}} הגשות",
+    "perSubmission": "לפי הגשה",
+    "allSubmissionsAverage": "ממוצע כל ההגשות",
+    "scoresFromSubmission": "ציונים מהגשה זו",
+    "averageAcrossAll": "Average across all {{count}} submissions",
+    "averageAcross": "ממוצע לאורך כל {{count}} ההגשות בכיתה זו",
+    "noDataSubmission": "אין נתוני ציון זמינים להגשה זו",
+    "noDataAverage": "אין נתוני ציון זמינים"
   },
   "classroomAnalytics": {
     "classOverview": "סקירת כיתה",
@@ -869,5 +947,34 @@
       "getStarted": "Get Started",
       "contactTeam": "Contact Our Team"
     }
+  },
+  "assignments": {
+    "status": {
+      "published": "פורסם",
+      "draft": "טיוטה",
+      "archived": "בארכיון"
+    },
+    "types": {
+      "text_essay": "חיבור טקסט",
+      "file_upload": "העלאת קובץ",
+      "quiz": "בוחן",
+      "project": "פרויקט",
+      "interactive": "אינטראקטיבי"
+    }
+  },
+  "notifications": {
+    "titles": {
+      "feedbackReceived": "משוב התקבל",
+      "successfullyEnrolled": "נרשמת בהצלחה",
+      "newAssignment": "מטלה אישית חדשה",
+      "studentEnrolled": "תלמיד חדש נרשם"
+    }
+  },
+  "assignmentTypes": {
+    "text_essay": "חיבור טקסט",
+    "file_upload": "העלאת קובץ",
+    "quiz": "חידון",
+    "project": "פרויקט",
+    "interactive": "אינטראקטיבי"
   }
 }

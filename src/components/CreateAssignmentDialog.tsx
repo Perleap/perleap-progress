@@ -477,10 +477,10 @@ export function CreateAssignmentDialog({
                     <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 h-11">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="text_essay">{t('createAssignment.typeOptions.text_essay')}</SelectItem>
-                      <SelectItem value="quiz">{t('createAssignment.typeOptions.quiz')}</SelectItem>
-                      <SelectItem value="project">{t('createAssignment.typeOptions.project')}</SelectItem>
+                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="text_essay">{t('assignments.types.text_essay')}</SelectItem>
+                      <SelectItem value="quiz">{t('assignments.types.quiz')}</SelectItem>
+                      <SelectItem value="project">{t('assignments.types.project')}</SelectItem>
                       <SelectItem value="presentation">{t('createAssignment.typeOptions.presentation')}</SelectItem>
                       <SelectItem value="other">{t('createAssignment.typeOptions.other')}</SelectItem>
                     </SelectContent>

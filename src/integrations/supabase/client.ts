@@ -13,7 +13,7 @@ export const supabase = createClient<Database>(
   SUPABASE_ANON_KEY || 'placeholder-key',
   {
     auth: {
-      storage: localStorage,
+      storage: sessionStorage,
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true, // Need this for OAuth callbacks and email confirmations

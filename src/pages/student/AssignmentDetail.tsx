@@ -224,7 +224,7 @@ const AssignmentDetail = () => {
                       `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
                   </CardDescription>
                 </div>
-                <Badge variant="secondary">{assignment.type.replace('_', ' ')}</Badge>
+                <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

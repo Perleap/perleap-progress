@@ -311,7 +311,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       className={`w-full md:w-auto rounded-full h-12 px-6 border-slate-200 dark:border-slate-700 ${isFiltersOpen || activeFiltersCount > 0 ? 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800' : 'bg-white dark:bg-slate-800'}`}
                     >
                       <Filter className="h-4 w-4 me-2" />
-                      Advanced Filters
+                      {t('common.advancedFilters')}
                       {activeFiltersCount > 0 && (
                         <Badge variant="secondary" className="ml-2 bg-indigo-200 text-indigo-700 hover:bg-indigo-300 dark:bg-indigo-800 dark:text-indigo-200">
                           {activeFiltersCount}
@@ -343,7 +343,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
                         {students.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
@@ -360,7 +360,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
                         {assignments.map((a) => (
                           <SelectItem key={a.id} value={a.id}>
@@ -377,7 +377,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectItem value="all">{t('submissionsTab.allStatuses')}</SelectItem>
                         <SelectItem value="completed">{t('common.completed')}</SelectItem>
                         <SelectItem value="in_progress">{t('submissionsTab.inProgress')}</SelectItem>

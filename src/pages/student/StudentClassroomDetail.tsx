@@ -410,7 +410,7 @@ const StudentClassroomDetail = () => {
                                 "rounded-full px-3 py-1",
                                 assignment.type === 'quiz' ? "bg-purple-100 text-purple-700 hover:bg-purple-200" : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                               )}>
-                                {assignment.type.replace('_', ' ')}
+                                {t(`assignmentTypes.${assignment.type}`)}
                               </Badge>
                               {assignment.due_at && (
                                 <span className="text-sm font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
@@ -465,7 +465,7 @@ const StudentClassroomDetail = () => {
                         <div className="p-6">
                           <div className="flex items-center justify-between mb-3">
                             <Badge variant="secondary" className="rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                              {assignment.type.replace('_', ' ')}
+                              {t(`assignmentTypes.${assignment.type}`)}
                             </Badge>
                             <Badge className="rounded-full bg-green-100 text-green-700 hover:bg-green-200 border-none flex items-center gap-1">
                               <CheckCircle2 className="h-3 w-3" />

@@ -731,12 +731,12 @@ const ClassroomDetail = () => {
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
                                 }`}
                             >
-                              {assignment.status}
+                              {t(`assignments.status.${assignment.status}`)}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                             <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
-                              {t('classroomDetail.type')} {assignment.type.replace('_', ' ')}
+                              {t('classroomDetail.type')} {t(`assignments.types.${assignment.type}`)}
                             </span>
                             {assignment.due_at && (
                               <span className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">

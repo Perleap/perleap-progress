@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 
 const Auth = () => {
@@ -348,6 +349,7 @@ const Auth = () => {
       </div>
 
       <div className="absolute top-8 end-8 z-20 flex items-center gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
 

@@ -46,8 +46,8 @@ export const AssignmentsList = ({ assignments, onEdit, onDelete }: AssignmentsLi
     if (!materialsData) return null;
     try {
       // Handle both JSONB (object) and old TEXT (string) formats
-      const materials = typeof materialsData === 'string' 
-        ? JSON.parse(materialsData) 
+      const materials = typeof materialsData === 'string'
+        ? JSON.parse(materialsData)
         : materialsData;
       return Array.isArray(materials) && materials.length > 0 ? materials : null;
     } catch {
@@ -67,7 +67,7 @@ export const AssignmentsList = ({ assignments, onEdit, onDelete }: AssignmentsLi
                 <div className="space-y-1 flex-1">
                   <CardTitle className="text-lg">{assignment.title}</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge variant={getStatusColor(assignment.status)}>{assignment.status}</Badge>
+                    <Badge variant={getStatusColor(assignment.status)}>{t(`assignments.status.${assignment.status}`)}</Badge>
                     <Badge variant="outline">
                       <Calendar className="h-3 w-3 me-1" />
                       {new Date(assignment.due_at).toLocaleDateString()}

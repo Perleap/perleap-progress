@@ -153,7 +153,8 @@
     "success": {
       "joinedClassroom": "Successfully joined {{name}}!",
       "markedRead": "Notifications marked as read"
-    }
+    },
+    "activeCourse": "Active Course"
   },
   "teacherDashboard": {
     "title": "Teacher Dashboard",
@@ -437,7 +438,13 @@
       "loading": "Error loading submission"
     },
     "generateFollowup": "Generate Follow-up",
-    "viewConversation": "View Conversation"
+    "viewConversation": "View Conversation",
+    "generateFollowUp": "Generate Follow-up Assignment",
+    "teacherFeedbackDesc": "AI-generated analysis and recommendations based on the learning conversation",
+    "studentFeedbackDesc": "What {{student}} saw after completing the assignment",
+    "conversationHistory": "Conversation History",
+    "conversationHistoryDesc": "Complete transcript between {{student}} and Perleap",
+    "noFeedbackDesc": "This student hasn't completed the assignment yet, or feedback is still being generated."
   },
   "assignmentDetail": {
     "title": "Assignment Details",
@@ -463,7 +470,16 @@
     "learningOutcomes": "Learning Outcomes",
     "errors": {
       "loading": "Error loading classroom"
-    }
+    },
+    "schedule": "Schedule",
+    "duration": "Duration",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "viewAssignment": "View Assignment",
+    "courseInfo": "Course Information",
+    "courseTitle": "Course Title",
+    "keyChallenges": "Key Challenges",
+    "noAssignmentsDesc": "No assignments have been assigned to this class yet."
   },
   "settings": {
     "title": "Settings",
@@ -502,7 +518,60 @@
         "notAuthenticated": "You must be logged in to delete your account",
         "deleteFailed": "Failed to delete account. Please try again or contact support."
       }
-    }
+    },
+    "profileDesc": "Manage your personal information and account settings",
+    "phoneNumber": "Phone Number",
+    "subjects": "Subjects You Teach",
+    "subjectsHelp": "Separate multiple subjects with commas",
+    "yearsExperience": "Years of Teaching Experience",
+    "studentLevel": "Student Level",
+    "noNameSet": "No name set",
+    "emailCannotChange": "Email cannot be changed",
+    "clickCameraUpload": "Click camera icon to upload",
+    "fileSizeTooLarge": "File size too large (max 5MB)",
+    "uploadImageFile": "Please upload an image file",
+    "photoUploadFailed": "Photo upload failed",
+    "photoUploadSuccess": "Profile photo updated successfully!",
+    "photoUploadError": "Error uploading photo",
+    "teachingPreferences": "Teaching Preferences",
+    "teachingPreferencesDesc": "Help us understand your teaching style and approach",
+    "teachingGoals": "Teaching Goals",
+    "teachingGoalsQuestion": "What are your main teaching goals?",
+    "teachingGoalsPlaceholder": "Brief description (1-2 sentences)",
+    "teachingStyle": "Teaching Style",
+    "teachingStyleQuestion": "Describe your teaching style",
+    "teachingStylePlaceholder": "How would you describe your approach to teaching?",
+    "teachingStyleHelp": "Include your tone, personality, values, and approach",
+    "teachingExample": "Teaching Example",
+    "teachingExampleQuestion": "Share a brief teaching example",
+    "teachingExamplePlaceholder": "How do you explain a concept or give feedback to students?",
+    "teachingExampleHelp": "Write a short example that shows your natural teaching voice",
+    "additionalNotes": "Additional Notes",
+    "additionalNotesQuestion": "Anything else we should know?",
+    "additionalNotesPlaceholder": "Any specific preferences or additional context...",
+    "notificationPreferences": "Notification Preferences",
+    "notificationPreferencesDesc": "Choose what notifications you want to receive",
+    "savePreferences": "Save Changes",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDesc": "Irreversible and destructive actions",
+    "deleteAccountWarning": "Once you delete your account, there is no going back. Please be certain.",
+    "deleteAccountButton": "Delete Account",
+    "notifications": {
+      "submissionNotifications": "Submission Notifications",
+      "submissionNotificationsDesc": "Get notified when students submit assignments",
+      "studentMessages": "Student Messages",
+      "studentMessagesDesc": "Receive notifications for student messages",
+      "classroomUpdates": "Classroom Updates",
+      "classroomUpdatesDesc": "Stay updated about changes in the classroom",
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsDesc": "Receive a digest of notifications via email",
+      "assignmentNotifications": "Assignment Notifications",
+      "assignmentNotificationsDesc": "Get notified when new assignments are posted",
+      "feedbackNotifications": "Feedback Notifications",
+      "feedbackNotificationsDesc": "Get notified when you receive feedback"
+    },
+    "learningPreferences": "Learning Preferences",
+    "learningPreferencesDesc": "Tell us about your learning style and preferences"
   },
   "analytics": {
     "overview": "Overview",
@@ -600,7 +669,13 @@
     "missing": "Missing",
     "assigned": "Assigned",
     "viewSubmission": "View Submission",
-    "startAssignment": "Start Assignment"
+    "startAssignment": "Start Assignment",
+    "advancedFilters": "Advanced Filters",
+    "status": "Status",
+    "lightMode": "Light Mode",
+    "active": "Active",
+    "finished": "Finished",
+    "completed": "Completed"
   },
   "dimensions": {
     "score": "Score",
@@ -773,13 +848,16 @@
   },
   "studentAnalytics": {
     "title": "Student Analytics",
-    "noSubmissions": "No submissions found for this student in this classroom",
+    "noSubmissions": "No submissions available for analysis",
     "developmentAcross": "5D Soft Skills Development Across {{count}} Submission",
     "developmentAcrossPlural": "5D Soft Skills Development Across {{count}} Submissions",
     "perSubmission": "Per Submission",
     "allSubmissionsAverage": "All Submissions Average",
     "scoresFromSubmission": "Scores from this submission",
-    "averageAcrossAll": "Average across all {{count}} submissions"
+    "averageAcrossAll": "Average across all {{count}} submissions",
+    "averageAcross": "Average across all {{count}} submission(s) in this classroom",
+    "noDataSubmission": "No score data available for this submission",
+    "noDataAverage": "No score data available"
   },
   "classroomAnalytics": {
     "classOverview": "Class Overview",
@@ -838,5 +916,34 @@
       "getStarted": "Get Started",
       "contactTeam": "Contact Our Team"
     }
+  },
+  "assignments": {
+    "status": {
+      "published": "Published",
+      "draft": "Draft",
+      "archived": "Archived"
+    },
+    "types": {
+      "text_essay": "Text Essay",
+      "file_upload": "File Upload",
+      "quiz": "Quiz",
+      "project": "Project",
+      "interactive": "Interactive"
+    }
+  },
+  "notifications": {
+    "titles": {
+      "feedbackReceived": "Feedback Received",
+      "successfullyEnrolled": "Successfully Enrolled",
+      "newAssignment": "New Personalized Assignment",
+      "studentEnrolled": "New Student Enrolled"
+    }
+  },
+  "assignmentTypes": {
+    "text_essay": "Text Essay",
+    "file_upload": "File Upload",
+    "quiz": "Quiz",
+    "project": "Project",
+    "interactive": "Interactive"
   }
 }

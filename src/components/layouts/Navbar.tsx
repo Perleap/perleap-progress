@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export const Navbar = () => {
     const { t } = useTranslation();
@@ -58,6 +59,7 @@ export const Navbar = () => {
                     </div>
 
                     <div className="hidden md:flex items-center gap-4">
+                        <LanguageSwitcher />
                         <ThemeToggle />
                         <Link to="/login" className="text-sm font-medium text-foreground hover:text-foreground/80 transition-colors">
                             {t('landing.nav.login')}
@@ -94,7 +96,8 @@ export const Navbar = () => {
                             </Link>
                         ))}
                         <div className="h-px bg-black/5 my-2" />
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end gap-2">
+                            <LanguageSwitcher />
                             <ThemeToggle />
                         </div>
                         <Link

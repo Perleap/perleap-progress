@@ -178,9 +178,35 @@ export function DashboardHeader({
                         key={notification.id}
                         className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
                         onClick={() => handleNotificationClick(notification)}
+                        dir={i18n.dir()}
                       >
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground">{notification.message}</p>
+                        <p className="font-medium">
+                          {(() => {
+                            const titleMap: Record<string, string> = {
+                              'Feedback Received': 'notifications.titles.feedbackReceived',
+                              'Successfully Enrolled': 'notifications.titles.successfullyEnrolled',
+                              'New Personalized Assignment': 'notifications.titles.newAssignment',
+                              'New Student Enrolled': 'notifications.titles.studentEnrolled',
+                            };
+                            return titleMap[notification.title] ? t(titleMap[notification.title]) : notification.title;
+                          })()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(() => {
+                            // Simple heuristic to translate common notification bodies
+                            if (notification.message.startsWith("You've joined")) {
+                              const classroomName = notification.message.replace("You've joined ", "");
+                              return i18n.language === 'he' ? `הצטרפת ל${classroomName}` : notification.message;
+                            }
+                            if (notification.message.includes("is ready")) {
+                              return i18n.language === 'he' ? "המשוב שלך מוכן" : notification.message;
+                            }
+                            if (notification.message.includes("has been created for you")) {
+                              return i18n.language === 'he' ? "נוצרה עבורך מטלת המשך" : notification.message;
+                            }
+                            return notification.message;
+                          })()}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Date(notification.created_at).toLocaleDateString()}
                         </p>
@@ -226,13 +252,7 @@ export function DashboardHeader({
                 )}
                 <span>{theme === "dark" ? t('common.lightMode') : t('common.darkMode')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                const newLang = i18n.language === 'en' ? 'he' : 'en';
-                i18n.changeLanguage(newLang);
-              }}>
-                <Globe className="me-2 h-4 w-4" />
-                <span>{i18n.language === 'en' ? 'עברית' : 'English'}</span>
-              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="me-2 h-4 w-4" />

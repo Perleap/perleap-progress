@@ -370,10 +370,10 @@ export function EditAssignmentDialog({
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text_essay">Text Essay</SelectItem>
-                  <SelectItem value="interactive">Interactive</SelectItem>
-                  <SelectItem value="project">Project</SelectItem>
+                <SelectContent dir={isRTL ? 'rtl' : 'ltr'}>
+                  <SelectItem value="text_essay">{t('assignments.types.text_essay')}</SelectItem>
+                  <SelectItem value="interactive">{t('assignments.types.interactive')}</SelectItem>
+                  <SelectItem value="project">{t('assignments.types.project')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -384,9 +384,9 @@ export function EditAssignmentDialog({
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
+                <SelectContent dir={isRTL ? 'rtl' : 'ltr'}>
+                  <SelectItem value="draft">{t('assignments.status.draft')}</SelectItem>
+                  <SelectItem value="published">{t('assignments.status.published')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

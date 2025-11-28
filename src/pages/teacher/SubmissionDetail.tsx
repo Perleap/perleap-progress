@@ -299,7 +299,7 @@ const SubmissionDetail = () => {
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Follow-up Assignment
+                    {t('submissionDetail.generateFollowUp')}
                   </>
                 )}
               </Button>
@@ -326,7 +326,7 @@ const SubmissionDetail = () => {
                       {t('submissionDetail.teacherFeedback')}
                     </CardTitle>
                     <CardDescription className="text-indigo-700/70 dark:text-indigo-300/70">
-                      AI-generated analysis and recommendations based on the learning conversation
+                      {t('submissionDetail.teacherFeedbackDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -348,7 +348,7 @@ const SubmissionDetail = () => {
                       {t('submissionDetail.studentFeedback')}
                     </CardTitle>
                     <CardDescription>
-                      What {studentName} saw after completing the assignment
+                      {t('submissionDetail.studentFeedbackDesc', { student: studentName })}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -373,10 +373,10 @@ const SubmissionDetail = () => {
                   <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 z-10 shrink-0">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <MessageSquare className="h-5 w-5 text-primary" />
-                      Conversation History
+                      {t('submissionDetail.conversationHistory')}
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Complete transcript between {studentName} and Perleap
+                      {t('submissionDetail.conversationHistoryDesc', { student: studentName })}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
@@ -441,7 +441,7 @@ const SubmissionDetail = () => {
                 </div>
                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{t('submissionDetail.noFeedback')}</h3>
                 <p className="text-slate-500 dark:text-slate-400 max-w-md">
-                  This student hasn't completed the assignment yet, or feedback is still being generated.
+                  {t('submissionDetail.noFeedbackDesc')}
                 </p>
               </CardContent>
             </Card>

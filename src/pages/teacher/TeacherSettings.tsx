@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,7 @@ import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'l
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TeacherProfile {
   full_name: string;
@@ -42,6 +44,7 @@ interface NotificationSettings {
 const TeacherSettings = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -257,7 +260,11 @@ const TeacherSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={cn("min-h-screen bg-background", isRTL && "text-right")}
+      dir={isRTL ? 'rtl' : 'ltr'}
+      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+    >
       <DashboardHeader
         title={t('settings.title')}
         userType="teacher"
@@ -267,7 +274,10 @@ const TeacherSettings = () => {
 
       <main className="container py-8 px-4 max-w-4xl">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList
+            className="grid w-full grid-cols-3"
+            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+          >
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">{t('settings.profile')}</span>
@@ -290,7 +300,10 @@ const TeacherSettings = () => {
                 <CardDescription>{t('settings.profileDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center gap-4">
+                <div
+                  className="flex items-center gap-4"
+                  style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                >
                   <div className="relative">
                     <Avatar className="h-20 w-20">
                       {profile.avatar_url ? (
@@ -319,7 +332,7 @@ const TeacherSettings = () => {
                       className="hidden"
                     />
                   </div>
-                  <div>
+                  <div className={cn(isRTL && "text-right")}>
                     <p className="text-sm font-medium">{profile.full_name || t('settings.noNameSet')}</p>
                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -336,6 +349,7 @@ const TeacherSettings = () => {
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="Jane Smith"
                     autoDirection
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
@@ -346,24 +360,25 @@ const TeacherSettings = () => {
                     type="email"
                     value={user?.email || ''}
                     disabled
-                    className="bg-muted"
+                    className={cn("bg-muted", isRTL && "text-right")}
                   />
                   <p className="text-xs text-muted-foreground">{t('settings.emailCannotChange')}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Label htmlFor="phoneNumber">{t('settings.phoneNumber')}</Label>
                   <Input
                     id="phoneNumber"
                     type="tel"
                     value={profile.phone_number}
                     onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
                     placeholder="+1 (555) 123-4567"
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="subjects">Subjects You Teach</Label>
+                  <Label htmlFor="subjects">{t('settings.subjects')}</Label>
                   <Input
                     id="subjects"
                     value={profile.subjects.join(', ')}
@@ -378,14 +393,15 @@ const TeacherSettings = () => {
                     }
                     placeholder="Math, Physics, Chemistry"
                     autoDirection
+                    className={cn(isRTL && "text-right")}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Separate multiple subjects with commas
+                    {t('settings.subjectsHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="yearsExperience">Years of Teaching Experience</Label>
+                  <Label htmlFor="yearsExperience">{t('settings.yearsExperience')}</Label>
                   <Input
                     id="yearsExperience"
                     type="number"
@@ -398,11 +414,12 @@ const TeacherSettings = () => {
                       })
                     }
                     placeholder="5"
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="studentLevel">Student Level</Label>
+                  <Label htmlFor="studentLevel">{t('settings.studentLevel')}</Label>
                   <Input
                     id="studentLevel"
                     value={profile.student_education_level}
@@ -411,6 +428,7 @@ const TeacherSettings = () => {
                     }
                     placeholder="e.g., Middle School, High School, University"
                     autoDirection
+                    className={cn(isRTL && "text-right")}
                   />
                 </div>
 
@@ -418,10 +436,10 @@ const TeacherSettings = () => {
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('settings.saving')}
                     </>
                   ) : (
-                    'Save Changes'
+                    t('settings.save')
                   )}
                 </Button>
               </CardContent>
@@ -437,7 +455,7 @@ const TeacherSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-lg bg-destructive/10 p-4 space-y-2">
-                  <p className="text-sm font-medium">{t('settings.deleteAccount')}</p>
+                  <p className="text-sm font-medium">{t('settings.deleteAccount.title')}</p>
                   <p className="text-sm text-muted-foreground">
                     {t('settings.deleteAccountWarning')}
                   </p>
@@ -463,19 +481,20 @@ const TeacherSettings = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="teachingGoals">What are your main teaching goals?</Label>
+                  <Label htmlFor="teachingGoals">{t('settings.teachingGoalsQuestion')}</Label>
                   <Textarea
                     id="teachingGoals"
                     value={questions.teaching_goals}
                     onChange={(e) => setQuestions({ ...questions, teaching_goals: e.target.value })}
                     placeholder={questions.teaching_goals || 'Brief description (1-2 sentences)'}
                     rows={3}
-                    className={!questions.teaching_goals ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.teaching_goals ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="teachingStyle">Describe your teaching style</Label>
+                  <Label htmlFor="teachingStyle">{t('settings.teachingStyleQuestion')}</Label>
                   <Textarea
                     id="teachingStyle"
                     value={questions.style_notes}
@@ -484,15 +503,16 @@ const TeacherSettings = () => {
                       questions.style_notes || 'How would you describe your approach to teaching?'
                     }
                     rows={4}
-                    className={!questions.style_notes ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.style_notes ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                   <p className="text-xs text-muted-foreground">
-                    Include your tone, personality, values, and approach
+                    {t('settings.teachingStyleHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="teachingExample">Share a brief teaching example</Label>
+                  <Label htmlFor="teachingExample">{t('settings.teachingExampleQuestion')}</Label>
                   <Textarea
                     id="teachingExample"
                     value={questions.teaching_examples}
@@ -504,15 +524,16 @@ const TeacherSettings = () => {
                       'How do you explain a concept or give feedback to students?'
                     }
                     rows={4}
-                    className={!questions.teaching_examples ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.teaching_examples ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                   <p className="text-xs text-muted-foreground">
-                    Write a short example that shows your natural teaching voice
+                    {t('settings.teachingExampleHelp')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="additionalNotes">Anything else we should know?</Label>
+                  <Label htmlFor="additionalNotes">{t('settings.additionalNotesQuestion')}</Label>
                   <Textarea
                     id="additionalNotes"
                     value={questions.sample_explanation}
@@ -524,7 +545,8 @@ const TeacherSettings = () => {
                       'Any specific preferences or additional context...'
                     }
                     rows={3}
-                    className={!questions.sample_explanation ? 'text-muted-foreground' : ''}
+                    className={cn(!questions.sample_explanation ? 'text-muted-foreground' : '', isRTL && "text-right")}
+                    autoDirection
                   />
                 </div>
 
@@ -532,10 +554,10 @@ const TeacherSettings = () => {
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t('settings.saving')}
                     </>
                   ) : (
-                    'Save Changes'
+                    t('settings.save')
                   )}
                 </Button>
               </CardContent>
@@ -551,8 +573,11 @@ const TeacherSettings = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
                       <Label htmlFor="submission-notifications">{t('settings.notifications.submissionNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
                         {t('settings.notifications.submissionNotificationsDesc')}
@@ -567,8 +592,11 @@ const TeacherSettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
                       <Label htmlFor="student-messages">{t('settings.notifications.studentMessages')}</Label>
                       <p className="text-sm text-muted-foreground">
                         {t('settings.notifications.studentMessagesDesc')}
@@ -583,8 +611,11 @@ const TeacherSettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
                       <Label htmlFor="classroom-updates">{t('settings.notifications.classroomUpdates')}</Label>
                       <p className="text-sm text-muted-foreground">
                         {t('settings.notifications.classroomUpdatesDesc')}
@@ -599,8 +630,11 @@ const TeacherSettings = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
+                  <div
+                    className="flex items-center justify-between gap-4"
+                    style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                  >
+                    <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
                       <Label htmlFor="email-notifications">{t('settings.notifications.emailNotifications')}</Label>
                       <p className="text-sm text-muted-foreground">
                         {t('settings.notifications.emailNotificationsDesc')}

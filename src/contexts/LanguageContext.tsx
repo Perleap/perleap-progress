@@ -47,33 +47,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   const loadUserLanguagePreference = async () => {
     if (!user) return;
 
-    // NEVER override if localStorage already has a preference
-    // Database is only used for INITIAL sync, localStorage is the source of truth
-    const localPref = getStoredLanguage();
-
-    // If localStorage has a preference, DON'T load from database
-    // Just update database to match localStorage
-    if (localPref !== 'en' || localStorage.getItem('language_preference') !== null) {
-      // Silently update database to match localStorage (don't call setLanguage)
-      if (localPref === 'he') {
-        supabase
-          .from('student_profiles')
-          .update({ preferred_language: localPref })
-          .eq('user_id', user.id)
-          .then(({ error }) => {
-            if (error) {
-              supabase
-                .from('teacher_profiles')
-                .update({ preferred_language: localPref })
-                .eq('user_id', user.id);
-            }
-          });
-      }
-      return;
-    }
-
     try {
-      // Only reach here if localStorage is empty or default 'en'
+      // Check DB for preference - prioritize DB over local storage
+      let dbLanguage: Language | null = null;
+
       // Try to get from student_profiles first
       const { data: studentProfile } = await supabase
         .from('student_profiles')
@@ -82,26 +59,44 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         .maybeSingle();
 
       if (studentProfile?.preferred_language) {
-        const preferredLang = studentProfile.preferred_language as Language;
-        // Only apply if different from current AND localStorage is empty
-        if (preferredLang !== 'en' && preferredLang !== localPref) {
-          setLanguage(preferredLang);
+        dbLanguage = studentProfile.preferred_language as Language;
+      } else {
+        // Try teacher_profiles if not found in student_profiles
+        const { data: teacherProfile } = await supabase
+          .from('teacher_profiles')
+          .select('preferred_language')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (teacherProfile?.preferred_language) {
+          dbLanguage = teacherProfile.preferred_language as Language;
         }
-        return;
       }
 
-      // Try teacher_profiles if not found in student_profiles
-      const { data: teacherProfile } = await supabase
-        .from('teacher_profiles')
-        .select('preferred_language')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      if (dbLanguage) {
+        // If DB has a preference, use it (overriding local storage)
+        if (dbLanguage !== language) {
+          console.log('Syncing language from database:', dbLanguage);
+          setLanguage(dbLanguage);
+        }
+      } else {
+        // If DB has no preference, sync current local preference to DB
+        const localPref = getStoredLanguage();
 
-      if (teacherProfile?.preferred_language) {
-        const preferredLang = teacherProfile.preferred_language as Language;
-        // Only apply if different from current AND localStorage is empty
-        if (preferredLang !== 'en' && preferredLang !== localPref) {
-          setLanguage(preferredLang);
+        // Silently update database to match localStorage
+        if (localPref === 'he') {
+          supabase
+            .from('student_profiles')
+            .update({ preferred_language: localPref })
+            .eq('user_id', user.id)
+            .then(({ error }) => {
+              if (error) {
+                supabase
+                  .from('teacher_profiles')
+                  .update({ preferred_language: localPref })
+                  .eq('user_id', user.id);
+              }
+            });
         }
       }
     } catch (error) {
