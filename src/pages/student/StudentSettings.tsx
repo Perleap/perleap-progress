@@ -276,7 +276,8 @@ const StudentSettings = () => {
 
       <main className="container py-8 px-4 max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]" dir={isRTL ? 'rtl' : 'ltr'}>
+          <div className="flex justify-center">
+            <TabsList className="grid w-full grid-cols-3" dir={isRTL ? 'rtl' : 'ltr'}>
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">{t('settings.profile')}</span>
@@ -288,7 +289,8 @@ const StudentSettings = () => {
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">{t('common.notifications')}</span>
             </TabsTrigger>
-          </TabsList >
+          </TabsList>
+          </div>
 
           {/* Profile Tab */}
           < TabsContent value="profile" className="space-y-6" >
@@ -421,25 +423,25 @@ const StudentSettings = () => {
                     value={questions.learning_methods}
                     onValueChange={(v) => setQuestions({ ...questions, learning_methods: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="visual" id="edit-visual" className="mt-0.5" />
                       <Label htmlFor="edit-visual" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step1.visual')}</span> - {t('studentOnboarding.step1.visualDesc')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="auditory" id="edit-auditory" className="mt-0.5" />
                       <Label htmlFor="edit-auditory" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step1.auditory')}</span> - {t('studentOnboarding.step1.auditoryDesc')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="kinesthetic" id="edit-kinesthetic" className="mt-0.5" />
                       <Label htmlFor="edit-kinesthetic" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step1.kinesthetic')}</span> - {t('studentOnboarding.step1.kinestheticDesc')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="video" id="edit-video" className="mt-0.5" />
                       <Label htmlFor="edit-video" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step1.video')}</span> - {t('studentOnboarding.step1.videoDesc')}
@@ -454,19 +456,19 @@ const StudentSettings = () => {
                     value={questions.solo_vs_group}
                     onValueChange={(v) => setQuestions({ ...questions, solo_vs_group: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="solo" id="edit-solo" className="mt-0.5" />
                       <Label htmlFor="edit-solo" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step2.solo')}</span>
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="group" id="edit-group" className="mt-0.5" />
                       <Label htmlFor="edit-group" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step2.group')}</span>
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="both" id="edit-both" className="mt-0.5" />
                       <Label htmlFor="edit-both" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step2.both')}</span>
@@ -481,13 +483,13 @@ const StudentSettings = () => {
                     value={questions.scheduled_vs_flexible}
                     onValueChange={(v) => setQuestions({ ...questions, scheduled_vs_flexible: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="scheduled" id="edit-scheduled" className="mt-0.5" />
                       <Label htmlFor="edit-scheduled" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step2.scheduled')}</span>
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="flexible" id="edit-flexible" className="mt-0.5" />
                       <Label htmlFor="edit-flexible" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="font-medium">{t('studentOnboarding.step2.flexible')}</span>
@@ -502,19 +504,19 @@ const StudentSettings = () => {
                     value={questions.motivation_factors}
                     onValueChange={(v) => setQuestions({ ...questions, motivation_factors: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="curiosity" id="edit-curiosity" className="mt-0.5" />
                       <Label htmlFor="edit-curiosity" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step3.curiosity')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="grades" id="edit-grades" className="mt-0.5" />
                       <Label htmlFor="edit-grades" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step3.grades')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem
                         value="encouragement"
                         id="edit-encouragement"
@@ -524,7 +526,7 @@ const StudentSettings = () => {
                         {t('studentOnboarding.step3.encouragement')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem
                         value="personal_goals"
                         id="edit-personal_goals"
@@ -534,7 +536,7 @@ const StudentSettings = () => {
                         {t('studentOnboarding.step3.personalGoals')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="competition" id="edit-competition" className="mt-0.5" />
                       <Label htmlFor="edit-competition" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step3.competition')}
@@ -549,13 +551,13 @@ const StudentSettings = () => {
                     value={questions.help_preferences}
                     onValueChange={(v) => setQuestions({ ...questions, help_preferences: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="hints" id="edit-hints" className="mt-0.5" />
                       <Label htmlFor="edit-hints" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step4.hints')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem
                         value="different_way"
                         id="edit-different_way"
@@ -565,7 +567,7 @@ const StudentSettings = () => {
                         {t('studentOnboarding.step4.differentWay')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem
                         value="step_by_step"
                         id="edit-step_by_step"
@@ -575,7 +577,7 @@ const StudentSettings = () => {
                         {t('studentOnboarding.step4.stepByStep')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="more_time" id="edit-more_time" className="mt-0.5" />
                       <Label htmlFor="edit-more_time" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step4.moreTime')}
@@ -590,25 +592,25 @@ const StudentSettings = () => {
                     value={questions.teacher_preferences}
                     onValueChange={(v) => setQuestions({ ...questions, teacher_preferences: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="patient" id="edit-patient" className="mt-0.5" />
                       <Label htmlFor="edit-patient" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step4.patient')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="challenging" id="edit-challenging" className="mt-0.5" />
                       <Label htmlFor="edit-challenging" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step4.challenging')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="clear" id="edit-clear" className="mt-0.5" />
                       <Label htmlFor="edit-clear" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step4.clear')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="fun" id="edit-fun" className="mt-0.5" />
                       <Label htmlFor="edit-fun" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step4.fun')}
@@ -623,19 +625,19 @@ const StudentSettings = () => {
                     value={questions.feedback_preferences}
                     onValueChange={(v) => setQuestions({ ...questions, feedback_preferences: v })}
                   >
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="immediate" id="edit-immediate" className="mt-0.5" />
                       <Label htmlFor="edit-immediate" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step5.immediate')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="written" id="edit-written" className="mt-0.5" />
                       <Label htmlFor="edit-written" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step5.written')}
                       </Label>
                     </div>
-                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2`}>
+                    <div className={`flex items-center p-3 rounded-lg border hover:bg-accent/50 transition-colors gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <RadioGroupItem value="discussion" id="edit-discussion" className="mt-0.5" />
                       <Label htmlFor="edit-discussion" className={`cursor-pointer font-normal ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('studentOnboarding.step5.discussion')}
@@ -694,7 +696,7 @@ const StudentSettings = () => {
                 </div>
 
 
-                <div className={isRTL ? 'flex justify-start' : 'flex justify-start'}>
+                <div className="flex justify-center">
                   <Button onClick={handleSaveQuestions} disabled={saving}>
                     {saving ? (
                       <>
@@ -717,9 +719,9 @@ const StudentSettings = () => {
                 <CardTitle>{t('settings.notificationPreferences')}</CardTitle>
                 <CardDescription>{t('settings.notificationPreferencesDesc')}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+              <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="space-y-0.5">
                       <Label htmlFor="assignment-notifications" className={isRTL ? 'text-right block' : 'text-left block'}>{t('settings.notifications.assignmentNotifications')}</Label>
                       <p className={`text-sm text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -735,7 +737,7 @@ const StudentSettings = () => {
                     />
                   </div>
 
-                  <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="space-y-0.5">
                       <Label htmlFor="feedback-notifications" className={isRTL ? 'text-right block' : 'text-left block'}>{t('settings.notifications.feedbackNotifications')}</Label>
                       <p className={`text-sm text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -751,7 +753,7 @@ const StudentSettings = () => {
                     />
                   </div>
 
-                  <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="space-y-0.5">
                       <Label htmlFor="classroom-updates" className={isRTL ? 'text-right block' : 'text-left block'}>{t('settings.notifications.classroomUpdates')}</Label>
                       <p className={`text-sm text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -767,7 +769,7 @@ const StudentSettings = () => {
                     />
                   </div>
 
-                  <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="space-y-0.5">
                       <Label htmlFor="email-notifications" className={isRTL ? 'text-right block' : 'text-left block'}>{t('settings.notifications.emailNotifications')}</Label>
                       <p className={`text-sm text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -785,7 +787,7 @@ const StudentSettings = () => {
                 </div>
 
 
-                <div className={isRTL ? 'flex justify-start' : 'flex justify-start'}>
+                <div className="flex justify-center">
                   <Button onClick={handleSaveNotifications}>{t('settings.savePreferences')}</Button>
                 </div>
               </CardContent>

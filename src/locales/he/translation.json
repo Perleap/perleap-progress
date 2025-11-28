@@ -319,6 +319,8 @@
     "subjectAreaPlaceholder": "לדוגמה, אלגברה, גאומטריה, חשבון, ספרות",
     "selectFromDomains": "בחר מתחומי הכיתה",
     "selectFromClassroomMaterials": "בחר מחומרי הכיתה",
+    "selectFromSkills": "בחר ממיומנויות {{domain}}",
+    "skillPlaceholder": "מיומנות {{number}}",
     "orEnterManually": "או הזן ידנית למטה",
     "cancel": "ביטול",
     "createButton": "צור משימה",
@@ -954,6 +956,7 @@
   },
   "assignments": {
     "status": {
+      "label": "סטטוס",
       "published": "פורסם",
       "draft": "טיוטה",
       "archived": "בארכיון"

@@ -308,6 +308,8 @@
       "quiz": "Quiz",
       "exam": "Exam"
     },
+    "selectFromSkills": "Select from {{domain}} skills",
+    "skillPlaceholder": "Skill {{number}}",
     "creating": "Creating...",
     "create": "Create Assignment",
     "errors": {
@@ -919,6 +921,7 @@
   },
   "assignments": {
     "status": {
+      "label": "Status",
       "published": "Published",
       "draft": "Draft",
       "archived": "Archived"

@@ -445,7 +445,8 @@ export function CreateAssignmentDialog({
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
-                  className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
+                  className={`rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                   autoDirection
                 />
               </div>
@@ -459,7 +460,8 @@ export function CreateAssignmentDialog({
                   placeholder={t('createAssignment.instructionsPlaceholder')}
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  className="min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
+                  className={`min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                   required
                   autoDirection
                 />
@@ -474,15 +476,15 @@ export function CreateAssignmentDialog({
                     value={formData.type}
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
                   >
-                    <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 h-11">
-                      <SelectValue placeholder="Select type" />
+                    <SelectTrigger className={`rounded-xl border-slate-200 dark:border-slate-700 h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue placeholder={t('createAssignment.type')} />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="text_essay">{t('assignments.types.text_essay')}</SelectItem>
-                      <SelectItem value="quiz">{t('assignments.types.quiz')}</SelectItem>
-                      <SelectItem value="project">{t('assignments.types.project')}</SelectItem>
-                      <SelectItem value="presentation">{t('createAssignment.typeOptions.presentation')}</SelectItem>
-                      <SelectItem value="other">{t('createAssignment.typeOptions.other')}</SelectItem>
+                      <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.types.text_essay')}</SelectItem>
+                      <SelectItem value="quiz" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.types.quiz')}</SelectItem>
+                      <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.types.project')}</SelectItem>
+                      <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
+                      <SelectItem value="other" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.other')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -497,7 +499,8 @@ export function CreateAssignmentDialog({
                       type="datetime-local"
                       value={formData.due_at}
                       onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10"
+                      className={`rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />
                     <Calendar className="absolute start-3 top-3 h-5 w-5 text-slate-400" />
@@ -533,12 +536,12 @@ export function CreateAssignmentDialog({
                         }
                       }}
                     >
-                      <SelectTrigger className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11">
+                      <SelectTrigger className={`rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue placeholder={t('createAssignment.selectFromDomains')} />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {classroomDomains.map((domain, index) => (
-                          <SelectItem key={index} value={domain.name}>
+                          <SelectItem key={index} value={domain.name} className={isRTL ? 'text-right' : 'text-left'}>
                             {domain.name}
                           </SelectItem>
                         ))}
@@ -557,7 +560,8 @@ export function CreateAssignmentDialog({
                     setFormData({ ...formData, hard_skill_domain: e.target.value });
                     setSelectedDomain(''); // Clear dropdown selection
                   }}
-                  className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11"
+                  className={`rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11 ${isRTL ? 'text-right' : 'text-left'}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                   autoDirection
                 />
               </div>
@@ -581,12 +585,12 @@ export function CreateAssignmentDialog({
                         }
                       }}
                     >
-                      <SelectTrigger className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11">
-                        <SelectValue placeholder={`Select from ${selectedDomain} skills`} />
+                      <SelectTrigger className={`rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                        <SelectValue placeholder={t('createAssignment.selectFromSkills', { domain: selectedDomain })} />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {availableComponents.map((component, index) => (
-                          <SelectItem key={index} value={component}>
+                          <SelectItem key={index} value={component} className={isRTL ? 'text-right' : 'text-left'}>
                             {component}
                           </SelectItem>
                         ))}
@@ -605,8 +609,9 @@ export function CreateAssignmentDialog({
                           newSkills[index] = e.target.value;
                           setFormData({ ...formData, hard_skills: newSkills });
                         }}
-                        placeholder={`Skill ${index + 1}`}
-                        className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-10"
+                        placeholder={t('createAssignment.skillPlaceholder', { number: index + 1 })}
+                        className={`flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-10 ${isRTL ? 'text-right' : 'text-left'}`}
+                        dir={isRTL ? 'rtl' : 'ltr'}
                         autoDirection
                       />
                       <Button
@@ -691,7 +696,8 @@ export function CreateAssignmentDialog({
                       accept="application/pdf"
                       onChange={handlePdfUpload}
                       disabled={uploadingMaterial}
-                      className="h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:me-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      className={`h-auto py-2.5 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 file:me-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />
                     {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -713,7 +719,8 @@ export function CreateAssignmentDialog({
                           handleAddLink();
                         }
                       }}
-                      className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      className={`rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />
                     <Button
