@@ -583,6 +583,7 @@
     "notificationPreferences": "העדפות התראות",
     "notificationPreferencesDesc": "בחר אילו התראות תרצה לקבל",
     "savePreferences": "שמור שינויים",
+    "saveChanges": "שמור שינויים",
     "dangerZone": "אזור מסוכן",
     "dangerZoneDesc": "פעולות בלתי הפיכות והרסניות",
     "deleteAccountWarning": "ברגע שתמחק את החשבון שלך, אין דרך חזרה. אנא היה בטוח.",
@@ -602,7 +603,10 @@
       "feedbackNotificationsDesc": "קבל התראה כאשר אתה מקבל משוב"
     },
     "learningPreferences": "העדפות למידה",
-    "learningPreferencesDesc": "ספר לנו על סגנון הלמידה וההעדפות שלך"
+    "learningPreferencesDesc": "ספר לנו על סגנון הלמידה וההעדפות שלך",
+    "questions": {
+      "learningMethods": "העדפות למידה"
+    }
   },
   "analytics": {
     "overview": "סקירה כללית",
