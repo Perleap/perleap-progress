@@ -278,18 +278,18 @@ const StudentSettings = () => {
         <Tabs defaultValue="profile" className="space-y-6">
           <div className="flex justify-center">
             <TabsList className="grid w-full grid-cols-3" dir={isRTL ? 'rtl' : 'ltr'}>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('settings.profile')}</span>
-            </TabsTrigger>
-            <TabsTrigger value="questions" className="flex items-center gap-2">
-              <span className="hidden sm:inline">{t('settings.questions.learningMethods').split(' ')[0]}</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('common.notifications')}</span>
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('settings.profile')}</span>
+              </TabsTrigger>
+              <TabsTrigger value="questions" className="flex items-center gap-2">
+                <span className="hidden sm:inline">{t('settings.questions.learningMethods').split(' ')[0]}</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('common.notifications')}</span>
+              </TabsTrigger>
+            </TabsList>
           </div>
 
           {/* Profile Tab */}
@@ -397,7 +397,7 @@ const StudentSettings = () => {
                   <Button
                     variant="destructive"
                     onClick={() => setShowDeleteDialog(true)}
-                    className="w-full sm:w-auto"
+                    className={`w-full sm:w-auto ${isRTL ? 'flex-row-reverse' : ''}`}
                   >
                     <Trash2 className={isRTL ? 'ml-2 h-4 w-4' : 'mr-2 h-4 w-4'} />
                     {t('settings.deleteAccountButton')}

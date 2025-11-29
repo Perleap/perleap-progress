@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ interface DeleteAccountDialogProps {
 
 export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAccountDialogProps) => {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState('');
@@ -59,14 +61,14 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
 
       // Success - sign out and redirect
       toast.success(t('settings.deleteAccount.success'));
-      
+
       // Clear all local storage and session storage
       localStorage.clear();
       sessionStorage.clear();
-      
+
       // Sign out
       await supabase.auth.signOut();
-      
+
       // Redirect to home page
       navigate('/', { replace: true });
     } catch (error: any) {
@@ -80,43 +82,47 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
-          <div className="flex items-center gap-3 mb-2">
+          <div className={`flex items-center gap-3 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className="p-2 rounded-full bg-destructive/10">
               <AlertTriangle className="h-6 w-6 text-destructive" />
             </div>
-            <AlertDialogTitle className="text-xl">
+            <AlertDialogTitle className={`text-xl ${isRTL ? 'text-right w-full' : 'text-left'}`}>
               {t('settings.deleteAccount.title')}
             </AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="space-y-3 text-left">
-            <p className="font-semibold text-foreground">
-              {t('settings.deleteAccount.warning')}
-            </p>
-            <ul className="list-disc list-inside space-y-1 text-sm">
-              <li>{t('settings.deleteAccount.consequences.profile')}</li>
-              <li>{t('settings.deleteAccount.consequences.data')}</li>
-              {userRole === 'teacher' && (
-                <>
-                  <li>{t('settings.deleteAccount.consequences.classrooms')}</li>
-                  <li>{t('settings.deleteAccount.consequences.assignments')}</li>
-                </>
-              )}
-              {userRole === 'student' && (
-                <>
-                  <li>{t('settings.deleteAccount.consequences.enrollments')}</li>
-                  <li>{t('settings.deleteAccount.consequences.submissions')}</li>
-                </>
-              )}
-              <li>{t('settings.deleteAccount.consequences.permanent')}</li>
-            </ul>
-            <p className="text-sm pt-2">
-              {t('settings.deleteAccount.confirmPrompt')}
-            </p>
+          <AlertDialogDescription className="sr-only">
+            {t('settings.deleteAccount.warning')}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
+        <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <p className="font-semibold text-foreground text-sm">
+            {t('settings.deleteAccount.warning')}
+          </p>
+          <ul className={`list-disc space-y-1 text-sm text-muted-foreground ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
+            <li>{t('settings.deleteAccount.consequences.profile')}</li>
+            <li>{t('settings.deleteAccount.consequences.data')}</li>
+            {userRole === 'teacher' && (
+              <>
+                <li>{t('settings.deleteAccount.consequences.classrooms')}</li>
+                <li>{t('settings.deleteAccount.consequences.assignments')}</li>
+              </>
+            )}
+            {userRole === 'student' && (
+              <>
+                <li>{t('settings.deleteAccount.consequences.enrollments')}</li>
+                <li>{t('settings.deleteAccount.consequences.submissions')}</li>
+              </>
+            )}
+            <li>{t('settings.deleteAccount.consequences.permanent')}</li>
+          </ul>
+          <p className="text-sm text-muted-foreground pt-2">
+            {t('settings.deleteAccount.confirmPrompt')}
+          </p>
+        </div>
+
         <div className="space-y-2 py-4">
-          <Label htmlFor="confirm-delete">
+          <Label htmlFor="confirm-delete" className={isRTL ? 'text-right block' : 'text-left block'}>
             {t('settings.deleteAccount.typeConfirm')}
           </Label>
           <Input
@@ -126,11 +132,12 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
             placeholder="confirm"
             disabled={isDeleting}
             autoComplete="off"
-            className="font-mono"
+            className={`font-mono ${isRTL ? 'text-right' : ''}`}
+            dir={isRTL ? 'rtl' : 'ltr'}
           />
         </div>
 
-        <AlertDialogFooter>
+        <AlertDialogFooter className={`gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Button
             variant="outline"
             onClick={() => {
@@ -146,7 +153,7 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
             onClick={handleDeleteAccount}
             disabled={confirmText.toLowerCase() !== 'confirm' || isDeleting}
           >
-            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isDeleting && <Loader2 className={isRTL ? 'ml-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4 animate-spin'} />}
             {t('settings.deleteAccount.deleteButton')}
           </Button>
         </AlertDialogFooter>

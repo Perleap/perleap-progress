@@ -16,7 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const TeacherOnboarding = () => {
   const { t } = useTranslation();
-  const { isRTL } = useLanguage();
+  const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -98,6 +98,7 @@ const TeacherOnboarding = () => {
         style_notes: formData.teachingStyle,
         teaching_examples: formData.teachingExample,
         sample_explanation: formData.additionalNotes,
+        preferred_language: language,
       });
 
       if (error) throw error;
@@ -130,6 +131,7 @@ const TeacherOnboarding = () => {
                 required
                 placeholder={t('teacherOnboarding.step1.fullNamePlaceholder')}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
             </div>
 
@@ -143,10 +145,10 @@ const TeacherOnboarding = () => {
                     <AvatarFallback>
                       {formData.fullName
                         ? formData.fullName
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .toUpperCase()
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase()
                         : 'T'}
                     </AvatarFallback>
                   )}
@@ -159,6 +161,7 @@ const TeacherOnboarding = () => {
                     onChange={handleAvatarChange}
                     className="hidden"
                     autoDirection
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <Label htmlFor="avatar" className="cursor-pointer">
                     <div className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md transition-colors w-fit">
@@ -182,6 +185,7 @@ const TeacherOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                 placeholder={t('teacherOnboarding.step1.phoneNumberPlaceholder')}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
             </div>
 
@@ -194,6 +198,7 @@ const TeacherOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, subjects: e.target.value })}
                 required
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
               <p className="text-xs text-muted-foreground">
                 {t('teacherOnboarding.step1.subjectsHelp')}
@@ -213,6 +218,7 @@ const TeacherOnboarding = () => {
                 required
                 placeholder={t('teacherOnboarding.step1.yearsExperiencePlaceholder')}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
             </div>
 
@@ -224,7 +230,8 @@ const TeacherOnboarding = () => {
                 id="studentEducationLevel"
                 placeholder={t('teacherOnboarding.step1.studentLevelPlaceholder')}
                 value={formData.studentEducationLevel}
-                  autoDirection
+                autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
                 onChange={(e) =>
                   setFormData({ ...formData, studentEducationLevel: e.target.value })
                 }
@@ -247,6 +254,7 @@ const TeacherOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, teachingGoals: e.target.value })}
                 rows={3}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
               <p className="text-xs text-muted-foreground">
                 {t('teacherOnboarding.step2.teachingGoalsHelp')}
@@ -264,6 +272,7 @@ const TeacherOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, teachingStyle: e.target.value })}
                 rows={4}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
               <p className="text-xs text-muted-foreground">
                 {t('teacherOnboarding.step2.teachingStyleHelp')}
@@ -281,6 +290,7 @@ const TeacherOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, teachingExample: e.target.value })}
                 rows={4}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
               <p className="text-xs text-muted-foreground">
                 {t('teacherOnboarding.step2.teachingExampleHelp')}
@@ -298,6 +308,7 @@ const TeacherOnboarding = () => {
                 onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
                 rows={3}
                 autoDirection
+                dir={isRTL ? 'rtl' : 'ltr'}
               />
             </div>
           </div>
@@ -333,14 +344,14 @@ const TeacherOnboarding = () => {
           <div className="flex gap-4 mt-6">
             {step > 1 && (
               <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                {isRTL ? <ArrowRight className="mr-2 h-4 w-4" /> : <ArrowLeft className="mr-2 h-4 w-4" />}
                 {t('teacherOnboarding.back')}
               </Button>
             )}
             {step < totalSteps ? (
               <Button onClick={() => setStep(step + 1)} className="flex-1">
                 {t('teacherOnboarding.next')}
-                <ArrowRight className="ml-2 h-4 w-4" />
+                {isRTL ? <ArrowLeft className="ml-2 h-4 w-4" /> : <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             ) : (
               <Button
