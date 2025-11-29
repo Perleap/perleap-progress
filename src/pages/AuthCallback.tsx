@@ -81,14 +81,30 @@ const AuthCallback = () => {
           orphanedStudentProfile: studentProfileByEmail && studentProfileByEmail.user_id !== user.id,
         });
 
-        // Detect and warn about orphaned profiles (data cleanup needed)
+        // Detect and CLEAN UP orphaned profiles immediately
         if (teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id) {
           console.warn('⚠️ AuthCallback: Found orphaned teacher_profile with email', userEmail, 
-            'but different user_id. This profile belongs to a deleted user and should be cleaned up.');
+            'but different user_id. Cleaning up now...');
+          // Delete the orphaned profile by its user_id (which doesn't exist in auth anymore)
+          const { error: deleteError } = await supabase
+            .from('teacher_profiles')
+            .delete()
+            .eq('user_id', teacherProfileByEmail.user_id);
+          if (!deleteError) {
+            console.log('✅ Orphaned teacher profile deleted');
+          }
         }
         if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
           console.warn('⚠️ AuthCallback: Found orphaned student_profile with email', userEmail, 
-            'but different user_id. This profile belongs to a deleted user and should be cleaned up.');
+            'but different user_id. Cleaning up now...');
+          // Delete the orphaned profile by its user_id (which doesn't exist in auth anymore)
+          const { error: deleteError } = await supabase
+            .from('student_profiles')
+            .delete()
+            .eq('user_id', studentProfileByEmail.user_id);
+          if (!deleteError) {
+            console.log('✅ Orphaned student profile deleted');
+          }
         }
 
         let userRole = user.user_metadata.role;
@@ -145,12 +161,27 @@ const AuthCallback = () => {
         if (userRole === 'teacher' || userRole === 'student') {
           console.log(`✅ AuthCallback: Role determined as ${userRole}, checking profile...`);
           
-          const tableName = `${userRole}_profiles`;
-          const { data: profile, error: profileError } = await supabase
-            .from(tableName)
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
+          // Check for profile existence using explicit table names for TypeScript
+          let profile = null;
+          let profileError = null;
+          
+          if (userRole === 'teacher') {
+            const result = await supabase
+              .from('teacher_profiles')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            profile = result.data;
+            profileError = result.error;
+          } else {
+            const result = await supabase
+              .from('student_profiles')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            profile = result.data;
+            profileError = result.error;
+          }
 
           if (profileError) {
             console.error('❌ AuthCallback: Error checking profile:', profileError);

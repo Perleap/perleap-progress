@@ -64,6 +64,25 @@ const StudentOnboarding = () => {
 
     setLoading(true);
     try {
+      // Check for orphaned profile with same email but different user_id
+      if (user.email) {
+        const { data: existingProfile } = await supabase
+          .from('student_profiles')
+          .select('user_id, email')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (existingProfile && existingProfile.user_id !== user.id) {
+          console.warn('Found orphaned profile with same email, cleaning up...');
+          // Delete the orphaned profile
+          await supabase
+            .from('student_profiles')
+            .delete()
+            .eq('email', user.email)
+            .neq('user_id', user.id);
+        }
+      }
+
       let avatarUrl = '';
 
       // Upload avatar if provided
@@ -86,7 +105,9 @@ const StudentOnboarding = () => {
       }
 
       // Create student profile with preferences
-      const { error } = await supabase.from('student_profiles').insert({
+      console.log('Creating student profile with language:', language);
+      
+      const profileData = {
         user_id: user.id,
         email: user.email,
         full_name: formData.fullName,
@@ -108,17 +129,37 @@ const StudentOnboarding = () => {
           motivationFactors: formData.motivationFactors,
         },
         mentor_tone_ref: 'supportive',
-        preferred_language: language,
-      });
+        preferred_language: language || 'en', // Fallback to 'en' if language is undefined
+      };
+      
+      console.log('Profile data to insert:', profileData);
+      
+      const { data, error } = await supabase.from('student_profiles').insert(profileData).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Profile creation error:', error);
+        throw error;
+      }
+      
+      console.log('Profile created successfully:', data);
 
       toast.success(t('studentOnboarding.success.profileCreated'));
       navigate('/student/dashboard');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Student onboarding error:', error);
+      
       if (error.code === '23505') {
+        // Duplicate key - profile already exists
         toast.error(t('studentOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/student/dashboard'), 2000);
+      } else if (error.code === '42703') {
+        // Undefined column
+        console.error('Database schema mismatch - column does not exist:', error);
+        toast.error('Database error: Some fields are not configured properly. Please contact support.');
+      } else if (error.message?.includes('violates not-null constraint')) {
+        // Missing required field
+        console.error('Missing required field:', error);
+        toast.error('Please fill in all required fields.');
       } else {
         toast.error(error.message || t('studentOnboarding.errors.createProfile'));
       }
@@ -190,21 +231,30 @@ const StudentOnboarding = () => {
                 value={formData.learningMethods}
                 onValueChange={(v) => setFormData({ ...formData, learningMethods: v })}
               >
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, learningMethods: 'visual' })}
+                >
                   <RadioGroupItem value="visual" id="visual" className="mt-1" />
                   <Label htmlFor="visual" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className="font-medium">{t('studentOnboarding.step1.visual')}</span> -{' '}
                     {t('studentOnboarding.step1.visualDesc')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, learningMethods: 'auditory' })}
+                >
                   <RadioGroupItem value="auditory" id="auditory" className="mt-1" />
                   <Label htmlFor="auditory" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className="font-medium">{t('studentOnboarding.step1.auditory')}</span> -{' '}
                     {t('studentOnboarding.step1.auditoryDesc')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, learningMethods: 'kinesthetic' })}
+                >
                   <RadioGroupItem value="kinesthetic" id="kinesthetic" className="mt-1" />
                   <Label
                     htmlFor="kinesthetic"
@@ -214,7 +264,10 @@ const StudentOnboarding = () => {
                     - {t('studentOnboarding.step1.kinestheticDesc')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, learningMethods: 'video' })}
+                >
                   <RadioGroupItem value="video" id="video" className="mt-1" />
                   <Label htmlFor="video" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className="font-medium">{t('studentOnboarding.step1.video')}</span> -{' '}
@@ -234,21 +287,30 @@ const StudentOnboarding = () => {
               value={formData.soloVsGroup}
               onValueChange={(v) => setFormData({ ...formData, soloVsGroup: v })}
             >
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, soloVsGroup: 'solo' })}
+              >
                 <RadioGroupItem value="solo" id="solo" className="mt-1" />
                 <Label htmlFor="solo" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   <span className="font-medium">{t('studentOnboarding.step2.solo')}</span> -{' '}
                   {t('studentOnboarding.step2.soloDesc')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, soloVsGroup: 'group' })}
+              >
                 <RadioGroupItem value="group" id="group" className="mt-1" />
                 <Label htmlFor="group" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   <span className="font-medium">{t('studentOnboarding.step2.group')}</span> -{' '}
                   {t('studentOnboarding.step2.groupDesc')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, soloVsGroup: 'both' })}
+              >
                 <RadioGroupItem value="both" id="both" className="mt-1" />
                 <Label htmlFor="both" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   <span className="font-medium">{t('studentOnboarding.step2.both')}</span> -{' '}
@@ -264,14 +326,20 @@ const StudentOnboarding = () => {
                 onValueChange={(v) => setFormData({ ...formData, scheduledVsFlexible: v })}
                 className="mt-4"
               >
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, scheduledVsFlexible: 'scheduled' })}
+                >
                   <RadioGroupItem value="scheduled" id="scheduled" className="mt-1" />
                   <Label htmlFor="scheduled" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className="font-medium">{t('studentOnboarding.step2.scheduled')}</span> -{' '}
                     {t('studentOnboarding.step2.scheduledDesc')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, scheduledVsFlexible: 'flexible' })}
+                >
                   <RadioGroupItem value="flexible" id="flexible" className="mt-1" />
                   <Label htmlFor="flexible" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className="font-medium">{t('studentOnboarding.step2.flexible')}</span> -{' '}
@@ -291,21 +359,30 @@ const StudentOnboarding = () => {
               value={formData.motivationFactors}
               onValueChange={(v) => setFormData({ ...formData, motivationFactors: v })}
             >
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, motivationFactors: 'curiosity' })}
+              >
                 <RadioGroupItem value="curiosity" id="curiosity" className="mt-1" />
                 <Label htmlFor="curiosity" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   <span className="font-medium">{t('studentOnboarding.step3.curiosity')}</span> -{' '}
                   {t('studentOnboarding.step3.curiosityDesc')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, motivationFactors: 'grades' })}
+              >
                 <RadioGroupItem value="grades" id="grades" className="mt-1" />
                 <Label htmlFor="grades" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   <span className="font-medium">{t('studentOnboarding.step3.grades')}</span> -{' '}
                   {t('studentOnboarding.step3.gradesDesc')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, motivationFactors: 'encouragement' })}
+              >
                 <RadioGroupItem value="encouragement" id="encouragement" className="mt-1" />
                 <Label
                   htmlFor="encouragement"
@@ -315,7 +392,10 @@ const StudentOnboarding = () => {
                   - {t('studentOnboarding.step3.encouragementDesc')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, motivationFactors: 'personal_goals' })}
+              >
                 <RadioGroupItem value="personal_goals" id="personal_goals" className="mt-1" />
                 <Label
                   htmlFor="personal_goals"
@@ -325,7 +405,10 @@ const StudentOnboarding = () => {
                   - {t('studentOnboarding.step3.personalGoalsDesc')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, motivationFactors: 'competition' })}
+              >
                 <RadioGroupItem value="competition" id="competition" className="mt-1" />
                 <Label htmlFor="competition" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   <span className="font-medium">{t('studentOnboarding.step3.competition')}</span> -{' '}
@@ -344,13 +427,19 @@ const StudentOnboarding = () => {
               value={formData.helpPreferences}
               onValueChange={(v) => setFormData({ ...formData, helpPreferences: v })}
             >
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, helpPreferences: 'hints' })}
+              >
                 <RadioGroupItem value="hints" id="hints" className="mt-1" />
                 <Label htmlFor="hints" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('studentOnboarding.step4.hints')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, helpPreferences: 'different_way' })}
+              >
                 <RadioGroupItem value="different_way" id="different_way" className="mt-1" />
                 <Label
                   htmlFor="different_way"
@@ -359,7 +448,10 @@ const StudentOnboarding = () => {
                   {t('studentOnboarding.step4.differentWay')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, helpPreferences: 'step_by_step' })}
+              >
                 <RadioGroupItem value="step_by_step" id="step_by_step" className="mt-1" />
                 <Label
                   htmlFor="step_by_step"
@@ -368,7 +460,10 @@ const StudentOnboarding = () => {
                   {t('studentOnboarding.step4.stepByStep')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, helpPreferences: 'more_time' })}
+              >
                 <RadioGroupItem value="more_time" id="more_time" className="mt-1" />
                 <Label htmlFor="more_time" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('studentOnboarding.step4.moreTime')}
@@ -383,13 +478,19 @@ const StudentOnboarding = () => {
                 onValueChange={(v) => setFormData({ ...formData, teacherPreferences: v })}
                 className="mt-4"
               >
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, teacherPreferences: 'patient' })}
+                >
                   <RadioGroupItem value="patient" id="patient" className="mt-1" />
                   <Label htmlFor="patient" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('studentOnboarding.step4.patient')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, teacherPreferences: 'challenging' })}
+                >
                   <RadioGroupItem value="challenging" id="challenging" className="mt-1" />
                   <Label
                     htmlFor="challenging"
@@ -398,13 +499,19 @@ const StudentOnboarding = () => {
                     {t('studentOnboarding.step4.challenging')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, teacherPreferences: 'clear' })}
+                >
                   <RadioGroupItem value="clear" id="clear" className="mt-1" />
                   <Label htmlFor="clear" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('studentOnboarding.step4.clear')}
                   </Label>
                 </div>
-                <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div 
+                  className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                  onClick={() => setFormData({ ...formData, teacherPreferences: 'fun' })}
+                >
                   <RadioGroupItem value="fun" id="fun" className="mt-1" />
                   <Label htmlFor="fun" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('studentOnboarding.step4.fun')}
@@ -423,19 +530,28 @@ const StudentOnboarding = () => {
               value={formData.feedbackPreferences}
               onValueChange={(v) => setFormData({ ...formData, feedbackPreferences: v })}
             >
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, feedbackPreferences: 'immediate' })}
+              >
                 <RadioGroupItem value="immediate" id="immediate" className="mt-1" />
                 <Label htmlFor="immediate" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('studentOnboarding.step5.immediate')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, feedbackPreferences: 'written' })}
+              >
                 <RadioGroupItem value="written" id="written" className="mt-1" />
                 <Label htmlFor="written" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('studentOnboarding.step5.written')}
                 </Label>
               </div>
-              <div className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div 
+                className={`flex items-start gap-2 p-4 rounded-2xl border hover:bg-accent/50 transition-colors cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}
+                onClick={() => setFormData({ ...formData, feedbackPreferences: 'discussion' })}
+              >
                 <RadioGroupItem value="discussion" id="discussion" className="mt-1" />
                 <Label htmlFor="discussion" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t('studentOnboarding.step5.discussion')}

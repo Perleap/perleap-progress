@@ -64,6 +64,25 @@ const TeacherOnboarding = () => {
 
     setLoading(true);
     try {
+      // Check for orphaned profile with same email but different user_id
+      if (user.email) {
+        const { data: existingProfile } = await supabase
+          .from('teacher_profiles')
+          .select('user_id, email')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (existingProfile && existingProfile.user_id !== user.id) {
+          console.warn('Found orphaned profile with same email, cleaning up...');
+          // Delete the orphaned profile
+          await supabase
+            .from('teacher_profiles')
+            .delete()
+            .eq('email', user.email)
+            .neq('user_id', user.id);
+        }
+      }
+
       let avatarUrl = '';
 
       // Upload avatar if provided
@@ -85,7 +104,9 @@ const TeacherOnboarding = () => {
         }
       }
 
-      const { error } = await supabase.from('teacher_profiles').insert({
+      console.log('Creating teacher profile with language:', language);
+      
+      const profileData = {
         user_id: user.id,
         email: user.email,
         full_name: formData.fullName,
@@ -98,17 +119,37 @@ const TeacherOnboarding = () => {
         style_notes: formData.teachingStyle,
         teaching_examples: formData.teachingExample,
         sample_explanation: formData.additionalNotes,
-        preferred_language: language,
-      });
+        preferred_language: language || 'en', // Fallback to 'en' if language is undefined
+      };
+      
+      console.log('Profile data to insert:', profileData);
+      
+      const { data, error } = await supabase.from('teacher_profiles').insert(profileData).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Profile creation error:', error);
+        throw error;
+      }
+      
+      console.log('Profile created successfully:', data);
 
       toast.success(t('teacherOnboarding.success.profileCreated'));
       navigate('/teacher/dashboard');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Teacher onboarding error:', error);
+      
       if (error.code === '23505') {
+        // Duplicate key - profile already exists
         toast.error(t('teacherOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/teacher/dashboard'), 2000);
+      } else if (error.code === '42703') {
+        // Undefined column
+        console.error('Database schema mismatch - column does not exist:', error);
+        toast.error('Database error: Some fields are not configured properly. Please contact support.');
+      } else if (error.message?.includes('violates not-null constraint')) {
+        // Missing required field
+        console.error('Missing required field:', error);
+        toast.error('Please fill in all required fields.');
       } else {
         toast.error(error.message || t('teacherOnboarding.errors.createProfile'));
       }

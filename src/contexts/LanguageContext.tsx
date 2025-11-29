@@ -47,50 +47,74 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   const loadUserLanguagePreference = async () => {
     if (!user) return;
 
+    console.log('🌐 LanguageContext: Loading language preference for user:', user.id);
+    console.log('🌐 Current language state:', language);
+    console.log('🌐 localStorage language:', localStorage.getItem('language_preference'));
+
     try {
       // Check DB for preference - prioritize DB over local storage
       let dbLanguage: Language | null = null;
 
       // Try to get from student_profiles first
-      const { data: studentProfile } = await supabase
+      const { data: studentProfile, error: studentError } = await supabase
         .from('student_profiles')
         .select('preferred_language')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      console.log('🌐 Student profile query result:', { studentProfile, studentError });
+
       if (studentProfile?.preferred_language) {
         dbLanguage = studentProfile.preferred_language as Language;
+        console.log('🌐 Found language in student profile:', dbLanguage);
       } else {
         // Try teacher_profiles if not found in student_profiles
-        const { data: teacherProfile } = await supabase
+        const { data: teacherProfile, error: teacherError } = await supabase
           .from('teacher_profiles')
           .select('preferred_language')
           .eq('user_id', user.id)
           .maybeSingle();
 
+        console.log('🌐 Teacher profile query result:', { teacherProfile, teacherError });
+
         if (teacherProfile?.preferred_language) {
           dbLanguage = teacherProfile.preferred_language as Language;
+          console.log('🌐 Found language in teacher profile:', dbLanguage);
         }
       }
 
       if (dbLanguage) {
         // If DB has a preference, use it (overriding local storage)
         if (dbLanguage !== language) {
-          console.log('Syncing language from database:', dbLanguage);
+          console.log('🌐 ✅ Syncing language from database:', dbLanguage);
           setLanguage(dbLanguage);
+        } else {
+          console.log('🌐 ✅ Database language matches current:', dbLanguage);
         }
       } else {
-        // If DB has no preference, sync current local preference to DB
+        // If DB has no preference, use localStorage and keep it synced
         const localPref = getStoredLanguage();
+        console.log('🌐 No DB preference, checking localStorage:', localPref);
+        
+        // Apply the localStorage language preference immediately
+        if (localPref !== language) {
+          console.log('🌐 ✅ APPLYING localStorage language:', localPref, '(was:', language, ')');
+          setLanguage(localPref);
+        } else {
+          console.log('🌐 localStorage language already applied:', localPref);
+        }
 
-        // Silently update database to match localStorage
+        // Silently try to update database to match localStorage (if profile exists)
+        // This will fail silently if profile doesn't exist yet, which is fine
         if (localPref === 'he') {
+          console.log('🌐 Attempting to sync Hebrew to database...');
           supabase
             .from('student_profiles')
             .update({ preferred_language: localPref })
             .eq('user_id', user.id)
             .then(({ error }) => {
               if (error) {
+                console.log('🌐 Student profile update failed, trying teacher...');
                 supabase
                   .from('teacher_profiles')
                   .update({ preferred_language: localPref })
@@ -100,11 +124,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     } catch (error) {
-      console.error('Error loading language preference:', error);
+      console.error('🌐 ❌ Error loading language preference:', error);
     }
   };
 
   const setLanguage = (lang: Language) => {
+    console.log('🌐 setLanguage called with:', lang);
+    
     // Update local state
     setLanguageState(lang);
 
@@ -113,6 +139,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Update localStorage
     localStorage.setItem('language_preference', lang);
+    console.log('🌐 localStorage updated to:', lang);
 
     // Update HTML attributes
     document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';

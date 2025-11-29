@@ -93,7 +93,15 @@ const TeacherSettings = () => {
         .maybeSingle();
 
       if (profileError) {
-        console.error('Error fetching teacher profile:', profileError);
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
+
+      // If no profile exists, silently redirect to onboarding
+      if (!profileData) {
+        // This is expected for new users - not an error
+        navigate('/onboarding/teacher', { replace: true });
+        return;
       }
 
       if (profileData) {
@@ -120,9 +128,16 @@ const TeacherSettings = () => {
       if (savedNotifications) {
         setNotifications(JSON.parse(savedNotifications));
       }
-    } catch (error) {
-      console.error('Error loading settings:', error);
-      toast.error(t('settings.errors.loading'));
+    } catch (error: any) {
+      // Only log actual errors, not missing profiles (which is expected for new users)
+      if (error.code === 'PGRST116') {
+        // No rows returned - profile doesn't exist, silently redirect to onboarding
+        navigate('/onboarding/teacher', { replace: true });
+      } else {
+        // This is an actual error
+        console.error('Error loading settings:', error);
+        toast.error(t('settings.errors.loading'));
+      }
     } finally {
       setLoading(false);
     }

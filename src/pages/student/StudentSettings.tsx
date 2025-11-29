@@ -90,13 +90,24 @@ const StudentSettings = () => {
   const fetchSettings = async () => {
     try {
       // Fetch student profile with all fields
+      // Use maybeSingle() instead of single() to handle case where profile doesn't exist
       const { data: profileData, error: profileError } = await supabase
         .from('student_profiles')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
+
+      // If no profile exists, silently redirect to onboarding
+      if (!profileData) {
+        // This is expected for new users - not an error
+        navigate('/onboarding/student', { replace: true });
+        return;
+      }
 
       if (profileData) {
         setProfile({
@@ -124,9 +135,16 @@ const StudentSettings = () => {
       if (savedNotifications) {
         setNotifications(JSON.parse(savedNotifications));
       }
-    } catch (error) {
-      console.error('Error loading settings:', error);
-      toast.error(t('settings.errors.loading'));
+    } catch (error: any) {
+      // Only log actual errors, not missing profiles (which is expected for new users)
+      if (error.code === 'PGRST116') {
+        // No rows returned - profile doesn't exist, silently redirect to onboarding
+        navigate('/onboarding/student', { replace: true });
+      } else {
+        // This is an actual error
+        console.error('Error loading settings:', error);
+        toast.error(t('settings.errors.loading'));
+      }
     } finally {
       setLoading(false);
     }

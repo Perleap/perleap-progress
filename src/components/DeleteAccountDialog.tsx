@@ -62,9 +62,17 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
       // Success - sign out and redirect
       toast.success(t('settings.deleteAccount.success'));
 
+      // Preserve language preference before clearing storage
+      const languagePreference = localStorage.getItem('language_preference');
+
       // Clear all local storage and session storage
       localStorage.clear();
       sessionStorage.clear();
+
+      // Restore language preference (user's UI preference should persist)
+      if (languagePreference) {
+        localStorage.setItem('language_preference', languagePreference);
+      }
 
       // Sign out
       await supabase.auth.signOut();
