@@ -79,10 +79,12 @@ const StudentSettings = () => {
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data when user is available
-    if (user?.id) {
+    if (user?.id && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       fetchSettings();
     }
   }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
@@ -364,7 +366,7 @@ const StudentSettings = () => {
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="John Doe"
                     autoDirection
-                    className={isRTL ? 'text-right' : ''}
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
 
@@ -676,6 +678,8 @@ const StudentSettings = () => {
                     }
                     rows={3}
                     className={!questions.learning_goal ? 'text-muted-foreground' : ''}
+                    autoDirection
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
 
@@ -693,6 +697,8 @@ const StudentSettings = () => {
                     }
                     rows={3}
                     className={!questions.special_needs ? 'text-muted-foreground' : ''}
+                    autoDirection
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
 
@@ -710,6 +716,8 @@ const StudentSettings = () => {
                     }
                     rows={4}
                     className={!questions.additional_notes ? 'text-muted-foreground' : ''}
+                    autoDirection
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
 

@@ -19,7 +19,7 @@
       "badge": "Introducing Perleap AI 2.0",
       "contactUs": "Contact Us"
     },
-    "mission": "At Perleap, we empower teachers to create intelligent, personalized AI agents built to reflect their voice, goals and style in every classroom",
+    "mission": "At Perleap, we empower teachers to create intelligent, personalized AI agents built to reflect their voice in every classroom",
     "features": {
       "title": "Why PerLeap?",
       "subtitle": "We combine cutting-edge AI with proven pedagogical methods to create transformative learning experiences.",
@@ -181,6 +181,8 @@
   },
   "assignmentChat": {
     "placeholder": "Type your message here...",
+    "conversationComplete": "Conversation complete! You can now finish the activity.",
+    "conversationEndedPlaceholder": "Conversation ended - please complete the activity",
     "completeActivity": "Complete Activity",
     "generatingFeedback": "Generating feedback...",
     "errors": {
@@ -332,6 +334,13 @@
     "selectFromClassroomMaterials": "Select from classroom materials:",
     "uploadPDF": "Upload PDF",
     "addLink": "Add Link",
+    "typeOptions": {
+      "text_essay": "Text Essay",
+      "quiz": "Quiz",
+      "project": "Project",
+      "presentation": "Presentation",
+      "other": "Other"
+    },
     "cancel": "Cancel",
     "createButton": "Create Assignment",
     "titleLabel": "Assignment Title",
@@ -495,6 +504,9 @@
     "submitted": "Submitted",
     "notStarted": "Not Started",
     "inProgress": "In Progress",
+    "success": {
+      "completed": "Activity completed successfully!"
+    },
     "errors": {
       "loading": "Error loading assignment"
     }

@@ -159,6 +159,7 @@ const ContactUs = () => {
                     required
                     rows={6}
                     className="rounded-xl resize-none bg-white/50 border-black/10 focus:bg-white transition-colors"
+                    autoDirection
                   />
                 </div>
 

@@ -310,7 +310,6 @@ const StudentClassroomDetail = () => {
                           </div>
                           <div>
                             <p className="font-bold text-lg">{teacher.full_name}</p>
-                            <p className="text-sm text-muted-foreground">{t('studentClassroom.courseTeacher')}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -325,6 +324,18 @@ const StudentClassroomDetail = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {teacher && (
+                        <div className="flex items-start gap-3">
+                          <div className="h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mt-0.5">
+                            <span className="text-xs font-semibold">{teacher.full_name?.charAt(0) || 'T'}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('common.teacher')}</p>
+                            <p className="font-medium">{teacher.full_name}</p>
+                          </div>
+                        </div>
+                      )}
+
                       {classroom.course_duration && (
                         <div className="flex items-start gap-3">
                           <Clock className="h-5 w-5 text-slate-400 mt-0.5" />

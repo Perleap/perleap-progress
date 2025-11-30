@@ -445,7 +445,7 @@ export function CreateAssignmentDialog({
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
-                  className={`rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                  className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
                   dir={isRTL ? 'rtl' : 'ltr'}
                   autoDirection
                 />
@@ -460,7 +460,7 @@ export function CreateAssignmentDialog({
                   placeholder={t('createAssignment.instructionsPlaceholder')}
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  className={`min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                  className="min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
                   dir={isRTL ? 'rtl' : 'ltr'}
                   required
                   autoDirection
@@ -499,7 +499,7 @@ export function CreateAssignmentDialog({
                       type="datetime-local"
                       value={formData.due_at}
                       onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
-                      className={`rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10 ${isRTL ? 'text-right' : 'text-left'}`}
+                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10"
                       dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />
@@ -560,7 +560,7 @@ export function CreateAssignmentDialog({
                     setFormData({ ...formData, hard_skill_domain: e.target.value });
                     setSelectedDomain(''); // Clear dropdown selection
                   }}
-                  className={`rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11 ${isRTL ? 'text-right' : 'text-left'}`}
+                  className="rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-11"
                   dir={isRTL ? 'rtl' : 'ltr'}
                   autoDirection
                 />
@@ -610,7 +610,7 @@ export function CreateAssignmentDialog({
                           setFormData({ ...formData, hard_skills: newSkills });
                         }}
                         placeholder={t('createAssignment.skillPlaceholder', { number: index + 1 })}
-                        className={`flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-10 ${isRTL ? 'text-right' : 'text-left'}`}
+                        className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-10"
                         dir={isRTL ? 'rtl' : 'ltr'}
                         autoDirection
                       />
@@ -719,7 +719,7 @@ export function CreateAssignmentDialog({
                           handleAddLink();
                         }
                       }}
-                      className={`rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 ${isRTL ? 'text-right' : 'text-left'}`}
+                      className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
                       dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />

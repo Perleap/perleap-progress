@@ -12,7 +12,7 @@ import {
   getTeacherNameByAssignment,
 } from '../shared/supabase.ts';
 import { logInfo, logError, logWarn } from '../shared/logger.ts';
-import { generateFeedbackPrompt, generateScoresPrompt } from '../_shared/prompts.ts';
+import { generateFeedbackPrompt, generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
 import { parseFeedback, parseScores } from './parser.ts';
 
 const corsHeaders = {
@@ -197,27 +197,14 @@ serve(async (req) => {
     // Generate explanations for scores (this needs the scores, so can't be fully parallelized)
     logInfo('Generating score explanations...');
     const explanationsStartTime = Date.now();
-    const explanationsPrompt = `You are an expert educator analyzing a student's learning conversation to provide actionable insights for their teacher.
-
-STUDENT CONVERSATION:
-${conversationText}
-
-SCORES ASSIGNED:
-- Vision: ${scores.vision}/10
+    
+    const scoresContext = `- Vision: ${scores.vision}/10
 - Values: ${scores.values}/10  
 - Thinking: ${scores.thinking}/10
 - Connection: ${scores.connection}/10
-- Action: ${scores.action}/10
+- Action: ${scores.action}/10`;
 
-For each dimension, write a specific explanation that:
-1. References concrete examples from the student's actual responses
-2. Explains what they did well or what they struggled with
-3. Provides actionable insight for the teacher
-
-Be specific - quote or paraphrase what the student said. Avoid generic statements.
-
-Return ONLY a JSON object with concise explanations (1-2 sentences each):
-{"vision": "...", "values": "...", "thinking": "...", "connection": "...", "action": "..."}`;
+    const explanationsPrompt = await generateScoreExplanationsPrompt(conversationText, scoresContext, language);
 
     const { content: explanationsText } = await createChatCompletion(
       explanationsPrompt,

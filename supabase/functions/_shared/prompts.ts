@@ -158,6 +158,20 @@ export async function generateWellbeingAnalysisPrompt(
 }
 
 /**
+ * Generate score explanations prompt
+ */
+export async function generateScoreExplanationsPrompt(
+  conversationText: string,
+  scoresContext: string,
+  language: string = 'en',
+): Promise<string> {
+  return await getPrompt('score_explanations', {
+    conversationText,
+    scoresContext,
+  }, language);
+}
+
+/**
  * Get initial greeting message
  */
 export async function getInitialGreetingMessage(language: string = 'en'): Promise<string> {

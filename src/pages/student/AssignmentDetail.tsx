@@ -6,6 +6,9 @@ import { DashboardHeader } from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { generateFeedback } from '@/services/submissionService';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Calendar, FileText, Link as LinkIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -47,6 +50,7 @@ interface Feedback {
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
+  const { language: uiLanguage } = useLanguage();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -61,19 +65,30 @@ const AssignmentDetail = () => {
 
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data when user is available
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('AssignmentDetail: No user ID yet');
+      return;
+    }
+
+    console.log('AssignmentDetail: User ID available', user.id, 'Assignment ID:', id);
 
     // Reset refs if assignment ID or user ID changes
     if (lastIdRef.current !== id || lastUserIdRef.current !== user.id) {
+      console.log('AssignmentDetail: ID changed, resetting refs');
       hasFetchedRef.current = false;
       isFetchingRef.current = false;
       lastIdRef.current = id;
       lastUserIdRef.current = user.id;
+      // Also reset loading to true when ID changes
+      setLoading(true);
     }
 
     // Only fetch if we haven't fetched yet and we're not currently fetching
     if (!hasFetchedRef.current && !isFetchingRef.current) {
+      console.log('AssignmentDetail: Triggering fetchData');
       fetchData();
+    } else {
+      console.log('AssignmentDetail: Skipping fetchData', { hasFetched: hasFetchedRef.current, isFetching: isFetchingRef.current });
     }
   }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
 
@@ -81,6 +96,7 @@ const AssignmentDetail = () => {
     if (isFetchingRef.current) return; // Prevent concurrent fetches
 
     isFetchingRef.current = true;
+    console.log('AssignmentDetail: fetchData started');
 
     try {
       // Fetch assignment with teacher info
@@ -90,13 +106,19 @@ const AssignmentDetail = () => {
         .eq('id', id)
         .maybeSingle();
 
-      if (assignError) throw assignError;
+      if (assignError) {
+        console.error('AssignmentDetail: Error fetching assignment', assignError);
+        throw assignError;
+      }
 
       if (!assignmentData) {
+        console.error('AssignmentDetail: Assignment not found');
         toast.error(t('assignmentDetail.errors.loading'));
         navigate('/student/dashboard');
         return;
       }
+
+      console.log('AssignmentDetail: Assignment fetched', assignmentData.id);
 
       // Fetch teacher profile separately
       let teacherName = 'Teacher';
@@ -120,42 +142,64 @@ const AssignmentDetail = () => {
         },
       } as any);
 
-      // Try to get or create submission using upsert to handle conflicts
+      // Try to get or create submission
       let finalSubmission = null;
 
-      const { data: submissionData, error: subError } = await supabase
+      // 1. Try to fetch existing submission first
+      const { data: existingSubmission, error: fetchSubError } = await supabase
         .from('submissions')
-        .upsert(
-          {
-            assignment_id: id!,
-            student_id: user!.id,
-            text_body: '',
-          },
-          {
-            onConflict: 'assignment_id,student_id',
-            ignoreDuplicates: false,
-          }
-        )
-        .select()
-        .single();
+        .select('*')
+        .eq('assignment_id', id)
+        .eq('student_id', user!.id)
+        .maybeSingle();
 
-      if (subError) {
-        // If upsert fails, try to fetch existing submission
-        const { data: existingSubmission } = await supabase
-          .from('submissions')
-          .select('*')
-          .eq('assignment_id', id)
-          .eq('student_id', user?.id)
-          .maybeSingle();
-
-        if (existingSubmission) {
-          finalSubmission = existingSubmission;
-        } else {
-          throw subError;
-        }
-      } else {
-        finalSubmission = submissionData;
+      if (fetchSubError) {
+        console.error('Error fetching existing submission:', fetchSubError);
+        throw fetchSubError;
       }
+
+      if (existingSubmission) {
+        finalSubmission = existingSubmission;
+      } else {
+        // 2. If not found, try to create a new one
+        console.log('Creating new submission for assignment:', id);
+        const { data: newSubmission, error: createError } = await supabase
+          .from('submissions')
+          .insert([
+            {
+              assignment_id: id!,
+              student_id: user!.id,
+              text_body: '',
+              status: 'in_progress'
+            },
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          // Check if it's a unique constraint violation (race condition)
+          if (createError.code === '23505') {
+            console.log('Race condition detected, fetching created submission');
+            const { data: retrySubmission, error: retryError } = await supabase
+              .from('submissions')
+              .select('*')
+              .eq('assignment_id', id)
+              .eq('student_id', user!.id)
+              .maybeSingle();
+            
+            if (retryError || !retrySubmission) {
+              throw retryError || createError;
+            }
+            finalSubmission = retrySubmission;
+          } else {
+            throw createError;
+          }
+        } else {
+          finalSubmission = newSubmission;
+        }
+      }
+
+      // Set submission and check for feedback
 
       // Set submission and check for feedback
       if (finalSubmission) {
@@ -172,16 +216,40 @@ const AssignmentDetail = () => {
         }
       }
     } catch (error) {
+      console.error('AssignmentDetail: Error in fetchData', error);
       toast.error(t('assignmentDetail.errors.loading'));
       navigate('/student/dashboard');
     } finally {
+      console.log('AssignmentDetail: fetchData finished');
       setLoading(false);
       isFetchingRef.current = false;
       hasFetchedRef.current = true;
     }
   };
 
-  const handleActivityComplete = () => {
+  const handleActivityComplete = async () => {
+    try {
+      // Trigger feedback generation
+      if (assignment && submission && user) {
+        const language = getAssignmentLanguage(assignment.instructions, uiLanguage);
+        const { error: feedbackError } = await generateFeedback({
+          submissionId: submission.id,
+          studentId: user.id,
+          assignmentId: assignment.id,
+          language,
+        });
+
+        if (feedbackError) {
+          console.error('Error generating feedback:', feedbackError);
+          toast.error(t('assignmentDetail.errors.generatingFeedback'));
+        } else {
+          toast.success(t('assignmentDetail.success.completed'));
+        }
+      }
+    } catch (error) {
+      console.error('Exception generating feedback:', error);
+    }
+
     // Reset flags to allow refetch after completing activity
     hasFetchedRef.current = false;
     isFetchingRef.current = false;
@@ -196,7 +264,13 @@ const AssignmentDetail = () => {
     );
   }
 
-  if (!assignment) return null;
+  if (!assignment) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Assignment not found or failed to load.</div>
+      </div>
+    );
+  }
 
   const targetDimensions = Object.entries(assignment.target_dimensions)
     .filter(([_, value]) => value)

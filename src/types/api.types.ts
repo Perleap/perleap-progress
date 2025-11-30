@@ -67,10 +67,14 @@ export interface ChatRequest {
   studentId: string;
   assignmentId: string;
   isInitialGreeting?: boolean;
+  language?: string;
 }
 
 export interface ChatResponse {
   message: string;
+  turnCount?: number;
+  shouldEnd?: boolean;
+  endReason?: string;
 }
 
 // Feedback API Types
@@ -78,6 +82,7 @@ export interface FeedbackRequest {
   submissionId: string;
   studentId: string;
   assignmentId: string;
+  language?: string;
 }
 
 export interface FeedbackResponse {

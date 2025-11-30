@@ -93,6 +93,17 @@
   body {
     @apply bg-background text-foreground font-inter antialiased;
   }
+
+  /* Auto-detect text direction based on content for all inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="password"],
+  input[type="url"],
+  input[type="tel"],
+  textarea {
+    direction: auto;
+  }
 }
 
 @layer utilities {
