@@ -44,6 +44,11 @@ interface Assignment {
   type: string;
 }
 
+interface TeacherProfile {
+  full_name: string;
+  avatar_url: string | null;
+}
+
 const StudentClassroomDetail = () => {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -51,6 +56,7 @@ const StudentClassroomDetail = () => {
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
+  const [teacher, setTeacher] = useState<TeacherProfile | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [finishedAssignments, setFinishedAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +108,19 @@ const StudentClassroomDetail = () => {
       }
 
       setClassroom(enrollment.classrooms as any);
+
+      // Fetch teacher profile
+      if (enrollment.classrooms.teacher_id) {
+        const { data: teacherData } = await supabase
+          .from('teacher_profiles')
+          .select('full_name, avatar_url')
+          .eq('user_id', enrollment.classrooms.teacher_id)
+          .maybeSingle();
+
+        if (teacherData) {
+          setTeacher(teacherData);
+        }
+      }
 
       // Fetch assignments
       const { data: assignmentsData, error: assignError } = await supabase
@@ -268,6 +287,36 @@ const StudentClassroomDetail = () => {
 
                 {/* Sidebar Info */}
                 <div className="space-y-6">
+                  {teacher && (
+                    <Card className="border-none shadow-md rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className={`text-lg flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          {t('common.teacher')}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                            {teacher.avatar_url ? (
+                              <img src={teacher.avatar_url} alt={teacher.full_name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-slate-500 font-medium text-lg">
+                                {teacher.full_name?.charAt(0) || 'T'}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg">{teacher.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{t('studentClassroom.courseTeacher')}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Card className="border-none shadow-md rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
                     <CardHeader className="pb-3">
                       <CardTitle className={`text-lg flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>

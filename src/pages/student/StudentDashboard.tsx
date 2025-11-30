@@ -542,8 +542,8 @@ const StudentDashboard = () => {
                 <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1 rounded-full shadow-sm border border-slate-200 dark:border-slate-800">
                   <Tabs value={assignmentsTab} onValueChange={(v) => setAssignmentsTab(v as 'active' | 'finished')} className="w-auto">
                     <TabsList className="h-9 bg-transparent p-0">
-                      <TabsTrigger value="active" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">{t('common.active')}</TabsTrigger>
-                      <TabsTrigger value="finished" className="rounded-full px-4 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">{t('common.finished')}</TabsTrigger>
+                      <TabsTrigger value="active" className="rounded-full px-4 text-slate-700 dark:text-slate-300 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">{t('common.active')}</TabsTrigger>
+                      <TabsTrigger value="finished" className="rounded-full px-4 text-slate-700 dark:text-slate-300 data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700 dark:data-[state=active]:bg-indigo-900/50 dark:data-[state=active]:text-indigo-300">{t('common.finished')}</TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>

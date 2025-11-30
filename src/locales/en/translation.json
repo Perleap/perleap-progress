@@ -23,29 +23,31 @@
     "features": {
       "title": "Why PerLeap?",
       "subtitle": "We combine cutting-edge AI with proven pedagogical methods to create transformative learning experiences.",
-      "growth": {
-        "title": "Growth-Focused Learning",
-        "description": "Every interaction is designed to build confidence, encourage deeper thinking, and celebrate progress."
+      "heading1": "Transforming Education",
+      "heading2": "with AI",
+      "cognitive": {
+        "title": "Cognitive Development",
+        "description": "Enhance critical thinking and problem-solving skills through personalized AI guidance."
       },
-      "aiPartner": {
-        "title": "AI Learning Partner",
-        "description": "Our intelligent agent guides students through assignments, asking thoughtful questions rather than giving direct answers."
+      "social": {
+        "title": "Social Learning",
+        "description": "Foster collaboration and communication skills in a safe, controlled environment."
       },
-      "personalized": {
-        "title": "Personalized Journeys",
-        "description": "Adaptive learning paths that meet each student where they are and help them grow at their own pace."
+      "realtime": {
+        "title": "Real-time Feedback",
+        "description": "Provide immediate, constructive feedback to students as they work."
       },
-      "assessments": {
-        "title": "Multidimensional Assessments",
-        "description": "Go beyond test scores with our unique 5D framework that evaluates Vision, Values, Thinking, Connection, and Action."
+      "secure": {
+        "title": "Secure & Private",
+        "description": "Enterprise-grade security ensures student data is always protected."
       },
       "analytics": {
-        "title": "Actionable Analytics",
-        "description": "Gain deep insights into student progress with intuitive dashboards and comprehensive feedback."
+        "title": "Advanced Analytics",
+        "description": "Gain deep insights into student progress and learning patterns."
       },
-      "security": {
-        "title": "Secure & Private",
-        "description": "Enterprise-grade security ensures your data is always protected and your privacy is respected."
+      "global": {
+        "title": "Global Accessibility",
+        "description": "Learning tools accessible to students worldwide."
       }
     },
     "stats": {
@@ -54,8 +56,8 @@
       "dimensions": "Skill Dimensions"
     },
     "cta": {
-      "title": "Ready to Transform Your Classroom?",
-      "subtitle": "Join thousands of educators who are already using PerLeap to unlock their students' potential.",
+      "title": "Ready to transform your classroom?",
+      "subtitle": "Join thousands of educators already using PerLeap to unlock their students' potential.",
       "button": "Start Free Trial"
     },
     "footer": {
@@ -317,7 +319,24 @@
     },
     "success": {
       "created": "Assignment created successfully!"
-    }
+    },
+    "instructionsPlaceholder": "Describe what students need to do...",
+    "subjectAreaAndSkills": "Subject Area & Skills",
+    "subjectAreaLabel": "Subject Area",
+    "selectFromDomains": "Select from classroom domains",
+    "orEnterManually": "or enter manually",
+    "subjectAreaPlaceholder": "Enter subject area",
+    "skillsToAssess": "Skills to Assess",
+    "addSkillManually": "Add skill manually",
+    "assignmentMaterials": "Assignment Materials",
+    "selectFromClassroomMaterials": "Select from classroom materials:",
+    "uploadPDF": "Upload PDF",
+    "addLink": "Add Link",
+    "cancel": "Cancel",
+    "createButton": "Create Assignment",
+    "titleLabel": "Assignment Title",
+    "instructionsLabel": "Instructions",
+    "titlePlaceholder": "Enter assignment title"
   },
   "editAssignment": {
     "title": "Edit Assignment",
@@ -330,7 +349,24 @@
     },
     "success": {
       "saved": "Assignment updated successfully!"
-    }
+    },
+    "instructionsPlaceholder": "Describe what students need to do...",
+    "subjectAreaAndSkills": "Subject Area & Skills",
+    "subjectAreaLabel": "Subject Area",
+    "selectFromDomains": "Select from classroom domains",
+    "orEnterManually": "or enter manually",
+    "subjectAreaPlaceholder": "Enter subject area",
+    "skillsToAssess": "Skills to Assess",
+    "addSkillManually": "Add skill manually",
+    "assignmentMaterials": "Assignment Materials",
+    "selectFromClassroomMaterials": "Select from classroom materials:",
+    "uploadPDF": "Upload PDF",
+    "addLink": "Add Link",
+    "cancel": "Cancel",
+    "saveButton": "Save Changes",
+    "titleLabel": "Assignment Title",
+    "instructionsLabel": "Instructions",
+    "titlePlaceholder": "Enter assignment title"
   },
   "classroomDetail": {
     "students": "Students",

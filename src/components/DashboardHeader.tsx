@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Settings, Moon, Sun, Globe, LogOut } from 'lucide-react';
+import { Bell, Settings, Moon, Sun, Globe, LogOut, Languages } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'next-themes';
 import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notificationService';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DashboardHeaderProps {
   title: string;
@@ -43,6 +44,7 @@ export function DashboardHeader({
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage } = useLanguage();
   // Use auth profile if available, otherwise fall back to empty state
   // This prevents the flicker by using the already loaded profile from context
   const profile = authProfile || { full_name: '', avatar_url: null };
@@ -251,6 +253,10 @@ export function DashboardHeader({
                   <Moon className="me-2 h-4 w-4" />
                 )}
                 <span>{theme === "dark" ? t('common.lightMode') : t('common.darkMode')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLanguage(language === 'en' ? 'he' : 'en')}>
+                <Languages className="me-2 h-4 w-4" />
+                <span>{language === 'en' ? 'עברית' : 'English'}</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

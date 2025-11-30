@@ -42,153 +42,110 @@ export function AssignmentChatInterface({
   submissionId,
   onComplete,
 }: AssignmentChatInterfaceProps) {
-  const { t } = useTranslation();
-  const { language } = useLanguage();
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const { isRTL } = useLanguage();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [conversationEnded, setConversationEnded] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [dialogType, setDialogType] = useState<'turnLimit' | 'aiDetected'>('turnLimit');
-  const [lastDialogTurnCount, setLastDialogTurnCount] = useState(0);
-  const [currentTurnCount, setCurrentTurnCount] = useState(0);
-  const [conversationEnded, setConversationEnded] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const hasInitialized = useRef(false);
+  const shouldScrollRef = useRef(false);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  };
 
-  const generateInitialGreeting = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data: promptData, error: promptError } = await supabase
-        .from('ai_prompts')
-        .select('prompt_template')
-        .eq('prompt_key', 'chat_initial_greeting')
-        .eq('is_active', true)
-        .order('version', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (promptError) throw promptError;
-
-      // Fallback if prompt is not found in database
-      const promptTemplate =
-        promptData?.prompt_template ||
-        '[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]';
-
-      const { data, error } = await supabase.functions.invoke('perleap-chat', {
-        body: {
-          message: promptTemplate,
-          assignmentInstructions,
-          submissionId,
-          studentId: user!.id,
-          assignmentId,
-          isInitialGreeting: true,
-          language: language,
-        },
-      });
-
-      if (error) throw error;
-
-      setMessages([{ role: 'assistant', content: data.message }]);
-    } catch (error) {
-      console.error('Error generating initial greeting:', error);
-      toast.error(t('assignmentChat.errors.startingConversation'));
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (shouldScrollRef.current) {
+      scrollToBottom();
+      shouldScrollRef.current = false;
     }
-  }, [assignmentId, assignmentInstructions, submissionId, user, language]);
+  }, [messages, loading]);
 
-  const loadConversation = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('assignment_conversations')
-        .select('messages')
-        .eq('submission_id', submissionId)
-        .maybeSingle();
+  useEffect(() => {
+    if (!user || !submissionId) return;
 
-      if (error && error.code !== 'PGRST116') throw error;
+    const fetchMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('assignment_chat_history')
+          .select('*')
+          .eq('submission_id', submissionId)
+          .order('created_at', { ascending: true });
 
-      if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-        setMessages(data.messages as unknown as Message[]);
-      } else {
-        await generateInitialGreeting();
+        if (error) throw error;
+
+        if (data) {
+          setMessages(data.map(msg => ({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        toast.error(t('assignmentChat.errors.loadingMessages'));
       }
-    } catch (error) {
-      console.error('Error loading conversation:', error);
-      toast.error(t('assignmentChat.errors.loadingConversation'));
-    }
-  }, [submissionId, generateInitialGreeting, t]);
+    };
 
-  useEffect(() => {
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      loadConversation();
-    }
-
-    // Don't reset on unmount - this was causing refetches on tab switch
-    // The component will naturally reload conversation if submissionId changes
-  }, [submissionId, loadConversation]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading, scrollToBottom]);
+    fetchMessages();
+  }, [user, submissionId, t]);
 
   const sendMessage = async () => {
-    const messageText = input.trim();
-    if (!messageText) return;
+    if (!input.trim() || loading || !user) return;
 
-    setMessages((prev) => [...prev, { role: 'user', content: messageText }]);
+    const userMessage = input.trim();
     setInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
+    shouldScrollRef.current = true;
 
     try {
-      const { data, error } = await supabase.functions.invoke('perleap-chat', {
+      const { error: saveError } = await supabase
+        .from('assignment_chat_history')
+        .insert({
+          submission_id: submissionId,
+          role: 'user',
+          content: userMessage,
+          user_id: user.id
+        });
+
+      if (saveError) throw saveError;
+
+      const { data, error: aiError } = await supabase.functions.invoke('chat-with-teacher', {
         body: {
-          message: messageText,
-          assignmentInstructions,
           submissionId,
-          studentId: user!.id,
+          message: userMessage,
           assignmentId,
-          language: language,
-        },
+          teacherName,
+          assignmentTitle,
+          instructions: assignmentInstructions
+        }
       });
 
-      if (error) throw error;
+      if (aiError) throw aiError;
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.message }]);
-      
-      // Update turn count
-      const turnCount = data.turnCount || 0;
-      setCurrentTurnCount(turnCount);
+      if (data?.reply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+        shouldScrollRef.current = true;
 
-      // Check if AI detected conversation should end
-      if (data.shouldEnd && data.endReason === 'ai_detected') {
-        console.log('🎯 AI detected completion - showing dialog');
-        setConversationEnded(true);
-        setDialogType('aiDetected');
-        setShowCompletionDialog(true);
-        return;
-      }
-
-      // Check for turn limit - show dialog at 8, 12, 16, etc. (every 4 turns after the first popup)
-      const shouldShowTurnDialog = 
-        turnCount >= 8 && 
-        (lastDialogTurnCount === 0 ? turnCount === 8 : turnCount >= lastDialogTurnCount + 4);
-
-      if (shouldShowTurnDialog) {
-        console.log(`📊 Turn limit reached: ${turnCount} exchanges - showing dialog`);
-        setDialogType('turnLimit');
-        setShowCompletionDialog(true);
+        await supabase
+          .from('assignment_chat_history')
+          .insert({
+            submission_id: submissionId,
+            role: 'assistant',
+            content: data.reply,
+            user_id: user.id
+          });
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error(t('assignmentChat.errors.communicating'));
+      toast.error(t('assignmentChat.errors.sendingMessage'));
     } finally {
       setLoading(false);
     }
@@ -197,52 +154,28 @@ export function AssignmentChatInterface({
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      const { error } = await supabase.functions.invoke('generate-feedback', {
-        body: {
-          submissionId,
-          studentId: user!.id,
-          assignmentId,
-          language: language,
-        },
-      });
-
-      if (error) throw error;
-
-      toast.success(t('assignmentChat.success.activityCompleted'));
-      onComplete();
+      await onComplete();
     } catch (error) {
-      console.error('Error generating feedback:', error);
-      toast.error(t('assignmentChat.errors.generatingFeedback'));
+      toast.error(t('assignmentChat.errors.completing'));
     } finally {
       setCompleting(false);
     }
   };
 
+  const handleDialogContinue = () => setShowCompletionDialog(false);
   const handleDialogComplete = () => {
     setShowCompletionDialog(false);
     handleComplete();
   };
 
-  const handleDialogContinue = () => {
-    setShowCompletionDialog(false);
-    // Update the last dialog turn count for turn-limit dialogs
-    if (dialogType === 'turnLimit') {
-      setLastDialogTurnCount(currentTurnCount);
-    }
-    // If it was AI detected, allow them to continue but reset the flag
-    if (dialogType === 'aiDetected') {
-      setConversationEnded(false);
-    }
-  };
-
-  const isDisabled = loading || completing || conversationEnded;
-  const canComplete = messages.length >= 2 && !completing;
+  const isDisabled = loading || conversationEnded;
+  const canComplete = messages.length > 0;
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>
+      <Card className="h-full flex flex-col">
+        <CardHeader className="px-4 py-3 border-b">
+          <CardTitle className="text-base font-medium">
             {teacherName} - {assignmentTitle}
           </CardTitle>
         </CardHeader>
@@ -258,9 +191,8 @@ export function AssignmentChatInterface({
                     dir="auto"
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                      }`}
+                      className={`max-w-[80%] rounded-lg p-3 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                        }`}
                     >
                       <p className="text-sm whitespace-pre-wrap" dir="auto">
                         {message.content}
@@ -332,7 +264,7 @@ export function AssignmentChatInterface({
             )}
           </Button>
         </CardContent>
-      </Card>
+      </Card >
 
       <AlertDialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
         <AlertDialogContent>
