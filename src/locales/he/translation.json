@@ -426,7 +426,17 @@
     "attachments": "קבצים מצורפים",
     "deleteDialog": {
       "title": "מחק כיתה",
-      "description": "האם אתה בטוח שברצונך למחוק את הכיתה הזו? פעולה זו אינה ניתנת לביטול."
+      "description": "האם אתה בטוח שברצונך למחוק את הכיתה הזו? פעולה זו אינה ניתנת לביטול.",
+      "assignmentCount": "משימה",
+      "assignmentCountPlural": "משימות",
+      "studentCount": "תלמיד",
+      "studentCountPlural": "תלמידים",
+      "allSubmissions": "כל ההגשות",
+      "allAnalytics": "כל נתוני הניתוח",
+      "classroomLabel": "כיתה:",
+      "deleteButton": "מחק כיתה",
+      "deleting": "מוחק...",
+      "cancel": "ביטול"
     }
   },
   "submissionsTab": {

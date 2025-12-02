@@ -7,7 +7,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createSupabaseClient } from '../shared/supabase.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
-import { generateScoresPrompt } from '../_shared/prompts.ts';
+import { generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 
 const corsHeaders = {
@@ -65,8 +65,13 @@ serve(async (req) => {
       .map((msg: any) => `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`)
       .join('\n\n');
 
+    // Detect language from conversation content (check for Hebrew characters)
+    const hebrewPattern = /[\u0590-\u05FF]/;
+    const detectedLanguage = hebrewPattern.test(conversationText) ? 'he' : 'en';
+    logInfo('Detected language', { detectedLanguage });
+
     // Generate scores prompt from database
-    const scoresPrompt = await generateScoresPrompt('the student');
+    const scoresPrompt = await generateScoresPrompt('the student', detectedLanguage);
     
     // Call OpenAI for 5D scores analysis
     const { content: scoresText } = await createChatCompletion(
@@ -84,41 +89,54 @@ serve(async (req) => {
       logError('Failed to parse scores', e);
     }
 
-    // Generate explanations for scores
-    const explanationsPrompt = `You are an expert educator analyzing a student's learning conversation to provide actionable insights for their teacher.
-
-STUDENT CONVERSATION:
-${conversationText}
-
-SCORES ASSIGNED:
-- Vision: ${scores.vision}/10
+    // Generate explanations for scores using shared prompt
+    const scoresContext = `- Vision: ${scores.vision}/10
 - Values: ${scores.values}/10  
 - Thinking: ${scores.thinking}/10
 - Connection: ${scores.connection}/10
-- Action: ${scores.action}/10
+- Action: ${scores.action}/10`;
 
-For each dimension, write a specific explanation that:
-1. References concrete examples from the student's actual responses
-2. Explains what they did well or what they struggled with
-3. Provides actionable insight for the teacher
-
-Be specific - quote or paraphrase what the student said. Avoid generic statements.
-
-Return ONLY a JSON object with concise explanations (1-2 sentences each):
-{"vision": "...", "values": "...", "thinking": "...", "connection": "...", "action": "..."}`;
+    const explanationsPrompt = await generateScoreExplanationsPrompt(
+      conversationText,
+      scoresContext,
+      detectedLanguage
+    );
 
     const { content: explanationsText } = await createChatCompletion(
       explanationsPrompt,
       [],
       0.6,
-      500,
+      1500, // Increased token limit for Hebrew explanations which can be longer
     );
 
     let scoreExplanations = null;
     try {
-      scoreExplanations = JSON.parse(explanationsText.replace(/```json\n?|\n?```/g, '').trim());
+      // Clean up the response: remove code blocks, normalize whitespace
+      let cleanedText = explanationsText
+        .replace(/```json\n?|\n?```/g, '')
+        .trim();
+      
+      // Log the raw response for debugging
+      logInfo('Raw explanations response length', { length: explanationsText.length });
+      
+      // Try to extract JSON object if there's extra text
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanedText = jsonMatch[0];
+      }
+      
+      scoreExplanations = JSON.parse(cleanedText);
     } catch (e) {
       logError('Failed to parse score explanations', e);
+      logError('Raw explanations text', { text: explanationsText.substring(0, 500) });
+      // Create a fallback with empty explanations rather than failing
+      scoreExplanations = {
+        vision: '',
+        values: '',
+        thinking: '',
+        connection: '',
+        action: ''
+      };
     }
 
     // Delete old snapshot for this submission if exists

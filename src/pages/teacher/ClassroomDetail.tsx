@@ -949,13 +949,13 @@ const ClassroomDetail = () => {
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-3xl">
-          <AlertDialogHeader>
+        <AlertDialogContent className="rounded-3xl" dir={isRTL ? 'rtl' : 'ltr'}>
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
             <AlertDialogTitle>{t('classroomDetail.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2">
+              <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 <p>{t('classroomDetail.deleteDialog.description')}</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
+                <ul className={`list-disc space-y-1 text-sm ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
                   <li>
                     <strong>{assignments.length}</strong> {assignments.length !== 1 ? t('classroomDetail.deleteDialog.assignmentCountPlural') : t('classroomDetail.deleteDialog.assignmentCount')}
                   </li>
@@ -969,8 +969,8 @@ const ClassroomDetail = () => {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} className="rounded-full">{t('classroomDetail.deleteDialog.cancel')}</AlertDialogCancel>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-full mt-0">{t('classroomDetail.deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteClassroom}
               disabled={isDeleting}

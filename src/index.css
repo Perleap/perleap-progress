@@ -178,3 +178,47 @@
 .rdp-day:hover:not(.rdp-day_selected) {
   background-color: transparent !important;
 }
+
+/* Markdown content styles for chat messages */
+.markdown-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-content p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.markdown-content p:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+
+.markdown-content code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.5em;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* Math equation styling */
+.markdown-content .katex {
+  font-size: 1em;
+}
+
+.markdown-content .katex-display {
+  margin: 0.5em 0;
+}

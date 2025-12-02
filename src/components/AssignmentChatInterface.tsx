@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useConversation } from '@/hooks/useConversation';
+import SafeMathMarkdown from './SafeMathMarkdown';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -121,11 +122,14 @@ export function AssignmentChatInterface({
             {teacherName} - {assignmentTitle}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-4">
           <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
+            <div className="space-y-4 pt-2">
               {messages.map((message, index) => {
                 const isUser = message.role === 'user';
+                // User messages always on the right side of the chat (end)
+                // Assistant messages always on the left side of the chat (start)
+                // This is standard chat convention regardless of language direction
                 return (
                   <div
                     key={index}
@@ -137,9 +141,9 @@ export function AssignmentChatInterface({
                       dir="auto"
                       style={{ unicodeBidi: 'plaintext' }}
                     >
-                      <p className="text-sm whitespace-pre-wrap">
-                        {message.content}
-                      </p>
+                      <div className={`text-sm markdown-content ${isUser ? 'text-primary-foreground' : ''}`}>
+                        <SafeMathMarkdown content={String(message.content || '')} />
+                      </div>
                     </div>
                   </div>
                 );
@@ -157,7 +161,7 @@ export function AssignmentChatInterface({
 
           {conversationEnded && (
             <div 
-              className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-sm text-green-800 dark:text-green-200"
+              className={`bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-sm text-green-800 dark:text-green-200 ${isRTL ? 'text-right' : 'text-left'}`}
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               {isRTL ? '✓ ' : ''}
@@ -180,8 +184,9 @@ export function AssignmentChatInterface({
                 }
               }}
               disabled={isDisabled}
-              className="min-h-[60px] max-h-[200px] resize-none"
+              className={`min-h-[60px] max-h-[200px] resize-none ${isRTL ? 'text-right' : 'text-left'}`}
               rows={2}
+              dir={isRTL ? 'rtl' : 'ltr'}
               autoDirection
             />
             <Button

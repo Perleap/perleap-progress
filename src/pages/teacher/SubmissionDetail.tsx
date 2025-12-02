@@ -15,6 +15,7 @@ import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import type { StudentAlert } from '@/types/alerts';
 
 interface ConversationMessage {
@@ -409,7 +410,7 @@ const SubmissionDetail = () => {
                                 </div>
                               )}
 
-                              <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                              <SafeMathMarkdown content={msg.content} className="text-sm leading-relaxed" />
 
                               {isConcerning && triggeredAlerts.length > 0 && (
                                 <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-800/50 text-xs text-red-700 dark:text-red-300 bg-red-100/50 dark:bg-red-900/20 -mx-4 -mb-4 p-3 rounded-b-2xl">
