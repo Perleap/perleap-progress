@@ -507,6 +507,7 @@
     "submitted": "הוגש",
     "notStarted": "לא התחיל",
     "inProgress": "בתהליך",
+    "learningDimensions": "ממדי למידה",
     "success": {
       "completed": "הפעילות הושלמה בהצלחה!"
     },

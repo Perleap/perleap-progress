@@ -78,7 +78,7 @@ serve(async (req) => {
       systemPrompt,
       openAIMessages,
       0.7,
-      300,
+      1500,
     );
 
     // Check for conversation completion marker (case-insensitive and flexible)

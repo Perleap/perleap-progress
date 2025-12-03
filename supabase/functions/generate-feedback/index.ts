@@ -210,7 +210,7 @@ serve(async (req) => {
       explanationsPrompt,
       [],
       0.6,
-      500,
+      1500, // Increased for detailed Hebrew explanations with examples
     );
 
     let scoreExplanations = null;

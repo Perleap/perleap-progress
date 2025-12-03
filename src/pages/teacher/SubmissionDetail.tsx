@@ -30,6 +30,7 @@ interface Submission {
   assignment_id: string;
   assignments: {
     title: string;
+    instructions: string;
     due_at: string;
     classroom_id: string;
     classrooms: {
@@ -104,7 +105,7 @@ const SubmissionDetail = () => {
       // Fetch submission with assignment info
       const { data: submissionData, error: subError } = await supabase
         .from('submissions')
-        .select('*, assignments(title, classroom_id, due_at, classrooms(name, teacher_id))')
+        .select('*, assignments(title, instructions, classroom_id, due_at, classrooms(name, teacher_id))')
         .eq('id', id)
         .single();
 
@@ -197,6 +198,7 @@ const SubmissionDetail = () => {
           studentFeedback: feedback.student_feedback,
           conversationContext: feedback.conversation_context,
           originalAssignmentTitle: submission.assignments.title,
+          originalAssignmentInstructions: submission.assignments.instructions,
           studentName: studentName,
         },
       });

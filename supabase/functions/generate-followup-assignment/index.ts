@@ -24,6 +24,7 @@ serve(async (req) => {
       studentFeedback,
       conversationContext,
       originalAssignmentTitle,
+      originalAssignmentInstructions,
       studentName,
     } = await req.json();
 
@@ -31,6 +32,19 @@ serve(async (req) => {
       studentName,
       originalAssignmentTitle,
     });
+
+    // Detect language from original assignment instructions
+    const containsHebrew = (text: string): boolean => {
+      const hebrewRegex = /[\u0590-\u05FF]/;
+      return hebrewRegex.test(text || '');
+    };
+
+    const detectedLanguage = containsHebrew(originalAssignmentInstructions || '') ? 'he' : 'en';
+    const languageInstruction = detectedLanguage === 'he' 
+      ? 'CRITICAL: You MUST write ALL fields (title, instructions, success_criteria, scaffolding_tips, reasoning) in HEBREW. The student and teacher speak Hebrew.'
+      : 'CRITICAL: You MUST write ALL fields (title, instructions, success_criteria, scaffolding_tips, reasoning) in ENGLISH.';
+
+    logInfo('Detected language for follow-up assignment', { language: detectedLanguage });
 
     // Prepare conversation text
     const conversationText = Array.isArray(conversationContext)
@@ -43,6 +57,10 @@ serve(async (req) => {
 
     // Create prompt for generating follow-up assignment
     const systemPrompt = `You are an expert educational designer specializing in personalized learning. Your task is to create a follow-up assignment for a student based on their recent work and the feedback they received.
+
+${languageInstruction}
+
+
 
 CRITICAL INSTRUCTION REQUIREMENTS:
 - Instructions must be EXACTLY 1 short paragraph (3-4 sentences maximum)

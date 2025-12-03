@@ -40,7 +40,8 @@ export function getAssignmentLanguage(
     return 'he';
   }
   
-  // Otherwise, use UI language
-  return uiLanguage;
+  // Otherwise, instructions are in English/Latin script
+  // Always use English for non-Hebrew instructions regardless of UI language
+  return 'en';
 }
 

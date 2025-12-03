@@ -514,6 +514,7 @@
     "submitted": "Submitted",
     "notStarted": "Not Started",
     "inProgress": "In Progress",
+    "learningDimensions": "Learning Dimensions",
     "success": {
       "completed": "Activity completed successfully!"
     },
