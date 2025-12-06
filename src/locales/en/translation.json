@@ -181,7 +181,7 @@
   },
   "assignmentChat": {
     "placeholder": "Type your message here...",
-    "conversationComplete": "Conversation complete! You can now finish the activity.",
+    "conversationComplete": "Conversation complete! You can now finish the activity. If you didn't understand something or want to continue asking questions, feel free to do so. Once you are done, click the 'Complete Activity' button.",
     "conversationEndedPlaceholder": "Conversation ended - please complete the activity",
     "completeActivity": "Complete Activity",
     "generatingFeedback": "Generating feedback...",

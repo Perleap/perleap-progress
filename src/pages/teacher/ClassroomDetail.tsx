@@ -42,6 +42,7 @@ import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
 import { SubmissionsTab } from '@/components/SubmissionsTab';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 
 interface CourseMaterial {
   type: 'pdf' | 'link';
@@ -769,9 +770,9 @@ const ClassroomDetail = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <p className={`text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
-                        {assignment.instructions}
-                      </p>
+                      <div className={`text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <SafeMathMarkdown content={assignment.instructions} />
+                      </div>
 
                       {/* Course Materials */}
                       {assignment.materials &&
