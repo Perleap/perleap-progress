@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/layouts/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
@@ -16,6 +16,10 @@ const Landing = () => {
   const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check if we're in the middle of an OAuth callback
+  const isOAuthCallback = searchParams.has('code') || searchParams.has('access_token') || searchParams.has('error');
 
   // Check if user is already authenticated and redirect
   useEffect(() => {
@@ -64,9 +68,9 @@ const Landing = () => {
     checkAuthAndRedirect();
   }, [user?.id, authLoading, navigate]);
 
-  // If user is already authenticated and auth is not loading, show loading state
+  // If OAuth callback is in progress or user is already authenticated, show loading state
   // This prevents the Landing page from rendering and causing a flicker
-  if (!authLoading && user) {
+  if (isOAuthCallback || (!authLoading && user)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
