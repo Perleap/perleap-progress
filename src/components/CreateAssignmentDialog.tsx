@@ -493,17 +493,17 @@ export function CreateAssignmentDialog({
                   <Label htmlFor="due_at" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('createAssignment.dueDate')}
                   </Label>
-                  <div className="relative">
+                  <div className={`relative w-fit ${isRTL ? 'ml-auto' : ''}`}>
                     <Input
                       id="due_at"
                       type="datetime-local"
                       value={formData.due_at}
                       onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10"
+                      className={`rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10 w-fit ${isRTL ? 'text-right' : 'text-left'}`}
                       dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />
-                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-slate-400" />
+                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
               </div>

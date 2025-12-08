@@ -66,7 +66,7 @@ export function AssignmentChatInterface({
     if (hookConversationEnded && !conversationEnded) {
       setConversationEnded(true);
       setDialogType('aiDetected');
-      setShowCompletionDialog(true);
+      // setShowCompletionDialog(true); // Disable auto-popup
     }
   }, [hookConversationEnded, conversationEnded]);
 
@@ -111,7 +111,7 @@ export function AssignmentChatInterface({
     handleComplete();
   };
 
-  const isDisabled = loading || sending || conversationEnded;
+  const isDisabled = loading || sending; // Allow chatting after end
   const canComplete = messages.length > 0;
 
   return (
@@ -160,7 +160,7 @@ export function AssignmentChatInterface({
           </ScrollArea>
 
           {conversationEnded && (
-            <div 
+            <div
               className={`bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-sm text-green-800 dark:text-green-200 ${isRTL ? 'text-right' : 'text-left'}`}
               dir={isRTL ? 'rtl' : 'ltr'}
             >

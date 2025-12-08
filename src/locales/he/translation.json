@@ -181,7 +181,7 @@
   },
   "assignmentChat": {
     "placeholder": "הקלד את ההודעה שלך כאן...",
-    "conversationComplete": "השיחה הסתיימה! כעת ניתן לסיים את הפעילות.",
+    "conversationComplete": "השיחה הסתיימה! כעת ניתן לסיים את הפעילות. אם לא הבנת משהו או שברצונך להמשיך לשאול שאלות, אתה מוזמן לעשות זאת. לאחר שתסיים, לחץ על הכפתור 'השלם פעילות'.",
     "conversationEndedPlaceholder": "השיחה הסתיימה - אנא השלם את הפעילות",
     "completeActivity": "השלם פעילות",
     "generatingFeedback": "מייצר משוב...",
