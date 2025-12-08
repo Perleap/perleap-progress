@@ -10,6 +10,7 @@ import { Customers } from "@/components/landing/Customers";
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -62,6 +63,19 @@ const Landing = () => {
 
     checkAuthAndRedirect();
   }, [user?.id, authLoading, navigate]);
+
+  // If user is already authenticated and auth is not loading, show loading state
+  // This prevents the Landing page from rendering and causing a flicker
+  if (!authLoading && user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">{t('common.redirecting')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/10">
