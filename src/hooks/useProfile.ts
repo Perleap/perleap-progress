@@ -3,7 +3,7 @@
  * Custom hook for fetching user profile data
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTeacherProfile, getStudentProfile, getInitials } from '@/services';
 import type { TeacherProfile, StudentProfile, ApiError } from '@/types';
@@ -26,7 +26,11 @@ export const useProfile = (role: 'teacher' | 'student'): UseProfileResult => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const fetchProfile = async () => {
+  // Use refs to track fetch status and prevent duplicates/re-fetches
+  const hasFetchedRef = useRef(false);
+  const lastUserIdRef = useRef<string | undefined>(undefined);
+
+  const fetchProfile = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -47,19 +51,35 @@ export const useProfile = (role: 'teacher' | 'student'): UseProfileResult => {
     }
 
     setLoading(false);
-  };
+  }, [user, role]);
 
   useEffect(() => {
-    fetchProfile();
-  }, [user?.id, role]);
+    // Reset if user ID changed
+    if (user?.id !== lastUserIdRef.current) {
+      hasFetchedRef.current = false;
+      lastUserIdRef.current = user?.id;
+    }
+
+    // Only fetch if we haven't fetched yet for this user
+    if (!hasFetchedRef.current && user?.id) {
+      fetchProfile();
+      hasFetchedRef.current = true;
+    }
+  }, [user?.id, role, fetchProfile]);
 
   const initials = getInitials(profile?.first_name, profile?.last_name);
+
+  const handleRefetch = async () => {
+    hasFetchedRef.current = false;
+    await fetchProfile();
+    hasFetchedRef.current = true;
+  };
 
   return {
     profile,
     loading,
     error,
     initials,
-    refetch: fetchProfile,
+    refetch: handleRefetch,
   };
 };

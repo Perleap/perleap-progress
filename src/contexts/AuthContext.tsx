@@ -15,7 +15,9 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (force?: boolean) => Promise<void>;
+  hasProfile: boolean | null;
+  isProfileLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +27,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Profile caching state
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [lastProfileFetch, setLastProfileFetch] = useState<number>(0);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  
   const navigate = useNavigate();
 
   // Token refresh failure recovery
@@ -55,8 +63,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate('/auth');
   };
 
-  const fetchProfile = async (userId: string, role?: string) => {
+  const fetchProfile = async (userId: string, role?: string, force: boolean = false) => {
     if (!userId) return;
+
+    // Use cached profile if available and fresh (less than 5 minutes old)
+    const now = Date.now();
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    
+    if (!force && profile && (now - lastProfileFetch < CACHE_DURATION)) {
+      console.log('🔄 AuthContext: Using cached profile data');
+      return;
+    }
 
     // If role isn't provided, try to get it from metadata
     const userRole = role || user?.user_metadata?.role;
@@ -66,6 +83,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+      setIsProfileLoading(true);
+      console.log(`🔄 AuthContext: Fetching fresh profile for ${userRole}...`);
+      
       const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
       const { data, error } = await supabase
         .from(table)
@@ -78,11 +98,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      setLastProfileFetch(now);
+      
       if (data) {
+        console.log('✅ AuthContext: Profile found and cached');
         setProfile(data);
+        setHasProfile(true);
+      } else {
+        console.log('⚠️ AuthContext: No profile found');
+        setHasProfile(false);
+        // Don't clear profile here if we want to keep "stale" data while we check, 
+        // but generally if it's not found in DB we should probably clear it.
+        // However, for onboarding check, hasProfile=false is what matters.
       }
     } catch (error) {
       console.error('Exception fetching profile:', error);
+    } finally {
+      setIsProfileLoading(false);
     }
   };
 
@@ -125,6 +157,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionStorage.removeItem('redirectAfterLogin');
           clearAllPersistedForms();
           setProfile(null);
+          setHasProfile(null);
+          setLastProfileFetch(0);
           // Don't navigate here as signOut function handles it
           break;
 
@@ -228,6 +262,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearAllPersistedForms();
       sessionStorage.clear();
       setProfile(null);
+      setHasProfile(null);
+      setLastProfileFetch(0);
       // Clear auth-related localStorage items
       const keysToKeep = ['language_preference']; // Keep language preference
       const allKeys = Object.keys(localStorage);
@@ -240,14 +276,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = async (force: boolean = false) => {
     if (user) {
-      await fetchProfile(user.id, user.user_metadata?.role);
+      await fetchProfile(user.id, user.user_metadata?.role, force);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      profile, 
+      loading, 
+      signOut, 
+      refreshProfile,
+      hasProfile,
+      isProfileLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

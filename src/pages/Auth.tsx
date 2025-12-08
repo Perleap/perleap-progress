@@ -20,7 +20,7 @@ const Auth = () => {
   const { t } = useTranslation();
   const { isRTL, setLanguage, language } = useLanguage();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, hasProfile, isProfileLoading } = useAuth();
 
   // Dynamic validation schemas using translation
   const emailSchema = z.string().email(t('auth.errors.invalidEmail'));
@@ -42,21 +42,20 @@ const Auth = () => {
   // Check if user is already authenticated and redirect
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
-      if (!authLoading && user) {
+      // Wait for auth loading and profile loading
+      if (authLoading || isProfileLoading) return;
+      // If user is logged in but profile check is not done, wait
+      if (user && hasProfile === null) return;
+
+      if (user) {
         console.log('🔍 Auth: Checking authenticated user profile status...');
 
         const userRole = user.user_metadata?.role;
 
         // Check if user has completed their profile
         if (userRole === 'teacher' || userRole === 'student') {
-          const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-          const { data: profile } = await supabase
-            .from(profileTable)
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (!profile) {
+          // Use cached profile check from AuthContext
+          if (hasProfile === false) {
             console.log(`⚠️ Auth: User has ${userRole} role but no profile, redirecting to onboarding`);
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
@@ -82,7 +81,7 @@ const Auth = () => {
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate]); // Use user?.id to avoid refetch on user object reference change
+  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading]); // Use user?.id to avoid refetch on user object reference change
 
   // Set the active tab based on the route
   useEffect(() => {
@@ -326,7 +325,7 @@ const Auth = () => {
 
   // If user is already authenticated and auth is not loading, show loading state
   // This prevents the Auth page from rendering and causing a flicker
-  if (!authLoading && user) {
+  if ((!authLoading && user) || isProfileLoading || (user && hasProfile === null)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

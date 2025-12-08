@@ -48,38 +48,55 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (!user) return;
 
     console.log('🌐 LanguageContext: Loading language preference for user:', user.id);
-    console.log('🌐 Current language state:', language);
-    console.log('🌐 localStorage language:', localStorage.getItem('language_preference'));
-
+    
     try {
       // Check DB for preference - prioritize DB over local storage
       let dbLanguage: Language | null = null;
+      const userRole = user.user_metadata?.role;
 
-      // Try to get from student_profiles first
-      const { data: studentProfile, error: studentError } = await supabase
-        .from('student_profiles')
-        .select('preferred_language')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      console.log('🌐 Student profile query result:', { studentProfile, studentError });
-
-      if (studentProfile?.preferred_language) {
-        dbLanguage = studentProfile.preferred_language as Language;
-        console.log('🌐 Found language in student profile:', dbLanguage);
-      } else {
-        // Try teacher_profiles if not found in student_profiles
-        const { data: teacherProfile, error: teacherError } = await supabase
+      // Only query the relevant table based on role
+      if (userRole === 'student') {
+        const { data: studentProfile, error } = await supabase
+          .from('student_profiles')
+          .select('preferred_language')
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        if (studentProfile?.preferred_language) {
+          dbLanguage = studentProfile.preferred_language as Language;
+        }
+      } else if (userRole === 'teacher') {
+        const { data: teacherProfile, error } = await supabase
           .from('teacher_profiles')
           .select('preferred_language')
           .eq('user_id', user.id)
           .maybeSingle();
-
-        console.log('🌐 Teacher profile query result:', { teacherProfile, teacherError });
-
+          
         if (teacherProfile?.preferred_language) {
           dbLanguage = teacherProfile.preferred_language as Language;
-          console.log('🌐 Found language in teacher profile:', dbLanguage);
+        }
+      } else {
+        // Fallback for unknown roles - try both (should rarely happen)
+        // Try to get from student_profiles first
+        const { data: studentProfile } = await supabase
+          .from('student_profiles')
+          .select('preferred_language')
+          .eq('user_id', user.id)
+          .maybeSingle();
+  
+        if (studentProfile?.preferred_language) {
+          dbLanguage = studentProfile.preferred_language as Language;
+        } else {
+          // Try teacher_profiles if not found in student_profiles
+          const { data: teacherProfile } = await supabase
+            .from('teacher_profiles')
+            .select('preferred_language')
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (teacherProfile?.preferred_language) {
+            dbLanguage = teacherProfile.preferred_language as Language;
+          }
         }
       }
 
@@ -104,23 +121,18 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
           console.log('🌐 localStorage language already applied:', localPref);
         }
 
-        // Silently try to update database to match localStorage (if profile exists)
-        // This will fail silently if profile doesn't exist yet, which is fine
+        // Silently try to update database to match localStorage
         if (localPref === 'he') {
-          console.log('🌐 Attempting to sync Hebrew to database...');
-          supabase
-            .from('student_profiles')
-            .update({ preferred_language: localPref })
-            .eq('user_id', user.id)
-            .then(({ error }) => {
-              if (error) {
-                console.log('🌐 Student profile update failed, trying teacher...');
-                supabase
-                  .from('teacher_profiles')
-                  .update({ preferred_language: localPref })
-                  .eq('user_id', user.id);
-              }
-            });
+          const userRole = user.user_metadata?.role;
+          const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+          
+          if (userRole === 'teacher' || userRole === 'student') {
+            console.log(`🌐 Attempting to sync Hebrew to ${table}...`);
+            supabase
+              .from(table)
+              .update({ preferred_language: localPref })
+              .eq('user_id', user.id);
+          }
         }
       }
     } catch (error) {
@@ -147,28 +159,23 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Update user profile if logged in (ONLY if different from what's in database)
     if (user) {
-      try {
-        // Try to update student profile first
-        supabase
-          .from('student_profiles')
-          .update({ preferred_language: lang })
-          .eq('user_id', user.id)
-          .then(({ error: studentError }) => {
-            if (studentError) {
-              // If student update failed, try teacher profile
-              supabase
-                .from('teacher_profiles')
-                .update({ preferred_language: lang })
-                .eq('user_id', user.id)
-                .then(({ error: teacherError }) => {
-                  if (teacherError) {
-                    console.error('Failed to update teacher profile:', teacherError);
-                  }
-                });
-            }
-          });
-      } catch (error) {
-        console.error('Error updating language preference:', error);
+      const userRole = user.user_metadata?.role;
+      const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+
+      if (userRole === 'teacher' || userRole === 'student') {
+        try {
+          supabase
+            .from(table)
+            .update({ preferred_language: lang })
+            .eq('user_id', user.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error(`Failed to update ${table}:`, error);
+              }
+            });
+        } catch (error) {
+          console.error('Error updating language preference:', error);
+        }
       }
     }
   };

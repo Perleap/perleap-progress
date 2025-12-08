@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: ProtectedRouteProps) => {
-  const { user, session, loading } = useAuth();
+  const { user, session, loading, hasProfile, isProfileLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const hasNavigated = useRef(false);
@@ -46,7 +46,11 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
 
   useEffect(() => {
     const checkAccessAndNavigate = async () => {
-      if (loading) return;
+      // Wait for auth to load and profile check if user is logged in
+      if (loading || isProfileLoading) return;
+      // If user exists but profile check isn't done yet, wait
+      if (user && hasProfile === null) return;
+      
       if (hasNavigated.current) return; // Prevent multiple navigations
 
       const currentPath = location.pathname;
@@ -98,18 +102,8 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
 
         // Check if user has completed their profile (unless they're on onboarding page)
         if (!currentPath.startsWith('/onboarding/')) {
-          const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-          const { data: profile, error } = await supabase
-            .from(profileTable)
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('🔒 Protected route: Error checking profile', error);
-          }
-
-          if (!profile) {
+          // Use cached profile check from AuthContext
+          if (hasProfile === false) {
             console.log(`🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`);
             const onboardingPath = `/onboarding/${userRole}`;
             
@@ -124,9 +118,9 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     };
 
     checkAccessAndNavigate();
-  }, [user, session, loading, requiredRole, navigate, redirectTo, location.pathname]);
+  }, [user, session, loading, requiredRole, navigate, redirectTo, location.pathname, hasProfile, isProfileLoading]);
 
-  if (loading) {
+  if (loading || (user && hasProfile === null) || isProfileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

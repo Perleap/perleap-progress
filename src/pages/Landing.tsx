@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 
 const Landing = () => {
   const { t } = useTranslation();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, hasProfile, isProfileLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -24,21 +24,20 @@ const Landing = () => {
   // Check if user is already authenticated and redirect
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
-      if (!authLoading && user) {
+      // Wait for auth loading and profile loading
+      if (authLoading || isProfileLoading) return;
+      // If user is logged in but profile check is not done, wait
+      if (user && hasProfile === null) return;
+
+      if (user) {
         console.log('🔍 Landing: Checking authenticated user profile status...');
 
         const userRole = user.user_metadata?.role;
 
         // Check if user has completed their profile
         if (userRole === 'teacher' || userRole === 'student') {
-          const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-          const { data: profile } = await supabase
-            .from(profileTable)
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (!profile) {
+          // Use cached profile check from AuthContext
+          if (hasProfile === false) {
             console.log(`⚠️ Landing: User has ${userRole} role but no profile, redirecting to onboarding`);
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
@@ -66,11 +65,11 @@ const Landing = () => {
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate]);
+  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading]);
 
   // If OAuth callback is in progress or user is already authenticated, show loading state
   // This prevents the Landing page from rendering and causing a flicker
-  if (isOAuthCallback || (!authLoading && user)) {
+  if (isOAuthCallback || (!authLoading && user) || isProfileLoading || (user && hasProfile === null)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
