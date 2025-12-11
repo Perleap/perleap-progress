@@ -64,15 +64,45 @@ const StudentOnboarding = () => {
 
     setLoading(true);
     try {
+      // CRITICAL: Check if user already has a TEACHER profile (dual profile prevention)
+      const { data: existingTeacherProfile } = await supabase
+        .from('teacher_profiles')
+        .select('id, user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingTeacherProfile) {
+        console.error('User already has a teacher profile - cannot create student profile');
+        toast.error(t('studentOnboarding.errors.alreadyHasTeacherProfile') || 'You already have a teacher account. You cannot create a student account.');
+        setTimeout(() => navigate('/teacher/dashboard'), 2000);
+        setLoading(false);
+        return;
+      }
+
+      // Check if user already has a STUDENT profile
+      const { data: existingStudentProfile } = await supabase
+        .from('student_profiles')
+        .select('id, user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingStudentProfile) {
+        console.warn('User already has a student profile - redirecting to dashboard');
+        toast.error(t('studentOnboarding.errors.profileExists') || 'You already have a student profile.');
+        setTimeout(() => navigate('/student/dashboard'), 2000);
+        setLoading(false);
+        return;
+      }
+
       // Check for orphaned profile with same email but different user_id
       if (user.email) {
-        const { data: existingProfile } = await supabase
+        const { data: orphanedProfile } = await supabase
           .from('student_profiles')
           .select('user_id, email')
           .eq('email', user.email)
           .maybeSingle();
 
-        if (existingProfile && existingProfile.user_id !== user.id) {
+        if (orphanedProfile && orphanedProfile.user_id !== user.id) {
           console.warn('Found orphaned profile with same email, cleaning up...');
           // Delete the orphaned profile
           await supabase
@@ -148,7 +178,11 @@ const StudentOnboarding = () => {
     } catch (error: any) {
       console.error('Student onboarding error:', error);
       
-      if (error.code === '23505') {
+      // Check for dual profile trigger error from database
+      if (error.message?.includes('already has a teacher profile')) {
+        toast.error(t('studentOnboarding.errors.alreadyHasTeacherProfile') || 'You already have a teacher account. You cannot create a student account.');
+        setTimeout(() => navigate('/teacher/dashboard'), 2000);
+      } else if (error.code === '23505') {
         // Duplicate key - profile already exists
         toast.error(t('studentOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/student/dashboard'), 2000);

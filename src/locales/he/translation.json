@@ -233,6 +233,7 @@
     "resources": "משאבים שאתה בדרך כלל משתמש בהם",
     "resourcesPlaceholder": "ספרים, קישורים, קבצי PDF, כלים...",
     "subjectAreas": "תחומי נושא ומיומנויות",
+    "subjectAreasHelper": "מלא זאת כדי שהסוכן יוכל להעריך את התקדמות התלמיד על פי טבלה זו",
     "addArea": "הוסף תחום נושא",
     "addAreaPrompt": "לחץ על 'הוסף תחום נושא' כדי להגדיר נושאים ומיומנויות לקורס שלך",
     "subjectAreaPlaceholder": "שם תחום נושא (לדוגמה, אלגברה)",
@@ -290,6 +291,7 @@
     "learningOutcomes": "תוצאות למידה",
     "keyChallenges": "אתגרים מרכזיים",
     "subjectAreas": "תחומי נושא ומיומנויות",
+    "subjectAreasHelper": "מלא זאת כדי שהסוכן יוכל להעריך את התקדמות התלמיד על פי טבלה זו",
     "addSubjectArea": "הוסף תחום נושא",
     "skills": "מיומנויות",
     "addSkill": "הוסף מיומנות",
@@ -329,6 +331,7 @@
     "cancel": "ביטול",
     "createButton": "צור משימה",
     "subjectAreaAndSkills": "תחומי נושא ומיומנויות",
+    "subjectAreasHelper": "מלא זאת כדי שהסוכן יוכל להעריך את התקדמות התלמיד על פי טבלה זו",
     "skillsToAssess": "מיומנויות להערכה",
     "addSkillManually": "הוסף מיומנות ידנית",
     "uploadPDF": "העלה PDF",
@@ -361,7 +364,9 @@
     },
     "titleLabel": "כותרת המטלה",
     "instructionsLabel": "הוראות",
-    "titlePlaceholder": "הזן כותרת למטלה"
+    "titlePlaceholder": "הזן כותרת למטלה",
+    "subjectAreaAndSkills": "תחומי נושא ומיומנויות",
+    "subjectAreasHelper": "מלא זאת כדי שהסוכן יוכל להעריך את התקדמות התלמיד על פי טבלה זו"
   },
   "classroomDetail": {
     "students": "תלמידים",
@@ -850,7 +855,8 @@
       "notAuthenticated": "משתמש לא מאומת. אנא התחבר שוב.",
       "uploadAvatar": "נכשל להעלות תמונת פרופיל. ממשיך ללא תמונת פרופיל.",
       "profileExists": "פרופיל כבר קיים לחשבון זה. מפנה ללוח הבקרה...",
-      "createProfile": "שגיאה ביצירת פרופיל. אנא נסה שוב."
+      "createProfile": "שגיאה ביצירת פרופיל. אנא נסה שוב.",
+      "alreadyHasTeacherProfile": "יש לך כבר חשבון מורה. אינך יכול ליצור חשבון תלמיד."
     },
     "success": {
       "profileCreated": "הפרופיל נוצר בהצלחה!"
@@ -898,7 +904,8 @@
       "notAuthenticated": "משתמש לא מאומת. אנא התחבר שוב.",
       "uploadAvatar": "נכשל להעלות תמונת פרופיל. ממשיך ללא תמונת פרופיל.",
       "profileExists": "פרופיל כבר קיים לחשבון זה. מפנה ללוח הבקרה...",
-      "createProfile": "שגיאה ביצירת פרופיל. אנא נסה שוב."
+      "createProfile": "שגיאה ביצירת פרופיל. אנא נסה שוב.",
+      "alreadyHasStudentProfile": "יש לך כבר חשבון תלמיד. אינך יכול ליצור חשבון מורה."
     },
     "success": {
       "profileCreated": "הפרופיל נוצר בהצלחה!"

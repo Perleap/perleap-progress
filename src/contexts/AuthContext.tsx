@@ -86,23 +86,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsProfileLoading(true);
       console.log(`🔄 AuthContext: Fetching fresh profile for ${userRole}...`);
       
-      const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-      const { data, error } = await supabase
-        .from(table)
-        .select('full_name, avatar_url')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // ENHANCED: Check for dual profile situation (shouldn't happen with trigger, but safety check)
+      const [teacherResult, studentResult] = await Promise.all([
+        supabase.from('teacher_profiles').select('full_name, avatar_url, created_at').eq('user_id', userId).maybeSingle(),
+        supabase.from('student_profiles').select('full_name, avatar_url, created_at').eq('user_id', userId).maybeSingle()
+      ]);
 
-      if (error) {
-        console.error('Error fetching profile:', error);
+      const hasTeacherProfile = !!teacherResult.data;
+      const hasStudentProfile = !!studentResult.data;
+
+      // CRITICAL: Detect dual profile situation
+      if (hasTeacherProfile && hasStudentProfile) {
+        console.error('⚠️ DUAL PROFILE DETECTED for user:', userId);
+        console.error('This should not happen! Database trigger may not be active.');
+        
+        // Use the profile that matches the user's role metadata, or the older one
+        const teacherCreated = new Date(teacherResult.data.created_at).getTime();
+        const studentCreated = new Date(studentResult.data.created_at).getTime();
+        
+        if (userRole === 'teacher' || teacherCreated < studentCreated) {
+          console.warn('→ Using TEACHER profile (role metadata or older)');
+          setProfile(teacherResult.data);
+          setHasProfile(true);
+        } else {
+          console.warn('→ Using STUDENT profile (role metadata or older)');
+          setProfile(studentResult.data);
+          setHasProfile(true);
+        }
+        
+        setLastProfileFetch(now);
+        return;
+      }
+
+      // Normal case: fetch the appropriate profile based on role
+      const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+      const result = userRole === 'teacher' ? teacherResult : studentResult;
+
+      if (result.error) {
+        console.error('Error fetching profile:', result.error);
         return;
       }
 
       setLastProfileFetch(now);
       
-      if (data) {
+      if (result.data) {
         console.log('✅ AuthContext: Profile found and cached');
-        setProfile(data);
+        setProfile(result.data);
         setHasProfile(true);
       } else {
         console.log('⚠️ AuthContext: No profile found');

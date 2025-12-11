@@ -517,6 +517,10 @@ export function CreateAssignmentDialog({
                   {t('createAssignment.subjectAreaAndSkills')}
                 </h3>
               </div>
+              
+              <p className={`text-sm text-slate-600 dark:text-slate-400 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('createAssignment.subjectAreasHelper')}
+              </p>
 
               <div className="space-y-2">
                 <Label htmlFor="hard_skill_domain" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>

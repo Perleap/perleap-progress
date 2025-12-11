@@ -233,6 +233,7 @@
     "resources": "Resources You Typically Use",
     "resourcesPlaceholder": "Books, links, PDFs, tools...",
     "subjectAreas": "Subject Areas & Skills",
+    "subjectAreasHelper": "Fill this out so that the agent can assess the student's progress according to this table",
     "addArea": "Add Subject Area",
     "addAreaPrompt": "Click 'Add Subject Area' to define topics and skills for your course",
     "subjectAreaPlaceholder": "Subject area name (e.g., Algebra)",
@@ -290,6 +291,7 @@
     "learningOutcomes": "Learning Outcomes",
     "keyChallenges": "Key Challenges",
     "subjectAreas": "Subject Areas & Skills",
+    "subjectAreasHelper": "Fill this out so that the agent can assess the student's progress according to this table",
     "addSubjectArea": "Add Subject Area",
     "skills": "Skills",
     "addSkill": "Add Skill",
@@ -324,6 +326,7 @@
     },
     "instructionsPlaceholder": "Describe what students need to do...",
     "subjectAreaAndSkills": "Subject Area & Skills",
+    "subjectAreasHelper": "Fill this out so that the agent can assess the student's progress according to this table",
     "subjectAreaLabel": "Subject Area",
     "selectFromDomains": "Select from classroom domains",
     "orEnterManually": "or enter manually",
@@ -361,6 +364,7 @@
     },
     "instructionsPlaceholder": "Describe what students need to do...",
     "subjectAreaAndSkills": "Subject Area & Skills",
+    "subjectAreasHelper": "Fill this out so that the agent can assess the student's progress according to this table",
     "subjectAreaLabel": "Subject Area",
     "selectFromDomains": "Select from classroom domains",
     "orEnterManually": "or enter manually",
@@ -853,7 +857,8 @@
       "notAuthenticated": "User not authenticated. Please log in again.",
       "uploadAvatar": "Failed to upload profile picture. Continuing without profile picture.",
       "profileExists": "Profile already exists for this account. Redirecting to dashboard...",
-      "createProfile": "Error creating profile. Please try again."
+      "createProfile": "Error creating profile. Please try again.",
+      "alreadyHasTeacherProfile": "You already have a teacher account. You cannot create a student account."
     },
     "success": {
       "profileCreated": "Profile created successfully!"
@@ -901,7 +906,8 @@
       "notAuthenticated": "User not authenticated. Please log in again.",
       "uploadAvatar": "Failed to upload profile picture. Continuing without profile picture.",
       "profileExists": "Profile already exists for this account. Redirecting to dashboard...",
-      "createProfile": "Error creating profile. Please try again."
+      "createProfile": "Error creating profile. Please try again.",
+      "alreadyHasStudentProfile": "You already have a student account. You cannot create a teacher account."
     },
     "success": {
       "profileCreated": "Profile created successfully!"

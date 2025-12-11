@@ -396,6 +396,10 @@ export const EditClassroomDialog = ({
                   {t('createClassroom.addArea')}
                 </Button>
               </div>
+              
+              <p className={`text-sm text-slate-600 dark:text-slate-400 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('editClassroom.subjectAreasHelper')}
+              </p>
 
               {formData.domains.length === 0 && (
                 <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50">
