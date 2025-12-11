@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { attemptRoleRecovery, getPendingRole, updateUserRole, clearPendingRole } from '@/utils/roleRecovery';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -135,19 +136,43 @@ const AuthCallback = () => {
         // No existing profiles found - process new registration
         console.log('🆕 AuthCallback: No existing profiles, processing new registration');
         
-        // Check for pending role from localStorage (Google OAuth)
-        const pendingRole = localStorage.getItem('pending_role');
-
-        if (pendingRole && !userRole) {
-          console.log(`🎭 AuthCallback: Setting role from pending: ${pendingRole}`);
-          await supabase.auth.updateUser({
-            data: { role: pendingRole },
-          });
-          localStorage.removeItem('pending_role');
-          userRole = pendingRole;
+        // ENHANCED: Attempt comprehensive role recovery
+        if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
+          console.warn('⚠️ AuthCallback: User has no valid role, attempting recovery...');
+          
+          const { recovered, role, source } = await attemptRoleRecovery();
+          
+          if (recovered && role) {
+            console.log(`✅ AuthCallback: Role recovered from ${source}: ${role}`);
+            userRole = role;
+          } else {
+            // Try old localStorage key for backward compatibility
+            const pendingRole = getPendingRole();
+            
+            if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {
+              console.log(`🔄 AuthCallback: Found pending role, attempting to set: ${pendingRole}`);
+              
+              const updated = await updateUserRole(pendingRole as 'teacher' | 'student');
+              
+              if (updated) {
+                console.log('✅ AuthCallback: Role set from pending');
+                clearPendingRole();
+                userRole = pendingRole;
+              } else {
+                console.error('❌ AuthCallback: Failed to set role from pending');
+              }
+            }
+          }
         }
 
         console.log('🎭 AuthCallback: Final role for new user:', userRole);
+        
+        // If still no role, redirect to role selection page
+        if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
+          console.warn('⚠️ AuthCallback: Cannot determine role, redirecting to role selection');
+          navigate('/role-selection', { replace: true });
+          return;
+        }
 
         // Check if there's a saved redirect path
         const redirectPath = sessionStorage.getItem('redirectAfterLogin');

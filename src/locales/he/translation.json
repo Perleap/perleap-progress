@@ -112,6 +112,9 @@
       "accountCreated": "החשבון נוצר! אנא בדוק את האימייל שלך כדי לאמת את החשבון שלך.",
       "accountCreatedSuccess": "החשבון נוצר בהצלחה!",
       "signedIn": "התחברת בהצלחה!"
+    },
+    "warnings": {
+      "roleNotSaved": "ההרשמה הושלמה אך התפקיד דורש אימות. ייתכן שתתבקש לבחור את התפקיד שלך בכניסה הבאה."
     }
   },
   "studentDashboard": {
@@ -937,6 +940,24 @@
     "hardSkillsFor": "הערכת מיומנויות קשות עבור {{student}}",
     "hardSkillsAssignmentFor": "הערכות מיומנויות קשות עבור {{assignment}}",
     "hardSkillsAllStudents": "הערכות מיומנויות קשות עבור כל התלמידים ב-{{assignment}}"
+  },
+  "roleSelection": {
+    "title": "השלם את ההרשמה שלך",
+    "description": "אנחנו צריכים לדעת את התפקיד שלך כדי להשלים את הגדרת החשבון שלך. אנא בחר אם אתה מורה או תלמיד.",
+    "teacher": "מורה",
+    "teacherDesc": "אני מלמד ויוצר מטלות",
+    "student": "תלמיד",
+    "studentDesc": "אני כאן כדי ללמוד ולהשלים מטלות",
+    "continue": "המשך",
+    "note": "בחירה זו תקבע את לוח הבקרה והתכונות הזמינות שלך.",
+    "errors": {
+      "selectRole": "אנא בחר תפקיד כדי להמשיך",
+      "updateFailed": "נכשל בשמירת התפקיד שלך. אנא נסה שוב.",
+      "unexpected": "אירעה שגיאה בלתי צפויה. אנא נסה שוב."
+    },
+    "success": {
+      "roleSet": "התפקיד נשמר בהצלחה! מפנה להשלמת הפרופיל שלך..."
+    }
   },
   "aboutUs": {
     "heroSubtitle": "We are a team of educators, technologists, and dreamers dedicated to reshaping the future of learning. We believe that every student deserves a personalized education tailored to their unique needs and potential.",

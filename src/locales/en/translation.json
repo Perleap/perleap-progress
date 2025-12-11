@@ -112,6 +112,9 @@
       "accountCreated": "Account created! Please check your email to verify your account.",
       "accountCreatedSuccess": "Account created successfully!",
       "signedIn": "Successfully signed in!"
+    },
+    "warnings": {
+      "roleNotSaved": "Registration completed but role needs verification. You may be asked to select your role on next login."
     }
   },
   "studentDashboard": {
@@ -939,6 +942,24 @@
     "hardSkillsFor": "Hard Skills Assessment for {{student}}",
     "hardSkillsAssignmentFor": "Hard Skills Assessments for {{assignment}}",
     "hardSkillsAllStudents": "Hard Skills Assessments for All Students in {{assignment}}"
+  },
+  "roleSelection": {
+    "title": "Complete Your Registration",
+    "description": "We need to know your role to complete your account setup. Please select whether you're a teacher or student.",
+    "teacher": "Teacher",
+    "teacherDesc": "I teach and create assignments",
+    "student": "Student",
+    "studentDesc": "I'm here to learn and complete assignments",
+    "continue": "Continue",
+    "note": "This choice will determine your dashboard and available features.",
+    "errors": {
+      "selectRole": "Please select a role to continue",
+      "updateFailed": "Failed to save your role. Please try again.",
+      "unexpected": "An unexpected error occurred. Please try again."
+    },
+    "success": {
+      "roleSet": "Role saved successfully! Redirecting to complete your profile..."
+    }
   },
   "aboutUs": {
     "heroSubtitle": "We are a team of educators, technologists, and dreamers dedicated to reshaping the future of learning. We believe that every student deserves a personalized education tailored to their unique needs and potential.",

@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { savePendingRole, verifyUserRole, updateUserRole } from '@/utils/roleRecovery';
 
 const Auth = () => {
   const { t } = useTranslation();
@@ -151,6 +152,9 @@ const Auth = () => {
         }
       }
 
+      // Save role to localStorage as backup before API call
+      savePendingRole(role);
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -164,6 +168,31 @@ const Auth = () => {
 
       // Handle signup response
       if (data.user) {
+        // IMPORTANT: Verify role was actually saved
+        console.log('🔍 Verifying role was saved correctly...');
+        
+        // Wait a moment for metadata to propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { hasRole, role: savedRole } = await verifyUserRole();
+        
+        if (!hasRole || savedRole !== role) {
+          console.warn('⚠️ Role not saved correctly, attempting retry...');
+          
+          // Retry setting the role
+          const retrySuccess = await updateUserRole(role);
+          
+          if (!retrySuccess) {
+            console.error('❌ Failed to set role even after retry');
+            toast.warning(t('auth.warnings.roleNotSaved'));
+            // Role is saved in localStorage, will be recovered on next login
+          } else {
+            console.log('✅ Role set successfully on retry');
+          }
+        } else {
+          console.log('✅ Role verified successfully:', savedRole);
+        }
+
         // If we have a session, user is confirmed - proceed to onboarding
         if (data.session) {
           toast.success(t('auth.success.accountCreatedSuccess'));

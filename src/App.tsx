@@ -12,6 +12,7 @@ import Auth from './pages/Auth';
 import AuthCallback from './pages/AuthCallback';
 import TeacherOnboarding from './pages/onboarding/TeacherOnboarding';
 import StudentOnboarding from './pages/onboarding/StudentOnboarding';
+import RoleSelection from './pages/RoleSelection';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import ClassroomDetail from './pages/teacher/ClassroomDetail';
 import SubmissionDetail from './pages/teacher/SubmissionDetail';
@@ -61,6 +62,7 @@ const App = () => (
                 <Route path="/login" element={<Auth />} />
                 <Route path="/register" element={<Auth />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/role-selection" element={<RoleSelection />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/contact" element={<ContactUs />} />
                 <Route path="/about" element={<AboutUs />} />

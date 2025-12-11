@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { clearAllPersistedForms } from '@/hooks/usePersistedState';
+import { shouldAttemptRecovery, attemptRoleRecovery, incrementRecoveryAttempt } from '@/utils/roleRecovery';
 
 interface UserProfile {
   full_name: string;
@@ -206,7 +207,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         case 'SIGNED_IN':
           console.log('✅ User signed in');
           if (session?.user) {
-            fetchProfile(session.user.id, session.user.user_metadata?.role);
+            // CRITICAL: Check if user has role metadata
+            const userRole = session.user.user_metadata?.role;
+            
+            if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
+              console.warn('⚠️ User signed in without valid role metadata');
+              
+              // Attempt automatic recovery
+              if (shouldAttemptRecovery()) {
+                console.log('🔄 Attempting automatic role recovery...');
+                incrementRecoveryAttempt();
+                
+                const { recovered, role } = await attemptRoleRecovery();
+                
+                if (recovered && role) {
+                  console.log(`✅ Role recovered successfully: ${role}`);
+                  fetchProfile(session.user.id, role);
+                } else {
+                  console.log('❌ Role recovery failed, redirecting to role selection');
+                  navigate('/role-selection', { replace: true });
+                  return;
+                }
+              } else {
+                console.log('⚠️ Max recovery attempts reached, redirecting to role selection');
+                navigate('/role-selection', { replace: true });
+                return;
+              }
+            } else {
+              fetchProfile(session.user.id, userRole);
+            }
           }
           break;
 
