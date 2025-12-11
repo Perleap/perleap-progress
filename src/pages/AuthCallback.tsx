@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { attemptRoleRecovery, getPendingRole, updateUserRole, clearPendingRole } from '@/utils/roleRecovery';
+import { isSignupInProgress } from '@/utils/sessionState';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -136,31 +137,36 @@ const AuthCallback = () => {
         // No existing profiles found - process new registration
         console.log('🆕 AuthCallback: No existing profiles, processing new registration');
         
-        // ENHANCED: Attempt comprehensive role recovery
+        // Check if this is an active signup or a recovery situation
+        const activelySigningUp = isSignupInProgress();
+        
         if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
-          console.warn('⚠️ AuthCallback: User has no valid role, attempting recovery...');
-          
-          const { recovered, role, source } = await attemptRoleRecovery();
-          
-          if (recovered && role) {
-            console.log(`✅ AuthCallback: Role recovered from ${source}: ${role}`);
-            userRole = role;
-          } else {
-            // Try old localStorage key for backward compatibility
+          // CRITICAL: Different behavior for active signup vs recovery
+          if (activelySigningUp) {
+            console.log('🔄 AuthCallback: Active signup - attempting quick recovery');
+            
+            // Try to recover from localStorage (backup from Auth.tsx)
             const pendingRole = getPendingRole();
             
             if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {
-              console.log(`🔄 AuthCallback: Found pending role, attempting to set: ${pendingRole}`);
-              
+              console.log(`🔄 AuthCallback: Found pending role: ${pendingRole}`);
               const updated = await updateUserRole(pendingRole as 'teacher' | 'student');
               
               if (updated) {
                 console.log('✅ AuthCallback: Role set from pending');
                 clearPendingRole();
                 userRole = pendingRole;
-              } else {
-                console.error('❌ AuthCallback: Failed to set role from pending');
               }
+            }
+          } else {
+            // NOT actively signing up - this is a recovery situation
+            console.warn('⚠️ AuthCallback: User has no valid role (not during active signup)');
+            
+            const { recovered, role, source } = await attemptRoleRecovery();
+            
+            if (recovered && role) {
+              console.log(`✅ AuthCallback: Role recovered from ${source}: ${role}`);
+              userRole = role;
             }
           }
         }

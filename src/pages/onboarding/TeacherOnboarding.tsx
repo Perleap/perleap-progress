@@ -13,11 +13,12 @@ import { Loader2, ArrowLeft, ArrowRight, Upload } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { markSignupComplete } from '@/utils/sessionState';
 
 const TeacherOnboarding = () => {
   const { t } = useTranslation();
   const { isRTL, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -64,35 +65,6 @@ const TeacherOnboarding = () => {
 
     setLoading(true);
     try {
-      // CRITICAL: Check if user already has a STUDENT profile (dual profile prevention)
-      const { data: existingStudentProfile } = await supabase
-        .from('student_profiles')
-        .select('id, user_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingStudentProfile) {
-        console.error('User already has a student profile - cannot create teacher profile');
-        toast.error(t('teacherOnboarding.errors.alreadyHasStudentProfile') || 'You already have a student account. You cannot create a teacher account.');
-        setTimeout(() => navigate('/student/dashboard'), 2000);
-        setLoading(false);
-        return;
-      }
-
-      // Check if user already has a TEACHER profile
-      const { data: existingTeacherProfile } = await supabase
-        .from('teacher_profiles')
-        .select('id, user_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingTeacherProfile) {
-        console.warn('User already has a teacher profile - redirecting to dashboard');
-        toast.error(t('teacherOnboarding.errors.profileExists') || 'You already have a teacher profile.');
-        setTimeout(() => navigate('/teacher/dashboard'), 2000);
-        setLoading(false);
-        return;
-      }
 
       // Check for orphaned profile with same email but different user_id
       if (user.email) {
@@ -163,8 +135,16 @@ const TeacherOnboarding = () => {
       
       console.log('Profile created successfully:', data);
 
+      // Mark signup as complete
+      markSignupComplete();
+
+      // Force refresh the profile in AuthContext
+      await refreshProfile(true);
+
       toast.success(t('teacherOnboarding.success.profileCreated'));
-      navigate('/teacher/dashboard');
+      
+      // Navigate directly to dashboard with replace to prevent back navigation
+      navigate('/teacher/dashboard', { replace: true });
     } catch (error: any) {
       console.error('Teacher onboarding error:', error);
       

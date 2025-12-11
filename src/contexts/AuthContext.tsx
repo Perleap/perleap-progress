@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { clearAllPersistedForms } from '@/hooks/usePersistedState';
 import { shouldAttemptRecovery, attemptRoleRecovery, incrementRecoveryAttempt } from '@/utils/roleRecovery';
+import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
 
 interface UserProfile {
   full_name: string;
@@ -186,6 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log('🚪 User signed out');
           sessionStorage.removeItem('redirectAfterLogin');
           clearAllPersistedForms();
+          clearAllSignupState();
           setProfile(null);
           setHasProfile(null);
           setLastProfileFetch(0);
@@ -207,13 +209,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         case 'SIGNED_IN':
           console.log('✅ User signed in');
           if (session?.user) {
-            // CRITICAL: Check if user has role metadata
             const userRole = session.user.user_metadata?.role;
             
+            // Check if user has role metadata
             if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
-              console.warn('⚠️ User signed in without valid role metadata');
+              // Check if signup is in progress
+              const signupInProgress = isSignupInProgress();
               
-              // Attempt automatic recovery
+              // Check if this is a VERY new account (created < 5 minutes ago)
+              // This helps catch fresh signups even if sessionStorage flag is lost
+              const userCreatedAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
+              const now = Date.now();
+              const fiveMinutes = 5 * 60 * 1000;
+              const isVeryNewAccount = (now - userCreatedAt) < fiveMinutes;
+              
+              // CRITICAL: Don't interfere if signup is in progress OR account is brand new
+              if (signupInProgress || isVeryNewAccount) {
+                if (signupInProgress) {
+                  console.log('🔄 Signup in progress, skipping role check (will be set during signup)');
+                } else {
+                  console.log('🆕 Very new account detected (< 5 min old), skipping role check to allow signup to complete');
+                }
+                // Don't fetch profile or redirect, let the signup flow handle it
+                break;
+              }
+              
+              console.warn('⚠️ User signed in without valid role metadata (not during signup, not new account)');
+              
+              // Only attempt recovery if NOT actively signing up and within attempt limit
               if (shouldAttemptRecovery()) {
                 console.log('🔄 Attempting automatic role recovery...');
                 incrementRecoveryAttempt();
@@ -234,6 +257,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 return;
               }
             } else {
+              // Normal case: user has valid role
               fetchProfile(session.user.id, userRole);
             }
           }
@@ -318,6 +342,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       // Always clear local data even if API call fails
       clearAllPersistedForms();
+      clearAllSignupState();
       sessionStorage.clear();
       setProfile(null);
       setHasProfile(null);

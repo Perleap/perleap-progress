@@ -92,17 +92,14 @@ const RoleSelection = () => {
                   variant={selectedRole === 'teacher' ? 'default' : 'outline'}
                   onClick={() => setSelectedRole('teacher')}
                   disabled={loading}
-                  className={`h-32 flex flex-col items-center justify-center gap-3 rounded-3xl transition-all ${
+                  className={`h-24 flex flex-col items-center justify-center gap-2 rounded-3xl transition-all ${
                     selectedRole === 'teacher'
                       ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                       : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
                   }`}
                 >
                   <span className="text-4xl">👨‍🏫</span>
-                  <div className="text-center">
-                    <div className="font-semibold text-xl">{t('roleSelection.teacher')}</div>
-                    <div className="text-sm opacity-80 mt-1">{t('roleSelection.teacherDesc')}</div>
-                  </div>
+                  <span className="font-semibold text-xl">{t('roleSelection.teacher')}</span>
                 </Button>
 
                 <Button
@@ -110,17 +107,14 @@ const RoleSelection = () => {
                   variant={selectedRole === 'student' ? 'default' : 'outline'}
                   onClick={() => setSelectedRole('student')}
                   disabled={loading}
-                  className={`h-32 flex flex-col items-center justify-center gap-3 rounded-3xl transition-all ${
+                  className={`h-24 flex flex-col items-center justify-center gap-2 rounded-3xl transition-all ${
                     selectedRole === 'student'
                       ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                       : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
                   }`}
                 >
                   <span className="text-4xl">👨‍🎓</span>
-                  <div className="text-center">
-                    <div className="font-semibold text-xl">{t('roleSelection.student')}</div>
-                    <div className="text-sm opacity-80 mt-1">{t('roleSelection.studentDesc')}</div>
-                  </div>
+                  <span className="font-semibold text-xl">{t('roleSelection.student')}</span>
                 </Button>
               </div>
 
