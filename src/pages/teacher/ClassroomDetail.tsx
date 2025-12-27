@@ -2,9 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardHeader } from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -21,7 +19,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
-  ArrowLeft,
   Users,
   BookOpen,
   Calendar,
@@ -33,6 +30,7 @@ import {
   Link as LinkIcon,
   ChevronDown,
   ChevronRight,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditClassroomDialog } from '@/components/EditClassroomDialog';
@@ -41,8 +39,9 @@ import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
 import { SubmissionsTab } from '@/components/SubmissionsTab';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
+import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 
 interface CourseMaterial {
   type: 'pdf' | 'link';
@@ -114,6 +113,11 @@ const ClassroomDetail = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
+  const [activeSection, setActiveSection] = useState('overview');
+  
+  // GSAP stagger animation refs
+  const assignmentsRef = useStaggerAnimation(':scope > div', 0.08, [activeSection, assignments.length]);
+  const studentsRef = useStaggerAnimation(':scope > div', 0.06, [activeSection, students.length]);
 
   const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
@@ -338,81 +342,34 @@ const ClassroomDetail = () => {
 
   if (!classroom) return null;
 
+  // Define classroom sections with translated titles
+  const classroomSections = [
+    { id: 'overview', title: t('studentClassroom.about'), icon: Info },
+    { id: 'assignments', title: t('studentClassroom.assignments'), icon: BookOpen },
+    { id: 'students', title: t('classroomDetail.students'), icon: Users },
+    { id: 'submissions', title: t('classroomDetail.submissionsTab'), icon: FileText },
+    { id: 'analytics', title: t('classroomDetail.analytics'), icon: BarChart3 },
+  ];
+
   return (
-    <BreathingBackground className="min-h-screen pb-12">
-      <DashboardHeader
-        title={classroom.name}
-        subtitle={classroom.subject}
-        userType="teacher"
-        showBackButton
-        onBackClick={() => navigate('/teacher/dashboard')}
-      />
-
-      <main className="container py-6 md:py-8 px-4 max-w-7xl mx-auto">
-        <Tabs defaultValue="overview" className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
-          <TabsList className={`bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-full inline-flex h-auto w-full sm:w-auto overflow-x-auto justify-start`}>
-            <TabsTrigger
-              value="overview"
-              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
-            >
-              {t('studentClassroom.about')}
-            </TabsTrigger>
-            <TabsTrigger
-              value="assignments"
-              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
-            >
-              {t('studentClassroom.assignments')}
-            </TabsTrigger>
-            <TabsTrigger
-              value="students"
-              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
-            >
-              {t('classroomDetail.students')}
-            </TabsTrigger>
-            <TabsTrigger
-              value="submissions"
-              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
-            >
-              {t('classroomDetail.submissionsTab')}
-            </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              className="rounded-full px-6 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
-            >
-              {t('classroomDetail.analytics')}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
-            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRTL ? '' : ''}`}>
-              <div className={`flex flex-col sm:flex-row gap-3 w-full sm:w-auto ${isRTL ? 'sm:order-2' : 'sm:order-1'}`}>
-                <Button
-                  onClick={() => setEditDialogOpen(true)}
-                  size="sm"
-                  className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all"
-                  variant="outline"
-                >
-                  <Edit className="me-2 h-4 w-4" />
-                  {t('classroomDetail.edit')}
-                </Button>
-                <Button
-                  onClick={() => setDeleteDialogOpen(true)}
-                  size="sm"
-                  variant="destructive"
-                  className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all"
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  {t('classroomDetail.deleteButton')}
-                </Button>
-              </div>
-              <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right sm:order-1' : 'text-left sm:order-2'}`}>
-                {t('classroomDetail.overview.title')}
-              </h2>
-            </div>
+    <ClassroomLayout
+      classroomName={classroom.name}
+      classroomSubject={classroom.subject}
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+      customSections={classroomSections}
+    >
+      <div className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
+        {/* Overview Section */}
+        {activeSection === 'overview' && (
+          <div className="space-y-6">
+            <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('classroomDetail.overview.title')}
+            </h2>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {/* Invite Code Card */}
-              <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-900/20 dark:to-pink-900/20 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+              <Card className="md:col-span-2 lg:col-span-3 rounded-xl border-none shadow-sm bg-accent dark:bg-accent/30 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
                 <CardHeader className="pb-2">
                   <CardTitle className={`text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('classroomDetail.inviteCode')}
@@ -420,8 +377,8 @@ const ClassroomDetail = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-4 justify-start">
-                    <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm">
-                      <code className="text-3xl font-mono font-bold text-indigo-600 dark:text-indigo-400 tracking-wider">
+                    <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-sm px-6 py-3 rounded-lg border border-white/50 dark:border-white/10 shadow-sm">
+                      <code className="text-3xl font-mono font-bold text-primary tracking-wider">
                         {classroom.invite_code}
                       </code>
                     </div>
@@ -445,7 +402,7 @@ const ClassroomDetail = () => {
 
               {/* Course Info */}
               {classroom.course_title && (
-                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
+                <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -479,7 +436,7 @@ const ClassroomDetail = () => {
                         <div className={`text-slate-700 dark:text-slate-300 space-y-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {classroom.start_date && (
                             <div className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary-400" />
                               <span className="text-sm">{t('common.start')}: {new Date(classroom.start_date).toLocaleDateString()}</span>
                             </div>
                           )}
@@ -498,7 +455,7 @@ const ClassroomDetail = () => {
 
               {/* Outline & Resources */}
               {(classroom.course_outline || classroom.resources) && (
-                <Card className="md:col-span-2 lg:col-span-2 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
+                <Card className="md:col-span-2 lg:col-span-2 rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
@@ -513,7 +470,7 @@ const ClassroomDetail = () => {
                         <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t('classroomDetail.overview.courseOutline')}
                         </h3>
-                        <p className={`text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <p className={`text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
                           {classroom.course_outline}
                         </p>
                       </div>
@@ -524,7 +481,7 @@ const ClassroomDetail = () => {
                         <h3 className={`text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {t('classroomDetail.overview.resources')}
                         </h3>
-                        <p className={`text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <p className={`text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
                           {classroom.resources}
                         </p>
                       </div>
@@ -535,12 +492,12 @@ const ClassroomDetail = () => {
 
               {/* Learning Outcomes & Challenges */}
               {(classroom.learning_outcomes?.length || classroom.key_challenges?.length) ? (
-                <Card className="md:col-span-2 lg:col-span-3 rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
+                <Card className="md:col-span-2 lg:col-span-3 rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardContent className="p-6 grid md:grid-cols-2 gap-8">
                     {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
                       <div>
                         <h3 className={`flex items-center gap-2 font-bold text-lg mb-4 text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          <span className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400">
+                          <span className="p-1.5 bg-primary-100 dark:bg-primary-900/30 rounded-lg text-primary-600 dark:text-primary-400">
                             <BarChart3 className="h-4 w-4" />
                           </span>
                           {t('classroomDetail.overview.learningOutcomes')}
@@ -548,7 +505,7 @@ const ClassroomDetail = () => {
                         <ul className="space-y-3">
                           {classroom.learning_outcomes.map((outcome: string, index: number) => (
                             <li key={index} className={`flex items-start gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl ${isRTL ? 'text-right' : 'text-left'}`}>
-                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold mt-0.5">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold mt-0.5">
                                 {index + 1}
                               </span>
                               <span className="text-sm leading-relaxed">{outcome}</span>
@@ -585,7 +542,7 @@ const ClassroomDetail = () => {
 
             {/* Domains & Components Section */}
             {classroom.domains && classroom.domains.length > 0 && (
-              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
+              <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800" dir={isRTL ? 'rtl' : 'ltr'}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
@@ -597,7 +554,7 @@ const ClassroomDetail = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {classroom.domains.map((domain, index) => (
-                    <div key={index} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+                    <div key={index} className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden">
                       <button
                         className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-white dark:bg-slate-900/30"
                         onClick={() => toggleDomain(index)}
@@ -631,7 +588,7 @@ const ClassroomDetail = () => {
 
             {/* Course Materials Section */}
             {classroom.materials && classroom.materials.length > 0 && (
-              <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+              <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
@@ -647,7 +604,7 @@ const ClassroomDetail = () => {
                       <Button
                         key={index}
                         variant="outline"
-                        className="justify-start h-auto py-4 px-4 rounded-2xl border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                        className="justify-start h-auto py-4 px-4 rounded-lg border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:bg-primary/5 transition-all group"
                         onClick={() => window.open(material.url, '_blank')}
                       >
                         <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl me-3 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
@@ -667,13 +624,40 @@ const ClassroomDetail = () => {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
 
-          <TabsContent value="assignments" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+            {/* Classroom Actions */}
+            <div className="pt-6 border-t border-border">
+              <div className={`flex flex-col sm:flex-row gap-3 ${isRTL ? 'sm:justify-end' : 'sm:justify-start'}`}>
+                <Button
+                  onClick={() => setEditDialogOpen(true)}
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  variant="outline"
+                >
+                  <Edit className="me-2 h-4 w-4" />
+                  {t('classroomDetail.edit')}
+                </Button>
+                <Button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  size="sm"
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="me-2 h-4 w-4" />
+                  {t('classroomDetail.deleteButton')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assignments Section */}
+        {activeSection === 'assignments' && (
+          <div className="space-y-6">
             <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRTL ? '' : ''}`}>
               <Button
                 onClick={() => setAssignmentDialogOpen(true)}
-                className={`w-full sm:w-auto rounded-full shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90 ${isRTL ? 'sm:order-2' : 'sm:order-1'}`}
+                className={`w-full sm:w-auto shadow-md hover:shadow-lg transition-all bg-primary hover:bg-primary/90 ${isRTL ? 'sm:order-2' : 'sm:order-1'}`}
               >
                 <Plus className="me-2 h-4 w-4" />
                 {t('classroomDetail.createAssignment')}
@@ -689,7 +673,7 @@ const ClassroomDetail = () => {
             </div>
 
             {assignments.length === 0 ? (
-              <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+              <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
                 <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                   <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4">
                     <BookOpen className="h-8 w-8 text-slate-400" />
@@ -700,16 +684,16 @@ const ClassroomDetail = () => {
                   <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
                     {t('classroomDetail.noAssignmentsDesc')}
                   </p>
-                  <Button onClick={() => setAssignmentDialogOpen(true)} className="rounded-full">
+                  <Button onClick={() => setAssignmentDialogOpen(true)}>
                     <Plus className="me-2 h-4 w-4" />
                     {t('classroomDetail.createAssignment')}
                   </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div ref={assignmentsRef} className="grid gap-4">
                 {assignments.map((assignment) => (
-                  <Card key={assignment.id} className="group rounded-3xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                  <Card key={assignment.id} className="group rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
                         <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -728,7 +712,7 @@ const ClassroomDetail = () => {
                             <Badge
                               variant={assignment.status === 'published' ? 'default' : 'secondary'}
                               className={`rounded-full px-3 font-normal ${assignment.status === 'published'
-                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                ? 'bg-primary-100 text-primary-700 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-400'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
                                 }`}
                             >
@@ -770,7 +754,7 @@ const ClassroomDetail = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className={`text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <div className={`text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
                         <SafeMathMarkdown content={assignment.instructions} />
                       </div>
 
@@ -818,9 +802,12 @@ const ClassroomDetail = () => {
                 ))}
               </div>
             )}
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="students" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+        {/* Students Section */}
+        {activeSection === 'students' && (
+          <div className="space-y-6">
             <div>
               <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('classroomDetail.studentsTab.title')}
@@ -830,11 +817,11 @@ const ClassroomDetail = () => {
               </p>
             </div>
 
-            <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+            <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                    <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+                    <Users className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                   </div>
                   {t('common.students')} ({students.length})
                 </CardTitle>
@@ -848,7 +835,7 @@ const ClassroomDetail = () => {
                     <p className="text-slate-500 dark:text-slate-400">{t('classroomDetail.studentsTab.noStudents')}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div ref={studentsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {students.map((enrollment) => {
                       const hasName = enrollment.student_profiles?.full_name;
                       const displayName = hasName
@@ -865,7 +852,7 @@ const ClassroomDetail = () => {
                       return (
                         <div
                           key={enrollment.id}
-                          className="flex items-center gap-4 p-4 border border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-white dark:bg-slate-900/30"
+                          className="flex items-center gap-4 p-4 border border-slate-100 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-white dark:bg-slate-900/30"
                         >
                           <Avatar className="h-12 w-12 border-2 border-white dark:border-slate-800 shadow-sm">
                             {enrollment.student_profiles?.avatar_url && (
@@ -874,7 +861,7 @@ const ClassroomDetail = () => {
                                 alt={displayName}
                               />
                             )}
-                            <AvatarFallback className="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300">{initials}</AvatarFallback>
+                            <AvatarFallback className="bg-primary/10 text-primary">{initials}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <p
@@ -895,9 +882,12 @@ const ClassroomDetail = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="submissions" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+        {/* Submissions Section */}
+        {activeSection === 'submissions' && (
+          <div className="space-y-6">
             <div>
               <h2 className={`text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('classroomDetail.submissions.title')}
@@ -907,9 +897,12 @@ const ClassroomDetail = () => {
               </p>
             </div>
             <SubmissionsTab classroomId={id!} />
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="analytics" className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2">
+        {/* Analytics Section */}
+        {activeSection === 'analytics' && (
+          <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -922,9 +915,9 @@ const ClassroomDetail = () => {
               <RegenerateScoresButton classroomId={id!} onComplete={fetchClassroom} />
             </div>
             <ClassroomAnalytics classroomId={id!} />
-          </TabsContent>
-        </Tabs>
-      </main>
+          </div>
+        )}
+      </div>
 
       <EditClassroomDialog
         open={editDialogOpen}
@@ -950,7 +943,7 @@ const ClassroomDetail = () => {
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-3xl" dir={isRTL ? 'rtl' : 'ltr'}>
+        <AlertDialogContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
           <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
             <AlertDialogTitle>{t('classroomDetail.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -971,18 +964,18 @@ const ClassroomDetail = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}>
-            <AlertDialogCancel disabled={isDeleting} className="rounded-full mt-0">{t('classroomDetail.deleteDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} className="mt-0">{t('classroomDetail.deleteDialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteClassroom}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? t('classroomDetail.deleteDialog.deleting') : t('classroomDetail.deleteDialog.deleteButton')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog >
-    </BreathingBackground >
+      </AlertDialog>
+    </ClassroomLayout>
   );
 };
 

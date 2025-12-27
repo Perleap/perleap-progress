@@ -408,13 +408,13 @@ export function CreateAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
-        <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-xl border-none shadow-2xl bg-white dark:bg-slate-900">
+        <div className="h-1.5 bg-primary" />
 
         <DialogHeader className="px-8 pt-8 pb-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
-              <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-lg">
+              <Sparkles className="h-6 w-6 text-primary" />
             </div>
             <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
               {initialData ? t('editAssignment.title') : t('createAssignment.title')}
@@ -429,8 +429,8 @@ export function CreateAssignmentDialog({
           <form onSubmit={handleSubmit} className="space-y-8">
 
             {/* Assignment Basics */}
-            <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
-              <div className={`flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+              <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <BookOpen className="h-5 w-5" />
                 <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseBasics')}</h3>
               </div>
@@ -460,7 +460,7 @@ export function CreateAssignmentDialog({
                   placeholder={t('createAssignment.instructionsPlaceholder')}
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  className="min-h-[120px] rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
+                  className="min-h-[120px] rounded-lg border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
                   dir={isRTL ? 'rtl' : 'ltr'}
                   required
                   autoDirection
@@ -510,7 +510,7 @@ export function CreateAssignmentDialog({
             </div>
 
             {/* Skills & Domain */}
-            <div className="space-y-5 p-5 bg-purple-50/30 dark:bg-purple-900/10 rounded-3xl border border-purple-100 dark:border-purple-900/30">
+            <div className="space-y-5 p-5 bg-purple-50/30 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/30">
               <div className={`flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <Target className="h-5 w-5" />
                 <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -649,7 +649,7 @@ export function CreateAssignmentDialog({
             </div>
 
             {/* Materials Section */}
-            <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
+            <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20">
               <div className={`flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <FileText className="h-5 w-5" />
                 <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -780,7 +780,7 @@ export function CreateAssignmentDialog({
               <Button
                 type="submit"
                 disabled={loading}
-                className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
+                className="rounded-full px-8"
                 dir={isRTL ? 'rtl' : 'ltr'}
               >
                 {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}

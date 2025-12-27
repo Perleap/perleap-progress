@@ -196,7 +196,7 @@ export function StudentCalendar({
       </div>
 
       <CardContent className="p-6 pt-0 space-y-6">
-        <div className="border rounded-3xl p-4">
+        <div className="border rounded-xl p-4">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -221,7 +221,7 @@ export function StudentCalendar({
               cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent",
               day: "h-9 w-9 p-0 font-normal text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all",
               day_selected: "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full shadow-md",
-              day_today: "text-indigo-600 font-bold",
+              day_today: "text-primary font-bold",
             }}
           />
         </div>
@@ -243,7 +243,7 @@ export function StudentCalendar({
                   {activeClassesForSelectedDate.map((classroom) => (
                     <div
                       key={classroom.id}
-                      className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 transition-all hover:scale-[1.02]"
+                      className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 transition-all hover:scale-[1.02]"
                     >
                       <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{classroom.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{classroom.subject}</p>
@@ -280,7 +280,7 @@ export function StudentCalendar({
                   {assignmentsForSelectedDate.map((assignment) => (
                     <div
                       key={assignment.id}
-                      className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 transition-all hover:scale-[1.02]"
+                      className="p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 transition-all hover:scale-[1.02]"
                     >
                       <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{assignment.title}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

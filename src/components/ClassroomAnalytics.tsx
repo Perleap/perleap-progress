@@ -268,11 +268,11 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Filters Section */}
       <Card className="rounded-[32px] border-none shadow-lg bg-white dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
+        <div className="h-1.5 bg-primary" />
         <CardHeader className="pb-4">
           <CardTitle className={`flex items-center gap-3 text-xl font-bold text-slate-800 dark:text-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
-              <Filter className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-lg">
+              <Filter className="h-6 w-6 text-primary" />
             </div>
             {t('analytics.filtersTitle')}
           </CardTitle>
@@ -285,10 +285,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                 {t('analytics.filterByStudent')}
               </label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger className={`h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                <SelectTrigger className={`h-12 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1" dir={isRTL ? 'rtl' : 'ltr'}>
+                <SelectContent className="rounded-lg border-slate-200 dark:border-slate-700 p-1" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.all')}</SelectItem>
                   {allStudents.map((s) => (
                     <SelectItem key={s.id} value={s.id} className="rounded-xl cursor-pointer">
@@ -304,10 +304,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                 {t('analytics.filterByAssignment')}
               </label>
               <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                <SelectTrigger className={`h-12 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 transition-all ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                <SelectTrigger className={`h-12 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-200 dark:border-slate-700 p-1" dir={isRTL ? 'rtl' : 'ltr'}>
+                <SelectContent className="rounded-lg border-slate-200 dark:border-slate-700 p-1" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allAssignments')}</SelectItem>
                   {assignments.map((a) => (
                     <SelectItem key={a.id} value={a.id} className="rounded-xl cursor-pointer">
@@ -323,10 +323,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
       {/* Key Metrics Grid */}
       <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-blue-500 to-indigo-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card className="rounded-[28px] border-none shadow-md bg-info text-info-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium text-blue-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <Users className="h-4 w-4" />
               {t('analytics.totalStudents')}
             </CardTitle>
@@ -336,10 +336,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-emerald-500 to-teal-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card className="rounded-[28px] border-none shadow-md bg-success text-success-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium text-emerald-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <BookOpen className="h-4 w-4" />
               {t('analytics.assignments')}
             </CardTitle>
@@ -349,10 +349,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card className="rounded-[28px] border-none shadow-md bg-warning text-warning-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium text-amber-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <FileText className="h-4 w-4" />
               {t('analytics.totalSubmissions')}
             </CardTitle>
@@ -364,10 +364,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-gradient-to-br from-purple-500 to-pink-600 text-white overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card className="rounded-[28px] border-none shadow-md bg-primary text-primary-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
           <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium text-purple-100 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               <CheckCircle2 className="h-4 w-4" />
               {t('analytics.completionRate')}
             </CardTitle>
@@ -452,21 +452,21 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {students.filter((s) => s.latestScores).length === 0 ? (
-                  <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700" dir={isRTL ? 'rtl' : 'ltr'}>
                     <p className={`text-slate-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classroomAnalytics.noStudentData')}</p>
                   </div>
                 ) : (
                   students
                     .filter((s) => s.latestScores)
                     .map((student) => (
-                      <Collapsible key={student.id} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+                      <Collapsible key={student.id} className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
                         <CollapsibleTrigger asChild>
                           <Button
                             variant="ghost"
                             className="w-full justify-between p-5 h-auto hover:bg-transparent"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                                 {student.fullName.charAt(0)}
                               </div>
                               <span className={`font-semibold text-slate-700 dark:text-slate-300 text-base ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -525,7 +525,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {allStudents.map((student) => (
-                  <Collapsible key={student.id} className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
+                  <Collapsible key={student.id} className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" className="w-full justify-between p-5 h-auto hover:bg-slate-100 dark:hover:bg-slate-800/50">
                         <div className="flex items-center gap-3">
@@ -568,7 +568,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
             </CardHeader>
             <CardContent className="p-6 space-y-8">
               <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
                   <div>
                     <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {t('analytics.activeStudents')}
@@ -582,7 +582,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
                   <div>
                     <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {t('analytics.avgSubmissions')}
@@ -600,7 +600,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">
                   <div>
                     <p className={`text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {t('analytics.engagementRate')}
@@ -635,7 +635,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                         <div className="flex items-center gap-3">
                           <div className="w-24 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-indigo-500 rounded-full"
+                              className="h-full bg-primary rounded-full"
                               style={{ width: `${(score / 10) * 100}%` }}
                             />
                           </div>

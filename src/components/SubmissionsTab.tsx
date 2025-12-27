@@ -268,7 +268,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   if (submissions.length === 0) {
     return (
-      <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+      <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4">
             <FileText className="h-8 w-8 text-slate-400" />
@@ -286,7 +286,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+      <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
         <CardContent className="p-6">
           <div className="space-y-4">
             {/* Top Row: Search, Filter Toggle, Export */}
@@ -308,12 +308,12 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="outline"
-                      className={`w-full md:w-auto rounded-full h-12 px-6 border-slate-200 dark:border-slate-700 ${isFiltersOpen || activeFiltersCount > 0 ? 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800' : 'bg-white dark:bg-slate-800'}`}
+                      className={`w-full md:w-auto rounded-full h-12 px-6 border-border ${isFiltersOpen || activeFiltersCount > 0 ? 'bg-primary/10 text-primary border-primary/20' : 'bg-card'}`}
                     >
                       <Filter className="h-4 w-4 me-2" />
                       {t('common.advancedFilters')}
                       {activeFiltersCount > 0 && (
-                        <Badge variant="secondary" className="ml-2 bg-indigo-200 text-indigo-700 hover:bg-indigo-300 dark:bg-indigo-800 dark:text-indigo-200">
+                        <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary hover:bg-primary/30">
                           {activeFiltersCount}
                         </Badge>
                       )}
@@ -428,7 +428,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       </Card>
 
       {filteredSubmissions.length === 0 ? (
-        <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+        <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-3">
               <Search className="h-6 w-6 text-slate-400" />
@@ -440,7 +440,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
               {t('submissionsTab.adjustFilters')}
             </p>
             {activeFiltersCount > 0 && (
-              <Button variant="link" onClick={clearFilters} className="mt-2 text-indigo-600">
+              <Button variant="link" onClick={clearFilters} className="mt-2 text-primary">
                 {t('submissionsTab.clearAllFilters')}
               </Button>
             )}

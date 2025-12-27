@@ -1,4 +1,17 @@
 {
+  "nav": {
+    "menu": "תפריט",
+    "dashboard": "לוח בקרה",
+    "settings": "הגדרות",
+    "teacherPortal": "פורטל מורים",
+    "studentPortal": "פורטל תלמידים",
+    "teacher": "מורה",
+    "student": "תלמיד",
+    "user": "משתמש",
+    "darkMode": "מצב כהה",
+    "lightMode": "מצב בהיר",
+    "logout": "התנתק"
+  },
   "landing": {
     "nav": {
       "product": "מוצר",

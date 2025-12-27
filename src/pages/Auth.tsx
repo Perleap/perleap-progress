@@ -364,7 +364,7 @@ const Auth = () => {
 
       <div className="w-full max-w-4xl animate-fade-in relative z-10">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-20 h-20 rounded-3xl bg-card/50 backdrop-blur-sm flex items-center justify-center border border-border/20 shadow-sm mb-6">
+          <div className="w-20 h-20 rounded-xl bg-card/50 backdrop-blur-sm flex items-center justify-center border border-border/20 shadow-sm mb-6">
             <img src="/perleap_logo.png" alt="PerLeap" className="h-12 w-12 object-contain" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-3 text-center">{t('auth.welcome')}</h1>
@@ -376,16 +376,16 @@ const Auth = () => {
         <Card className="shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-2xl border-border/50 rounded-[2.5rem] overflow-hidden">
           <CardContent className="p-12 md:p-16" dir={isRTL ? 'rtl' : 'ltr'}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1.5 rounded-2xl mb-10 h-12">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1.5 rounded-lg mb-10 h-12">
                 <TabsTrigger
                   value="signin"
-                  className="rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-md transition-all h-full text-lg font-medium"
+                  className="rounded-xl data-active:bg-background data-active:shadow-md transition-all h-full text-lg font-medium"
                 >
                   {t('auth.signIn')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-md transition-all h-full text-lg font-medium"
+                  className="rounded-xl data-active:bg-background data-active:shadow-md transition-all h-full text-lg font-medium"
                 >
                   {t('auth.signUp')}
                 </TabsTrigger>
@@ -406,7 +406,7 @@ const Auth = () => {
                       autoComplete="username"
                       readOnly
                       autoDirection
-                      className="h-12 rounded-2xl bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
+                      className="h-12 rounded-lg bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
                   <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -422,7 +422,7 @@ const Auth = () => {
                       autoComplete="new-password"
                       readOnly
                       autoDirection
-                      className="h-12 rounded-2xl bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
+                      className="h-12 rounded-lg bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
 
@@ -485,7 +485,7 @@ const Auth = () => {
                         type="button"
                         variant={role === 'teacher' ? 'default' : 'outline'}
                         onClick={() => setRole('teacher')}
-                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-3xl transition-all ${role === 'teacher'
+                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${role === 'teacher'
                           ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                           : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
                           }`}
@@ -497,7 +497,7 @@ const Auth = () => {
                         type="button"
                         variant={role === 'student' ? 'default' : 'outline'}
                         onClick={() => setRole('student')}
-                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-3xl transition-all ${role === 'student'
+                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${role === 'student'
                           ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                           : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
                           }`}
@@ -515,7 +515,7 @@ const Auth = () => {
                         type="button"
                         variant={selectedLanguage === 'en' ? 'default' : 'outline'}
                         onClick={() => handleLanguageSelect('en')}
-                        className={`h-16 flex items-center justify-center gap-3 rounded-3xl transition-all ${selectedLanguage === 'en'
+                        className={`h-16 flex items-center justify-center gap-3 rounded-xl transition-all ${selectedLanguage === 'en'
                           ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                           : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
                           }`}
@@ -527,7 +527,7 @@ const Auth = () => {
                         type="button"
                         variant={selectedLanguage === 'he' ? 'default' : 'outline'}
                         onClick={() => handleLanguageSelect('he')}
-                        className={`h-16 flex items-center justify-center gap-3 rounded-3xl transition-all ${selectedLanguage === 'he'
+                        className={`h-16 flex items-center justify-center gap-3 rounded-xl transition-all ${selectedLanguage === 'he'
                           ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                           : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
                           }`}
@@ -551,7 +551,7 @@ const Auth = () => {
                       autoComplete="username"
                       readOnly
                       autoDirection
-                      className="h-12 rounded-2xl bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
+                      className="h-12 rounded-lg bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
                   <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -567,7 +567,7 @@ const Auth = () => {
                       autoComplete="new-password"
                       readOnly
                       autoDirection
-                      className="h-12 rounded-2xl bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
+                      className="h-12 rounded-lg bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
                     />
                   </div>
 

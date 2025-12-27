@@ -31,13 +31,13 @@ export const FlowChart = () => {
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-900/20 rounded-full blur-[120px]" />
                 <div className="absolute top-0 left-0 w-96 h-96 bg-purple-900/20 rounded-full blur-[100px]" />
-                <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-900/20 rounded-full blur-[100px]" />
+                <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-[100px]" />
             </div>
 
             <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center mb-20">
                     <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
-                        Seamless <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Interaction Flow</span>
+                        Seamless <span className="text-primary">Interaction Flow</span>
                     </h2>
                     <p className="text-white/60 max-w-2xl mx-auto text-lg">
                         A unified ecosystem connecting every aspect of the educational journey.
@@ -49,8 +49,8 @@ export const FlowChart = () => {
                     {/* Central Node: Perleap */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
                         <div className="relative group">
-                            <div className="absolute -inset-12 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-pulse" />
-                            <div className="w-40 h-20 md:w-48 md:h-24 bg-black/80 border border-white/20 rounded-2xl shadow-2xl flex items-center justify-center gap-3 relative z-10 backdrop-blur-xl">
+                            <div className="absolute -inset-12 bg-primary rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-pulse" />
+                            <div className="w-40 h-20 md:w-48 md:h-24 bg-black/80 border border-white/20 rounded-lg shadow-2xl flex items-center justify-center gap-3 relative z-10 backdrop-blur-xl">
                                 <img src="/perleap_logo.png" alt="Perleap" className="w-8 h-8 object-contain" />
                                 <span className="font-bold text-xl md:text-2xl tracking-wide">Perleap</span>
                             </div>

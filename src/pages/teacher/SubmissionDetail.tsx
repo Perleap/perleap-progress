@@ -266,11 +266,11 @@ const SubmissionDetail = () => {
       <main className="container py-8 px-4 max-w-6xl mx-auto relative z-10">
         <div className="space-y-8">
           {/* Student Info Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-3xl border border-white/20 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-md">
                 <AvatarImage src={studentAvatar} alt={studentName} />
-                <AvatarFallback className="bg-indigo-100 text-indigo-600 text-xl">{studentName.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary text-xl">{studentName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
                 <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{studentName}</h1>
@@ -291,7 +291,7 @@ const SubmissionDetail = () => {
               <Button
                 onClick={handleGenerateFollowupAssignment}
                 disabled={generatingAssignment}
-                className="rounded-full shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 border-0"
+                className="rounded-full shadow-md hover:shadow-lg transition-all"
                 size="lg"
               >
                 {generatingAssignment ? (
@@ -322,19 +322,19 @@ const SubmissionDetail = () => {
             <div className="grid lg:grid-cols-12 gap-8">
               {/* Left Column: Feedback & Analytics */}
               <div className="lg:col-span-7 space-y-8">
-                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-900/30 pb-6">
-                    <CardTitle className="text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-indigo-500" />
+                <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                  <CardHeader className="bg-accent dark:bg-accent/30 pb-6">
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" />
                       {t('submissionDetail.teacherFeedback')}
                     </CardTitle>
-                    <CardDescription className="text-indigo-700/70 dark:text-indigo-300/70">
+                    <CardDescription className="text-accent-foreground/70">
                       {t('submissionDetail.teacherFeedbackDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="prose prose-slate dark:prose-invert max-w-none">
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-lg text-slate-700 dark:text-slate-300 leading-relaxed">
                         {feedback.teacher_feedback
                           ?.replace(/\*\*/g, '')
                           ?.replace(/\/\//g, '')
@@ -344,7 +344,7 @@ const SubmissionDetail = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
+                <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <User className="h-5 w-5 text-slate-500" />
@@ -355,7 +355,7 @@ const SubmissionDetail = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl text-slate-600 dark:text-slate-400 italic">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-lg text-slate-600 dark:text-slate-400 italic">
                       "{feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}"
                     </div>
                   </CardContent>
@@ -372,7 +372,7 @@ const SubmissionDetail = () => {
 
               {/* Right Column: Conversation History & CRA */}
               <div className="lg:col-span-5 space-y-6">
-                <Card className="h-[600px] flex flex-col rounded-3xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                <Card className="h-[600px] flex flex-col rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                   <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 z-10 shrink-0">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <MessageSquare className="h-5 w-5 text-primary" />
@@ -399,7 +399,7 @@ const SubmissionDetail = () => {
                             className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                           >
                             <div
-                              className={`max-w-[85%] p-4 rounded-2xl relative shadow-sm ${isConcerning
+                              className={`max-w-[85%] p-4 rounded-lg relative shadow-sm ${isConcerning
                                 ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
                                 : isUser
                                   ? 'bg-primary text-primary-foreground rounded-tr-none'
@@ -437,7 +437,7 @@ const SubmissionDetail = () => {
               </div>
             </div>
           ) : (
-            <Card className="rounded-3xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+            <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-6">
                   <MessageSquare className="h-10 w-10 text-slate-300" />

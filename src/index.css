@@ -4,37 +4,55 @@
 
 @layer base {
   :root {
-    /* Light Theme Default */
+    /* Udemy Design System - Light Theme */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --foreground: 0 0% 3.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 0 0% 3.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 0 0% 3.9%;
 
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary: Udemy Purple #6c44bc */
+    --primary: 263 47% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    /* Secondary: Slate-100 */
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    /* Muted: Slate-100/200 */
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    /* Accent: Udemy Pink #e08ca4 */
+    --accent: 344 56% 71%;
+    --accent-foreground: 263 47% 30%;
 
+    /* Destructive: Red-500 */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
+    /* Success: Green-600 */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
 
-    --radius: 0.75rem;
+    /* Warning: Amber-500 */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
 
+    /* Info: Sky-500 */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 263 47% 50%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -43,37 +61,61 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
+    /* Udemy Design System - Dark Theme */
+    --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 3.9%;
+    --card: 0 0% 3.9%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 3.9%;
+    --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    /* Primary: Lighter purple for dark mode */
+    --primary: 263 55% 65%;
+    --primary-foreground: 263 47% 10%;
 
-    --secondary: 240 3.7% 15.9%;
+    /* Secondary: Slate-800 */
+    --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    /* Muted: Slate-800 */
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    /* Accent: Darker pink for dark mode */
+    --accent: 344 40% 25%;
+    --accent-foreground: 344 56% 71%;
 
+    /* Destructive: Red-600 (darker for dark mode) */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    /* Success: Green-500 */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
 
+    /* Warning: Amber-400 */
+    --warning: 43 96% 56%;
+    --warning-foreground: 0 0% 0%;
+
+    /* Info: Sky-400 */
+    --info: 198 93% 60%;
+    --info-foreground: 0 0% 0%;
+
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 263 55% 65%;
+
+    /* Sidebar */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -82,6 +124,11 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
@@ -115,30 +162,54 @@
     @apply bg-white/80 backdrop-blur-xl border border-black/5 shadow-xl;
   }
 
+  /* Replaced gradients with solid semantic colors */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-700 to-gray-500;
+    @apply text-foreground;
   }
 
   .text-gradient-primary {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500;
+    @apply text-primary;
+  }
+
+  /* Enhanced animation utilities */
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/20;
   }
 }
 
-/* Calendar custom styles */
+/* Calendar custom styles - using Udemy palette */
 .rdp {
   --rdp-cell-size: 40px;
-  --rdp-accent-color: #3b82f6;
-  --rdp-background-color: #3b82f6;
+  --rdp-accent-color: hsl(263 47% 50%);
+  --rdp-background-color: hsl(263 47% 50%);
 }
 
 .rdp-day_selected {
-  background-color: #3b82f6 !important;
+  background-color: hsl(263 47% 50%) !important;
   color: white !important;
-  border-radius: 50% !important;
+  border-radius: 6px !important;
 }
 
 .rdp-day_selected:hover {
-  background-color: #3b82f6 !important;
+  background-color: hsl(263 47% 45%) !important;
   color: white !important;
 }
 
@@ -303,4 +374,43 @@
        url('/fonts/katex/KaTeX_Size4-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* RTL Sidebar Support */
+.rtl-sidebar [data-sidebar="sidebar"] {
+  left: auto;
+  right: 0;
+}
+
+.rtl-sidebar [data-sidebar="sidebar"][data-state="collapsed"] {
+  left: auto;
+  right: calc(var(--sidebar-width-icon) * -1);
+}
+
+.rtl-sidebar [data-sidebar="inset"] {
+  margin-left: 0;
+  margin-right: var(--sidebar-width);
+}
+
+.rtl-sidebar [data-sidebar="inset"][data-sidebar-state="collapsed"] {
+  margin-left: 0;
+  margin-right: var(--sidebar-width-icon);
+}
+
+/* Mobile RTL sidebar */
+@media (max-width: 768px) {
+  .rtl-sidebar [data-sidebar="inset"] {
+    margin-right: 0;
+  }
 }

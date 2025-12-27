@@ -1,0 +1,71 @@
+import * as React from 'react';
+import { useRef, useEffect } from 'react';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
+import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { usePageTransition } from '@/hooks/useGsapAnimations';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  breadcrumbs?: BreadcrumbItem[];
+  title?: string;
+}
+
+export function DashboardLayout({ children, breadcrumbs = [], title }: DashboardLayoutProps) {
+  const contentRef = usePageTransition();
+  const { isRTL } = useLanguage();
+
+  return (
+    <SidebarProvider defaultOpen={true} className={isRTL ? 'rtl-sidebar' : ''}>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-6 shadow-sm">
+          <SidebarTrigger className="hover:bg-accent hover:scale-105 rounded-lg p-2 transition-all duration-200" />
+          <Separator orientation="vertical" className="h-6 bg-border/60" />
+          {breadcrumbs.length > 0 && (
+            <Breadcrumb>
+              <BreadcrumbList>
+                {breadcrumbs.map((item, index) => (
+                  <React.Fragment key={index}>
+                    <BreadcrumbItem className={index === breadcrumbs.length - 1 ? '' : 'hidden md:block'}>
+                      {item.href ? (
+                        <BreadcrumbLink href={item.href} className="font-medium hover:text-primary transition-colors">
+                          {item.label}
+                        </BreadcrumbLink>
+                      ) : (
+                        <BreadcrumbPage className="font-semibold text-foreground">{item.label}</BreadcrumbPage>
+                      )}
+                    </BreadcrumbItem>
+                    {index < breadcrumbs.length - 1 && (
+                      <BreadcrumbSeparator className="hidden md:block" />
+                    )}
+                  </React.Fragment>
+                ))}
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
+        </header>
+        <div ref={contentRef} className="flex flex-1 flex-col gap-10 p-6 md:p-8 lg:p-10 bg-gradient-to-br from-background via-background to-muted/10">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+
+

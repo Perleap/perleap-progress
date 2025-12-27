@@ -39,7 +39,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
     .slice(0, 2);
 
   return (
-    <Card className="group rounded-3xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden flex flex-col h-[320px] relative">
+    <Card className="group rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden flex flex-col h-[320px] relative">
       {/* Status Badge - Absolute Top Right */}
       <div className="absolute top-4 right-4 z-10">
         <Badge
@@ -61,7 +61,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
           {submission.student_avatar_url ? (
             <img src={submission.student_avatar_url} alt={submission.student_name} className="h-full w-full object-cover" />
           ) : (
-            <AvatarFallback className="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300 font-bold text-2xl">
+            <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl">
               {initials}
             </AvatarFallback>
           )}
@@ -85,7 +85,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
             variant="ghost"
             size="sm"
             onClick={() => setShowFeedback(true)}
-            className="mt-auto text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 -mb-2"
+            className="mt-auto text-primary hover:text-primary/80 hover:bg-primary/10 -mb-2"
           >
             <MessageSquare className="h-4 w-4 mr-2" />
             {t('submissionCard.teacherFeedback')}
@@ -99,7 +99,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <User className="h-4 w-4 text-indigo-500" />
+            <User className="h-4 w-4 text-primary" />
             {t('submissionCard.teacherFeedback')}
           </h4>
           <Button
@@ -123,7 +123,7 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
       <div className="p-4 pt-0 z-30 bg-white dark:bg-slate-900">
         <Button
           onClick={() => navigate(`/teacher/submission/${submission.id}`)}
-          className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all h-11 text-sm font-medium"
+          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all h-11 text-sm font-medium"
         >
           Full Report
         </Button>

@@ -15,9 +15,9 @@ export const Hero = () => {
 
             {/* Floating Orbs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-10 w-24 h-24 bg-gradient-to-br from-pink-200 to-purple-200 rounded-full blur-xl animate-float opacity-60" />
-                <div className="absolute bottom-1/4 right-10 w-32 h-32 bg-gradient-to-br from-blue-200 to-cyan-200 rounded-full blur-xl animate-float delay-2000 opacity-60" />
-                <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-gradient-to-br from-yellow-200 to-orange-200 rounded-full blur-xl animate-float delay-1000 opacity-40" />
+                <div className="absolute top-1/4 left-10 w-24 h-24 bg-primary/20 rounded-full blur-xl animate-float opacity-60" />
+                <div className="absolute bottom-1/4 right-10 w-32 h-32 bg-info/20 rounded-full blur-xl animate-float delay-2000 opacity-60" />
+                <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-success/20 rounded-full blur-xl animate-float delay-1000 opacity-40" />
             </div>
 
             <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">

@@ -1,4 +1,17 @@
 {
+  "nav": {
+    "menu": "Menu",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "teacherPortal": "Teacher Portal",
+    "studentPortal": "Student Portal",
+    "teacher": "Teacher",
+    "student": "Student",
+    "user": "User",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "logout": "Logout"
+  },
   "landing": {
     "nav": {
       "product": "Product",
