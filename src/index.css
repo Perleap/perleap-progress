@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    /* Udemy Design System - Light Theme */
+    /* Base-vega Theme - Light */
     --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 0 0% 9%;
 
-    /* Primary: Udemy Purple #6c44bc */
-    --primary: 263 47% 50%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: Neutral-900 */
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
 
-    /* Secondary: Slate-100 */
+    /* Secondary: Neutral-100 */
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
 
-    /* Muted: Slate-100/200 */
+    /* Muted: Neutral-100 */
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
 
-    /* Accent: Udemy Pink #e08ca4 */
-    --accent: 344 56% 71%;
-    --accent-foreground: 263 47% 30%;
+    /* Accent: Neutral-100 */
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
 
     /* Destructive: Red-500 */
     --destructive: 0 84.2% 60.2%;
@@ -48,7 +48,7 @@
 
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 263 47% 50%;
+    --ring: 0 0% 9%;
 
     --radius: 0.5rem;
 
@@ -69,7 +69,7 @@
   }
 
   .dark {
-    /* Udemy Design System - Dark Theme */
+    /* Base-vega Theme - Dark */
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
 
@@ -79,24 +79,24 @@
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    /* Primary: Lighter purple for dark mode */
-    --primary: 263 55% 65%;
-    --primary-foreground: 263 47% 10%;
+    /* Primary: Neutral-50 */
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
 
-    /* Secondary: Slate-800 */
+    /* Secondary: Neutral-800 */
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
 
-    /* Muted: Slate-800 */
+    /* Muted: Neutral-800 */
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
 
-    /* Accent: Darker pink for dark mode */
-    --accent: 344 40% 25%;
-    --accent-foreground: 344 56% 71%;
+    /* Accent: Neutral-800 */
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
 
-    /* Destructive: Red-600 (darker for dark mode) */
-    --destructive: 0 62.8% 30.6%;
+    /* Destructive: Red-500 */
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
     /* Success: Green-500 */
@@ -113,7 +113,7 @@
 
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 263 55% 65%;
+    --ring: 0 0% 98%;
 
     /* Sidebar */
     --sidebar-background: 240 5.9% 10%;
@@ -154,6 +154,35 @@
 }
 
 @layer utilities {
+  /* Typography utilities */
+  .text-heading {
+    @apply font-semibold tracking-tight;
+    line-height: 1.2;
+  }
+
+  .text-body {
+    @apply font-normal;
+    line-height: 1.6;
+  }
+
+  .text-subtle {
+    @apply text-muted-foreground;
+  }
+
+  /* Spacing utilities */
+  .space-section {
+    @apply py-8 md:py-12;
+  }
+
+  .space-card {
+    @apply p-6;
+  }
+
+  .space-form {
+    @apply space-y-4;
+  }
+
+  /* Glass effects */
   .glass {
     @apply bg-white/70 backdrop-blur-lg border border-black/5 shadow-sm;
   }
@@ -162,7 +191,7 @@
     @apply bg-white/80 backdrop-blur-xl border border-black/5 shadow-xl;
   }
 
-  /* Replaced gradients with solid semantic colors */
+  /* Gradients */
   .text-gradient {
     @apply text-foreground;
   }

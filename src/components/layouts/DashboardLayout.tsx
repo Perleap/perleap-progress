@@ -32,9 +32,9 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
   return (
     <SidebarProvider defaultOpen={true} className={isRTL ? 'rtl-sidebar' : ''}>
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-6 shadow-sm">
-          <SidebarTrigger className="hover:bg-accent hover:scale-105 rounded-lg p-2 transition-all duration-200" />
+      <SidebarInset className="relative z-0">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-6 shadow-sm sticky top-0 z-30">
+          <SidebarTrigger className="hover:bg-accent hover:scale-110 rounded-lg p-2.5 transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-accent-foreground/10" />
           <Separator orientation="vertical" className="h-6 bg-border/60" />
           {breadcrumbs.length > 0 && (
             <Breadcrumb>
@@ -59,7 +59,7 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
             </Breadcrumb>
           )}
         </header>
-        <div ref={contentRef} className="flex flex-1 flex-col gap-10 p-6 md:p-8 lg:p-10 bg-gradient-to-br from-background via-background to-muted/10">
+        <div ref={contentRef} className="flex flex-1 flex-col gap-10 p-6 md:p-8 lg:p-10 bg-gradient-to-br from-background via-background to-muted/10 min-h-0">
           {children}
         </div>
       </SidebarInset>

@@ -49,10 +49,10 @@ export function AppSidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
 
-  const isTeacher = profile?.role === 'teacher';
+  const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
 
   // Define navigation items based on role
@@ -111,42 +111,49 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+      <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center px-5 group-data-[collapsible=icon]:px-2">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              onClick={() => navigate('/')}
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <GraduationCap className="size-4" />
+          <SidebarMenuItem className="list-none">
+            <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+              <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-card border border-border shadow-sm group-data-[collapsible=icon]:size-8">
+                <img 
+                  src="/perleap_logo.png" 
+                  alt="PerLeap Logo" 
+                  className="size-7 object-contain group-data-[collapsible=icon]:size-6"
+                  onError={(e) => {
+                    console.error('Logo failed to load');
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">PerLeap</span>
-                <span className="truncate text-xs text-muted-foreground">
+              <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate font-bold text-xl">PerLeap</span>
+                <span className="truncate text-base text-muted-foreground font-semibold">
                   {isTeacher ? t('nav.teacherPortal') : t('nav.studentPortal')}
                 </span>
               </div>
-            </SidebarMenuButton>
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel>{t('nav.menu')}</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            {t('nav.menu')}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navItemsWithActive.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     onClick={() => navigate(item.url)}
                     isActive={item.isActive}
                     tooltip={item.title}
+                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:justify-center ${item.isActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                   >
-                    <item.icon className="size-4" />
-                    <span>{item.title}</span>
+                    <item.icon className="size-5" />
+                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -155,29 +162,30 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <SidebarMenu>
+      <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
+        <SidebarMenu className="space-y-1">
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleTheme}
               tooltip={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+              className="min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:justify-center"
             >
               {theme === 'dark' ? (
-                <Sun className="size-4" />
+                <Sun className="size-5" />
               ) : (
-                <Moon className="size-4" />
+                <Moon className="size-5" />
               )}
-              <span>{theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}</span>
+              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleSignOut}
-              className="text-muted-foreground hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:justify-center"
               tooltip={t('nav.signOut')}
             >
-              <LogOut className="size-4" />
-              <span>{t('nav.signOut')}</span>
+              <LogOut className="size-5" />
+              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.signOut')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

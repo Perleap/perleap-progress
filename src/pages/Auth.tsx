@@ -363,38 +363,38 @@ const Auth = () => {
       </div>
 
       <div className="w-full max-w-4xl animate-fade-in relative z-10">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-20 h-20 rounded-xl bg-card/50 backdrop-blur-sm flex items-center justify-center border border-border/20 shadow-sm mb-6">
+        <div className="flex flex-col items-center mb-12">
+          <div className="w-20 h-20 rounded-2xl bg-card flex items-center justify-center border border-border shadow-sm mb-6">
             <img src="/perleap_logo.png" alt="PerLeap" className="h-12 w-12 object-contain" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight mb-3 text-center">{t('auth.welcome')}</h1>
-          <p className="text-muted-foreground text-lg text-center max-w-lg">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-center text-heading">{t('auth.welcome')}</h1>
+          <p className="text-muted-foreground text-lg text-center max-w-lg text-body">
             {t('auth.tagline')}
           </p>
         </div>
 
-        <Card className="shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-2xl border-border/50 rounded-[2.5rem] overflow-hidden">
-          <CardContent className="p-12 md:p-16" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card className="shadow-xl bg-card border-border rounded-3xl overflow-hidden">
+          <CardContent className="p-10 md:p-14 space-card" dir={isRTL ? 'rtl' : 'ltr'}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1.5 rounded-lg mb-10 h-12">
+              <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl mb-8 h-12">
                 <TabsTrigger
                   value="signin"
-                  className="rounded-xl data-active:bg-background data-active:shadow-md transition-all h-full text-lg font-medium"
+                  className="rounded-lg data-active:bg-background data-active:shadow-sm transition-all h-full text-base font-semibold"
                 >
                   {t('auth.signIn')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="rounded-xl data-active:bg-background data-active:shadow-md transition-all h-full text-lg font-medium"
+                  className="rounded-lg data-active:bg-background data-active:shadow-sm transition-all h-full text-base font-semibold"
                 >
                   {t('auth.signUp')}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin" className="mt-0 space-y-8">
-                <form onSubmit={handleSignIn} className="space-y-6">
-                  <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label htmlFor="signin-email" className="text-lg font-medium text-foreground block">{t('auth.email')}</Label>
+              <TabsContent value="signin" className="mt-0 space-y-6 space-form">
+                <form onSubmit={handleSignIn} className="space-y-5 space-form">
+                  <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <Label htmlFor="signin-email" className="text-sm font-semibold">{t('auth.email')}</Label>
                     <Input
                       id="signin-email"
                       type="email"
@@ -406,11 +406,11 @@ const Auth = () => {
                       autoComplete="username"
                       readOnly
                       autoDirection
-                      className="h-12 rounded-lg bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
+                      className="h-11"
                     />
                   </div>
-                  <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label htmlFor="signin-password" className="text-lg font-medium text-foreground block">{t('auth.password')}</Label>
+                  <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <Label htmlFor="signin-password" className="text-sm font-semibold">{t('auth.password')}</Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -422,25 +422,25 @@ const Auth = () => {
                       autoComplete="new-password"
                       readOnly
                       autoDirection
-                      className="h-12 rounded-lg bg-muted/50 border-input focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all px-6 text-lg shadow-sm"
+                      className="h-11"
                     />
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full h-12 text-xl font-semibold shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all mt-6"
+                    className="w-full h-11 text-base font-semibold mt-6"
                     disabled={loading}
                   >
-                    {loading && <Loader2 className="me-3 h-6 w-6 animate-spin" />}
+                    {loading && <Loader2 className="me-2 h-5 w-5 animate-spin" />}
                     {t('auth.signInButton')}
                   </Button>
 
-                  <div className="relative my-10">
+                  <div className="relative my-8">
                     <div className="absolute inset-0 flex items-center">
                       <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-6 text-muted-foreground text-sm font-medium tracking-wider">
+                      <span className="bg-card px-4 text-muted-foreground text-xs font-medium tracking-wide">
                         {t('auth.orContinueWith')}
                       </span>
                     </div>
@@ -449,7 +449,7 @@ const Auth = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full rounded-full h-12 border-input hover:bg-muted/50 hover:border-border transition-all bg-card shadow-sm hover:shadow-md"
+                    className="w-full h-11"
                     onClick={() => handleGoogleSignIn()}
                     disabled={loading}
                   >

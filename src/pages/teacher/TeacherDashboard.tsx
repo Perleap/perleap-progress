@@ -5,7 +5,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, BookOpen } from 'lucide-react';
+import { Plus, Users, BookOpen, Copy, LayoutGrid, List, Grid2x2, LayoutList, Table2, CalendarDays, Calendar } from 'lucide-react';
+import { ClassroomTableView } from '@/components/features/dashboard/ClassroomTableView';
+import { ClassroomTimelineView } from '@/components/features/dashboard/ClassroomTimelineView';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { CreateClassroomDialog } from '@/components/CreateClassroomDialog';
 import { TeacherCalendar } from '@/components/TeacherCalendar';
@@ -14,6 +23,7 @@ import { DashboardLayout } from '@/components/layouts';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { SkeletonCardGrid } from '@/components/ui/GsapSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { copyToClipboard } from '@/lib/utils';
 
 interface Classroom {
   id: string;
@@ -35,20 +45,44 @@ interface CalendarClassroom {
 
 const TeacherDashboard = () => {
   const { t } = useTranslation();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [profile, setProfile] = useState<{ full_name: string; avatar_url?: string }>({
-    full_name: '',
-    avatar_url: '',
+  // Initialize classrooms from sessionStorage to survive component remounts
+  const [classrooms, setClassrooms] = useState<Classroom[]>(() => {
+    try {
+      const storageKey = `classrooms_${user?.id}`;
+      const cached = sessionStorage.getItem(storageKey);
+      return cached ? JSON.parse(cached) : [];
+    } catch (error) {
+      return [];
+    }
   });
+  // Initialize loading based on whether we have cached data
+  const [loading, setLoading] = useState(() => {
+    // If we have data in cache, start with loading = false to show it immediately
+    if (user?.id) {
+      const cached = sessionStorage.getItem(`classrooms_${user.id}`);
+      if (cached) {
+        try {
+          const parsedCache = JSON.parse(cached);
+          if (Array.isArray(parsedCache) && parsedCache.length > 0) {
+            return false; // We have cached data, show it immediately
+          }
+        } catch {
+          // Invalid cache, show loading
+        }
+      }
+    }
+    return true; // Otherwise show loading while we fetch
+  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'compact' | 'detailed' | 'table' | 'timeline'>('grid');
   const cardsRef = useStaggerAnimation(':scope > div', 0.08);
 
-  const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data when user is available
@@ -59,40 +93,66 @@ const TeacherDashboard = () => {
 
     // Reset fetch flag if user ID actually changed
     if (lastUserIdRef.current !== user.id) {
-      hasFetchedRef.current = false;
+      hasFetchedRef.current = false; // Reset to fetch fresh data for new user
       lastUserIdRef.current = user.id;
     }
 
-    // Only fetch if we haven't fetched yet and not currently fetching
+    // Fetch on mount to ensure fresh data (even if we have cache)
+    // This provides better UX: cached data shows immediately (loading=false),
+    // then fresh data updates in background
     if (!hasFetchedRef.current && !isFetchingRef.current) {
-      fetchClassrooms();
+      // Clear any pending fetch timeout
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      
+      // Debounce the fetch to prevent rapid successive calls
+      fetchTimeoutRef.current = setTimeout(() => {
+        fetchClassrooms();
+      }, 100);
     }
+
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [user?.id, authLoading]); // Use user?.id instead of user to avoid refetch on user object reference change
 
   const fetchClassrooms = async () => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('🔄 TeacherDashboard: Fetch already in progress, skipping');
+      return;
+    }
+    
     isFetchingRef.current = true;
+    console.log('🔄 TeacherDashboard: Fetching classrooms...');
+    
+    // Only show loading spinner if we don't have cached data yet
+    if (classrooms.length === 0) {
+      setLoading(true);
+    }
+    
     try {
-      // Fetch teacher profile - use maybeSingle() to handle cases where profile doesn't exist yet
-      const { data: profileData, error: profileError } = await supabase
-        .from('teacher_profiles')
-        .select('full_name, avatar_url')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (!profileError && profileData) {
-        setProfile(profileData);
-      } else if (profileError) {
-        console.error('Error fetching teacher profile:', profileError);
-      }
-
+      // Only fetch classrooms, profile is handled by AuthContext
       const { data, error } = await supabase
         .from('classrooms')
         .select('id, name, subject, invite_code, start_date, end_date')
         .eq('teacher_id', user?.id);
 
       if (error) throw error;
+      
+      console.log('✅ TeacherDashboard: Classrooms loaded:', data?.length || 0);
       setClassrooms(data || []);
+      // Persist classroom data to survive component remounts
+      if (user?.id) {
+        const storageKey = `classrooms_${user.id}`;
+        const dataToStore = JSON.stringify(data || []);
+        sessionStorage.setItem(storageKey, dataToStore);
+      }
     } catch (error) {
+      console.error('❌ TeacherDashboard: Error loading classrooms:', error);
       toast.error(t('teacherDashboard.errors.loadingClassrooms'));
     } finally {
       setLoading(false);
@@ -104,6 +164,37 @@ const TeacherDashboard = () => {
   const handleClassroomCreated = (classroomId: string) => {
     fetchClassrooms();
     navigate(`/teacher/classroom/${classroomId}`);
+  };
+
+  const handleCopyInviteCode = async (e: React.MouseEvent, inviteCode: string) => {
+    e.stopPropagation();
+    try {
+      await copyToClipboard(inviteCode);
+      toast.success(t('teacherDashboard.inviteCodeCopied') || 'Invite code copied!');
+    } catch (error) {
+      toast.error(t('common.error') || 'Failed to copy');
+    }
+  };
+
+  const formatDate = (dateString: string | null | undefined, format: 'short' | 'long' = 'short') => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (format === 'short') {
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getViewModeLabel = (mode: typeof viewMode) => {
+    const labels = {
+      grid: 'Grid',
+      compact: 'Compact',
+      list: 'List',
+      detailed: 'Detailed',
+      table: 'Table',
+      timeline: 'Timeline',
+    };
+    return labels[mode];
   };
 
   // Transform data for calendar component
@@ -128,22 +219,15 @@ const TeacherDashboard = () => {
 
   return (
     <DashboardLayout breadcrumbs={[{ label: t('nav.dashboard') }]}>
-      {/* Enhanced Page Header with Gradient Background */}
-      <div className="relative -mx-6 md:-mx-8 lg:-mx-10 -mt-6 md:-mt-8 lg:-mt-10 px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-6 md:pb-8 mb-6 md:mb-8 overflow-hidden">
-        {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-accent/5 to-transparent dark:from-primary/10 dark:via-accent/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(108,68,188,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_30%_20%,rgba(108,68,188,0.2),transparent_50%)]" />
-        
-        <div className="relative flex flex-col gap-3">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg flex-shrink-0">
-              <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-white" />
-            </div>
+      {/* Enhanced Page Header */}
+      <div className="relative -mx-6 md:-mx-8 lg:-mx-10 -mt-6 md:-mt-8 lg:-mt-10 px-6 md:px-8 lg:px-10 pt-8 md:pt-10 lg:pt-12 pb-8 md:pb-10 mb-8 md:mb-10 overflow-hidden bg-gradient-to-br from-muted/30 to-transparent">
+        <div className="relative flex flex-col gap-4">
+          <div className="flex items-center gap-4 md:gap-5">
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text truncate">
-                {t('teacherDashboard.title')}
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-heading truncate">
+                {profile?.full_name ? `${profile.full_name}'s Dashboard` : t('teacherDashboard.title')}
               </h1>
-              <p className="text-muted-foreground mt-0.5 md:mt-1 text-sm md:text-base truncate">{t('teacherDashboard.subtitle')}</p>
+              <p className="text-muted-foreground mt-2 text-sm md:text-base text-body truncate">{t('teacherDashboard.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -152,19 +236,73 @@ const TeacherDashboard = () => {
       <div className="grid lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_420px] gap-6 md:gap-8 xl:gap-10">
         <div className="space-y-6 md:space-y-8">
           {/* Section Header with Enhanced Button */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t('teacherDashboard.myClassrooms')}</h2>
-              <p className="text-xs md:text-sm text-muted-foreground mt-1">Manage and track your classes</p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-heading">{t('teacherDashboard.myClassrooms')}</h2>
+                <p className="text-sm md:text-base text-subtle mt-2">Manage and track your classes</p>
+              </div>
+              <Button
+                onClick={() => setDialogOpen(true)}
+                size="lg"
+                className="gap-2 w-full sm:w-auto flex-shrink-0"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
+              </Button>
             </div>
-            <Button
-              onClick={() => setDialogOpen(true)}
-              size="lg"
-              className="gap-2 shadow-lg hover:shadow-xl transition-all duration-300 group w-full sm:w-auto flex-shrink-0"
-            >
-              <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
-              <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
-            </Button>
+            
+            {/* View Switcher */}
+            {classrooms.length > 0 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground mr-2">View:</span>
+                <Select value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue>
+                      {getViewModeLabel(viewMode)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="grid">
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid className="h-4 w-4" />
+                        <span>Grid</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="compact">
+                      <div className="flex items-center gap-2">
+                        <Grid2x2 className="h-4 w-4" />
+                        <span>Compact</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="list">
+                      <div className="flex items-center gap-2">
+                        <List className="h-4 w-4" />
+                        <span>List</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="detailed">
+                      <div className="flex items-center gap-2">
+                        <LayoutList className="h-4 w-4" />
+                        <span>Detailed</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="table">
+                      <div className="flex items-center gap-2">
+                        <Table2 className="h-4 w-4" />
+                        <span>Table</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="timeline">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4" />
+                        <span>Timeline</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -179,49 +317,180 @@ const TeacherDashboard = () => {
                 onClick: () => setDialogOpen(true),
               }}
             />
+          ) : viewMode === 'table' ? (
+            <ClassroomTableView 
+              classrooms={classrooms} 
+              onCopyInviteCode={(code) => console.log('Copied:', code)}
+            />
+          ) : viewMode === 'timeline' ? (
+            <ClassroomTimelineView 
+              classrooms={classrooms} 
+              onCopyInviteCode={(code) => console.log('Copied:', code)}
+            />
           ) : (
-            <div ref={cardsRef} className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
+            <div 
+              ref={cardsRef} 
+              className={
+                viewMode === 'grid' ? 'grid gap-4' :
+                viewMode === 'compact' ? 'grid gap-3' :
+                viewMode === 'list' ? 'flex flex-col gap-4' :
+                'grid gap-5'
+              }
+              style={
+                viewMode === 'grid' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))' } :
+                viewMode === 'compact' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))' } :
+                viewMode === 'detailed' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(350px, 100%), 1fr))' } :
+                undefined
+              }
+            >
               {classrooms.map((classroom) => (
-                <Card
-                  key={classroom.id}
-                  className="group relative overflow-hidden cursor-pointer border-2 hover:border-primary/40 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 md:hover:-translate-y-1 bg-gradient-to-br from-card/80 to-card backdrop-blur-sm active:scale-95 md:active:scale-100"
-                  onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
-                >
-                  {/* Decorative gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  <CardContent className="p-4 md:p-6 relative">
-                    <div className="flex items-start justify-between gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-base md:text-lg mb-2 md:mb-3 truncate group-hover:text-primary transition-colors">
+                // Grid View
+                viewMode === 'grid' ? (
+                  <Card
+                    key={classroom.id}
+                    className="group relative overflow-hidden cursor-pointer hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
+                    onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
+                  >
+                    <CardContent className="p-4 relative">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-base mb-2 truncate group-hover:text-primary transition-colors">
+                            {classroom.name}
+                          </h3>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 pt-3 border-t border-border/50">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Users className="h-4 w-4" />
+                            <span className="font-medium">{classroom._count?.enrollments || 0} students</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            <span>{formatDate(classroom.start_date)}</span>
+                          </div>
+                        </div>
+                        <div 
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
+                          onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
+                        >
+                          <span className="text-xs font-mono font-semibold text-primary">{classroom.invite_code}</span>
+                          <Copy className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : viewMode === 'compact' ? (
+                  // Compact View
+                  <Card
+                    key={classroom.id}
+                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200"
+                    onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="mb-2">
+                        <h3 className="font-bold text-sm truncate group-hover:text-primary transition-colors">
                           {classroom.name}
                         </h3>
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs font-semibold px-2.5 md:px-3 py-0.5 md:py-1 bg-primary/10 text-primary border-primary/20 group-hover:bg-primary/20 transition-colors"
-                        >
-                          {classroom.subject}
-                        </Badge>
                       </div>
-                      <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg md:rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300 flex-shrink-0">
-                        <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground pt-3 md:pt-4 border-t border-border/50 flex-wrap">
-                      <div className="flex items-center gap-1.5 md:gap-2">
-                        <div className="h-7 w-7 md:h-8 md:w-8 rounded-md md:rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                          <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          <span>{classroom._count?.enrollments || 0}</span>
+                          <span className="mx-1">•</span>
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(classroom.start_date)}</span>
                         </div>
-                        <span className="font-medium whitespace-nowrap">{classroom._count?.enrollments || 0} {t('common.students')}</span>
+                        <div 
+                          className="flex items-center gap-1 px-2 py-1 rounded bg-primary/5 border border-primary/20 hover:bg-primary/10 cursor-pointer transition-all w-full justify-center"
+                          onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
+                        >
+                          <span className="font-mono text-xs font-semibold text-primary">{classroom.invite_code}</span>
+                          <Copy className="h-3 w-3 text-primary" />
+                        </div>
                       </div>
-                      <span className="text-border hidden sm:inline">•</span>
-                      <div className="flex items-center gap-2 font-mono text-xs bg-muted/50 px-2 md:px-3 py-1 rounded-full">
-                        {classroom.invite_code}
+                    </CardContent>
+                  </Card>
+                ) : viewMode === 'list' ? (
+                  // List View
+                  <Card
+                    key={classroom.id}
+                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200"
+                    onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-base truncate group-hover:text-primary transition-colors mb-2">
+                            {classroom.name}
+                          </h3>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {classroom._count?.enrollments || 0} {t('common.students')}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(classroom.start_date, 'long')} - {formatDate(classroom.end_date, 'long')}
+                            </span>
+                          </div>
+                        </div>
+                        <div 
+                          className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105"
+                          onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
+                        >
+                          <span className="text-sm font-mono font-semibold text-primary">{classroom.invite_code}</span>
+                          <Copy className="h-4 w-4 text-primary" />
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  // Detailed View
+                  <Card
+                    key={classroom.id}
+                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200"
+                    onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="mb-4">
+                        <h3 className="font-bold text-lg mb-2 truncate group-hover:text-primary transition-colors">
+                          {classroom.name}
+                        </h3>
+                      </div>
+                      <div className="space-y-3 pt-4 border-t border-border/50">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                              <Users className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Students</p>
+                              <p className="font-bold">{classroom._count?.enrollments || 0}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                              <Calendar className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Duration</p>
+                              <p className="font-semibold text-xs">{formatDate(classroom.start_date)} - {formatDate(classroom.end_date)}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div 
+                          className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
+                          onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
+                        >
+                          <span className="text-sm font-mono font-semibold text-primary">{classroom.invite_code}</span>
+                          <Copy className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
               ))}
             </div>
           )}

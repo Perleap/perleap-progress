@@ -106,9 +106,10 @@ const StudentDashboard = () => {
   const assignmentsRef = useStaggerAnimation(':scope > div', 0.06);
 
   // Prevent refetching when tabbing in/out
-  const hasFetchedRef = useRef(false);
   const isFetchingRef = useRef(false);
   const lastUserIdRef = useRef<string | undefined>(undefined);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     // ProtectedRoute handles auth, just fetch data
@@ -121,30 +122,38 @@ const StudentDashboard = () => {
       lastUserIdRef.current = user.id;
     }
 
-    // Only fetch if we haven't fetched yet and not currently fetching
+    // Fetch on mount to ensure fresh data when navigating back
     if (!hasFetchedRef.current && !isFetchingRef.current) {
-      fetchData();
+      // Clear any pending fetch timeout
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      
+      // Debounce the fetch to prevent rapid successive calls
+      fetchTimeoutRef.current = setTimeout(() => {
+        fetchData();
+      }, 100);
     }
+
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
 
   const fetchData = async () => {
-    if (isFetchingRef.current) return; // Prevent concurrent fetches
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('🔄 StudentDashboard: Fetch already in progress, skipping');
+      return;
+    }
+    
     isFetchingRef.current = true;
+    console.log('🔄 StudentDashboard: Fetching data...');
+    
     try {
-      // Fetch student profile - use maybeSingle() to handle missing profiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('student_profiles')
-        .select('full_name, avatar_url')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (!profileError && profileData) {
-        setProfile(profileData);
-      } else if (profileError) {
-        console.error('Error fetching student profile:', profileError);
-      }
-
-      // Fetch enrollments and classrooms with date ranges
+      // Profile is handled by AuthContext, only fetch enrollments and classrooms
       const { data: enrollments } = await supabase
         .from('enrollments')
         .select('classroom_id, classrooms(id, name, subject, invite_code, start_date, end_date)')
@@ -237,8 +246,10 @@ const StudentDashboard = () => {
         setAssignments([]);
         setFinishedAssignments([]);
       }
+      
+      console.log('✅ StudentDashboard: Data loaded successfully');
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ StudentDashboard: Error loading dashboard data:', error);
       toast.error(t('studentDashboard.errors.loadingData'));
     } finally {
       setLoading(false);
@@ -473,7 +484,11 @@ const StudentDashboard = () => {
                   }}
                 />
               ) : (
-                <div ref={classroomsRef} className="grid gap-6 lg:grid-cols-2">
+                <div 
+                  ref={classroomsRef} 
+                  className="grid gap-6"
+                  style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))' }}
+                >
                   {classrooms.map((classroom) => (
                     <Card
                       key={classroom.id}
