@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface NavItem {
   title: string;
@@ -51,6 +52,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { isRTL } = useLanguage();
 
   const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
@@ -110,7 +112,7 @@ export function AppSidebar() {
   }, [profile?.full_name]);
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" side={isRTL ? "right" : "left"}>
       <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center px-5 group-data-[collapsible=icon]:px-2">
         <SidebarMenu>
           <SidebarMenuItem className="list-none">
@@ -150,9 +152,9 @@ export function AppSidebar() {
                     onClick={() => navigate(item.url)}
                     isActive={item.isActive}
                     tooltip={item.title}
-                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:justify-center ${item.isActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${item.isActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                   >
-                    <item.icon className="size-5" />
+                    <item.icon className="size-5 group-data-[collapsible=icon]:size-5" />
                     <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -163,30 +165,58 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
-        <SidebarMenu className="space-y-1">
+        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={toggleTheme}
-              tooltip={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
-              className="min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:justify-center"
-            >
-              {theme === 'dark' ? (
-                <Sun className="size-5" />
-              ) : (
-                <Moon className="size-5" />
-              )}
-              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:justify-center"
-              tooltip={t('nav.signOut')}
-            >
-              <LogOut className="size-5" />
-              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.signOut')}</span>
-            </SidebarMenuButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
+                    <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {isTeacher ? t('nav.teacher') : t('nav.student')}
+                    </span>
+                  </div>
+                  <ChevronUp className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side="top"
+                align={isRTL ? "start" : "end"}
+                sideOffset={4}
+              >
+                <DropdownMenuItem onClick={() => navigate(`${basePath}/settings`)}>
+                  <User2 className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
+                  {t('nav.profile')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleTheme}>
+                  {theme === 'dark' ? (
+                    <Sun className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
+                  ) : (
+                    <Moon className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
+                  )}
+                  {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5">
+                  <LanguageSwitcher />
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
+                  {t('nav.signOut')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

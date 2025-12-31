@@ -309,7 +309,26 @@ export function TeacherCalendar({
       </div>
 
       <CardContent className="p-6 pt-0 space-y-6">
-        <div className="border border-border/30 rounded-2xl p-4 bg-gradient-to-br from-muted/30 to-transparent backdrop-blur-sm">
+        <div className="border border-border/30 rounded-2xl p-3 bg-gradient-to-br from-muted/30 to-transparent backdrop-blur-sm calendar-custom-selected">
+          <div className="flex flex-col items-center mb-2">
+            <div className="text-sm font-bold uppercase tracking-wider mb-1">
+              {format(month, 'MMMM yyyy', { locale: language === 'he' ? he : undefined })}
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1))}
+                className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-border/50 rounded-full hover:bg-primary/10 hover:border-primary/50 dark:hover:bg-primary/20 transition-all duration-300 flex items-center justify-center"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1))}
+                className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-border/50 rounded-full hover:bg-primary/10 hover:border-primary/50 dark:hover:bg-primary/20 transition-all duration-300 flex items-center justify-center"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -319,21 +338,24 @@ export function TeacherCalendar({
             modifiers={modifiers}
             modifiersStyles={CALENDAR_MODIFIERS_STYLES}
             className="w-full"
+            components={{
+              Caption: () => null,
+            }}
             classNames={{
-              month: "space-y-4 w-full",
-              caption: "flex justify-center items-center relative pt-1 pb-6",
-              caption_label: "text-base font-bold uppercase tracking-wider",
-              nav: "flex items-center gap-1",
-              nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 border border-border/50 rounded-full hover:bg-primary/10 hover:border-primary/50 dark:hover:bg-primary/20 transition-all duration-300",
-              nav_button_previous: "absolute start-1",
-              nav_button_next: "absolute end-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex w-full justify-between mb-2",
-              head_cell: "text-muted-foreground w-9 font-normal text-[10px] uppercase tracking-wider text-center",
-              row: "flex w-full mt-2 justify-between",
-              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent",
-              day: "h-9 w-9 p-0 font-normal text-sm hover:bg-primary/10 dark:hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-110",
-              day_selected: "!bg-gradient-to-br !from-primary !to-primary/80 !text-white hover:!from-primary/90 hover:!to-primary/70 focus:!from-primary focus:!to-primary/80 rounded-full shadow-lg scale-110",
+              month: "flex flex-col items-center w-full",
+              caption: "hidden",
+              caption_label: "hidden",
+              nav: "hidden",
+              nav_button: "hidden",
+              nav_button_previous: "hidden",
+              nav_button_next: "hidden",
+              table: "border-collapse mx-auto",
+              head_row: "flex justify-center gap-1 mb-1",
+              head_cell: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
+              row: "flex mt-1 justify-center gap-1",
+              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent flex items-center justify-center w-8",
+              day: "h-8 w-8 p-0 font-normal text-sm hover:bg-primary/10 dark:hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center",
+              day_selected: "!bg-gradient-to-br !from-primary !to-primary/80 !text-white hover:!from-primary/90 hover:!to-primary/70 focus:!from-primary focus:!to-primary/80 rounded-full shadow-sm scale-90",
               day_today: "text-primary font-bold ring-2 ring-primary/30 ring-offset-2 ring-offset-background",
             }}
           />

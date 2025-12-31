@@ -42,6 +42,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ClassroomSection {
   id: string;
@@ -68,6 +69,7 @@ export function ClassroomSidebar({
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { isRTL } = useLanguage();
 
   const isTeacher = profile?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
@@ -94,7 +96,7 @@ export function ClassroomSidebar({
   }, [profile?.full_name]);
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" side={isRTL ? "right" : "left"}>
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -128,8 +130,9 @@ export function ClassroomSidebar({
                     isActive={activeSection === section.id}
                     tooltip={section.title}
                     onClick={() => onSectionChange(section.id)}
+                    className="group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                   >
-                    <section.icon className="size-4" />
+                    <section.icon className="size-4 group-data-[collapsible=icon]:size-5" />
                     <span>{section.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -148,8 +151,9 @@ export function ClassroomSidebar({
                 <SidebarMenuButton
                   tooltip={t('nav.dashboard')}
                   onClick={() => navigate(`${basePath}/dashboard`)}
+                  className="group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                 >
-                  <LayoutDashboard className="size-4" />
+                  <LayoutDashboard className="size-4 group-data-[collapsible=icon]:size-5" />
                   <span>{t('nav.dashboard')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -157,8 +161,9 @@ export function ClassroomSidebar({
                 <SidebarMenuButton
                   tooltip={t('nav.settings')}
                   onClick={() => navigate(`${basePath}/settings`)}
+                  className="group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                 >
-                  <Settings className="size-4" />
+                  <Settings className="size-4 group-data-[collapsible=icon]:size-5" />
                   <span>{t('nav.settings')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -188,24 +193,24 @@ export function ClassroomSidebar({
                       {isTeacher ? t('nav.teacher') : t('nav.student')}
                     </span>
                   </div>
-                  <ChevronUp className="ml-auto size-4" />
+                  <ChevronUp className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
                 side="top"
-                align="end"
+                align={isRTL ? "start" : "end"}
                 sideOffset={4}
               >
                 <DropdownMenuItem onClick={() => navigate(`${basePath}/settings`)}>
-                  <User2 className="mr-2 size-4" />
+                  <User2 className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
                   {t('nav.profile')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleTheme}>
                   {theme === 'dark' ? (
-                    <Sun className="mr-2 size-4" />
+                    <Sun className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
                   ) : (
-                    <Moon className="mr-2 size-4" />
+                    <Moon className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
                   )}
                   {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
                 </DropdownMenuItem>
@@ -215,7 +220,7 @@ export function ClassroomSidebar({
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                  <LogOut className="mr-2 size-4" />
+                  <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
                   {t('nav.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>

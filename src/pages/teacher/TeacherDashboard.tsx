@@ -258,8 +258,8 @@ const TeacherDashboard = () => {
                 <span className="text-sm text-muted-foreground mr-2">View:</span>
                 <Select value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue>
-                      {getViewModeLabel(viewMode)}
+                    <SelectValue placeholder="Select view">
+                      <span>{getViewModeLabel(viewMode)}</span>
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>

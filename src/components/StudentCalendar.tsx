@@ -196,7 +196,26 @@ export function StudentCalendar({
       </div>
 
       <CardContent className="p-6 pt-0 space-y-6">
-        <div className="border rounded-xl p-4">
+        <div className="border rounded-xl p-3 calendar-custom-selected">
+          <div className="flex flex-col items-center mb-2">
+            <div className="text-sm font-bold uppercase tracking-wider mb-1">
+              {format(month, 'MMMM yyyy', { locale: language === 'he' ? he : undefined })}
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1))}
+                className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1))}
+                className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -206,21 +225,24 @@ export function StudentCalendar({
             modifiers={modifiers}
             modifiersStyles={CALENDAR_MODIFIERS_STYLES}
             className="w-full"
+            components={{
+              Caption: () => null,
+            }}
             classNames={{
-              month: "space-y-4 w-full",
-              caption: "flex justify-center items-center relative pt-1 pb-6",
-              caption_label: "text-base font-bold uppercase tracking-wider",
-              nav: "flex items-center gap-1",
-              nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all",
-              nav_button_previous: "absolute start-1",
-              nav_button_next: "absolute end-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex w-full justify-between mb-2",
-              head_cell: "text-muted-foreground w-9 font-normal text-[10px] uppercase tracking-wider text-center",
-              row: "flex w-full mt-2 justify-between",
-              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent",
-              day: "h-9 w-9 p-0 font-normal text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all",
-              day_selected: "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full shadow-md",
+              month: "flex flex-col items-center w-full",
+              caption: "hidden",
+              caption_label: "hidden",
+              nav: "hidden",
+              nav_button: "hidden",
+              nav_button_previous: "hidden",
+              nav_button_next: "hidden",
+              table: "border-collapse mx-auto",
+              head_row: "flex justify-center gap-1 mb-1",
+              head_cell: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
+              row: "flex mt-1 justify-center gap-1",
+              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent flex items-center justify-center w-8",
+              day: "h-8 w-8 p-0 font-normal text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all flex items-center justify-center",
+              day_selected: "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full shadow-sm scale-90",
               day_today: "text-primary font-bold",
             }}
           />
