@@ -6,7 +6,7 @@ import { DashboardHeader } from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { generateFeedback } from '@/services/submissionService';
+import { generateFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -186,7 +186,7 @@ const AssignmentDetail = () => {
               .eq('assignment_id', id)
               .eq('student_id', user!.id)
               .maybeSingle();
-            
+
             if (retryError || !retrySubmission) {
               throw retryError || createError;
             }
@@ -243,7 +243,15 @@ const AssignmentDetail = () => {
           console.error('Error generating feedback:', feedbackError);
           toast.error(t('assignmentDetail.errors.generatingFeedback'));
         } else {
-          toast.success(t('assignmentDetail.success.completed'));
+          // Mark submission as completed
+          const { error: completeError } = await completeSubmission(submission.id);
+
+          if (completeError) {
+            console.error('Error completing submission:', completeError);
+            toast.error(t('common.error'));
+          } else {
+            toast.success(t('assignmentDetail.success.completed'));
+          }
         }
       }
     } catch (error) {
