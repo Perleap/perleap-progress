@@ -114,7 +114,7 @@ const ClassroomDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
   const [activeSection, setActiveSection] = useState('overview');
-  
+
   // GSAP stagger animation refs
   const assignmentsRef = useStaggerAnimation(':scope > div', 0.08, [activeSection, assignments.length]);
   const studentsRef = useStaggerAnimation(':scope > div', 0.06, [activeSection, students.length]);
@@ -177,6 +177,20 @@ const ClassroomDetail = () => {
         domains: domains || null,
         materials: materials || null,
       });
+
+      // Log view activity
+      supabase.from('activity_events' as any).insert([
+        {
+          teacher_id: user?.id,
+          type: 'view',
+          entity_type: 'classroom',
+          title: `Viewed classroom: ${data.name}`,
+          route: `/teacher/classroom/${id}`,
+        }
+      ]).then(({ error }) => {
+        if (error) console.error('Error logging activity:', error);
+      });
+
       await fetchAssignments();
       await fetchStudents();
     } catch (error) {

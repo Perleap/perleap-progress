@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { TeacherAssistant } from '@/components/ai/TeacherAssistant';
 
 interface BreadcrumbItem {
   label: string;
@@ -62,6 +63,7 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
         <div ref={contentRef} className="flex flex-1 flex-col gap-10 p-6 md:p-8 lg:p-10 bg-gradient-to-br from-background via-background to-muted/10 min-h-0">
           {children}
         </div>
+        <TeacherAssistant />
       </SidebarInset>
     </SidebarProvider>
   );

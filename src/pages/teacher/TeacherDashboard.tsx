@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { CreateClassroomDialog } from '@/components/CreateClassroomDialog';
 import { TeacherCalendar } from '@/components/TeacherCalendar';
+import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layouts';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
@@ -105,7 +106,7 @@ const TeacherDashboard = () => {
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
       }
-      
+
       // Debounce the fetch to prevent rapid successive calls
       fetchTimeoutRef.current = setTimeout(() => {
         fetchClassrooms();
@@ -125,15 +126,15 @@ const TeacherDashboard = () => {
       console.log('🔄 TeacherDashboard: Fetch already in progress, skipping');
       return;
     }
-    
+
     isFetchingRef.current = true;
     console.log('🔄 TeacherDashboard: Fetching classrooms...');
-    
+
     // Only show loading spinner if we don't have cached data yet
     if (classrooms.length === 0) {
       setLoading(true);
     }
-    
+
     try {
       // Only fetch classrooms, profile is handled by AuthContext
       const { data, error } = await supabase
@@ -142,7 +143,7 @@ const TeacherDashboard = () => {
         .eq('teacher_id', user?.id);
 
       if (error) throw error;
-      
+
       console.log('✅ TeacherDashboard: Classrooms loaded:', data?.length || 0);
       setClassrooms(data || []);
       // Persist classroom data to survive component remounts
@@ -218,7 +219,11 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: t('nav.dashboard') }]}>
+    <DashboardLayout
+      breadcrumbs={[
+        { label: 'Dashboard' }
+      ]}
+    >
       {/* Enhanced Page Header */}
       <div className="relative -mx-6 md:-mx-8 lg:-mx-10 -mt-6 md:-mt-8 lg:-mt-10 px-6 md:px-8 lg:px-10 pt-8 md:pt-10 lg:pt-12 pb-8 md:pb-10 mb-8 md:mb-10 overflow-hidden bg-gradient-to-br from-muted/30 to-transparent">
         <div className="relative flex flex-col gap-4">
@@ -251,14 +256,14 @@ const TeacherDashboard = () => {
                 <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
               </Button>
             </div>
-            
+
             {/* View Switcher */}
             {classrooms.length > 0 && (
               <div className="flex gap-2 items-center">
                 <span className="text-sm text-muted-foreground mr-2">View:</span>
                 <Select value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select view">
+                    <SelectValue>
                       <span>{getViewModeLabel(viewMode)}</span>
                     </SelectValue>
                   </SelectTrigger>
@@ -318,29 +323,29 @@ const TeacherDashboard = () => {
               }}
             />
           ) : viewMode === 'table' ? (
-            <ClassroomTableView 
-              classrooms={classrooms} 
+            <ClassroomTableView
+              classrooms={classrooms}
               onCopyInviteCode={(code) => console.log('Copied:', code)}
             />
           ) : viewMode === 'timeline' ? (
-            <ClassroomTimelineView 
-              classrooms={classrooms} 
+            <ClassroomTimelineView
+              classrooms={classrooms}
               onCopyInviteCode={(code) => console.log('Copied:', code)}
             />
           ) : (
-            <div 
-              ref={cardsRef} 
+            <div
+              ref={cardsRef}
               className={
                 viewMode === 'grid' ? 'grid gap-4' :
-                viewMode === 'compact' ? 'grid gap-3' :
-                viewMode === 'list' ? 'flex flex-col gap-4' :
-                'grid gap-5'
+                  viewMode === 'compact' ? 'grid gap-3' :
+                    viewMode === 'list' ? 'flex flex-col gap-4' :
+                      'grid gap-5'
               }
               style={
                 viewMode === 'grid' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))' } :
-                viewMode === 'compact' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))' } :
-                viewMode === 'detailed' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(350px, 100%), 1fr))' } :
-                undefined
+                  viewMode === 'compact' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))' } :
+                    viewMode === 'detailed' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(min(350px, 100%), 1fr))' } :
+                      undefined
               }
             >
               {classrooms.map((classroom) => (
@@ -359,7 +364,7 @@ const TeacherDashboard = () => {
                           </h3>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2 pt-3 border-t border-border/50">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -371,7 +376,7 @@ const TeacherDashboard = () => {
                             <span>{formatDate(classroom.start_date)}</span>
                           </div>
                         </div>
-                        <div 
+                        <div
                           className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
@@ -402,7 +407,7 @@ const TeacherDashboard = () => {
                           <Calendar className="h-3 w-3" />
                           <span>{formatDate(classroom.start_date)}</span>
                         </div>
-                        <div 
+                        <div
                           className="flex items-center gap-1 px-2 py-1 rounded bg-primary/5 border border-primary/20 hover:bg-primary/10 cursor-pointer transition-all w-full justify-center"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
@@ -436,7 +441,7 @@ const TeacherDashboard = () => {
                             </span>
                           </div>
                         </div>
-                        <div 
+                        <div
                           className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
@@ -480,7 +485,7 @@ const TeacherDashboard = () => {
                             </div>
                           </div>
                         </div>
-                        <div 
+                        <div
                           className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
@@ -499,7 +504,8 @@ const TeacherDashboard = () => {
         {/* Calendar Sidebar */}
         <aside className="space-y-6 md:space-y-8">
           {user && (
-            <div className="lg:sticky lg:top-6">
+            <div className="lg:sticky lg:top-6 space-y-6">
+              <RecentActivity />
               <TeacherCalendar
                 teacherId={user.id}
                 classrooms={calendarClassrooms}
@@ -518,5 +524,4 @@ const TeacherDashboard = () => {
     </DashboardLayout>
   );
 };
-
 export default TeacherDashboard;

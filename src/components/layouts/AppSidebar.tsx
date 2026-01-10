@@ -12,6 +12,7 @@ import {
   User2,
   Moon,
   Sun,
+  Calendar,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -69,6 +70,12 @@ export function AppSidebar() {
 
     if (isTeacher) {
       items.push({
+        title: 'Planner',
+        url: '/teacher/planner',
+        icon: Calendar,
+      });
+
+      items.push({
         title: t('nav.settings'),
         url: '/teacher/settings',
         icon: Settings,
@@ -118,9 +125,9 @@ export function AppSidebar() {
           <SidebarMenuItem className="list-none">
             <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
               <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-card border border-border shadow-sm group-data-[collapsible=icon]:size-8">
-                <img 
-                  src="/perleap_logo.png" 
-                  alt="PerLeap Logo" 
+                <img
+                  src="/perleap_logo.png"
+                  alt="PerLeap Logo"
                   className="size-7 object-contain group-data-[collapsible=icon]:size-6"
                   onError={(e) => {
                     console.error('Logo failed to load');

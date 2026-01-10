@@ -17,6 +17,7 @@ import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import ClassroomDetail from './pages/teacher/ClassroomDetail';
 import SubmissionDetail from './pages/teacher/SubmissionDetail';
 import TeacherSettings from './pages/teacher/TeacherSettings';
+import Planner from './pages/teacher/Planner';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentClassroomDetail from './pages/student/StudentClassroomDetail';
 import AssignmentDetail from './pages/student/AssignmentDetail';
@@ -115,6 +116,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredRole="teacher">
                       <TeacherSettings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/planner"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <Planner />
                     </ProtectedRoute>
                   }
                 />

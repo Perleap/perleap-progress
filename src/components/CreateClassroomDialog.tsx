@@ -93,6 +93,21 @@ export const CreateClassroomDialog = ({
       onOpenChange(false);
       onSuccess(data.id);
 
+      // Log activity
+      try {
+        await supabase.from('activity_events' as any).insert([
+          {
+            teacher_id: user.id,
+            type: 'create',
+            entity_type: 'classroom',
+            title: `Created classroom: ${formData.courseTitle || 'New Classroom'}`,
+            route: `/teacher/classroom/${data.id}`,
+          }
+        ]);
+      } catch (logError) {
+        console.error('Error logging activity:', logError);
+      }
+
       // Reset form
       setFormData({
         courseTitle: '',
@@ -376,7 +391,7 @@ export const CreateClassroomDialog = ({
                   {t('createClassroom.addArea')}
                 </Button>
               </div>
-              
+
               <p className={`text-sm text-slate-600 dark:text-slate-400 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('createClassroom.subjectAreasHelper')}
               </p>

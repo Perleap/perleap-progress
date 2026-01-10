@@ -395,6 +395,21 @@ export function CreateAssignmentDialog({
         }
       }
 
+      // Log activity
+      try {
+        await supabase.from('activity_events' as any).insert([
+          {
+            teacher_id: user!.id,
+            type: 'create',
+            entity_type: 'assignment',
+            title: `Created assignment: ${formData.title}`,
+            route: `/teacher/classroom/${classroomId}`,
+          }
+        ]);
+      } catch (logError) {
+        console.error('Error logging activity:', logError);
+      }
+
       toast.success(t('createAssignment.success.created'));
       onSuccess();
       onOpenChange(false);
@@ -517,7 +532,7 @@ export function CreateAssignmentDialog({
                   {t('createAssignment.subjectAreaAndSkills')}
                 </h3>
               </div>
-              
+
               <p className={`text-sm text-slate-600 dark:text-slate-400 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('createAssignment.subjectAreasHelper')}
               </p>
