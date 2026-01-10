@@ -499,59 +499,69 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
-function SidebarMenuButton({
-  render,
-  isActive = false,
-  variant = "default",
-  size = "default",
-  tooltip,
-  className,
-  ...props
-}: useRender.ComponentProps<"button"> &
+const SidebarMenuButton = React.forwardRef<
+  HTMLButtonElement,
+  useRender.ComponentProps<"button"> &
   React.ComponentProps<"button"> & {
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
-  } & VariantProps<typeof sidebarMenuButtonVariants>) {
-  const { isMobile, state } = useSidebar()
-  const comp = useRender({
-    defaultTagName: "button",
-    props: mergeProps<"button">(
-      {
-        className: cn(sidebarMenuButtonVariants({ variant, size }), className),
-      },
-      props
-    ),
-    render: !tooltip ? render : TooltipTrigger,
-    state: {
-      slot: "sidebar-menu-button",
-      sidebar: "menu-button",
-      size,
-      active: isActive,
+  } & VariantProps<typeof sidebarMenuButtonVariants>
+>(
+  (
+    {
+      render,
+      isActive = false,
+      variant = "default",
+      size = "default",
+      tooltip,
+      className,
+      ...props
     },
-  })
+    ref
+  ) => {
+    const { isMobile, state } = useSidebar()
+    const comp = useRender({
+      defaultTagName: "button",
+      props: mergeProps<"button">(
+        {
+          className: cn(sidebarMenuButtonVariants({ variant, size }), className),
+          ref,
+        },
+        props
+      ),
+      render: !tooltip ? render : TooltipTrigger,
+      state: {
+        slot: "sidebar-menu-button",
+        sidebar: "menu-button",
+        size,
+        active: isActive,
+      },
+    })
 
-  if (!tooltip) {
-    return comp
-  }
-
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
+    if (!tooltip) {
+      return comp
     }
-  }
 
-  return (
-    <Tooltip>
-      {comp}
-      <TooltipContent
-        side="right"
-        align="center"
-        hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
-      />
-    </Tooltip>
-  )
-}
+    if (typeof tooltip === "string") {
+      tooltip = {
+        children: tooltip,
+      }
+    }
+
+    return (
+      <Tooltip>
+        {comp}
+        <TooltipContent
+          side="right"
+          align="center"
+          hidden={state !== "collapsed" || isMobile}
+          {...tooltip}
+        />
+      </Tooltip>
+    )
+  }
+)
+SidebarMenuButton.displayName = "SidebarMenuButton"
 
 function SidebarMenuAction({
   className,
@@ -569,7 +579,7 @@ function SidebarMenuAction({
         className: cn(
           "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground peer-hover/menu-button:text-sidebar-accent-foreground absolute top-1.5 right-1 aspect-square w-5 rounded-md p-0 peer-data-[size=default]/menu-button:top-2 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 focus-visible:ring-2 [&>svg]:size-4 flex items-center justify-center outline-hidden transition-transform group-data-[collapsible=icon]:hidden after:absolute after:-inset-2 md:after:hidden [&>svg]:shrink-0",
           showOnHover &&
-            "peer-data-active/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-open:opacity-100 md:opacity-0",
+          "peer-data-active/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-open:opacity-100 md:opacity-0",
           className
         ),
       },
