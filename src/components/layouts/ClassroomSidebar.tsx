@@ -8,7 +8,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  ChevronUp,
+  ChevronDown,
   User2,
   Moon,
   Sun,
@@ -67,11 +67,11 @@ export function ClassroomSidebar({
 }: ClassroomSidebarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isRTL } = useLanguage();
 
-  const isTeacher = profile?.role === 'teacher';
+  const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
 
   const handleSignOut = async () => {
@@ -119,54 +119,59 @@ export function ClassroomSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
+        {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel>{t('nav.classroomSections')}</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            {t('nav.navigation')}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {sections.map((section) => (
-                <SidebarMenuItem key={section.id}>
-                  <SidebarMenuButton
-                    isActive={activeSection === section.id}
-                    tooltip={section.title}
-                    onClick={() => onSectionChange(section.id)}
-                    className="group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
-                  >
-                    <section.icon className="size-4 group-data-[collapsible=icon]:size-5" />
-                    <span>{section.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>{t('nav.navigation')}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={t('nav.dashboard')}
                   onClick={() => navigate(`${basePath}/dashboard`)}
-                  className="group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                  className="min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                 >
-                  <LayoutDashboard className="size-4 group-data-[collapsible=icon]:size-5" />
-                  <span>{t('nav.dashboard')}</span>
+                  <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
+                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={t('nav.settings')}
                   onClick={() => navigate(`${basePath}/settings`)}
-                  className="group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                  className="min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                 >
-                  <Settings className="size-4 group-data-[collapsible=icon]:size-5" />
-                  <span>{t('nav.settings')}</span>
+                  <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
+                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Classroom Sections */}
+        <SidebarSeparator className="my-2" />
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            {t('nav.classroomSections')}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {sections.map((section) => (
+                <SidebarMenuItem key={section.id}>
+                  <SidebarMenuButton
+                    isActive={activeSection === section.id}
+                    tooltip={section.title}
+                    onClick={() => onSectionChange(section.id)}
+                    className="cursor-pointer min-h-[40px] group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                  >
+                    <section.icon className="size-4 group-data-[collapsible=icon]:size-5" />
+                    <span className="font-normal text-sm group-data-[collapsible=icon]:hidden">{section.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -193,7 +198,7 @@ export function ClassroomSidebar({
                       {isTeacher ? t('nav.teacher') : t('nav.student')}
                     </span>
                   </div>
-                  <ChevronUp className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
+                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -202,10 +207,6 @@ export function ClassroomSidebar({
                 align={isRTL ? "start" : "end"}
                 sideOffset={4}
               >
-                <DropdownMenuItem onClick={() => navigate(`${basePath}/settings`)}>
-                  <User2 className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  {t('nav.profile')}
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleTheme}>
                   {theme === 'dark' ? (
                     <Sun className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
@@ -214,7 +215,6 @@ export function ClassroomSidebar({
                   )}
                   {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
                   <LanguageSwitcher />
                 </div>

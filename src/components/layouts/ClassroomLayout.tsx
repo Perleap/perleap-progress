@@ -37,19 +37,19 @@ export function ClassroomLayout({
   customSections,
 }: ClassroomLayoutProps) {
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { isRTL } = useLanguage();
   const contentRef = usePageTransition([activeSection]);
-  
-  const isTeacher = profile?.role === 'teacher';
+
+  const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
 
   // Use custom sections if provided, otherwise use defaults based on role
   const sections = React.useMemo(() => {
     if (customSections) return customSections;
-    
+
     const defaultSections = isTeacher ? TEACHER_CLASSROOM_SECTIONS : STUDENT_CLASSROOM_SECTIONS;
-    
+
     // Translate section titles
     return defaultSections.map((section) => ({
       ...section,
@@ -69,9 +69,9 @@ export function ClassroomLayout({
         sections={sections}
       />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-6 shadow-sm sticky top-0 z-30">
+          <SidebarTrigger className="hover:bg-accent hover:scale-110 rounded-lg p-2.5 transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-accent-foreground/10" />
+          <Separator orientation="vertical" className="h-6 bg-border/60" />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
@@ -94,7 +94,7 @@ export function ClassroomLayout({
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <div ref={contentRef} className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div ref={contentRef} className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-background via-background to-muted/10 min-h-0">
           <div className="pt-4">
             {children}
           </div>

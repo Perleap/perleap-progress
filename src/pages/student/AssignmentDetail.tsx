@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardHeader } from '@/components/DashboardHeader';
+import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,7 @@ interface Assignment {
   instructions: string;
   due_at: string;
   type: string;
+  classroom_id: string;
   materials?: string;
   target_dimensions: {
     vision: boolean;
@@ -285,15 +286,14 @@ const AssignmentDetail = () => {
     .map(([key]) => key);
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader
-        title={assignment.title}
-        subtitle={assignment.classrooms.name}
-        userType="student"
-        showBackButton
-      />
-
-      <main className="container py-4 md:py-8 px-4 max-w-4xl">
+    <DashboardLayout
+      breadcrumbs={[
+        { label: t('nav.dashboard'), href: '/student/dashboard' },
+        { label: assignment.classrooms.name, href: `/student/classroom/${assignment.classroom_id}` },
+        { label: assignment.title }
+      ]}
+    >
+      <div className="container py-4 px-0 max-w-4xl">
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -419,8 +419,8 @@ const AssignmentDetail = () => {
             </Card>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardHeader } from '@/components/DashboardHeader';
+import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
@@ -48,6 +48,8 @@ const StudentSettings = () => {
   const { user } = useAuth();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'profile';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -286,31 +288,15 @@ const StudentSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader
-        title={t('settings.title')}
-        userType="student"
-        showBackButton
-        onBackClick={() => navigate('/student/dashboard')}
-      />
-
-      <main className="container py-8 px-4 max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
-        <Tabs defaultValue="profile" className="space-y-6">
-          <div className="flex justify-center">
-            <TabsList className="grid w-full grid-cols-3" dir={isRTL ? 'rtl' : 'ltr'}>
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">{t('settings.profile')}</span>
-              </TabsTrigger>
-              <TabsTrigger value="questions" className="flex items-center gap-2">
-                <span className="hidden sm:inline">{t('settings.questions.learningMethods').split(' ')[0]}</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                <span className="hidden sm:inline">{t('common.notifications')}</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+    <DashboardLayout
+      breadcrumbs={[
+        { label: t('nav.dashboard'), href: '/student/dashboard' },
+        { label: t('settings.title') }
+      ]}
+    >
+      <div className="container py-8 px-4 max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-6">
+          {/* TabsList removed as navigation is now in the sidebar */}
 
           {/* Profile Tab */}
           < TabsContent value="profile" className="space-y-6" >
@@ -365,7 +351,6 @@ const StudentSettings = () => {
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="John Doe"
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -674,11 +659,10 @@ const StudentSettings = () => {
                     onChange={(e) => setQuestions({ ...questions, learning_goal: e.target.value })}
                     placeholder={
                       questions.learning_goal ||
-                      t('studentOnboarding.step5.goalPlaceholder')
+                      (t('studentOnboarding.step5.goalPlaceholder') as string)
                     }
                     rows={3}
                     className={!questions.learning_goal ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -693,11 +677,10 @@ const StudentSettings = () => {
                     onChange={(e) => setQuestions({ ...questions, special_needs: e.target.value })}
                     placeholder={
                       questions.special_needs ||
-                      t('studentOnboarding.step6.specialNeedsPlaceholder')
+                      (t('studentOnboarding.step6.specialNeedsPlaceholder') as string)
                     }
                     rows={3}
                     className={!questions.special_needs ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -712,11 +695,10 @@ const StudentSettings = () => {
                     }
                     placeholder={
                       questions.additional_notes ||
-                      t('studentOnboarding.step6.additionalNotesPlaceholder')
+                      (t('studentOnboarding.step6.additionalNotesPlaceholder') as string)
                     }
                     rows={4}
                     className={!questions.additional_notes ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -820,14 +802,14 @@ const StudentSettings = () => {
             </Card>
           </TabsContent >
         </Tabs >
-      </main >
+      </div>
 
       <DeleteAccountDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         userRole="student"
       />
-    </div >
+    </DashboardLayout>
   );
 };
 

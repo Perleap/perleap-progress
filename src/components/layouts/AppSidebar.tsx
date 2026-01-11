@@ -8,10 +8,12 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  ChevronUp,
-  User2,
+  ChevronDown,
+  User,
   Moon,
   Sun,
+  Bell,
+  MessageSquare,
   Calendar,
 } from 'lucide-react';
 import {
@@ -26,6 +28,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -47,7 +53,7 @@ interface NavItem {
   isActive?: boolean;
 }
 
-export function AppSidebar() {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +63,7 @@ export function AppSidebar() {
 
   const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
+  const isOnSettingsPage = location.pathname.includes('/settings');
 
   // Define navigation items based on role
   const navItems: NavItem[] = React.useMemo(() => {
@@ -75,16 +82,44 @@ export function AppSidebar() {
         icon: Calendar,
       });
 
-      items.push({
-        title: t('nav.settings'),
-        url: '/teacher/settings',
-        icon: Settings,
+    }
+
+    // Removed generic Settings link in favor of detailed account items
+    // items.push({
+    //   title: t('nav.settings'),
+    //   url: isTeacher ? '/teacher/settings' : '/student/settings',
+    //   icon: Settings,
+    // });
+
+
+    return items;
+  }, [t, basePath, isTeacher]);
+
+  const accountItems: NavItem[] = React.useMemo(() => {
+    const items: NavItem[] = [
+      {
+        title: t('settings.profile'),
+        url: `${basePath}/settings?tab=profile`,
+        icon: User,
+      },
+      {
+        title: t('common.notifications'),
+        url: `${basePath}/settings?tab=notifications`,
+        icon: Bell,
+      },
+    ];
+
+    if (isTeacher) {
+      items.splice(1, 0, {
+        title: t('settings.teachingPreferences'),
+        url: '/teacher/settings?tab=questions', // Using questions tab for preferences
+        icon: MessageSquare,
       });
     } else {
-      items.push({
-        title: t('nav.settings'),
-        url: '/student/settings',
-        icon: Settings,
+      items.splice(1, 0, {
+        title: t('settings.learningPreferences'),
+        url: '/student/settings?tab=questions',
+        icon: MessageSquare,
       });
     }
 
@@ -94,8 +129,24 @@ export function AppSidebar() {
   // Mark active item
   const navItemsWithActive = navItems.map((item) => ({
     ...item,
-    isActive: location.pathname === item.url || location.pathname.startsWith(item.url + '/'),
+    isActive: location.pathname === item.url || (location.pathname !== '/' && location.pathname.startsWith(item.url) && item.url !== `${basePath}/dashboard`),
   }));
+
+  const accountItemsWithActive = accountItems.map((item) => {
+    // Check if base URL matches AND query param matches
+    const currentUrl = location.pathname + location.search;
+    // Simple check: if path matches and tab param matches (or defaults)
+    const itemUrl = new URL(item.url, 'http://localhost'); // dummy host for parsing
+    const itemPath = itemUrl.pathname;
+    const itemTab = itemUrl.searchParams.get('tab');
+
+    const currentTab = new URLSearchParams(location.search).get('tab') || 'profile';
+
+    return {
+      ...item,
+      isActive: location.pathname === itemPath && currentTab === itemTab,
+    };
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -166,9 +217,50 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* Settings button */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate(`${basePath}/settings`)}
+                  isActive={isOnSettingsPage}
+                  tooltip={t('nav.settings')}
+                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isOnSettingsPage ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                >
+                  <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
+                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Settings sub-items - only show when on settings page */}
+        {isOnSettingsPage && (
+          <>
+            <SidebarSeparator className="my-2" />
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {t('nav.settings')}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  {accountItemsWithActive.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        onClick={() => navigate(item.url)}
+                        isActive={item.isActive}
+                        className="cursor-pointer min-h-[40px]"
+                      >
+                        <item.icon className="size-4" />
+                        <span className="font-normal text-sm">{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
@@ -192,7 +284,7 @@ export function AppSidebar() {
                       {isTeacher ? t('nav.teacher') : t('nav.student')}
                     </span>
                   </div>
-                  <ChevronUp className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
+                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -201,10 +293,6 @@ export function AppSidebar() {
                 align={isRTL ? "start" : "end"}
                 sideOffset={4}
               >
-                <DropdownMenuItem onClick={() => navigate(`${basePath}/settings`)}>
-                  <User2 className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  {t('nav.profile')}
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleTheme}>
                   {theme === 'dark' ? (
                     <Sun className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
@@ -213,7 +301,6 @@ export function AppSidebar() {
                   )}
                   {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
                   <LanguageSwitcher />
                 </div>

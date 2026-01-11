@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardHeader } from '@/components/DashboardHeader';
+import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +13,6 @@ import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import type { StudentAlert } from '@/types/alerts';
@@ -254,16 +253,15 @@ const SubmissionDetail = () => {
   if (!submission) return null;
 
   return (
-    <BreathingBackground className="min-h-screen pb-12">
-      <DashboardHeader
-        title={`${t('submissionDetail.title')}`}
-        subtitle={`${submission.assignments.title}`}
-        userType="teacher"
-        showBackButton
-        onBackClick={() => navigate(-1)}
-      />
-
-      <main className="container py-8 px-4 max-w-6xl mx-auto relative z-10">
+    <DashboardLayout
+      breadcrumbs={[
+        { label: t('nav.dashboard'), href: '/teacher/dashboard' },
+        { label: submission.assignments.classrooms.name, href: `/teacher/classroom/${submission.assignments.classroom_id}` },
+        { label: submission.assignments.title },
+        { label: studentName }
+      ]}
+    >
+      <div className="container py-8 px-4 max-w-6xl mx-auto relative z-10">
         <div className="space-y-8">
           {/* Student Info Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm">
@@ -450,7 +448,7 @@ const SubmissionDetail = () => {
             </Card>
           )}
         </div>
-      </main>
+      </div>
 
       {submission && (
         <CreateAssignmentDialog
@@ -467,7 +465,7 @@ const SubmissionDetail = () => {
           studentName={studentName}
         />
       )}
-    </BreathingBackground>
+    </DashboardLayout>
   );
 };
 
