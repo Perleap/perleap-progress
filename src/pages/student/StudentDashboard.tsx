@@ -314,104 +314,109 @@ const StudentDashboard = () => {
         <p className="text-muted-foreground">{t('studentDashboard.subtitle')}</p>
       </div>
 
-      {/* View Switcher */}
-      {classrooms.length > 0 && (
-        <div className="flex gap-2 items-center mb-6">
-          <span className="text-sm text-muted-foreground mr-2">View:</span>
-          <Select value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
-            <SelectTrigger className="w-[180px] bg-card">
-              <SelectValue>
-                <span>{getViewModeLabel(viewMode)}</span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="bg-card">
-              <SelectItem value="grid">
-                <div className="flex items-center gap-2">
-                  <LayoutGrid className="h-4 w-4" />
-                  <span>Grid</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="compact">
-                <div className="flex items-center gap-2">
-                  <Grid2x2 className="h-4 w-4" />
-                  <span>Compact</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="list">
-                <div className="flex items-center gap-2">
-                  <List className="h-4 w-4" />
-                  <span>List</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="detailed">
-                <div className="flex items-center gap-2">
-                  <LayoutList className="h-4 w-4" />
-                  <span>Detailed</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="table">
-                <div className="flex items-center gap-2">
-                  <Table2 className="h-4 w-4" />
-                  <span>Table</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="timeline">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4" />
-                  <span>Timeline</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         <div className="space-y-8">
           {/* My Classes Section */}
           <section>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <h2 className="text-xl font-semibold text-foreground">{t('studentDashboard.myClasses')}</h2>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    {t('studentDashboard.joinClass')}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="rounded-xl sm:max-w-[425px] bg-card">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl text-foreground">{t('studentDashboard.joinClassroom.title')}</DialogTitle>
-                    <DialogDescription>
-                      {t('studentDashboard.joinClassroom.description')}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-6 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="code" className="text-base font-medium text-foreground">
-                        {t('studentDashboard.joinClassroom.inviteCode')}
-                      </Label>
-                      <Input
-                        id="code"
-                        placeholder={t('studentDashboard.joinClassroom.placeholder')}
-                        value={inviteCode}
-                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                        maxLength={6}
-                        className="text-center text-2xl tracking-widest uppercase h-14 rounded-xl border-2 focus-visible:ring-ring bg-card text-foreground"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleJoinClassroom}
-                      className="w-full rounded-full h-12 text-lg font-medium"
-                      disabled={joining}
-                    >
-                      {joining
-                        ? t('studentDashboard.joinClassroom.joining')
-                        : t('studentDashboard.joinClassroom.button')}
-                    </Button>
+            <div className="flex flex-col gap-6 mb-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-foreground">{t('studentDashboard.myClasses')}</h2>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                {/* View Switcher */}
+                {classrooms.length > 0 && (
+                  <div className="flex gap-2 items-center">
+                    <span className="text-sm text-muted-foreground mr-2">View:</span>
+                    <Select value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
+                      <SelectTrigger className="w-[180px] bg-card">
+                        <SelectValue>
+                          <span>{getViewModeLabel(viewMode)}</span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="bg-card">
+                        <SelectItem value="grid">
+                          <div className="flex items-center gap-2">
+                            <LayoutGrid className="h-4 w-4" />
+                            <span>Grid</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="compact">
+                          <div className="flex items-center gap-2">
+                            <Grid2x2 className="h-4 w-4" />
+                            <span>Compact</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="list">
+                          <div className="flex items-center gap-2">
+                            <List className="h-4 w-4" />
+                            <span>List</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="detailed">
+                          <div className="flex items-center gap-2">
+                            <LayoutList className="h-4 w-4" />
+                            <span>Detailed</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="table">
+                          <div className="flex items-center gap-2">
+                            <Table2 className="h-4 w-4" />
+                            <span>Table</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="timeline">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            <span>Timeline</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </DialogContent>
-              </Dialog>
+                )}
+
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" className="gap-2 w-full sm:w-auto">
+                      <Plus className="h-4 w-4" />
+                      {t('studentDashboard.joinClass')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="rounded-xl sm:max-w-[425px] bg-card">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl text-foreground">{t('studentDashboard.joinClassroom.title')}</DialogTitle>
+                      <DialogDescription>
+                        {t('studentDashboard.joinClassroom.description')}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="code" className="text-base font-medium text-foreground">
+                          {t('studentDashboard.joinClassroom.inviteCode')}
+                        </Label>
+                        <Input
+                          id="code"
+                          placeholder={t('studentDashboard.joinClassroom.placeholder')}
+                          value={inviteCode}
+                          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                          maxLength={6}
+                          className="text-center text-2xl tracking-widest uppercase h-14 rounded-xl border-2 focus-visible:ring-ring bg-card text-foreground"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleJoinClassroom}
+                        className="w-full rounded-full h-12 text-lg font-medium"
+                        disabled={joining}
+                      >
+                        {joining
+                          ? t('studentDashboard.joinClassroom.joining')
+                          : t('studentDashboard.joinClassroom.button')}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
 
             {loading ? (

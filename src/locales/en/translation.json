@@ -768,6 +768,10 @@
     "logout": "Logout",
     "backToDashboard": "Back to Dashboard",
     "subject": "Subject",
+    "name": "Name",
+    "dates": "Dates",
+    "actions": "Actions",
+    "view": "View",
     "graded": "Graded",
     "submitted": "Submitted",
     "missing": "Missing",
@@ -779,7 +783,11 @@
     "lightMode": "Light Mode",
     "active": "Active",
     "finished": "Finished",
-    "completed": "Completed"
+    "completed": "Completed",
+    "error": "Error",
+    "areYouSure": "Are you sure?",
+    "upcoming": "Upcoming",
+    "progress": "Progress"
   },
   "dimensions": {
     "score": "Score",

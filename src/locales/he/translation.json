@@ -757,6 +757,10 @@
     "logout": "התנתק",
     "backToDashboard": "חזרה ללוח הבקרה",
     "subject": "נושא",
+    "name": "שם",
+    "dates": "תאריכים",
+    "actions": "פעולות",
+    "view": "צפה",
     "graded": "נבדק",
     "submitted": "הוגש",
     "missing": "חסר",
@@ -768,7 +772,11 @@
     "lightMode": "מצב בהיר",
     "active": "פעיל",
     "finished": "הסתיים",
-    "completed": "הושלם"
+    "completed": "הושלם",
+    "error": "שגיאה",
+    "areYouSure": "האם אתה בטוח?",
+    "upcoming": "בקרוב",
+    "progress": "התקדמות"
   },
   "dimensions": {
     "score": "ציון",
