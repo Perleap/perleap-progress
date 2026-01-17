@@ -2,7 +2,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ 
+  className, 
+  // @ts-ignore - Filter out autoDirection prop
+  autoDirection,
+  ...props 
+}: React.ComponentProps<"textarea"> & { autoDirection?: boolean }) {
   return (
     <textarea
       data-slot="textarea"

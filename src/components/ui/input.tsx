@@ -9,7 +9,7 @@ function Input({
   // @ts-ignore - Filter out autoDirection prop
   autoDirection,
   ...props 
-}: React.ComponentProps<"input"> & { autoDirection?: string }) {
+}: React.ComponentProps<"input"> & { autoDirection?: boolean }) {
   return (
     <InputPrimitive
       type={type}

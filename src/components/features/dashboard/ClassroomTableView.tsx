@@ -105,15 +105,15 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-card">
+    <div className="border border-border rounded-lg overflow-hidden bg-card">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/50">
+          <TableRow className="bg-muted/30 border-b border-border">
             <TableHead className="min-w-[200px]">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-2 hover:bg-muted/80"
+                className="h-8 gap-2 hover:bg-muted/50 text-foreground"
                 onClick={() => handleSort('name')}
               >
                 {t('common.name') || 'Name'}
@@ -124,7 +124,7 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-2 hover:bg-muted/80"
+                className="h-8 gap-2 hover:bg-muted/50 text-foreground"
                 onClick={() => handleSort('subject')}
               >
                 {t('common.subject') || 'Subject'}
@@ -135,7 +135,7 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-2 hover:bg-muted/80"
+                className="h-8 gap-2 hover:bg-muted/50 text-foreground"
                 onClick={() => handleSort('students')}
               >
                 <Users className="h-4 w-4" />
@@ -144,13 +144,13 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
               </Button>
             </TableHead>
             <TableHead className="min-w-[180px]">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-foreground font-medium px-3 text-sm">
                 <Calendar className="h-4 w-4" />
                 {t('common.dates') || 'Start - End Date'}
               </div>
             </TableHead>
-            <TableHead className="w-[180px]">{t('teacherDashboard.inviteCode') || 'Invite Code'}</TableHead>
-            <TableHead className="w-[100px] text-right">{t('common.actions') || 'Actions'}</TableHead>
+            <TableHead className="w-[180px] text-foreground font-medium px-3 text-sm">{t('teacherDashboard.inviteCode') || 'Invite Code'}</TableHead>
+            <TableHead className="w-[100px] text-right text-foreground font-medium px-3 text-sm">{t('common.actions') || 'Actions'}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -164,10 +164,10 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
             sortedClassrooms.map((classroom) => (
               <TableRow
                 key={classroom.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                className="cursor-pointer hover:bg-muted/20 border-b border-border transition-colors"
                 onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
               >
-                <TableCell className="font-medium">{classroom.name}</TableCell>
+                <TableCell className="font-medium text-foreground">{classroom.name}</TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
                     {classroom.subject}
@@ -176,7 +176,7 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{classroom._count?.enrollments || 0}</span>
+                    <span className="font-medium text-foreground">{classroom._count?.enrollments || 0}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -186,7 +186,7 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
                 </TableCell>
                 <TableCell>
                   <div
-                    className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200"
+                    className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all duration-200"
                     onClick={(e) => handleCopyCode(e, classroom.invite_code)}
                   >
                     <span className="text-sm font-mono font-semibold text-primary">{classroom.invite_code}</span>
@@ -197,6 +197,7 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="text-foreground hover:bg-muted/50"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/teacher/classroom/${classroom.id}`);

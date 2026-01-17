@@ -17,7 +17,7 @@ import { markSignupComplete } from '@/utils/sessionState';
 
 const TeacherOnboarding = () => {
   const { t } = useTranslation();
-  const { isRTL, language } = useLanguage();
+  const { isRTL, language = 'en' } = useLanguage();
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);

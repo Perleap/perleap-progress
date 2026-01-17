@@ -38,7 +38,7 @@ BEGIN
       'submission',
       NEW.id,
       coalesce(v_student_name, 'Student') || ' submitted ' || coalesce(v_assignment_title, 'Assignment'),
-      '/teacher/classroom/' || v_classroom_id || '/assignment/' || NEW.assignment_id || '/submissions'
+      '/teacher/submission/' || NEW.id
     );
   END IF;
   RETURN NEW;

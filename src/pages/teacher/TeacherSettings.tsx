@@ -276,11 +276,26 @@ const TeacherSettings = () => {
     );
   }
 
+  // Get the current tab label for breadcrumb
+  const getTabLabel = () => {
+    switch (activeTab) {
+      case 'profile':
+        return t('settings.profile');
+      case 'questions':
+        return t('settings.teachingPreferences');
+      case 'notifications':
+        return t('common.notifications');
+      default:
+        return t('settings.profile');
+    }
+  };
+
   return (
     <DashboardLayout
       breadcrumbs={[
         { label: t('nav.dashboard'), href: '/teacher/dashboard' },
-        { label: t('settings.title') }
+        { label: t('settings.title'), href: '/teacher/settings' },
+        { label: getTabLabel() }
       ]}
     >
       <div

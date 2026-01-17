@@ -25,10 +25,10 @@ export const ClassroomCard = ({
   const { t } = useTranslation();
 
   return (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={onClick}>
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-card border-border" onClick={onClick}>
       <CardHeader>
-        <CardTitle className="text-base md:text-lg">{classroom.name}</CardTitle>
-        <CardDescription className="text-sm">{classroom.subject}</CardDescription>
+        <CardTitle className="text-base md:text-lg text-foreground">{classroom.name}</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">{classroom.subject}</CardDescription>
       </CardHeader>
       {showInviteCode && classroom.invite_code && (
         <CardContent>

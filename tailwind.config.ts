@@ -149,15 +149,18 @@ export default {
   				}
   			}
   		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  			float: 'float 6s ease-in-out infinite',
-  			'fade-in': 'fade-in 0.8s ease-out forwards',
-  			'fade-in-slow': 'fade-in-slow 1.5s ease-out forwards',
-  			shimmer: 'shimmer 8s linear infinite'
-  		}
-  	}
+		animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			float: 'float 6s ease-in-out infinite',
+			'fade-in': 'fade-in 0.8s ease-out forwards',
+			'fade-in-slow': 'fade-in-slow 1.5s ease-out forwards',
+			shimmer: 'shimmer 8s linear infinite'
+		},
+		transitionTimingFunction: {
+			'smooth': 'cubic-bezier(0.22, 1, 0.36, 1)'
+		}
+	}
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;

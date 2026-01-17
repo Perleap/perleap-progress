@@ -20,7 +20,7 @@ import { markSignupInProgress } from '@/utils/sessionState';
 
 const Auth = () => {
   const { t } = useTranslation();
-  const { isRTL, setLanguage, language } = useLanguage();
+  const { isRTL, setLanguage, language = 'en' } = useLanguage();
   const location = useLocation();
   const { user, loading: authLoading, hasProfile, isProfileLoading } = useAuth();
 
@@ -322,7 +322,7 @@ const Auth = () => {
           .from(profileTable)
           .select('id')
           .eq('user_id', data.user.id)
-          .single();
+          .maybeSingle();
 
         navigate(profile ? dashboardPath : onboardingPath);
       }

@@ -81,7 +81,7 @@
 
     /* Primary: Neutral-50 */
     --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
+    --primary-foreground: 0 0% 3.9%;
 
     /* Secondary: Neutral-800 */
     --secondary: 0 0% 14.9%;
@@ -457,4 +457,39 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Performance optimizations */
+/* Enable GPU acceleration for commonly animated elements */
+@layer utilities {
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Optimize animations by hinting what will change */
+  .will-animate {
+    will-change: transform, opacity;
+  }
+
+  /* Remove will-change after animation completes */
+  .will-animate-complete {
+    will-change: auto;
+  }
+
+  /* Optimize scrolling performance */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Contain layout to prevent unnecessary repaints */
+  .contain-layout {
+    contain: layout style;
+  }
+
+  /* Contain paint for elements that don't affect layout */
+  .contain-paint {
+    contain: paint;
+  }
 }

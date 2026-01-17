@@ -46,10 +46,12 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
 
   useEffect(() => {
     const checkAccessAndNavigate = async () => {
-      // Wait for auth to load and profile check if user is logged in
-      if (loading || isProfileLoading) return;
-      // If user exists but profile check isn't done yet, wait
-      if (user && hasProfile === null) return;
+      // Don't navigate while core auth is loading
+      if (loading) return;
+      
+      // If we have a user but are still checking for their profile, wait
+      // unless we already have a profile in cache (handled by AuthContext)
+      if (user && hasProfile === null && isProfileLoading) return;
       
       if (hasNavigated.current) return; // Prevent multiple navigations
 
@@ -59,7 +61,6 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
       if (!user || !session || !isSessionValid(session)) {
         // Prevent navigation loop - don't redirect if already at redirectTo
         if (currentPath === redirectTo) {
-          console.log('🔒 Already at auth page, skipping redirect');
           return;
         }
 
@@ -103,7 +104,8 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
         // Check if user has completed their profile (unless they're on onboarding page)
         if (!currentPath.startsWith('/onboarding/')) {
           // Use cached profile check from AuthContext
-          if (hasProfile === false) {
+          // Only redirect if we ARE NOT currently loading the profile and we know it's missing
+          if (hasProfile === false && !isProfileLoading) {
             console.log(`🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`);
             const onboardingPath = `/onboarding/${userRole}`;
             
@@ -120,7 +122,13 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     checkAccessAndNavigate();
   }, [user, session, loading, requiredRole, navigate, redirectTo, location.pathname, hasProfile, isProfileLoading]);
 
-  if (loading || (user && hasProfile === null) || isProfileLoading) {
+  // STABILIZED LOADING CHECK:
+  // Only show the full-page loader if:
+  // 1. Initial auth is loading
+  // 2. We have a user but haven't determined if they have a profile yet AND it's currently being fetched
+  const shouldShowLoader = loading || (user && hasProfile === null && isProfileLoading);
+
+  if (shouldShowLoader) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

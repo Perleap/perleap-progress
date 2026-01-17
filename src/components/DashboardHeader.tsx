@@ -44,7 +44,7 @@ export function DashboardHeader({
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const { language, setLanguage } = useLanguage();
+  const { language = 'en', setLanguage } = useLanguage();
   // Use auth profile if available, otherwise fall back to empty state
   // This prevents the flicker by using the already loaded profile from context
   const profile = authProfile || { full_name: '', avatar_url: null };
@@ -102,7 +102,7 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+    <header className="border-b bg-background/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {showBackButton && (

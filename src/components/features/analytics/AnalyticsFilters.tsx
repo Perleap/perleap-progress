@@ -34,19 +34,19 @@ export const AnalyticsFilters = ({
   onAssignmentChange,
 }: AnalyticsFiltersProps) => {
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-base md:text-lg">Analytics Filters</CardTitle>
+        <CardTitle className="text-base md:text-lg text-foreground">Analytics Filters</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm font-medium mb-2 block">Filter by Student</label>
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">Filter by Student</label>
             <Select value={selectedStudent} onValueChange={onStudentChange}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-muted/30 border-border text-foreground">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All</SelectItem>
                 {students.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
@@ -57,12 +57,12 @@ export const AnalyticsFilters = ({
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block">Filter by Assignment</label>
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">Filter by Assignment</label>
             <Select value={selectedAssignment} onValueChange={onAssignmentChange}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-muted/30 border-border text-foreground">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-card border-border">
                 <SelectItem value="all">All Assignments</SelectItem>
                 {assignments.map((a) => (
                   <SelectItem key={a.id} value={a.id}>

@@ -144,7 +144,7 @@ export function WellbeingAlertCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Consolidated alert display */}
-        <div className="p-4 rounded-lg border bg-white border-gray-300">
+        <div className="p-4 rounded-lg border bg-card/50 border-border">
           <div className="flex items-start justify-between gap-4 mb-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={mostSevereLevel === 'critical' ? 'destructive' : 'default'}>
@@ -165,18 +165,18 @@ export function WellbeingAlertCard({
           </div>
 
           <div className="mb-3">
-            <h4 className="font-semibold text-sm mb-2">AI Analysis:</h4>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{bestAnalysis}</p>
+            <h4 className="font-semibold text-sm mb-2 text-foreground">AI Analysis:</h4>
+            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{bestAnalysis}</p>
           </div>
 
           {allTriggeredMessages.length > 0 && (
             <div>
-              <h4 className="font-semibold text-sm mb-2">Concerning Messages:</h4>
+              <h4 className="font-semibold text-sm mb-2 text-foreground">Concerning Messages:</h4>
               <div className="space-y-2">
                 {allTriggeredMessages.map((msg, idx) => (
-                  <div key={idx} className="bg-red-50 border-l-4 border-red-400 p-3 text-sm">
-                    <p className="text-gray-800 mb-1">"{msg.content}"</p>
-                    <p className="text-red-700 text-xs italic">{msg.reason}</p>
+                  <div key={idx} className="bg-destructive/10 border-l-4 border-destructive p-3 text-sm">
+                    <p className="text-foreground font-medium mb-1">"{msg.content}"</p>
+                    <p className="text-destructive text-xs italic">{msg.reason}</p>
                   </div>
                 ))}
               </div>
@@ -184,7 +184,7 @@ export function WellbeingAlertCard({
           )}
 
           {hasAnyAcknowledged && alerts[0].acknowledged_at && (
-            <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+            <div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
               Acknowledged on {new Date(alerts[0].acknowledged_at).toLocaleString()}
             </div>
           )}

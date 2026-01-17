@@ -68,7 +68,7 @@ export function TeacherCalendar({
   loading: propLoading,
 }: TeacherCalendarProps) {
   const { t } = useTranslation();
-  const { language } = useLanguage();
+  const { language = 'en' } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
   const [assignments, setAssignments] = useState<AssignmentWithIncomplete[]>([]);
@@ -123,11 +123,15 @@ export function TeacherCalendar({
       // Get all unique student IDs
       const allStudentIds = [...new Set(allEnrollments?.map((e) => e.student_id) || [])];
 
-      // Get all student profiles in one query
-      const { data: allStudentProfiles } = await supabase
-        .from('student_profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', allStudentIds);
+      let allStudentProfiles: any[] | null = [];
+      if (allStudentIds.length > 0) {
+        // Get all student profiles in one query
+        const { data: profiles } = await supabase
+          .from('student_profiles')
+          .select('user_id, full_name, avatar_url')
+          .in('user_id', allStudentIds);
+        allStudentProfiles = profiles;
+      }
 
       // Create lookup maps for fast access
       const enrollmentsByClassroom = new Map<string, string[]>();

@@ -16,6 +16,8 @@ import {
   FileText,
   Info,
   ArrowLeft,
+  Globe,
+  Calendar,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,14 +43,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-interface ClassroomSection {
-  id: string;
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
+import { ClassroomSection } from '@/config/classroomSections';
 
 interface ClassroomSidebarProps {
   classroomName?: string;
@@ -69,10 +66,15 @@ export function ClassroomSidebar({
   const navigate = useNavigate();
   const { profile, signOut, user } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { isRTL } = useLanguage();
+  const { isRTL, language = 'en', setLanguage } = useLanguage();
+  const location = useLocation();
 
   const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
+
+  const isDashboardActive = location.pathname === `${basePath}/dashboard`;
+  const isPlannerActive = location.pathname === '/teacher/planner';
+  const isSettingsActive = location.pathname.startsWith(`${basePath}/settings`);
 
   const handleSignOut = async () => {
     await signOut();
@@ -131,17 +133,32 @@ export function ClassroomSidebar({
                 <SidebarMenuButton
                   tooltip={t('nav.dashboard')}
                   onClick={() => navigate(`${basePath}/dashboard`)}
-                  className="min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                  isActive={isDashboardActive}
+                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isDashboardActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                 >
                   <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
                   <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {isTeacher && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip={t('nav.planner')}
+                    onClick={() => navigate('/teacher/planner')}
+                    isActive={isPlannerActive}
+                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isPlannerActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                  >
+                    <Calendar className="size-5 group-data-[collapsible=icon]:size-5" />
+                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.planner')}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={t('nav.settings')}
                   onClick={() => navigate(`${basePath}/settings`)}
-                  className="min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                  isActive={isSettingsActive}
+                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isSettingsActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                 >
                   <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
                   <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
@@ -165,10 +182,10 @@ export function ClassroomSidebar({
                     isActive={activeSection === section.id}
                     tooltip={section.title}
                     onClick={() => onSectionChange(section.id)}
-                    className="cursor-pointer min-h-[40px] group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                    className="cursor-pointer min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                   >
-                    <section.icon className="size-4 group-data-[collapsible=icon]:size-5" />
-                    <span className="font-normal text-sm group-data-[collapsible=icon]:hidden">{section.title}</span>
+                    <section.icon className="size-5 group-data-[collapsible=icon]:size-5" />
+                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{section.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -177,51 +194,104 @@ export function ClassroomSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
+      <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
+        <SidebarMenu className="space-y-1">
+          {/* Theme Toggle */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={toggleTheme}
+              tooltip={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+              className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+            >
+              {theme === 'dark' ? (
+                <Sun className="size-5 group-data-[collapsible=icon]:size-5" />
+              ) : (
+                <Moon className="size-5 group-data-[collapsible=icon]:size-5" />
+              )}
+              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          {/* Language - Dropdown */}
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  tooltip="Language"
+                  className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg cursor-pointer hover:bg-sidebar-accent/50 transition-colors"
+                >
+                  <Globe className="size-5 group-data-[collapsible=icon]:size-5 opacity-70" />
+                  <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 text-left ml-1">
+                    {language === 'en' ? 'English' : 'עברית'}
+                  </span>
+                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`} />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="right"
+                align="end"
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-[160px] rounded-xl p-1 shadow-lg border border-border/50"
+              >
+                <DropdownMenuItem
+                  onClick={() => setLanguage('en')}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                    language === 'en' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent'
+                  }`}
+                >
+                  <span className="text-lg leading-none">🇺🇸</span>
+                  <span>English</span>
+                  {language === 'en' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setLanguage('he')}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                    language === 'he' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent'
+                  }`}
+                >
+                  <span className="text-lg leading-none">🇮🇱</span>
+                  <span>עברית</span>
+                  {language === 'he' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+
+          <SidebarSeparator className="my-2" />
+
+          {/* Profile - Dropdown Menu */}
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
                 >
-                  <Avatar className="h-8 w-8 rounded-lg">
+                  <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
                     <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
                     <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                     <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {isTeacher ? t('nav.teacher') : t('nav.student')}
                     </span>
                   </div>
-                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4`} />
+                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 group-data-[collapsible=icon]:hidden`} />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="top"
+                side="bottom"
                 align={isRTL ? "start" : "end"}
-                sideOffset={4}
+                sideOffset={8}
               >
-                <DropdownMenuItem onClick={toggleTheme}>
-                  {theme === 'dark' ? (
-                    <Sun className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  ) : (
-                    <Moon className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  )}
-                  {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
-                </DropdownMenuItem>
-                <div className="px-2 py-1.5">
-                  <LanguageSwitcher />
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  {t('nav.signOut')}
+                  {t('nav.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -234,19 +304,6 @@ export function ClassroomSidebar({
   );
 }
 
-// Pre-defined sections for teacher classroom
-export const TEACHER_CLASSROOM_SECTIONS: ClassroomSection[] = [
-  { id: 'overview', title: 'Overview', icon: Info },
-  { id: 'assignments', title: 'Assignments', icon: BookOpen },
-  { id: 'students', title: 'Students', icon: Users },
-  { id: 'submissions', title: 'Submissions', icon: FileText },
-  { id: 'analytics', title: 'Analytics', icon: BarChart3 },
-];
-
-// Pre-defined sections for student classroom
-export const STUDENT_CLASSROOM_SECTIONS: ClassroomSection[] = [
-  { id: 'overview', title: 'Overview', icon: Info },
-  { id: 'assignments', title: 'Assignments', icon: BookOpen },
-];
+// Pre-defined sections removed - now in @/config/classroomSections
 
 

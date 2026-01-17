@@ -93,24 +93,24 @@ export function ClassroomTimelineView({ classrooms, onCopyInviteCode }: Classroo
   const renderClassroomCard = (classroom: ClassroomWithStatus) => (
     <Card
       key={classroom.id}
-      className="group cursor-pointer hover:border-primary/30 hover:shadow-md transition-all duration-200"
+      className="group cursor-pointer border border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 bg-card"
       onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-bold text-base truncate group-hover:text-primary transition-colors">
+              <h3 className="font-bold text-base truncate group-hover:text-primary transition-colors text-foreground">
                 {classroom.name}
               </h3>
               <Badge
                 variant="secondary"
                 className={
                   classroom.status === 'active'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    ? 'bg-success/20 text-success'
                     : classroom.status === 'upcoming'
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-muted text-muted-foreground'
                 }
               >
                 {classroom.status === 'active'
@@ -140,13 +140,13 @@ export function ClassroomTimelineView({ classrooms, onCopyInviteCode }: Classroo
               <div className="mb-3">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-muted-foreground">{t('common.progress') || 'Progress'}</span>
-                  <span className="font-semibold">{classroom.progress}%</span>
+                  <span className="font-semibold text-foreground">{classroom.progress}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-300 ${
                       classroom.status === 'active'
-                        ? 'bg-gradient-to-r from-primary to-primary/70'
+                        ? 'bg-primary'
                         : 'bg-muted-foreground/50'
                     }`}
                     style={{ width: `${classroom.progress}%` }}
@@ -155,13 +155,13 @@ export function ClassroomTimelineView({ classrooms, onCopyInviteCode }: Classroo
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/50">
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{classroom._count?.enrollments || 0}</span>
+                <span className="text-sm font-medium text-foreground">{classroom._count?.enrollments || 0}</span>
               </div>
               <div
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all duration-200 hover:scale-105"
                 onClick={(e) => handleCopyCode(e, classroom.invite_code)}
               >
                 <span className="text-xs font-mono font-semibold text-primary">{classroom.invite_code}</span>

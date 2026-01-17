@@ -33,10 +33,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false, // Prevent refetching when tabbing back to the app
-      refetchOnMount: false, // Prevent refetching on component mount if data exists
-      refetchOnReconnect: false, // Prevent refetching on internet reconnect
-      retry: 1, // Only retry failed requests once
-      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+      staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
+      gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
+      retry: 1,
     },
   },
 });

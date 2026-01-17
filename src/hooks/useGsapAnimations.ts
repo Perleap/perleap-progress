@@ -54,6 +54,8 @@ export function useFadeIn(delay = 0, dependencies: React.DependencyList = []) {
 
 /**
  * Hook for stagger animation on children
+ * Optimized to prevent forced reflows by using requestAnimationFrame
+ * and only animating when dependencies actually change
  */
 export function useStaggerAnimation(
   childSelector = ':scope > *',
@@ -61,16 +63,44 @@ export function useStaggerAnimation(
   dependencies: React.DependencyList = []
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastDepsRef = useRef<string>(JSON.stringify(dependencies));
 
   useGSAP(
     () => {
-      if (containerRef.current) {
-        const children = containerRef.current.querySelectorAll(childSelector);
-        staggerFadeInUp(children, stagger);
+      const currentDeps = JSON.stringify(dependencies);
+      
+      // Only animate if dependencies actually changed
+      if (containerRef.current && currentDeps !== lastDepsRef.current) {
+        // Cancel any pending animation
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+
+        // Use requestAnimationFrame to batch DOM operations and avoid forced reflow
+        animationFrameRef.current = requestAnimationFrame(() => {
+          if (containerRef.current) {
+            const children = containerRef.current.querySelectorAll(childSelector);
+            if (children.length > 0) {
+              // Reduced duration and simplified animation for better performance
+              staggerFadeInUp(children, stagger, 0.3);
+            }
+          }
+          lastDepsRef.current = currentDeps;
+        });
       }
     },
     { scope: containerRef, dependencies }
   );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   return containerRef;
 }

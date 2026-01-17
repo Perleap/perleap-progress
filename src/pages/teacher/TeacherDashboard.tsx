@@ -1,8 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Users, BookOpen, Copy, LayoutGrid, List, Grid2x2, LayoutList, Table2, CalendarDays, Calendar } from 'lucide-react';
@@ -25,6 +23,7 @@ import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { SkeletonCardGrid } from '@/components/ui/GsapSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { copyToClipboard } from '@/lib/utils';
+import { useClassrooms } from '@/hooks/queries';
 
 interface Classroom {
   id: string;
@@ -48,122 +47,24 @@ const TeacherDashboard = () => {
   const { t } = useTranslation();
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  // Initialize classrooms from sessionStorage to survive component remounts
-  const [classrooms, setClassrooms] = useState<Classroom[]>(() => {
-    try {
-      const storageKey = `classrooms_${user?.id}`;
-      const cached = sessionStorage.getItem(storageKey);
-      return cached ? JSON.parse(cached) : [];
-    } catch (error) {
-      return [];
-    }
-  });
-  // Initialize loading based on whether we have cached data
-  const [loading, setLoading] = useState(() => {
-    // If we have data in cache, start with loading = false to show it immediately
-    if (user?.id) {
-      const cached = sessionStorage.getItem(`classrooms_${user.id}`);
-      if (cached) {
-        try {
-          const parsedCache = JSON.parse(cached);
-          if (Array.isArray(parsedCache) && parsedCache.length > 0) {
-            return false; // We have cached data, show it immediately
-          }
-        } catch {
-          // Invalid cache, show loading
-        }
-      }
-    }
-    return true; // Otherwise show loading while we fetch
-  });
+  
+  const { 
+    data: rawClassrooms = [], 
+    isLoading: classroomsLoading,
+    refetch: refetchClassrooms
+  } = useClassrooms('teacher');
+
+  // Memoize classrooms cast to prevent unnecessary re-renders
+  const classrooms = useMemo(() => rawClassrooms as unknown as Classroom[], [rawClassrooms]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'compact' | 'detailed' | 'table' | 'timeline'>('grid');
-  const cardsRef = useStaggerAnimation(':scope > div', 0.08);
-
-  const isFetchingRef = useRef(false);
-  const lastUserIdRef = useRef<string | null>(null);
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasFetchedRef = useRef(false);
-
-  useEffect(() => {
-    // ProtectedRoute handles auth, just fetch data when user is available
-    // Wait for auth to finish loading before checking user
-    if (authLoading) return;
-
-    if (!user?.id) return;
-
-    // Reset fetch flag if user ID actually changed
-    if (lastUserIdRef.current !== user.id) {
-      hasFetchedRef.current = false; // Reset to fetch fresh data for new user
-      lastUserIdRef.current = user.id;
-    }
-
-    // Fetch on mount to ensure fresh data (even if we have cache)
-    // This provides better UX: cached data shows immediately (loading=false),
-    // then fresh data updates in background
-    if (!hasFetchedRef.current && !isFetchingRef.current) {
-      // Clear any pending fetch timeout
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-
-      // Debounce the fetch to prevent rapid successive calls
-      fetchTimeoutRef.current = setTimeout(() => {
-        fetchClassrooms();
-      }, 100);
-    }
-
-    return () => {
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-    };
-  }, [user?.id, authLoading]); // Use user?.id instead of user to avoid refetch on user object reference change
-
-  const fetchClassrooms = async () => {
-    // Prevent concurrent fetches
-    if (isFetchingRef.current) {
-      console.log('🔄 TeacherDashboard: Fetch already in progress, skipping');
-      return;
-    }
-
-    isFetchingRef.current = true;
-    console.log('🔄 TeacherDashboard: Fetching classrooms...');
-
-    // Only show loading spinner if we don't have cached data yet
-    if (classrooms.length === 0) {
-      setLoading(true);
-    }
-
-    try {
-      // Only fetch classrooms, profile is handled by AuthContext
-      const { data, error } = await supabase
-        .from('classrooms')
-        .select('id, name, subject, invite_code, start_date, end_date')
-        .eq('teacher_id', user?.id);
-
-      if (error) throw error;
-
-      console.log('✅ TeacherDashboard: Classrooms loaded:', data?.length || 0);
-      setClassrooms(data || []);
-      // Persist classroom data to survive component remounts
-      if (user?.id) {
-        const storageKey = `classrooms_${user.id}`;
-        const dataToStore = JSON.stringify(data || []);
-        sessionStorage.setItem(storageKey, dataToStore);
-      }
-    } catch (error) {
-      console.error('❌ TeacherDashboard: Error loading classrooms:', error);
-      toast.error(t('teacherDashboard.errors.loadingClassrooms'));
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-      hasFetchedRef.current = true;
-    }
-  };
+  
+  // Only trigger stagger animation when classrooms data or viewMode changes
+  const cardsRef = useStaggerAnimation(':scope > div', 0.08, [classrooms.length, viewMode]);
 
   const handleClassroomCreated = (classroomId: string) => {
-    fetchClassrooms();
+    refetchClassrooms();
     navigate(`/teacher/classroom/${classroomId}`);
   };
 
@@ -198,14 +99,14 @@ const TeacherDashboard = () => {
     return labels[mode];
   };
 
-  // Transform data for calendar component
-  const calendarClassrooms: CalendarClassroom[] = classrooms.map((c) => ({
+  // Memoize calendar data
+  const calendarClassrooms: CalendarClassroom[] = useMemo(() => classrooms.map((c) => ({
     id: c.id,
     name: c.name,
     subject: c.subject,
     start_date: c.start_date || null,
     end_date: c.end_date || null,
-  }));
+  })), [classrooms]);
 
   // Show loading screen while auth is initializing
   if (authLoading) {
@@ -225,14 +126,14 @@ const TeacherDashboard = () => {
       ]}
     >
       {/* Enhanced Page Header */}
-      <div className="relative -mx-6 md:-mx-8 lg:-mx-10 -mt-6 md:-mt-8 lg:-mt-10 px-6 md:px-8 lg:px-10 pt-8 md:pt-10 lg:pt-12 pb-8 md:pb-10 mb-8 md:mb-10 overflow-hidden bg-gradient-to-br from-muted/30 to-transparent">
+      <div className="relative -mx-6 md:-mx-8 lg:-mx-10 -mt-6 md:-mt-8 lg:-mt-10 px-6 md:px-8 lg:px-10 pt-8 md:pt-10 lg:pt-12 pb-8 md:pb-10 mb-8 md:mb-10 overflow-hidden bg-muted/30">
         <div className="relative flex flex-col gap-4">
           <div className="flex items-center gap-4 md:gap-5">
             <div className="min-w-0 flex-1">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-heading truncate">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground truncate">
                 {profile?.full_name ? `${profile.full_name}'s Dashboard` : t('teacherDashboard.title')}
               </h1>
-              <p className="text-muted-foreground mt-2 text-sm md:text-base text-body truncate">{t('teacherDashboard.subtitle')}</p>
+              <p className="text-muted-foreground mt-2 text-sm md:text-base truncate">{t('teacherDashboard.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -244,8 +145,8 @@ const TeacherDashboard = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="min-w-0 flex-1">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-heading">{t('teacherDashboard.myClassrooms')}</h2>
-                <p className="text-sm md:text-base text-subtle mt-2">Manage and track your classes</p>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{t('teacherDashboard.myClassrooms')}</h2>
+                <p className="text-sm md:text-base text-muted-foreground mt-2">Manage and track your classes</p>
               </div>
               <Button
                 onClick={() => setDialogOpen(true)}
@@ -262,12 +163,12 @@ const TeacherDashboard = () => {
               <div className="flex gap-2 items-center">
                 <span className="text-sm text-muted-foreground mr-2">View:</span>
                 <Select value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[180px] bg-card">
                     <SelectValue>
                       <span>{getViewModeLabel(viewMode)}</span>
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-card">
                     <SelectItem value="grid">
                       <div className="flex items-center gap-2">
                         <LayoutGrid className="h-4 w-4" />
@@ -310,7 +211,7 @@ const TeacherDashboard = () => {
             )}
           </div>
 
-          {loading ? (
+          {classroomsLoading ? (
             <SkeletonCardGrid count={4} />
           ) : classrooms.length === 0 ? (
             <EmptyState
@@ -353,19 +254,19 @@ const TeacherDashboard = () => {
                 viewMode === 'grid' ? (
                   <Card
                     key={classroom.id}
-                    className="group relative overflow-hidden cursor-pointer hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
+                    className="group relative overflow-hidden cursor-pointer hover:border-primary/30 transition-all duration-200 active:scale-[0.98] bg-card border-border"
                     onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
                   >
                     <CardContent className="p-4 relative">
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-base mb-2 truncate group-hover:text-primary transition-colors">
+                          <h3 className="font-bold text-base mb-2 truncate group-hover:text-primary transition-colors text-foreground">
                             {classroom.name}
                           </h3>
                         </div>
                       </div>
 
-                      <div className="space-y-2 pt-3 border-t border-border/50">
+                      <div className="space-y-2 pt-3 border-t border-border">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Users className="h-4 w-4" />
@@ -377,7 +278,7 @@ const TeacherDashboard = () => {
                           </div>
                         </div>
                         <div
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
                           <span className="text-xs font-mono font-semibold text-primary">{classroom.invite_code}</span>
@@ -390,12 +291,12 @@ const TeacherDashboard = () => {
                   // Compact View
                   <Card
                     key={classroom.id}
-                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200"
+                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200 bg-card border-border"
                     onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
                   >
                     <CardContent className="p-3">
                       <div className="mb-2">
-                        <h3 className="font-bold text-sm truncate group-hover:text-primary transition-colors">
+                        <h3 className="font-bold text-sm truncate group-hover:text-primary transition-colors text-foreground">
                           {classroom.name}
                         </h3>
                       </div>
@@ -408,7 +309,7 @@ const TeacherDashboard = () => {
                           <span>{formatDate(classroom.start_date)}</span>
                         </div>
                         <div
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-primary/5 border border-primary/20 hover:bg-primary/10 cursor-pointer transition-all w-full justify-center"
+                          className="flex items-center gap-1 px-2 py-1 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all w-full justify-center"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
                           <span className="font-mono text-xs font-semibold text-primary">{classroom.invite_code}</span>
@@ -421,13 +322,13 @@ const TeacherDashboard = () => {
                   // List View
                   <Card
                     key={classroom.id}
-                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200"
+                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200 bg-card border-border"
                     onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-base truncate group-hover:text-primary transition-colors mb-2">
+                          <h3 className="font-bold text-base truncate group-hover:text-primary transition-colors mb-2 text-foreground">
                             {classroom.name}
                           </h3>
                           <div className="flex items-center gap-3 flex-wrap">
@@ -442,7 +343,7 @@ const TeacherDashboard = () => {
                           </div>
                         </div>
                         <div
-                          className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105"
+                          className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all duration-200 hover:scale-105"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
                           <span className="text-sm font-mono font-semibold text-primary">{classroom.invite_code}</span>
@@ -455,38 +356,38 @@ const TeacherDashboard = () => {
                   // Detailed View
                   <Card
                     key={classroom.id}
-                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200"
+                    className="group cursor-pointer hover:border-primary/30 transition-all duration-200 bg-card border-border"
                     onClick={() => navigate(`/teacher/classroom/${classroom.id}`)}
                   >
                     <CardContent className="p-5">
                       <div className="mb-4">
-                        <h3 className="font-bold text-lg mb-2 truncate group-hover:text-primary transition-colors">
+                        <h3 className="font-bold text-lg mb-2 truncate group-hover:text-primary transition-colors text-foreground">
                           {classroom.name}
                         </h3>
                       </div>
-                      <div className="space-y-3 pt-4 border-t border-border/50">
+                      <div className="space-y-3 pt-4 border-t border-border">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                              <Users className="h-5 w-5" />
+                              <Users className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground">Students</p>
-                              <p className="font-bold">{classroom._count?.enrollments || 0}</p>
+                              <p className="font-bold text-foreground">{classroom._count?.enrollments || 0}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                              <Calendar className="h-5 w-5" />
+                              <Calendar className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground">Duration</p>
-                              <p className="font-semibold text-xs">{formatDate(classroom.start_date)} - {formatDate(classroom.end_date)}</p>
+                              <p className="font-semibold text-xs text-foreground">{formatDate(classroom.start_date)} - {formatDate(classroom.end_date)}</p>
                             </div>
                           </div>
                         </div>
                         <div
-                          className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 hover:bg-primary/10 hover:border-primary/30 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
+                          className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all duration-200 hover:scale-105 w-full justify-center"
                           onClick={(e) => handleCopyInviteCode(e, classroom.invite_code)}
                         >
                           <span className="text-sm font-mono font-semibold text-primary">{classroom.invite_code}</span>
@@ -509,7 +410,7 @@ const TeacherDashboard = () => {
               <TeacherCalendar
                 teacherId={user.id}
                 classrooms={calendarClassrooms}
-                loading={loading}
+                loading={classroomsLoading}
               />
             </div>
           )}

@@ -2,6 +2,7 @@
   "nav": {
     "menu": "תפריט",
     "dashboard": "לוח בקרה",
+    "planner": "מתכנן",
     "settings": "הגדרות",
     "teacherPortal": "פורטל מורים",
     "studentPortal": "פורטל תלמידים",
@@ -132,6 +133,7 @@
   },
   "studentDashboard": {
     "title": "לוח תלמיד",
+    "subtitle": "עקוב אחר התקדמות הלמידה והמשימות הקרובות שלך",
     "welcome": "ברוך שובך, {{name}}!",
     "myClasses": "הכיתות שלי",
     "myAssignments": "המשימות שלי",
@@ -157,7 +159,9 @@
       "noClasses": "אין כיתות עדיין",
       "noClassesDescription": "הצטרף לכיתה באמצעות קוד ההזמנה של המורה שלך",
       "noAssignments": "אין משימות עדיין",
-      "noAssignmentsDescription": "המשימות שלך יופיעו כאן ברגע שהמורה שלך יצור אותן"
+      "noAssignmentsDescription": "המשימות שלך יופיעו כאן ברגע שהמורה שלך יצור אותן",
+      "noFinishedAssignments": "אין משימות שהושלמו עדיין",
+      "noFinishedAssignmentsDesc": "משימות שהושלמו יעברו לכאן לאחר שתסיים אותן."
     },
     "errors": {
       "loadingData": "שגיאה בטעינת נתוני לוח הבקרה",
@@ -283,7 +287,11 @@
       "created": "הכיתה נוצרה בהצלחה!",
       "pdfUploaded": "קובץ PDF הועלה בהצלחה!",
       "linkAdded": "הקישור נוסף בהצלחה!"
-    }
+    },
+    "rephraseButton": "נסח מחדש עם בינה מלאכותית",
+    "rephrasing": "מנסח מחדש...",
+    "rephraseSuccess": "הטקסט נוסח מחדש בהצלחה!",
+    "rephraseError": "שגיאה בניסוח מחדש. אנא נסה שוב."
   },
   "editClassroom": {
     "title": "ערוך כיתה",
@@ -364,7 +372,11 @@
     },
     "success": {
       "created": "המשימה נוצרה בהצלחה!"
-    }
+    },
+    "rephraseButton": "נסח מחדש עם בינה מלאכותית",
+    "rephrasing": "מנסח מחדש...",
+    "rephraseSuccess": "הטקסט נוסח מחדש בהצלחה!",
+    "rephraseError": "שגיאה בניסוח מחדש. אנא נסה שוב."
   },
   "editAssignment": {
     "title": "ערוך משימה",
@@ -550,12 +562,14 @@
     "duration": "משך הקורס",
     "startDate": "תאריך התחלה",
     "endDate": "תאריך סיום",
-    "viewAssignment": "צפה במטלה",
-    "courseInfo": "מידע על הקורס",
-    "courseTitle": "שם הקורס",
-    "keyChallenges": "אתגרים מרכזיים",
-    "noAssignmentsDesc": "לא הוקצו עדיין מטלות לכיתה זו."
-  },
+      "viewAssignment": "צפה במטלה",
+      "courseInfo": "מידע על הקורס",
+      "courseTitle": "שם הקורס",
+      "keyChallenges": "אתגרים מרכזיים",
+      "noAssignmentsDesc": "לא הוקצו עדיין מטלות לכיתה זו.",
+      "noFinishedAssignments": "אין משימות שהושלמו עדיין",
+      "noFinishedAssignmentsDesc": "משימות שהושלמו יעברו לכאן לאחר שתסיים אותן."
+    },
   "settings": {
     "title": "הגדרות",
     "profile": "פרופיל",
@@ -1010,10 +1024,10 @@
       "satisfactionRate": "Satisfaction Rate"
     },
     "cta": {
-      "title": "Join Us on Our Journey",
-      "subtitle": "Whether you're a school leader, a teacher, or a parent, we'd love to show you how PerLeap can make a difference.",
-      "getStarted": "Get Started",
-      "contactTeam": "Contact Our Team"
+      "title": "הצטרפו למסע שלנו",
+      "subtitle": "בין אם אתם מנהלי בתי ספר, מורים או הורים, נשמח להראות לכם כיצד PerLeap יכולה לעשות את ההבדל.",
+      "getStarted": "התחל עכשיו",
+      "contactTeam": "צור קשר עם הצוות"
     }
   },
   "assignments": {

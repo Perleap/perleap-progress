@@ -50,13 +50,11 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     console.log('🌐 LanguageContext: Loading language preference for user:', user.id);
     
     try {
-      // Check DB for preference - prioritize DB over local storage
       let dbLanguage: Language | null = null;
       const userRole = user.user_metadata?.role;
 
-      // Only query the relevant table based on role
       if (userRole === 'student') {
-        const { data: studentProfile, error } = await supabase
+        const { data: studentProfile } = await supabase
           .from('student_profiles')
           .select('preferred_language')
           .eq('user_id', user.id)
@@ -66,7 +64,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
           dbLanguage = studentProfile.preferred_language as Language;
         }
       } else if (userRole === 'teacher') {
-        const { data: teacherProfile, error } = await supabase
+        const { data: teacherProfile } = await supabase
           .from('teacher_profiles')
           .select('preferred_language')
           .eq('user_id', user.id)
@@ -75,30 +73,8 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (teacherProfile?.preferred_language) {
           dbLanguage = teacherProfile.preferred_language as Language;
         }
-      } else {
-        // Fallback for unknown roles - try both (should rarely happen)
-        // Try to get from student_profiles first
-        const { data: studentProfile } = await supabase
-          .from('student_profiles')
-          .select('preferred_language')
-          .eq('user_id', user.id)
-          .maybeSingle();
-  
-        if (studentProfile?.preferred_language) {
-          dbLanguage = studentProfile.preferred_language as Language;
-        } else {
-          // Try teacher_profiles if not found in student_profiles
-          const { data: teacherProfile } = await supabase
-            .from('teacher_profiles')
-            .select('preferred_language')
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          if (teacherProfile?.preferred_language) {
-            dbLanguage = teacherProfile.preferred_language as Language;
-          }
-        }
       }
+      // No fallback to both tables - trust the metadata role
 
       if (dbLanguage) {
         // If DB has a preference, use it (overriding local storage)

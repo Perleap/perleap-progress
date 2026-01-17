@@ -35,7 +35,7 @@ export const useTeacherProfile = (userId?: string) => {
       if (error) throw error;
       return data;
     },
-    enabled: !!targetUserId,
+    enabled: !!targetUserId && (!!userId || !userId && !!user?.id),
   });
 };
 

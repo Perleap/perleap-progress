@@ -86,6 +86,7 @@ export const scaleIn = (element: Element | null, delay = 0, duration = 0.4) => {
 
 /**
  * Stagger fade in children elements
+ * Optimized to use transform for better performance and will-change hint
  */
 export const staggerFadeInUp = (
   elements: Element[] | NodeListOf<Element> | null,
@@ -95,8 +96,20 @@ export const staggerFadeInUp = (
   if (!elements || (elements as Element[]).length === 0) return;
   return gsap.fromTo(
     elements,
-    { opacity: 0, y: 30 },
-    { opacity: 1, y: 0, duration, stagger, ease: 'power3.out' }
+    { 
+      opacity: 0, 
+      y: 20, // Reduced distance for smoother animation
+      willChange: 'transform, opacity' 
+    },
+    { 
+      opacity: 1, 
+      y: 0, 
+      duration, 
+      stagger, 
+      ease: 'power2.out', // Lighter easing function
+      clearProps: 'willChange', // Clean up will-change after animation
+      force3D: true // Enable hardware acceleration
+    }
   );
 };
 

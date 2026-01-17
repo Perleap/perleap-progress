@@ -59,7 +59,8 @@ export const useClassroom = (classroomId: string | undefined) => {
     queryKey: classroomKeys.detail(classroomId || ''),
     queryFn: async () => {
       if (!user || !classroomId) throw new Error('Missing user or classroom ID');
-      const { data, error } = await getClassroomById(classroomId, user.id);
+      const isTeacher = user.user_metadata?.role === 'teacher';
+      const { data, error } = await getClassroomById(classroomId, isTeacher ? user.id : undefined);
       if (error) throw error;
       return data;
     },

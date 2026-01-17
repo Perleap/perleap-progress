@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.regenerate-scores]
 verify_jwt = false
+
+[functions.rephrase-text]
+verify_jwt = false

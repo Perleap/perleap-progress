@@ -25,10 +25,10 @@ export const ClassPerformanceSummary = ({
   const engagementRate = studentCount > 0 ? Math.round((activeStudents / studentCount) * 100) : 0;
 
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-base md:text-lg">Class Performance Summary</CardTitle>
-        <CardDescription className="text-sm">
+        <CardTitle className="text-base md:text-lg text-foreground">Class Performance Summary</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
           Overall statistics and completion rates
         </CardDescription>
       </CardHeader>
@@ -37,7 +37,7 @@ export const ClassPerformanceSummary = ({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <p className="text-xs md:text-sm text-muted-foreground">Active Students</p>
-              <p className="text-xl md:text-2xl font-bold">
+              <p className="text-xl md:text-2xl font-bold text-foreground">
                 {activeStudents} / {studentCount}
               </p>
             </div>
@@ -45,24 +45,24 @@ export const ClassPerformanceSummary = ({
               <p className="text-xs md:text-sm text-muted-foreground">
                 Average Submissions per Student
               </p>
-              <p className="text-xl md:text-2xl font-bold">{averageSubmissionsPerStudent}</p>
+              <p className="text-xl md:text-2xl font-bold text-foreground">{averageSubmissionsPerStudent}</p>
             </div>
             <div className="space-y-2">
               <p className="text-xs md:text-sm text-muted-foreground">Class Engagement Rate</p>
-              <p className="text-xl md:text-2xl font-bold">{engagementRate}%</p>
+              <p className="text-xl md:text-2xl font-bold text-foreground">{engagementRate}%</p>
             </div>
           </div>
 
           {classAverage && (
-            <div className="pt-4 border-t">
-              <h4 className="text-sm md:text-base font-semibold mb-3">Average 5D Scores</h4>
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-sm md:text-base font-semibold mb-3 text-foreground">Average 5D Scores</h4>
               <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                 {Object.entries(classAverage).map(([dimension, score]) => (
-                  <div key={dimension} className="text-center p-2 md:p-3 bg-muted rounded-lg">
+                  <div key={dimension} className="text-center p-2 md:p-3 bg-muted/30 rounded-lg border border-border">
                     <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">
                       {dimension}
                     </p>
-                    <p className="text-base md:text-xl font-bold">{score.toFixed(1)}/10</p>
+                    <p className="text-base md:text-xl font-bold text-foreground">{score.toFixed(1)}/10</p>
                   </div>
                 ))}
               </div>

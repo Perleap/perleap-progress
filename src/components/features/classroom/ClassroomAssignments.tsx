@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, BookOpen } from 'lucide-react';
 import { EmptyState } from '@/components/common';
 import type { Assignment } from '@/types';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ClassroomAssignmentsProps {
   assignments: Assignment[];
@@ -28,17 +29,22 @@ export const ClassroomAssignments = ({
   onDeleteAssignment,
 }: ClassroomAssignmentsProps) => {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold">Assignments</h2>
-          <p className="text-sm text-muted-foreground">Create and manage assignments</p>
-        </div>
-        <Button onClick={onCreateAssignment} size="sm" className="w-full sm:w-auto">
+        <Button
+          onClick={onCreateAssignment}
+          size="sm"
+          className={`w-full sm:w-auto ${isRTL ? 'sm:order-1' : 'sm:order-2'}`}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Create Assignment
         </Button>
+        <div className={`${isRTL ? 'sm:order-2' : 'sm:order-1'}`}>
+          <h2 className={`text-xl md:text-2xl font-bold ${isRTL ? 'text-right' : 'text-left'}`}>Assignments</h2>
+          <p className={`text-sm text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>Create and manage assignments</p>
+        </div>
       </div>
 
       {assignments.length === 0 ? (

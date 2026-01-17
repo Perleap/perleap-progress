@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { ClassroomSidebar, TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from './ClassroomSidebar';
+import { ClassroomSidebar } from './ClassroomSidebar';
+import { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from '@/config/classroomSections';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -14,6 +15,7 @@ import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 
 interface ClassroomLayoutProps {
   children: React.ReactNode;
@@ -70,31 +72,38 @@ export function ClassroomLayout({
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-6 shadow-sm sticky top-0 z-30">
-          <SidebarTrigger className="hover:bg-accent hover:scale-110 rounded-lg p-2.5 transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-accent-foreground/10" />
-          <Separator orientation="vertical" className="h-6 bg-border/60" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href={`${basePath}/dashboard`}>
-                  {t('nav.dashboard')}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbPage>{classroomName || t('nav.classroom')}</BreadcrumbPage>
-              </BreadcrumbItem>
-              {currentSection && (
-                <>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>{currentSection.title}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
-            </BreadcrumbList>
-          </Breadcrumb>
+          <div className="flex items-center gap-4 flex-1">
+            <SidebarTrigger className="hover:bg-accent hover:scale-110 rounded-lg p-2.5 transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-accent-foreground/10" />
+            <Separator orientation="vertical" className="h-6 bg-border/60" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href={`${basePath}/dashboard`}>
+                    {t('nav.dashboard')}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbPage>{classroomName || t('nav.classroom')}</BreadcrumbPage>
+                </BreadcrumbItem>
+                {currentSection && (
+                  <>
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>{currentSection.title}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          {user && (
+            <div className="flex items-center gap-2">
+              <NotificationDropdown userId={user.id} />
+            </div>
+          )}
         </header>
-        <div ref={contentRef} className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-background via-background to-muted/10 min-h-0">
+        <div ref={contentRef} className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-background via-background to-muted/5 min-h-0">
           <div className="pt-4">
             {children}
           </div>
@@ -104,7 +113,7 @@ export function ClassroomLayout({
   );
 }
 
-export { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS };
+// Sections moved to @/config/classroomSections
 
 
 

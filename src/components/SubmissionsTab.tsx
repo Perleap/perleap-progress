@@ -209,11 +209,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       const submissionIds = submissionsData.map((s) => s.id);
       const studentIds = [...new Set(submissionsData.map((s) => s.student_id))];
 
-      // Fetch all student profiles in one query
-      const { data: studentProfiles } = await supabase
-        .from('student_profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', studentIds);
+      let studentProfiles: any[] | null = [];
+      if (studentIds.length > 0) {
+        // Fetch all student profiles in one query
+        const { data: profiles } = await supabase
+          .from('student_profiles')
+          .select('user_id, full_name, avatar_url')
+          .in('user_id', studentIds);
+        studentProfiles = profiles;
+      }
 
       // Fetch all feedback in one query
       const { data: feedbackData } = await supabase
@@ -268,15 +272,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   if (submissions.length === 0) {
     return (
-      <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+      <Card className="rounded-xl border-dashed border-2 border-border bg-muted/20">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-4">
-            <FileText className="h-8 w-8 text-slate-400" />
+          <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center shadow-sm mb-4">
+            <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className={`text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <h3 className={`text-xl font-bold text-foreground mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('submissionsTab.noSubmissionsYet')}
           </h3>
-          <p className={`text-slate-500 dark:text-slate-400 max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
+          <p className={`text-muted-foreground max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('submissionsTab.noSubmissionsDesc')}
           </p>
         </CardContent>
@@ -286,20 +290,20 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+      <Card className="rounded-xl border-none shadow-sm bg-card ring-1 ring-border overflow-hidden">
         <CardContent className="p-6">
           <div className="space-y-4">
             {/* Top Row: Search, Filter Toggle, Export */}
             <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="relative flex-1 w-full">
                 <Search
-                  className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400`}
+                  className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`}
                 />
                 <Input
                   placeholder={t('submissionsTab.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`${isRTL ? 'pr-12' : 'pl-12'} h-12 rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all text-base shadow-sm`}
+                  className={`${isRTL ? 'pr-12' : 'pl-12'} h-12 rounded-full border-border bg-muted/30 focus:bg-card transition-all text-base shadow-sm text-foreground`}
                 />
               </div>
 
@@ -326,7 +330,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   onClick={handleBulkExport}
                   disabled={submissions.length === 0}
                   variant="outline"
-                  className="rounded-full h-12 px-4 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="rounded-full h-12 px-4 border-border hover:bg-muted/50"
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -336,14 +340,14 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
             {/* Collapsible Advanced Filters */}
             <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
               <CollapsibleContent className="animate-in slide-in-from-top-2 fade-in duration-300">
-                <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="pt-4 mt-2 border-t border-border grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1.5">
-                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
+                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                      <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
+                      <SelectTrigger className="rounded-xl h-10 border-border bg-muted/30 text-sm text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
                         {students.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
@@ -355,12 +359,12 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
+                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
                     <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                      <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
+                      <SelectTrigger className="rounded-xl h-10 border-border bg-muted/30 text-sm text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
                         {assignments.map((a) => (
                           <SelectItem key={a.id} value={a.id}>
@@ -372,12 +376,12 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
+                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
                     <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                      <SelectTrigger className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-sm">
+                      <SelectTrigger className="rounded-xl h-10 border-border bg-muted/30 text-sm text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectItem value="all">{t('submissionsTab.allStatuses')}</SelectItem>
                         <SelectItem value="completed">{t('common.completed')}</SelectItem>
                         <SelectItem value="in_progress">{t('submissionsTab.inProgress')}</SelectItem>
@@ -386,14 +390,14 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className={`text-xs font-medium text-slate-500 dark:text-slate-400 ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.dateRange')}</label>
+                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.dateRange')}</label>
                     <div className="flex gap-2">
                       <div className="relative flex-1 min-w-0">
                         <Input
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-xs px-2"
+                          className="rounded-xl h-10 border-border bg-muted/30 text-xs px-2 text-foreground"
                         />
                       </div>
                       <div className="relative flex-1 min-w-0">
@@ -401,7 +405,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="rounded-xl h-10 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-xs px-2"
+                          className="rounded-xl h-10 border-border bg-muted/30 text-xs px-2 text-foreground"
                         />
                       </div>
                     </div>
@@ -414,7 +418,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       variant="ghost"
                       size="sm"
                       onClick={clearFilters}
-                      className="text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full"
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
                     >
                       <X className="h-3.5 w-3.5 me-1.5" />
                       {t('submissionsTab.clearFilters')}
@@ -428,15 +432,15 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       </Card>
 
       {filteredSubmissions.length === 0 ? (
-        <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+        <Card className="rounded-xl border-dashed border-2 border-border bg-muted/20">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
-            <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-3">
-              <Search className="h-6 w-6 text-slate-400" />
+            <div className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-sm mb-3">
+              <Search className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className={`text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <h3 className={`text-lg font-bold text-foreground mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
               {t('submissionsTab.noMatches')}
             </h3>
-            <p className={`text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <p className={`text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
               {t('submissionsTab.adjustFilters')}
             </p>
             {activeFiltersCount > 0 && (

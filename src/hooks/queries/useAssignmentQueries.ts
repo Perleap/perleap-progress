@@ -29,11 +29,13 @@ export const assignmentKeys = {
  * Hook to fetch assignments for a classroom
  */
 export const useClassroomAssignments = (classroomId: string | undefined) => {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: assignmentKeys.listByClassroom(classroomId || ''),
     queryFn: async () => {
       if (!classroomId) throw new Error('Missing classroom ID');
-      const { data, error } = await getClassroomAssignments(classroomId);
+      const { data, error } = await getClassroomAssignments(classroomId, user?.id);
       if (error) throw error;
       return data || [];
     },
@@ -48,8 +50,8 @@ export const useAssignment = (assignmentId: string | undefined) => {
   return useQuery({
     queryKey: assignmentKeys.detail(assignmentId || ''),
     queryFn: async () => {
-      if (!assignmentId) throw new Error('Missing assignment ID');
-      const { data, error } = await getAssignmentById(assignmentId);
+      if (!user || !assignmentId) throw new Error('Missing assignment ID');
+      const { data, error } = await getAssignmentById(assignmentId, user.id);
       if (error) throw error;
       return data;
     },

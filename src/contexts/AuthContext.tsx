@@ -265,10 +265,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const fiveMinutes = 5 * 60 * 1000;
               const isVeryNewAccount = (now - userCreatedAt) < fiveMinutes;
               
-              // CRITICAL: Don't interfere if signup is in progress OR account is brand new
-              if (signupInProgress || isVeryNewAccount) {
+              // CRITICAL: Don't interfere if on callback page or signup is in progress OR account is brand new
+              const isCallbackPage = window.location.pathname.includes('/auth/callback');
+              if (signupInProgress || isVeryNewAccount || isCallbackPage) {
                 if (signupInProgress) {
                   console.log('🔄 Signup in progress, skipping role check (will be set during signup)');
+                } else if (isCallbackPage) {
+                  console.log('🔄 On callback page, letting AuthCallback handle role assignment');
                 } else {
                   console.log('🆕 Very new account detected (< 5 min old), skipping role check to allow signup to complete');
                 }
@@ -311,8 +314,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           break;
       }
 
-      setSession(session);
-      setUser(session?.user ?? null);
+      // Update state only if changed to prevent unnecessary re-renders
+      setSession(prev => {
+        if (prev?.access_token === session?.access_token && prev?.expires_at === session?.expires_at) {
+          return prev;
+        }
+        return session;
+      });
+      
+      setUser(prev => {
+        if (prev?.id === session?.user?.id && JSON.stringify(prev?.user_metadata) === JSON.stringify(session?.user?.user_metadata)) {
+          return prev;
+        }
+        return session?.user ?? null;
+      });
+      
       setLoading(false);
     });
 

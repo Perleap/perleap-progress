@@ -74,7 +74,7 @@ export const getSubmissionById = async (
         `
         *,
         assignments(title),
-        student_profiles(full_name, first_name, last_name, avatar_url, user_id, created_at),
+        student_profiles(full_name, avatar_url, user_id, created_at),
         assignment_feedback(student_feedback, teacher_feedback, created_at)
       `
       )
@@ -115,7 +115,7 @@ export const getClassroomSubmissions = async (
         `
         *,
         assignments(title),
-        student_profiles(full_name, first_name, last_name, avatar_url, user_id, created_at),
+        student_profiles(full_name, avatar_url, user_id, created_at),
         assignment_feedback(student_feedback, teacher_feedback, created_at)
       `
       )
