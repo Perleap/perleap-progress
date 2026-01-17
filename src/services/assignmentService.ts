@@ -16,10 +16,11 @@ import type {
  * Fetch all assignments for a classroom
  */
 export const getClassroomAssignments = async (
-  classroomId: string
+  classroomId: string,
+  studentId?: string
 ): Promise<{ data: Assignment[] | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
+    const { data: assignments, error } = await supabase
       .from('assignments')
       .select('*')
       .eq('classroom_id', classroomId)
@@ -29,7 +30,30 @@ export const getClassroomAssignments = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    if (!assignments || assignments.length === 0) {
+      return { data: [], error: null };
+    }
+
+    let finalAssignments = assignments;
+
+    if (studentId) {
+      // If studentId is provided, we only want THIS student's submissions
+      const assignmentIds = assignments.map(a => a.id);
+      const { data: studentSubmissions, error: subError } = await supabase
+        .from('submissions')
+        .select('*, assignment_feedback(id)')
+        .in('assignment_id', assignmentIds)
+        .eq('student_id', studentId);
+
+      if (!subError && studentSubmissions) {
+        finalAssignments = assignments.map(a => ({
+          ...a,
+          submissions: studentSubmissions.filter(s => s.assignment_id === a.id)
+        }));
+      }
+    }
+
+    return { data: finalAssignments as Assignment[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -39,10 +63,11 @@ export const getClassroomAssignments = async (
  * Get assignment by ID with classroom info
  */
 export const getAssignmentById = async (
-  assignmentId: string
+  assignmentId: string,
+  studentId: string
 ): Promise<{ data: AssignmentWithClassroom | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
+    const { data: assignment, error } = await supabase
       .from('assignments')
       .select('*, classrooms(name, teacher_id)')
       .eq('id', assignmentId)
@@ -52,7 +77,23 @@ export const getAssignmentById = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    if (!assignment) {
+      return { data: null, error: null };
+    }
+
+    // Fetch submission for this assignment for this student
+    const { data: submissions, error: subError } = await supabase
+      .from('submissions')
+      .select('*, assignment_feedback(id)')
+      .eq('assignment_id', assignmentId)
+      .eq('student_id', studentId);
+
+    const assignmentWithSubmission = {
+      ...assignment,
+      submissions: submissions || []
+    } as AssignmentWithClassroom;
+
+    return { data: assignmentWithSubmission, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -76,9 +117,9 @@ export const getStudentAssignments = async (
 
     const classroomIds = enrollments.map((e) => e.classroom_id);
 
-    const { data, error } = await supabase
+    const { data: assignments, error } = await supabase
       .from('assignments')
-      .select('*, classrooms(name)')
+      .select('*, classrooms(name, teacher_id)')
       .in('classroom_id', classroomIds)
       .eq('status', 'published')
       .order('due_at', { ascending: true });
@@ -87,7 +128,31 @@ export const getStudentAssignments = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    if (!assignments || assignments.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Fetch submissions for these assignments for this student
+    const assignmentIds = assignments.map(a => a.id);
+    const { data: submissions, error: subError } = await supabase
+      .from('submissions')
+      .select('*, assignment_feedback(id)')
+      .in('assignment_id', assignmentIds)
+      .eq('student_id', studentId);
+
+    if (subError) {
+      console.error('Error fetching student submissions:', subError);
+      // We still return assignments even if submissions fail
+      return { data: assignments as AssignmentWithClassroom[], error: null };
+    }
+
+    // Merge submissions into assignments
+    const assignmentsWithSubmissions = assignments.map(a => ({
+      ...a,
+      submissions: submissions?.filter(s => s.assignment_id === a.id) || []
+    })) as AssignmentWithClassroom[];
+
+    return { data: assignmentsWithSubmissions, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

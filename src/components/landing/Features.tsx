@@ -103,7 +103,7 @@ const FeatureItem = ({ feature, index }: { feature: any, index: number }) => {
                 isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             )}
         >
-            <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center flex-shrink-0 shadow-xl">
+            <div className="w-16 h-16 rounded-lg bg-black text-white flex items-center justify-center flex-shrink-0 shadow-xl">
                 <Icon className="w-8 h-8" />
             </div>
             <div>

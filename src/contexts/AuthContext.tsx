@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -27,13 +27,54 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  
+  // Initialize profile from sessionStorage to survive component remounts
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    try {
+      const cached = sessionStorage.getItem('auth_profile_cache');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+  
+  // Initialize loading based on whether we have a session check to do
   const [loading, setLoading] = useState(true);
   
   // Profile caching state
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
-  const [lastProfileFetch, setLastProfileFetch] = useState<number>(0);
+  const [lastProfileFetch, setLastProfileFetch] = useState<number>(() => {
+    try {
+      const cached = sessionStorage.getItem('auth_profile_fetch_time');
+      return cached ? parseInt(cached, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  
+  // Use sessionStorage to persist fetch flag across potential component recreations
+  // Clear stale flags (older than 10 seconds - likely from aborted fetch)
+  const getInitialFetchingState = () => {
+    try {
+      const flagTime = sessionStorage.getItem('auth_fetching_profile_time');
+      if (!flagTime) return false;
+      
+      const timeSinceSet = Date.now() - parseInt(flagTime, 10);
+      if (timeSinceSet > 10000) {
+        // Stale flag, clear it
+        sessionStorage.removeItem('auth_fetching_profile');
+        sessionStorage.removeItem('auth_fetching_profile_time');
+        return false;
+      }
+      
+      return sessionStorage.getItem('auth_fetching_profile') === 'true';
+    } catch {
+      return false;
+    }
+  };
+  
+  const isFetchingProfile = useRef(getInitialFetchingState());
   
   const navigate = useNavigate();
 
@@ -68,12 +109,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = async (userId: string, role?: string, force: boolean = false) => {
     if (!userId) return;
 
+    // Prevent concurrent profile fetches
+    if (isFetchingProfile.current) {
+      console.log('🔄 AuthContext: Profile fetch already in progress, skipping');
+      return;
+    }
+
     // Use cached profile if available and fresh (less than 5 minutes old)
     const now = Date.now();
     const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
     
     if (!force && profile && (now - lastProfileFetch < CACHE_DURATION)) {
       console.log('🔄 AuthContext: Using cached profile data');
+      // CRITICAL FIX: Ensure hasProfile is set to true when using cached data
+      // This prevents infinite loading on page refresh when profile exists in cache
+      if (hasProfile !== true) {
+        setHasProfile(true);
+      }
       return;
     }
 
@@ -85,67 +137,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+      isFetchingProfile.current = true;
+      sessionStorage.setItem('auth_fetching_profile', 'true');
+      sessionStorage.setItem('auth_fetching_profile_time', Date.now().toString());
       setIsProfileLoading(true);
       console.log(`🔄 AuthContext: Fetching fresh profile for ${userRole}...`);
       
-      // ENHANCED: Check for dual profile situation (shouldn't happen with trigger, but safety check)
-      const [teacherResult, studentResult] = await Promise.all([
-        supabase.from('teacher_profiles').select('full_name, avatar_url, created_at').eq('user_id', userId).maybeSingle(),
-        supabase.from('student_profiles').select('full_name, avatar_url, created_at').eq('user_id', userId).maybeSingle()
-      ]);
-
-      const hasTeacherProfile = !!teacherResult.data;
-      const hasStudentProfile = !!studentResult.data;
-
-      // CRITICAL: Detect dual profile situation
-      if (hasTeacherProfile && hasStudentProfile) {
-        console.error('⚠️ DUAL PROFILE DETECTED for user:', userId);
-        console.error('This should not happen! Database trigger may not be active.');
-        
-        // Use the profile that matches the user's role metadata, or the older one
-        const teacherCreated = new Date(teacherResult.data.created_at).getTime();
-        const studentCreated = new Date(studentResult.data.created_at).getTime();
-        
-        if (userRole === 'teacher' || teacherCreated < studentCreated) {
-          console.warn('→ Using TEACHER profile (role metadata or older)');
-          setProfile(teacherResult.data);
-          setHasProfile(true);
-        } else {
-          console.warn('→ Using STUDENT profile (role metadata or older)');
-          setProfile(studentResult.data);
-          setHasProfile(true);
-        }
-        
-        setLastProfileFetch(now);
-        return;
-      }
-
-      // Normal case: fetch the appropriate profile based on role
+      // OPTIMIZED: Only fetch the profile for the user's role (no dual profile check)
       const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-      const result = userRole === 'teacher' ? teacherResult : studentResult;
+      const { data, error } = await supabase
+        .from(table)
+        .select('full_name, avatar_url')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (result.error) {
-        console.error('Error fetching profile:', result.error);
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setHasProfile(false);
         return;
       }
 
       setLastProfileFetch(now);
       
-      if (result.data) {
+      if (data) {
         console.log('✅ AuthContext: Profile found and cached');
-        setProfile(result.data);
+        setProfile(data);
         setHasProfile(true);
+        // Persist profile and fetch time to sessionStorage
+        sessionStorage.setItem('auth_profile_cache', JSON.stringify(data));
+        sessionStorage.setItem('auth_profile_fetch_time', now.toString());
       } else {
         console.log('⚠️ AuthContext: No profile found');
         setHasProfile(false);
-        // Don't clear profile here if we want to keep "stale" data while we check, 
-        // but generally if it's not found in DB we should probably clear it.
-        // However, for onboarding check, hasProfile=false is what matters.
+        setProfile(null);
+        // Clear sessionStorage
+        sessionStorage.removeItem('auth_profile_cache');
+        sessionStorage.removeItem('auth_profile_fetch_time');
       }
     } catch (error) {
       console.error('Exception fetching profile:', error);
+      setHasProfile(false);
     } finally {
       setIsProfileLoading(false);
+      isFetchingProfile.current = false;
+      sessionStorage.removeItem('auth_fetching_profile');
+      sessionStorage.removeItem('auth_fetching_profile_time');
     }
   };
 
@@ -170,6 +206,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
+
+      // Ignore auth events triggered by visibility changes to prevent unnecessary refetches
+      if (document.hidden && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN')) {
+        console.log(`🔕 Ignoring ${event} event while document is hidden`);
+        return;
+      }
 
       console.log(`🔐 Auth Event: ${event}`, {
         hasSession: !!session,
@@ -223,10 +265,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const fiveMinutes = 5 * 60 * 1000;
               const isVeryNewAccount = (now - userCreatedAt) < fiveMinutes;
               
-              // CRITICAL: Don't interfere if signup is in progress OR account is brand new
-              if (signupInProgress || isVeryNewAccount) {
+              // CRITICAL: Don't interfere if on callback page or signup is in progress OR account is brand new
+              const isCallbackPage = window.location.pathname.includes('/auth/callback');
+              if (signupInProgress || isVeryNewAccount || isCallbackPage) {
                 if (signupInProgress) {
                   console.log('🔄 Signup in progress, skipping role check (will be set during signup)');
+                } else if (isCallbackPage) {
+                  console.log('🔄 On callback page, letting AuthCallback handle role assignment');
                 } else {
                   console.log('🆕 Very new account detected (< 5 min old), skipping role check to allow signup to complete');
                 }
@@ -264,15 +309,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           break;
 
         case 'INITIAL_SESSION':
-          console.log('🔍 Initial session loaded');
-          if (session?.user) {
-            fetchProfile(session.user.id, session.user.user_metadata?.role);
-          }
+          console.log('🔍 Initial session loaded (profile already fetched by getSession)');
+          // Don't fetch profile here - already done by getSession() above
           break;
       }
 
-      setSession(session);
-      setUser(session?.user ?? null);
+      // Update state only if changed to prevent unnecessary re-renders
+      setSession(prev => {
+        if (prev?.access_token === session?.access_token && prev?.expires_at === session?.expires_at) {
+          return prev;
+        }
+        return session;
+      });
+      
+      setUser(prev => {
+        if (prev?.id === session?.user?.id && JSON.stringify(prev?.user_metadata) === JSON.stringify(session?.user?.user_metadata)) {
+          return prev;
+        }
+        return session?.user ?? null;
+      });
+      
       setLoading(false);
     });
 
@@ -280,7 +336,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []); // Empty deps - only run once on mount, navigate is stable
 
   // Session health monitoring - check every 5 minutes
   useEffect(() => {

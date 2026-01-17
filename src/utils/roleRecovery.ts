@@ -116,16 +116,35 @@ export const isRegistrationComplete = async (): Promise<boolean> => {
 export const attemptRoleRecovery = async (): Promise<{
   recovered: boolean;
   role: string | null;
-  source: 'metadata' | 'localStorage' | 'none';
+  source: 'metadata' | 'localStorage' | 'database' | 'none';
 }> => {
-  // First check if role is already in metadata
+  // 1. First check if role is already in metadata
   const { hasRole, role: metadataRole } = await verifyUserRole();
   
   if (hasRole && metadataRole) {
     return { recovered: true, role: metadataRole, source: 'metadata' };
   }
 
-  // Try to recover from localStorage
+  // 2. Try to recover from database (most reliable source of truth)
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    console.log('🔍 Checking database for existing profile to recover role...');
+    const { data: tp } = await supabase.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle();
+    if (tp) {
+      console.log('✅ Found teacher profile, updating role metadata');
+      await updateUserRole('teacher');
+      return { recovered: true, role: 'teacher', source: 'database' };
+    }
+
+    const { data: sp } = await supabase.from('student_profiles').select('id').eq('user_id', user.id).maybeSingle();
+    if (sp) {
+      console.log('✅ Found student profile, updating role metadata');
+      await updateUserRole('student');
+      return { recovered: true, role: 'student', source: 'database' };
+    }
+  }
+
+  // 3. Try to recover from localStorage
   const pendingRole = getPendingRole();
   
   if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {

@@ -11,7 +11,7 @@ export const Customers = () => {
 
                 <div className="relative max-w-4xl mx-auto">
                     {/* Placeholder Card */}
-                    <div className="bg-gray-50 rounded-3xl p-12 md:p-20 border border-gray-100 shadow-sm flex flex-col items-center justify-center min-h-[400px]">
+                    <div className="bg-gray-50 rounded-xl p-12 md:p-20 border border-gray-100 shadow-sm flex flex-col items-center justify-center min-h-[400px]">
                         <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-6 animate-pulse">
                             <Building2 className="w-10 h-10 text-gray-400" />
                         </div>
@@ -21,8 +21,8 @@ export const Customers = () => {
                     </div>
 
                     {/* Decorative Elements */}
-                    <div className="absolute top-1/2 -left-12 -translate-y-1/2 w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full blur-xl opacity-50 -z-10" />
-                    <div className="absolute top-1/2 -right-12 -translate-y-1/2 w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full blur-xl opacity-50 -z-10" />
+                    <div className="absolute top-1/2 -left-12 -translate-y-1/2 w-24 h-24 bg-primary/20 rounded-full blur-xl opacity-50 -z-10" />
+                    <div className="absolute top-1/2 -right-12 -translate-y-1/2 w-32 h-32 bg-info/20 rounded-full blur-xl opacity-50 -z-10" />
                 </div>
             </div>
         </section>

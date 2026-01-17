@@ -68,7 +68,7 @@ export function TeacherCalendar({
   loading: propLoading,
 }: TeacherCalendarProps) {
   const { t } = useTranslation();
-  const { language } = useLanguage();
+  const { language = 'en' } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
   const [assignments, setAssignments] = useState<AssignmentWithIncomplete[]>([]);
@@ -123,11 +123,15 @@ export function TeacherCalendar({
       // Get all unique student IDs
       const allStudentIds = [...new Set(allEnrollments?.map((e) => e.student_id) || [])];
 
-      // Get all student profiles in one query
-      const { data: allStudentProfiles } = await supabase
-        .from('student_profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', allStudentIds);
+      let allStudentProfiles: any[] | null = [];
+      if (allStudentIds.length > 0) {
+        // Get all student profiles in one query
+        const { data: profiles } = await supabase
+          .from('student_profiles')
+          .select('user_id, full_name, avatar_url')
+          .in('user_id', allStudentIds);
+        allStudentProfiles = profiles;
+      }
 
       // Create lookup maps for fast access
       const enrollmentsByClassroom = new Map<string, string[]>();
@@ -289,7 +293,7 @@ export function TeacherCalendar({
 
   if (loading) {
     return (
-      <Card className="border-none shadow-lg rounded-[32px]">
+      <Card className="border border-border/50 shadow-xl rounded-2xl backdrop-blur-xl bg-gradient-to-br from-card/95 to-card/80">
         <CardContent className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
@@ -298,16 +302,37 @@ export function TeacherCalendar({
   }
 
   return (
-    <Card className="border-none shadow-lg rounded-[32px] overflow-hidden bg-white dark:bg-slate-900">
-      <div className="p-6 pb-0">
-        <div className="flex items-center gap-2 mb-6">
-          <CalendarIcon className="h-6 w-6" />
-          <h2 className="text-2xl font-bold">{t('calendar.title')}</h2>
+    <Card className="border border-border/50 shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-gradient-to-br from-card/95 to-card/80 hover:shadow-2xl transition-shadow duration-300">
+      <div className="p-6 pb-0 bg-gradient-to-br from-primary/5 to-transparent">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+            <CalendarIcon className="h-5 w-5 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight">{t('calendar.title')}</h2>
         </div>
       </div>
 
       <CardContent className="p-6 pt-0 space-y-6">
-        <div className="border rounded-3xl p-4">
+        <div className="border border-border/30 rounded-2xl p-3 bg-gradient-to-br from-muted/30 to-transparent backdrop-blur-sm calendar-custom-selected">
+          <div className="flex flex-col items-center mb-2">
+            <div className="text-sm font-bold uppercase tracking-wider mb-1">
+              {format(month, 'MMMM yyyy', { locale: language === 'he' ? he : undefined })}
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1))}
+                className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-border/50 rounded-full hover:bg-primary/10 hover:border-primary/50 dark:hover:bg-primary/20 transition-all duration-300 flex items-center justify-center"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1))}
+                className="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 border border-border/50 rounded-full hover:bg-primary/10 hover:border-primary/50 dark:hover:bg-primary/20 transition-all duration-300 flex items-center justify-center"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -317,34 +342,39 @@ export function TeacherCalendar({
             modifiers={modifiers}
             modifiersStyles={CALENDAR_MODIFIERS_STYLES}
             className="w-full"
+            components={{
+              Caption: () => null,
+            }}
             classNames={{
-              month: "space-y-4 w-full",
-              caption: "flex justify-center items-center relative pt-1 pb-6",
-              caption_label: "text-base font-bold uppercase tracking-wider",
-              nav: "flex items-center gap-1",
-              nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 border rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all",
-              nav_button_previous: "absolute start-1",
-              nav_button_next: "absolute end-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex w-full justify-between mb-2",
-              head_cell: "text-muted-foreground w-9 font-normal text-[10px] uppercase tracking-wider text-center",
-              row: "flex w-full mt-2 justify-between",
-              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent",
-              day: "h-9 w-9 p-0 font-normal text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all",
-              day_selected: "!bg-black !text-white hover:!bg-black hover:!text-white focus:!bg-black focus:!text-white rounded-full shadow-md",
-              day_today: "text-indigo-600 font-bold",
+              month: "flex flex-col items-center w-full",
+              caption: "hidden",
+              caption_label: "hidden",
+              nav: "hidden",
+              nav_button: "hidden",
+              nav_button_previous: "hidden",
+              nav_button_next: "hidden",
+              table: "border-collapse mx-auto",
+              head_row: "flex justify-center gap-1 mb-1",
+              head_cell: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
+              row: "flex mt-1 justify-center gap-1",
+              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent flex items-center justify-center w-8",
+              day: "h-8 w-8 p-0 font-normal text-sm hover:bg-primary/10 dark:hover:bg-primary/20 rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center",
+              day_selected: "!bg-gradient-to-br !from-primary !to-primary/80 !text-white hover:!from-primary/90 hover:!to-primary/70 focus:!from-primary focus:!to-primary/80 rounded-full shadow-sm scale-90",
+              day_today: "text-primary font-bold ring-2 ring-primary/30 ring-offset-2 ring-offset-background",
             }}
           />
         </div>
 
         {selectedDate && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h3 className="font-bold text-lg">
-              {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
-            </h3>
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 rounded-xl border border-primary/20">
+              <h3 className="font-bold text-lg text-primary">
+                {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
+              </h3>
+            </div>
 
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+              <h4 className="text-sm font-bold text-primary flex items-center gap-2 bg-primary/5 px-3 py-2 rounded-lg">
                 <CalendarIcon className="h-4 w-4" />
                 {t('calendar.activeClasses')} ({activeClassesForSelectedDate.length})
               </h4>
@@ -354,12 +384,12 @@ export function TeacherCalendar({
                   {activeClassesForSelectedDate.map((classroom) => (
                     <div
                       key={classroom.id}
-                      className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 transition-all hover:scale-[1.02]"
+                      className="group p-4 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-primary/40 backdrop-blur-sm"
                     >
-                      <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{classroom.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{classroom.subject}</p>
+                      <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{classroom.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{classroom.subject}</p>
                       {classroom.start_date && classroom.end_date && (
-                        <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                        <p className="text-[10px] text-muted-foreground mt-2 font-medium bg-background/50 px-2 py-1 rounded-md inline-block">
                           {format(new Date(classroom.start_date), 'MMM d', {
                             locale: language === 'he' ? he : undefined,
                           })}{' '}
@@ -373,17 +403,18 @@ export function TeacherCalendar({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground ps-1">{t('calendar.noActiveClasses')}</p>
+                <p className="text-xs text-muted-foreground ps-1 py-2">{t('calendar.noActiveClasses')}</p>
               )}
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-red-500 dark:text-red-400">
+              <h4 className="text-sm font-bold text-destructive flex items-center gap-2 bg-destructive/5 px-3 py-2 rounded-lg">
+                <AlertCircle className="h-4 w-4" />
                 {t('calendar.assignmentsDue')}
               </h4>
 
               {assignmentsForSelectedDate.length === 0 ? (
-                <p className="text-sm text-slate-400 dark:text-slate-500">
+                <p className="text-sm text-muted-foreground py-2">
                   {t('calendar.noAssignmentsDue')}
                 </p>
               ) : (
@@ -391,29 +422,29 @@ export function TeacherCalendar({
                   {assignmentsForSelectedDate.map((assignment) => (
                     <div
                       key={assignment.id}
-                      className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 transition-all hover:scale-[1.02]"
+                      className="group p-4 rounded-xl bg-gradient-to-br from-destructive/10 via-destructive/5 to-transparent border border-destructive/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-destructive/40 backdrop-blur-sm"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{assignment.title}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          <p className="font-bold text-sm text-foreground group-hover:text-destructive transition-colors">{assignment.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {assignment.classrooms.name}
                           </p>
                         </div>
-                        <Badge variant="outline" className="text-[10px] bg-white dark:bg-slate-900 border-red-200 text-red-600">
+                        <Badge variant="outline" className="text-[10px] bg-background/80 border-destructive/30 text-destructive font-semibold">
                           {assignment.type.replace('_', ' ')}
                         </Badge>
                       </div>
 
-                      {/* Completion Status Bar */}
+                      {/* Enhanced Completion Status Bar */}
                       <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] text-slate-500">
+                        <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                           <span>Progress</span>
-                          <span>{Math.round(((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100)}%</span>
+                          <span className="text-foreground">{Math.round(((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100)}%</span>
                         </div>
-                        <div className="h-1.5 w-full bg-white dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
                           <div
-                            className="h-full bg-gradient-to-r from-red-400 to-pink-500 rounded-full transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full transition-all duration-700 ease-out shadow-sm"
                             style={{ width: `${((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100}%` }}
                           />
                         </div>
@@ -421,24 +452,24 @@ export function TeacherCalendar({
 
                       {/* Incomplete Students */}
                       {assignment.incompleteStudents.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-red-100 dark:border-red-900/30">
-                          <div className="flex items-center gap-1.5 text-[10px] text-red-600 dark:text-red-400 mb-2 font-medium">
+                        <div className="mt-3 pt-3 border-t border-destructive/20">
+                          <div className="flex items-center gap-1.5 text-[10px] text-destructive mb-2 font-semibold bg-destructive/5 px-2 py-1 rounded-md inline-flex">
                             <AlertCircle className="h-3 w-3" />
                             <span>{assignment.incompleteStudents.length} pending submissions</span>
                           </div>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1.5 mt-2">
                             {assignment.incompleteStudents.slice(0, 5).map((student) => (
-                              <Avatar key={student.user_id} className="h-5 w-5 border border-white dark:border-slate-900">
+                              <Avatar key={student.user_id} className="h-6 w-6 border-2 border-background shadow-sm ring-1 ring-destructive/20">
                                 {student.avatar_url && (
                                   <AvatarImage src={student.avatar_url} alt={student.full_name} />
                                 )}
-                                <AvatarFallback className="text-[8px] bg-red-100 text-red-700">
+                                <AvatarFallback className="text-[8px] bg-destructive/10 text-destructive font-semibold">
                                   {student.full_name?.charAt(0) || '?'}
                                 </AvatarFallback>
                               </Avatar>
                             ))}
                             {assignment.incompleteStudents.length > 5 && (
-                              <div className="h-5 w-5 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center border border-white dark:border-slate-900 text-[8px] font-medium text-red-600">
+                              <div className="h-6 w-6 rounded-full bg-destructive/10 flex items-center justify-center border-2 border-background shadow-sm text-[8px] font-bold text-destructive ring-1 ring-destructive/20">
                                 +{assignment.incompleteStudents.length - 5}
                               </div>
                             )}

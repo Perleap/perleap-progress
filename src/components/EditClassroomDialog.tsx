@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Calendar, Target, Sparkles, FileText } from 'lucide-react';
+import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Calendar, Target, Sparkles, FileText, Loader2 } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -54,6 +54,7 @@ export const EditClassroomDialog = ({
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [linkInput, setLinkInput] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
+  const [rephrasingOutline, setRephrasingOutline] = useState(false);
 
   const [formData, setFormData] = useState({
     courseTitle: '',
@@ -276,53 +277,77 @@ export const EditClassroomDialog = ({
     });
   };
 
+  const handleRephraseOutline = async () => {
+    if (!formData.courseOutline.trim()) {
+      toast.error(t('createClassroom.rephraseError'));
+      return;
+    }
+
+    setRephrasingOutline(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('rephrase-text', {
+        body: {
+          text: formData.courseOutline,
+          language: isRTL ? 'he' : 'en',
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.rephrasedText) {
+        setFormData({ ...formData, courseOutline: data.rephrasedText });
+        toast.success(t('createClassroom.rephraseSuccess'));
+      }
+    } catch (error) {
+      console.error('Error rephrasing text:', error);
+      toast.error(t('createClassroom.rephraseError'));
+    } finally {
+      setRephrasingOutline(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="max-w-3xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl bg-white dark:bg-slate-900">
-        <div className="h-2 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
-
-        <DialogHeader className="px-8 pt-8 pb-4">
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="sm:max-w-6xl max-h-[90vh] p-0 overflow-hidden rounded-xl border-none shadow-2xl bg-background">
+        <DialogHeader className="px-8 pt-8 pb-6 bg-gradient-to-br from-muted/20 to-transparent">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl">
-              <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-heading">
               {t('editClassroom.title')}
             </DialogTitle>
           </div>
-          <p className={`text-slate-500 dark:text-slate-400 ms-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <p className={`text-subtle text-body ms-1 ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('editClassroom.description')}
           </p>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-140px)] px-8 pb-8">
-          <form onSubmit={handleSubmit} className="space-y-8">
+        <ScrollArea className="max-h-[calc(90vh-160px)] px-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-8 pt-4">
 
             {/* Basic Info Section */}
-            <div className="space-y-5 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
-              <div className={`flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
+              <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <BookOpen className="h-5 w-5" />
-                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseBasics')}</h3>
+                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseBasics')}</h3>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="courseTitle" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('createClassroom.courseTitle')} <span className="text-red-400">*</span>
+                <Label htmlFor="courseTitle" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createClassroom.courseTitle')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="courseTitle"
                   value={formData.courseTitle}
                   onChange={(e) => setFormData({ ...formData, courseTitle: e.target.value })}
                   required
-                  className="rounded-xl border-slate-200 dark:border-slate-700 h-11 focus-visible:ring-indigo-500"
+                  className="rounded-xl h-11 focus-visible:ring-primary"
                   placeholder={t('createClassroom.courseTitlePlaceholder')}
                   autoDirection
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="courseDuration" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <Label htmlFor="courseDuration" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('createClassroom.courseDuration')}
                   </Label>
                   <div className="relative">
@@ -331,65 +356,87 @@ export const EditClassroomDialog = ({
                       placeholder={t('createClassroom.courseDurationPlaceholder')}
                       value={formData.courseDuration}
                       onChange={(e) => setFormData({ ...formData, courseDuration: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11 ps-10"
+                      className="rounded-xl h-11 ps-10"
                       autoDirection
                     />
-                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-slate-400" />
+                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.startDate')}</Label>
+                    <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.startDate')}</Label>
                     <Input
                       id="startDate"
                       type="date"
                       value={formData.startDate}
                       onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11"
+                      className="rounded-xl h-11"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.endDate')}</Label>
+                    <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.endDate')}</Label>
                     <Input
                       id="endDate"
                       type="date"
                       value={formData.endDate}
                       onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      className="rounded-xl border-slate-200 dark:border-slate-700 h-11"
+                      className="rounded-xl h-11"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="courseOutline" className={`text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('createClassroom.courseOutline')}
-                </Label>
+                <div className={`flex items-center justify-between gap-4 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <Label htmlFor="courseOutline" className={`text-body font-medium mb-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createClassroom.courseOutline')}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRephraseOutline}
+                    disabled={!formData.courseOutline.trim() || rephrasingOutline}
+                    className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
+                  >
+                    {rephrasingOutline ? (
+                      <>
+                        <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
+                        {t('createClassroom.rephrasing')}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
+                        {t('createClassroom.rephraseButton')}
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Textarea
                   id="courseOutline"
                   placeholder={t('createClassroom.courseOutlinePlaceholder')}
                   value={formData.courseOutline}
                   onChange={(e) => setFormData({ ...formData, courseOutline: e.target.value })}
                   rows={4}
-                  className="rounded-2xl border-slate-200 dark:border-slate-700 resize-none focus-visible:ring-indigo-500"
+                  className="rounded-xl resize-none focus-visible:ring-primary"
                   autoDirection
                 />
               </div>
             </div>
 
             {/* Subject Areas Section */}
-            <div className="space-y-5">
+            <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
               <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className={`flex items-center gap-2 text-purple-600 dark:text-purple-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <Target className="h-5 w-5" />
-                  <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.subjectAreas')}</h3>
+                  <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.subjectAreas')}</h3>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={addDomain}
-                  className="rounded-full border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                  className="rounded-full border-border text-foreground hover:bg-muted"
                   size="sm"
                 >
                   <Plus className="h-4 w-4 me-1" />
@@ -397,28 +444,28 @@ export const EditClassroomDialog = ({
                 </Button>
               </div>
               
-              <p className={`text-sm text-slate-600 dark:text-slate-400 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <p className={`text-sm text-subtle mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('editClassroom.subjectAreasHelper')}
               </p>
 
               {formData.domains.length === 0 && (
-                <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/50">
-                  <p className={`text-slate-500 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addAreaPrompt')}</p>
+                <div className="p-8 border-2 border-dashed border-border rounded-xl bg-muted/10">
+                  <p className={`text-subtle text-sm ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addAreaPrompt')}</p>
                 </div>
               )}
 
               <div className="grid gap-4">
                 {formData.domains.map((domain, domainIndex) => (
-                  <div key={domainIndex} className="space-y-4 p-5 border border-purple-100 dark:border-purple-900/30 rounded-3xl bg-purple-50/30 dark:bg-purple-900/10">
+                  <div key={domainIndex} className="space-y-4 p-5 border border-border rounded-xl bg-muted/5 shadow-sm">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-purple-600 font-bold text-sm">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                         {domainIndex + 1}
                       </div>
                       <Input
                         placeholder={t('createClassroom.subjectAreaPlaceholder')}
                         value={domain.name}
                         onChange={(e) => updateDomainName(domainIndex, e.target.value)}
-                        className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 h-10"
+                        className="flex-1 rounded-xl h-10"
                         autoDirection
                       />
                       <Button
@@ -426,23 +473,23 @@ export const EditClassroomDialog = ({
                         variant="ghost"
                         size="icon"
                         onClick={() => removeDomain(domainIndex)}
-                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
 
                     <div className="ps-11 space-y-3">
-                      <Label className={`text-xs font-semibold text-purple-600 uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.skills')}</Label>
+                      <Label className={`text-xs font-bold text-primary uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.skills')}</Label>
                       <div className="grid gap-2">
                         {domain.components.map((component, componentIndex) => (
                           <div key={componentIndex} className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-purple-300" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary/30" />
                             <Input
                               placeholder={t('createClassroom.skillPlaceholder', { number: componentIndex + 1 })}
                               value={component}
                               onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
-                              className="flex-1 rounded-lg border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 h-9 text-sm"
+                              className="flex-1 rounded-lg h-9 text-sm"
                               autoDirection
                             />
                             <Button
@@ -450,7 +497,7 @@ export const EditClassroomDialog = ({
                               variant="ghost"
                               size="icon"
                               onClick={() => removeComponent(domainIndex, componentIndex)}
-                              className="h-8 w-8 text-slate-400 hover:text-red-500"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -462,7 +509,7 @@ export const EditClassroomDialog = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => addComponent(domainIndex)}
-                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-100/50 text-xs font-medium"
+                        className="text-primary hover:text-primary/80 hover:bg-primary/5 text-xs font-semibold"
                       >
                         <Plus className="h-3 w-3 me-1" />
                         {t('createClassroom.addSkill')}
@@ -474,15 +521,15 @@ export const EditClassroomDialog = ({
             </div>
 
             {/* Materials Section */}
-            <div className="space-y-5 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/20">
-              <div className={`flex items-center gap-2 text-blue-600 dark:text-blue-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
+              <div className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <FileText className="h-5 w-5" />
-                <h3 className={`font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseMaterials')}</h3>
+                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseMaterials')}</h3>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.uploadPdf')}</Label>
+                  <Label className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.uploadPdf')}</Label>
                   <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <input
                       id="pdf-upload"
@@ -501,18 +548,18 @@ export const EditClassroomDialog = ({
                       variant="outline"
                       onClick={() => document.getElementById('pdf-upload')?.click()}
                       disabled={uploadingMaterial}
-                      className="rounded-full border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold"
+                      className="rounded-full border-border hover:bg-muted font-bold"
                     >
                       {t('createClassroom.chooseFile')}
                     </Button>
-                    <span className={`text-sm text-slate-500 dark:text-slate-400 truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <span className={`text-sm text-subtle truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}>
                       {selectedFileName || t('createClassroom.noFileChosen')}
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className={`text-sm font-medium text-slate-600 dark:text-slate-300 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addLink')}</Label>
+                  <Label className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addLink')}</Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder={t('createClassroom.linkPlaceholder')}
@@ -524,13 +571,13 @@ export const EditClassroomDialog = ({
                           handleAddLink();
                         }
                       }}
-                      className="rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                      className="rounded-xl"
                       autoDirection
                     />
                     <Button
                       type="button"
                       onClick={handleAddLink}
-                      className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                      className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -539,23 +586,23 @@ export const EditClassroomDialog = ({
               </div>
 
               {formData.materials.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {formData.materials.map((material, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm group">
-                      <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                    <div key={index} className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border shadow-sm group">
+                      <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary">
                         {material.type === 'pdf' ? (
                           <Upload className="h-4 w-4" />
                         ) : (
                           <LinkIcon className="h-4 w-4" />
                         )}
                       </div>
-                      <span className="flex-1 text-sm truncate font-medium text-slate-700 dark:text-slate-300">{material.name}</span>
+                      <span className="flex-1 text-sm truncate font-bold text-foreground">{material.name}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => removeMaterial(index)}
-                        className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -567,54 +614,54 @@ export const EditClassroomDialog = ({
 
             {/* Outcomes & Challenges */}
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+              <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
                 <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Label className={`text-emerald-700 dark:text-emerald-400 font-semibold block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.learningOutcomes')}</Label>
+                  <Label className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.learningOutcomes')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={addOutcome}
-                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 text-xs"
+                    className="text-primary hover:bg-primary/5 h-8 text-xs font-bold"
                   >
                     <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add')}
                   </Button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {formData.learningOutcomes.map((outcome, index) => (
                     <Input
                       key={index}
                       placeholder={t('createClassroom.outcomePlaceholder', { number: index + 1 })}
                       value={outcome}
                       onChange={(e) => handleOutcomeChange(index, e.target.value)}
-                      className="rounded-xl border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/30 dark:bg-emerald-900/10 focus-visible:ring-emerald-500"
+                      className="rounded-xl border-border bg-background focus-visible:ring-primary"
                       autoDirection
                     />
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
                 <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Label className={`text-amber-700 dark:text-amber-400 font-semibold block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.keyChallenges')}</Label>
+                  <Label className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.keyChallenges')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={addChallenge}
-                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-8 text-xs"
+                    className="text-primary hover:bg-primary/5 h-8 text-xs font-bold"
                   >
                     <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add')}
                   </Button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {formData.keyChallenges.map((challenge, index) => (
                     <Input
                       key={index}
                       placeholder={t('createClassroom.challengePlaceholder', { number: index + 1 })}
                       value={challenge}
                       onChange={(e) => handleChallengeChange(index, e.target.value)}
-                      className="rounded-xl border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10 focus-visible:ring-amber-500"
+                      className="rounded-xl border-border bg-background focus-visible:ring-primary"
                       autoDirection
                     />
                   ))}
@@ -622,19 +669,19 @@ export const EditClassroomDialog = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 pt-6 border-t">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="rounded-full px-6"
+                className="rounded-full px-6 font-bold"
               >
                 {t('createClassroom.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="rounded-full px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105"
+                className="rounded-full px-10 font-bold shadow-lg shadow-primary/20"
               >
                 {loading ? t('editClassroom.saving') : t('editClassroom.saveButton')}
               </Button>

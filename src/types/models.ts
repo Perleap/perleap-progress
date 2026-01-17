@@ -68,6 +68,9 @@ export interface Assignment {
   due_at: string | null;
   target_dimensions: TargetDimensions;
   personalization_flag: boolean;
+  materials?: CourseMaterial[] | null;
+  hard_skills?: string[] | null;
+  hard_skill_domain?: string | null;
   created_at: string;
   updated_at: string;
 }

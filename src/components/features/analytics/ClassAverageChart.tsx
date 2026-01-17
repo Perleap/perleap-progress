@@ -18,10 +18,10 @@ interface ClassAverageChartProps {
  */
 export const ClassAverageChart = ({ scores, title, description }: ClassAverageChartProps) => {
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-base md:text-lg">{title}</CardTitle>
-        <CardDescription className="text-sm">{description}</CardDescription>
+        <CardTitle className="text-base md:text-lg text-foreground">{title}</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <FiveDChart scores={scores} />

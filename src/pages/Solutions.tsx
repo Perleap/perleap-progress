@@ -41,7 +41,7 @@ const Solutions = () => {
                             headline="Reclaim your time and focus on what matters."
                             description="Automate administrative tasks like grading and attendance. Get real-time insights into student performance so you can intervene when it counts."
                             features={["Automated Grading", "Lesson Planning AI", "Student Progress Tracking"]}
-                            imageGradient="from-orange-100 to-pink-100"
+                            imageBg="bg-warning/10"
                             reversed={false}
                         />
 
@@ -52,7 +52,7 @@ const Solutions = () => {
                             headline="Personalized learning that adapts to you."
                             description="Get instant feedback on assignments, personalized study guides, and a learning path that evolves as you grow."
                             features={["Instant Feedback", "Adaptive Practice", "Skill Mastery Visualization"]}
-                            imageGradient="from-blue-100 to-purple-100"
+                            imageBg="bg-info/10"
                             reversed={true}
                         />
 
@@ -63,7 +63,7 @@ const Solutions = () => {
                             headline="Data-driven decisions at scale."
                             description="Gain visibility into curriculum effectiveness, teacher performance, and student outcomes across the entire institution."
                             features={["District-wide Analytics", "Curriculum Alignment", "Resource Allocation Insights"]}
-                            imageGradient="from-green-100 to-teal-100"
+                            imageBg="bg-success/10"
                             reversed={false}
                         />
 
@@ -97,10 +97,10 @@ const Solutions = () => {
     );
 };
 
-const SolutionSection = ({ icon: Icon, title, headline, description, features, imageGradient, reversed }: any) => (
+const SolutionSection = ({ icon: Icon, title, headline, description, features, imageBg, reversed }: any) => (
     <div className={`flex flex-col md:flex-row items-center gap-12 ${reversed ? 'md:flex-row-reverse' : ''}`}>
         <div className="flex-1 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/5 text-sm font-medium">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted text-sm font-medium">
                 <Icon className="w-4 h-4" />
                 {title}
             </div>
@@ -111,7 +111,7 @@ const SolutionSection = ({ icon: Icon, title, headline, description, features, i
             <ul className="space-y-3">
                 {features.map((feature: string, i: number) => (
                     <li key={i} className="flex items-center gap-2 text-foreground/80">
-                        <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                         {feature}
                     </li>
                 ))}
@@ -120,9 +120,9 @@ const SolutionSection = ({ icon: Icon, title, headline, description, features, i
                 Learn more <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
         </div>
-        <div className={`flex-1 aspect-square md:aspect-video rounded-3xl bg-gradient-to-br ${imageGradient} flex items-center justify-center shadow-inner`}>
+        <div className={`flex-1 aspect-square md:aspect-video rounded-xl ${imageBg} flex items-center justify-center shadow-inner`}>
             {/* Placeholder for illustration */}
-            <div className="w-2/3 h-2/3 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg flex items-center justify-center">
+            <div className="w-2/3 h-2/3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg flex items-center justify-center">
                 <span className="text-muted-foreground/50 font-medium">Illustration</span>
             </div>
         </div>

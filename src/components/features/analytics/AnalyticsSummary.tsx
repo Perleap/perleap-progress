@@ -23,36 +23,36 @@ export const AnalyticsSummary = ({
 }: AnalyticsSummaryProps) => {
   return (
     <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs md:text-sm">Total Students</CardTitle>
+          <CardTitle className="text-xs md:text-sm text-muted-foreground">Total Students</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-xl md:text-2xl font-bold">{studentCount}</div>
+          <div className="text-xl md:text-2xl font-bold text-foreground">{studentCount}</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs md:text-sm">Assignments</CardTitle>
+          <CardTitle className="text-xs md:text-sm text-muted-foreground">Assignments</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-xl md:text-2xl font-bold">{assignmentCount}</div>
+          <div className="text-xl md:text-2xl font-bold text-foreground">{assignmentCount}</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs md:text-sm">Total Submissions</CardTitle>
+          <CardTitle className="text-xs md:text-sm text-muted-foreground">Total Submissions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-xl md:text-2xl font-bold">{totalSubmissions}</div>
+          <div className="text-xl md:text-2xl font-bold text-foreground">{totalSubmissions}</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs md:text-sm">Completion Rate</CardTitle>
+          <CardTitle className="text-xs md:text-sm text-muted-foreground">Completion Rate</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-xl md:text-2xl font-bold">{completionRate}%</div>
+          <div className="text-xl md:text-2xl font-bold text-foreground">{completionRate}%</div>
         </CardContent>
       </Card>
     </div>

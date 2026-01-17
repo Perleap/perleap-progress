@@ -161,7 +161,7 @@ export function AssignmentChatInterface({
 
           {conversationEnded && (
             <div
-              className={`bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-sm text-green-800 dark:text-green-200 ${isRTL ? 'text-right' : 'text-left'}`}
+              className={`bg-success/10 border border-success/20 rounded-lg p-3 text-sm text-success ${isRTL ? 'text-right' : 'text-left'}`}
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               {isRTL ? '✓ ' : ''}

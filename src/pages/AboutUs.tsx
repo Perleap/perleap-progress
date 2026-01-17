@@ -34,7 +34,7 @@ const AboutUs = () => {
           <div className="grid md:grid-cols-2 gap-8 mb-16">
             <Card className="bg-white/50 backdrop-blur-sm border-black/5 hover:shadow-xl transition-all hover:-translate-y-1">
               <CardContent className="pt-8 pb-8">
-                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 mb-4">
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-lg bg-purple-100 text-purple-600 mb-4">
                   <Target className="h-7 w-7" />
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-4">{t('aboutUs.mission')}</h2>
@@ -46,7 +46,7 @@ const AboutUs = () => {
 
             <Card className="bg-white/50 backdrop-blur-sm border-black/5 hover:shadow-xl transition-all hover:-translate-y-1">
               <CardContent className="pt-8 pb-8">
-                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 mb-4">
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-lg bg-orange-100 text-orange-600 mb-4">
                   <Lightbulb className="h-7 w-7" />
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-4">{t('aboutUs.vision')}</h2>
@@ -128,7 +128,7 @@ const AboutUs = () => {
 
           {/* Stats Section */}
           <div className="mb-16">
-            <Card className="bg-gradient-to-r from-purple-500 to-pink-500 border-none text-white shadow-xl">
+            <Card className="bg-primary border-none text-primary-foreground shadow-xl">
               <CardContent className="pt-12 pb-12">
                 <div className="grid sm:grid-cols-3 gap-8 text-center">
                   <div>

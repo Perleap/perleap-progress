@@ -94,7 +94,7 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
             </linearGradient>
           </defs>
 
-          <PolarGrid stroke="#e2e8f0" />
+          <PolarGrid stroke="hsl(var(--border))" />
           <PolarAngleAxis
             dataKey="label"
             tick={({ payload, x, y, textAnchor, ...props }) => {
@@ -148,7 +148,7 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
             return (
               <div
                 key={dimension}
-                className={`flex items-start gap-3 p-3 rounded-lg transition-all duration-200 cursor-pointer ${isHovered ? 'bg-white shadow-md scale-105 ring-1' : 'bg-muted/30'}`}
+                className={`flex items-start gap-3 p-3 rounded-lg transition-all duration-200 cursor-pointer ${isHovered ? 'bg-card shadow-md scale-105 ring-1' : 'bg-muted/30'}`}
                 style={{ '--tw-ring-color': isHovered ? config.color : 'transparent' } as React.CSSProperties}
                 onMouseEnter={() => setHoveredDimension(dimension)}
                 onMouseLeave={() => setHoveredDimension(null)}

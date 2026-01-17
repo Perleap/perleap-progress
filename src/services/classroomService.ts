@@ -39,15 +39,19 @@ export const getTeacherClassrooms = async (
  */
 export const getClassroomById = async (
   classroomId: string,
-  teacherId: string
+  teacherId?: string
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('classrooms')
       .select('*')
-      .eq('id', classroomId)
-      .eq('teacher_id', teacherId)
-      .maybeSingle();
+      .eq('id', classroomId);
+
+    if (teacherId) {
+      query = query.eq('teacher_id', teacherId);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -150,7 +154,7 @@ export const getEnrolledStudents = async (
     const studentIds = enrollments.map((e) => e.student_id);
     const { data: profiles } = await supabase
       .from('student_profiles')
-      .select('user_id, full_name, first_name, last_name, avatar_url, created_at')
+      .select('user_id, full_name, avatar_url, created_at')
       .in('user_id', studentIds);
 
     const studentsWithProfiles: EnrolledStudent[] = enrollments.map((enrollment) => ({

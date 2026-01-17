@@ -10,6 +10,12 @@ const AuthCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Safety timeout: if callback takes more than 10 seconds, force redirect to login
+    const timeout = setTimeout(() => {
+      console.warn('⚠️ AuthCallback: Operation timed out, redirecting to /auth');
+      navigate('/auth', { replace: true });
+    }, 10000);
+
     const handleCallback = async () => {
       try {
         console.log('🔄 AuthCallback: Starting authentication callback');
@@ -18,33 +24,37 @@ const AuthCallback = () => {
           data: { user },
         } = await supabase.auth.getUser();
 
-        console.log('👤 AuthCallback: User data:', { 
-          userId: user?.id, 
-          email: user?.email,
-          role: user?.user_metadata?.role 
-        });
-
         if (!user) {
           console.log('❌ AuthCallback: No user found, redirecting to /auth');
-          navigate('/auth');
+          clearTimeout(timeout);
+          navigate('/auth', { replace: true });
           return;
         }
+
+        console.log('👤 AuthCallback: User data:', { 
+          userId: user.id, 
+          email: user.email,
+          role: user.user_metadata?.role 
+        });
 
         // ALWAYS check for existing profiles first to prevent duplicate registrations
         console.log('🔍 AuthCallback: Checking for existing profiles...');
         
         // Check by user_id - THIS IS THE SOURCE OF TRUTH
-        const { data: teacherProfile } = await supabase
+        const { data: teacherProfile, error: tError } = await supabase
           .from('teacher_profiles')
           .select('id, user_id, email')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        const { data: studentProfile } = await supabase
+        const { data: studentProfile, error: sError } = await supabase
           .from('student_profiles')
           .select('id, user_id, email')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        if (tError) console.error('Error fetching teacher profile:', tError);
+        if (sError) console.error('Error fetching student profile:', sError);
 
         // Also check by email to detect orphaned data or conflicts
         const userEmail = user.email?.toLowerCase().trim();
@@ -88,28 +98,22 @@ const AuthCallback = () => {
           console.warn('⚠️ AuthCallback: Found orphaned teacher_profile with email', userEmail, 
             'but different user_id. Cleaning up now...');
           // Delete the orphaned profile by its user_id (which doesn't exist in auth anymore)
-          const { error: deleteError } = await supabase
+          await supabase
             .from('teacher_profiles')
             .delete()
             .eq('user_id', teacherProfileByEmail.user_id);
-          if (!deleteError) {
-            console.log('✅ Orphaned teacher profile deleted');
-          }
         }
         if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
           console.warn('⚠️ AuthCallback: Found orphaned student_profile with email', userEmail, 
             'but different user_id. Cleaning up now...');
           // Delete the orphaned profile by its user_id (which doesn't exist in auth anymore)
-          const { error: deleteError } = await supabase
+          await supabase
             .from('student_profiles')
             .delete()
             .eq('user_id', studentProfileByEmail.user_id);
-          if (!deleteError) {
-            console.log('✅ Orphaned student profile deleted');
-          }
         }
 
-        let userRole = user.user_metadata.role;
+        let userRole = user.user_metadata?.role;
 
         // If user already has a profile (matching current user_id), use that role
         if (hasTeacherProfile || hasStudentProfile) {
@@ -130,6 +134,7 @@ const AuthCallback = () => {
           
           // Redirect to the existing role's dashboard
           console.log(`🚀 AuthCallback: Redirecting to existing ${existingRole} dashboard`);
+          clearTimeout(timeout);
           navigate(`/${existingRole}/dashboard`, { replace: true });
           return;
         }
@@ -176,6 +181,7 @@ const AuthCallback = () => {
         // If still no role, redirect to role selection page
         if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
           console.warn('⚠️ AuthCallback: Cannot determine role, redirecting to role selection');
+          clearTimeout(timeout);
           navigate('/role-selection', { replace: true });
           return;
         }
@@ -184,6 +190,7 @@ const AuthCallback = () => {
         const redirectPath = sessionStorage.getItem('redirectAfterLogin');
         if (redirectPath) {
           sessionStorage.removeItem('redirectAfterLogin');
+          clearTimeout(timeout);
           navigate(redirectPath);
           return;
         }
@@ -221,21 +228,26 @@ const AuthCallback = () => {
           const destination = profile ? `/${userRole}/dashboard` : `/onboarding/${userRole}`;
           
           console.log(`🚀 AuthCallback: ${profile ? 'Profile exists' : 'No profile found'}, redirecting to ${destination}`);
+          clearTimeout(timeout);
           navigate(destination, { replace: true });
         } else {
           // New user with no role - redirect to auth to select role
           console.log('⚠️ AuthCallback: No role determined, redirecting to /auth to select role');
           // Store a flag to indicate the user needs to complete registration
           sessionStorage.setItem('needsRoleSelection', 'true');
+          clearTimeout(timeout);
           navigate('/auth', { replace: true });
         }
       } catch (error) {
         console.error('❌ AuthCallback: Error during callback:', error);
+        clearTimeout(timeout);
         navigate('/auth', { replace: true });
       }
     };
 
     handleCallback();
+    
+    return () => clearTimeout(timeout);
   }, [navigate]);
 
   return (

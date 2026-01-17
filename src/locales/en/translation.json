@@ -1,4 +1,20 @@
 {
+  "nav": {
+    "menu": "Menu",
+    "dashboard": "Dashboard",
+    "planner": "Planner",
+    "settings": "Settings",
+    "navigation": "Navigation",
+    "classroomSections": "Classroom Sections",
+    "teacherPortal": "Teacher Portal",
+    "studentPortal": "Student Portal",
+    "teacher": "Teacher",
+    "student": "Student",
+    "user": "User",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "logout": "Logout"
+  },
   "landing": {
     "nav": {
       "product": "Product",
@@ -119,6 +135,7 @@
   },
   "studentDashboard": {
     "title": "Student Dashboard",
+    "subtitle": "Track your learning progress and upcoming tasks",
     "welcome": "Welcome back, {{name}}!",
     "myClasses": "My Classes",
     "myAssignments": "My Assignments",
@@ -144,7 +161,9 @@
       "noClasses": "No classes yet",
       "noClassesDescription": "Join a classroom using your teacher's invite code",
       "noAssignments": "No assignments yet",
-      "noAssignmentsDescription": "Your assignments will appear here once your teacher creates them"
+      "noAssignmentsDescription": "Your assignments will appear here once your teacher creates them",
+      "noFinishedAssignments": "No finished assignments yet",
+      "noFinishedAssignmentsDesc": "Completed assignments will move here once you finish them."
     },
     "errors": {
       "loadingData": "Error loading dashboard data",
@@ -270,7 +289,11 @@
       "created": "Classroom created successfully!",
       "pdfUploaded": "PDF uploaded successfully!",
       "linkAdded": "Link added successfully!"
-    }
+    },
+    "rephraseButton": "Rephrase with AI",
+    "rephrasing": "Rephrasing...",
+    "rephraseSuccess": "Text rephrased successfully!",
+    "rephraseError": "Failed to rephrase text. Please try again."
   },
   "editClassroom": {
     "title": "Edit Classroom",
@@ -351,7 +374,11 @@
     "createButton": "Create Assignment",
     "titleLabel": "Assignment Title",
     "instructionsLabel": "Instructions",
-    "titlePlaceholder": "Enter assignment title"
+    "titlePlaceholder": "Enter assignment title",
+    "rephraseButton": "Rephrase with AI",
+    "rephrasing": "Rephrasing...",
+    "rephraseSuccess": "Text rephrased successfully!",
+    "rephraseError": "Failed to rephrase text. Please try again."
   },
   "editAssignment": {
     "title": "Edit Assignment",
@@ -469,7 +496,14 @@
     "allStudents": "All Students",
     "allAssignments": "All Assignments",
     "noMatches": "No submissions match your filters",
-    "adjustFilters": "Try adjusting your filters"
+    "adjustFilters": "Try adjusting your filters",
+    "noSubmissionsYet": "No submissions yet",
+    "noSubmissionsDesc": "Student submissions will appear here once they complete assignments",
+    "allStatuses": "All Statuses",
+    "inProgress": "In Progress",
+    "dateRange": "Date Range",
+    "clearFilters": "Clear Filters",
+    "clearAllFilters": "Clear All Filters"
   },
   "submissionCard": {
     "submitted": "Submitted",
@@ -547,7 +581,9 @@
     "courseInfo": "Course Information",
     "courseTitle": "Course Title",
     "keyChallenges": "Key Challenges",
-    "noAssignmentsDesc": "No assignments have been assigned to this class yet."
+    "noAssignmentsDesc": "No assignments have been assigned to this class yet.",
+    "noFinishedAssignments": "No finished assignments yet",
+    "noFinishedAssignmentsDesc": "Completed assignments will move here once you finish them."
   },
   "settings": {
     "title": "Settings",

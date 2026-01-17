@@ -11,10 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { DashboardHeader } from '@/components/DashboardHeader';
+import { DashboardLayout } from '@/components/layouts';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -46,6 +46,8 @@ const TeacherSettings = () => {
   const { user } = useAuth();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'profile';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -274,45 +276,41 @@ const TeacherSettings = () => {
     );
   }
 
-  return (
-    <div
-      className={cn("min-h-screen bg-background", isRTL && "text-right")}
-      dir={isRTL ? 'rtl' : 'ltr'}
-      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-    >
-      <DashboardHeader
-        title={t('settings.title')}
-        userType="teacher"
-        showBackButton
-        onBackClick={() => navigate('/teacher/dashboard')}
-      />
+  // Get the current tab label for breadcrumb
+  const getTabLabel = () => {
+    switch (activeTab) {
+      case 'profile':
+        return t('settings.profile');
+      case 'questions':
+        return t('settings.teachingPreferences');
+      case 'notifications':
+        return t('common.notifications');
+      default:
+        return t('settings.profile');
+    }
+  };
 
-      <main className="container py-8 px-4 max-w-4xl">
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList
-            className="grid w-full grid-cols-3"
-            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-          >
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('settings.profile')}</span>
-            </TabsTrigger>
-            <TabsTrigger value="questions" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('settings.teachingPreferences')}</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('common.notifications')}</span>
-            </TabsTrigger>
-          </TabsList>
+  return (
+    <DashboardLayout
+      breadcrumbs={[
+        { label: t('nav.dashboard'), href: '/teacher/dashboard' },
+        { label: t('settings.title'), href: '/teacher/settings' },
+        { label: getTabLabel() }
+      ]}
+    >
+      <div
+        className={cn("container py-8 px-4 max-w-4xl", isRTL && "text-right")}
+        dir={isRTL ? 'rtl' : 'ltr'}
+        style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+      >
+        <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-6">
+          {/* TabsList removed as navigation is now in the sidebar */}
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>{t('settings.profile')}</CardTitle>
-                <CardDescription>{t('settings.profileDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div
@@ -363,7 +361,6 @@ const TeacherSettings = () => {
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     placeholder="Jane Smith"
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -389,7 +386,6 @@ const TeacherSettings = () => {
                     onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
                     placeholder="+1 (555) 123-4567"
                     dir={isRTL ? 'rtl' : 'ltr'}
-                    autoDirection
                   />
                 </div>
 
@@ -408,7 +404,6 @@ const TeacherSettings = () => {
                       })
                     }
                     placeholder="Math, Physics, Chemistry"
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -431,7 +426,6 @@ const TeacherSettings = () => {
                     }
                     placeholder="5"
                     dir={isRTL ? 'rtl' : 'ltr'}
-                    autoDirection
                   />
                 </div>
 
@@ -444,7 +438,6 @@ const TeacherSettings = () => {
                       setProfile({ ...profile, student_education_level: e.target.value })
                     }
                     placeholder="e.g., Middle School, High School, University"
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -506,7 +499,6 @@ const TeacherSettings = () => {
                     placeholder={questions.teaching_goals || 'Brief description (1-2 sentences)'}
                     rows={3}
                     className={!questions.teaching_goals ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -522,7 +514,6 @@ const TeacherSettings = () => {
                     }
                     rows={4}
                     className={!questions.style_notes ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -544,7 +535,6 @@ const TeacherSettings = () => {
                     }
                     rows={4}
                     className={!questions.teaching_examples ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -566,7 +556,6 @@ const TeacherSettings = () => {
                     }
                     rows={3}
                     className={!questions.sample_explanation ? 'text-muted-foreground' : ''}
-                    autoDirection
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
@@ -674,14 +663,14 @@ const TeacherSettings = () => {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
 
       <DeleteAccountDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         userRole="teacher"
       />
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -14,7 +14,10 @@ SET
 - אם כתוב "תעשה 1+1" → אמור "בואו נפתור מתמטיקה! מה התשובה ל-1+1?"
 - אם כתוב "2+2=?" → אמור "בואו נפתור חישוב! כמה זה 2+2?"
 - אם כתוב "כתוב פסקה על החופש" → אמור "בואו נכתוב! על מה תרצה לכתוב בפסקה על החופש?"
-- אם כתוב "כגדגדג" → אמור "בואו נתח
+- אם כתוב "כגדגדג" → אמור "בואו נתחיל!"$$,
+  version = version + 1,
+  updated_at = now()
+WHERE prompt_key = 'chat_greeting_instruction' AND language = 'he';
 
 -- Verify the chat_system_enhanced prompt for Hebrew has all critical instructions
 UPDATE ai_prompts

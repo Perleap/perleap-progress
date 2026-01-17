@@ -92,7 +92,7 @@ const Product = () => {
                 {/* CTA */}
                 <section className="py-20">
                     <div className="container mx-auto px-4 text-center">
-                        <div className="max-w-3xl mx-auto bg-gradient-to-br from-purple-100 to-orange-100 rounded-3xl p-12 border border-white/20 shadow-xl">
+                        <div className="max-w-3xl mx-auto bg-accent rounded-xl p-12 border border-border shadow-xl">
                             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to transform your classroom?</h2>
                             <p className="text-lg text-muted-foreground mb-8">
                                 Join thousands of educators who are already using Perleap to enhance their teaching.
@@ -113,7 +113,7 @@ const Product = () => {
 };
 
 const FeatureCard = ({ icon: Icon, title, description, delay }: { icon: any, title: string, description: string, delay: number }) => (
-    <div className="p-8 rounded-2xl bg-white border border-black/5 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: `${delay * 0.1}s` }}>
+    <div className="p-8 rounded-lg bg-white border border-black/5 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: `${delay * 0.1}s` }}>
         <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-6 text-purple-600">
             <Icon className="w-6 h-6" />
         </div>

@@ -156,7 +156,7 @@ export function StudentAnalytics({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-card border-border">
         <CardContent className="py-12">
           <LoadingSpinner />
         </CardContent>
@@ -166,20 +166,20 @@ export function StudentAnalytics({
 
   if (submissions.length === 0) {
     return (
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle>{t('studentAnalytics.title')}</CardTitle>
-          <CardDescription>{t('studentAnalytics.noSubmissions')}</CardDescription>
+          <CardTitle className="text-foreground">{t('studentAnalytics.title')}</CardTitle>
+          <CardDescription className="text-muted-foreground">{t('studentAnalytics.noSubmissions')}</CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle>{t('studentAnalytics.title')}</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-foreground">{t('studentAnalytics.title')}</CardTitle>
+        <CardDescription className="text-muted-foreground">
           {submissions.length === 1
             ? t('studentAnalytics.developmentAcross', { count: submissions.length })
             : t('studentAnalytics.developmentAcrossPlural', { count: submissions.length })}
@@ -187,9 +187,9 @@ export function StudentAnalytics({
       </CardHeader>
       <CardContent>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'average' | 'perSubmission')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="perSubmission">{t('studentAnalytics.perSubmission')}</TabsTrigger>
-            <TabsTrigger value="average">{t('studentAnalytics.allSubmissionsAverage')}</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-muted/30">
+            <TabsTrigger value="perSubmission" className="text-foreground data-[state=active]:bg-card">{t('studentAnalytics.perSubmission')}</TabsTrigger>
+            <TabsTrigger value="average" className="text-foreground data-[state=active]:bg-card">{t('studentAnalytics.allSubmissionsAverage')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="perSubmission" className="mt-6">

@@ -73,7 +73,7 @@ const RoleSelection = () => {
       <div className="w-full max-w-2xl animate-fade-in relative z-10">
         <Card className="shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-2xl border-border/50 rounded-[2.5rem]">
           <CardHeader className="text-center pb-8 pt-12 px-12">
-            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm mb-6 mx-auto">
+            <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm mb-6 mx-auto">
               <img src="/perleap_logo.png" alt="PerLeap" className="h-12 w-12 object-contain" />
             </div>
             <CardTitle className="text-3xl font-bold mb-3" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -92,7 +92,7 @@ const RoleSelection = () => {
                   variant={selectedRole === 'teacher' ? 'default' : 'outline'}
                   onClick={() => setSelectedRole('teacher')}
                   disabled={loading}
-                  className={`h-24 flex flex-col items-center justify-center gap-2 rounded-3xl transition-all ${
+                  className={`h-24 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${
                     selectedRole === 'teacher'
                       ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                       : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
@@ -107,7 +107,7 @@ const RoleSelection = () => {
                   variant={selectedRole === 'student' ? 'default' : 'outline'}
                   onClick={() => setSelectedRole('student')}
                   disabled={loading}
-                  className={`h-24 flex flex-col items-center justify-center gap-2 rounded-3xl transition-all ${
+                  className={`h-24 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${
                     selectedRole === 'student'
                       ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
                       : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'

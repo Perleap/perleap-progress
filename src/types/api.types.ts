@@ -29,6 +29,7 @@ export interface AssignmentWithClassroom extends Assignment {
     teacher_id?: string;
     teacher_profiles?: TeacherProfile | null;
   };
+  submissions?: Submission[];
 }
 
 export interface CreateAssignmentInput {

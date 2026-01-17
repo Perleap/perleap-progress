@@ -17,7 +17,7 @@ export const getTeacherProfile = async (
       .from('teacher_profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -40,7 +40,7 @@ export const getStudentProfile = async (
       .from('student_profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };

@@ -2,14 +2,16 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardHeader } from '@/components/DashboardHeader';
+import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { generateFeedback } from '@/services/submissionService';
+import { generateFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import { ArrowLeft, Calendar, FileText, Link as LinkIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
@@ -20,6 +22,7 @@ interface Assignment {
   instructions: string;
   due_at: string;
   type: string;
+  classroom_id: string;
   materials?: string;
   target_dimensions: {
     vision: boolean;
@@ -50,10 +53,11 @@ interface Feedback {
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
-  const { language: uiLanguage } = useLanguage();
+  const { language: uiLanguage = 'en' } = useLanguage();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -121,16 +125,19 @@ const AssignmentDetail = () => {
       console.log('AssignmentDetail: Assignment fetched', assignmentData.id);
 
       // Fetch teacher profile separately
-      let teacherName = 'Teacher';
+      let teacherProfile: { full_name: string; avatar_url: string | null } | null = null;
       if (assignmentData.classrooms?.teacher_id) {
-        const { data: teacherProfile } = await supabase
+        const { data: tProfile } = await supabase
           .from('teacher_profiles')
-          .select('full_name')
+          .select('full_name, avatar_url')
           .eq('user_id', assignmentData.classrooms.teacher_id)
           .maybeSingle();
 
-        if (teacherProfile?.full_name) {
-          teacherName = teacherProfile.full_name;
+        if (tProfile) {
+          teacherProfile = {
+            full_name: tProfile.full_name || t('common.teacher'),
+            avatar_url: tProfile.avatar_url
+          };
         }
       }
 
@@ -138,7 +145,7 @@ const AssignmentDetail = () => {
         ...assignmentData,
         classrooms: {
           ...assignmentData.classrooms,
-          teacher_profiles: { full_name: teacherName },
+          teacher_profiles: teacherProfile,
         },
       } as any);
 
@@ -186,7 +193,7 @@ const AssignmentDetail = () => {
               .eq('assignment_id', id)
               .eq('student_id', user!.id)
               .maybeSingle();
-            
+
             if (retryError || !retrySubmission) {
               throw retryError || createError;
             }
@@ -213,6 +220,15 @@ const AssignmentDetail = () => {
 
         if (feedbackData) {
           setFeedback(feedbackData);
+          
+          // Auto-heal: If feedback exists but submission is not completed, mark it as completed
+          if (finalSubmission && finalSubmission.status !== 'completed') {
+            console.log('Auto-healing submission status to completed');
+            await completeSubmission(finalSubmission.id);
+            setSubmission({ ...finalSubmission, status: 'completed' });
+            // Invalidate queries to update dashboard and classroom views
+            queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+          }
         }
       }
     } catch (error) {
@@ -243,7 +259,17 @@ const AssignmentDetail = () => {
           console.error('Error generating feedback:', feedbackError);
           toast.error(t('assignmentDetail.errors.generatingFeedback'));
         } else {
-          toast.success(t('assignmentDetail.success.completed'));
+          // Mark submission as completed
+          const { error: completeError } = await completeSubmission(submission.id);
+
+          if (completeError) {
+            console.error('Error completing submission:', completeError);
+            toast.error(t('common.error'));
+          } else {
+            toast.success(t('assignmentDetail.success.completed'));
+            // Invalidate queries to update dashboard and classroom views
+            queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+          }
         }
       }
     } catch (error) {
@@ -277,15 +303,14 @@ const AssignmentDetail = () => {
     .map(([key]) => key);
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader
-        title={assignment.title}
-        subtitle={assignment.classrooms.name}
-        userType="student"
-        showBackButton
-      />
-
-      <main className="container py-4 md:py-8 px-4 max-w-4xl">
+    <DashboardLayout
+      breadcrumbs={[
+        { label: t('nav.dashboard'), href: '/student/dashboard' },
+        { label: assignment.classrooms.name, href: `/student/classroom/${assignment.classroom_id}` },
+        { label: assignment.title }
+      ]}
+    >
+      <div className="container py-4 px-0 max-w-4xl">
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -411,8 +436,8 @@ const AssignmentDetail = () => {
             </Card>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

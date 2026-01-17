@@ -199,17 +199,21 @@ export const getClassroomAnalytics = async (
       };
     }
 
+    const studentIds = enrollments.map(e => e.student_id);
+
+    // Fetch all student profiles in one query
+    const { data: profiles } = await supabase
+      .from('student_profiles')
+      .select('user_id, full_name')
+      .in('user_id', studentIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
     const studentAnalytics: StudentAnalytics[] = [];
     let totalSubmissions = 0;
 
     for (const enrollment of enrollments) {
-      const { data: profile } = await supabase
-        .from('student_profiles')
-        .select('full_name')
-        .eq('user_id', enrollment.student_id)
-        .single();
-
-      const fullName = profile?.full_name || 'Unknown';
+      const fullName = profileMap.get(enrollment.student_id) || 'Unknown';
 
       // Get scores for this classroom
       const { data: snapshots } = await getUserSnapshots(enrollment.student_id, true, classroomId);

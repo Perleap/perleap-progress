@@ -20,10 +20,10 @@ export const StudentProfilesList = ({ students }: StudentProfilesListProps) => {
 
   if (studentsWithScores.length === 0) {
     return (
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Student Profiles</CardTitle>
-          <CardDescription className="text-sm">
+          <CardTitle className="text-base md:text-lg text-foreground">Student Profiles</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
             Individual student progress and feedback analytics
           </CardDescription>
         </CardHeader>
@@ -37,21 +37,21 @@ export const StudentProfilesList = ({ students }: StudentProfilesListProps) => {
   }
 
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-base md:text-lg">Student Profiles</CardTitle>
-        <CardDescription className="text-sm">
+        <CardTitle className="text-base md:text-lg text-foreground">Student Profiles</CardTitle>
+        <CardDescription className="text-sm text-muted-foreground">
           Individual student progress and feedback analytics
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
           {studentsWithScores.map((student) => (
-            <Card key={student.id}>
+            <Card key={student.id} className="bg-card border-border">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <CardTitle className="text-base md:text-lg">{student.fullName}</CardTitle>
-                  <Badge variant="secondary" className="text-xs">
+                  <CardTitle className="text-base md:text-lg text-foreground">{student.fullName}</CardTitle>
+                  <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
                     {student.feedbackCount} submissions
                   </Badge>
                 </div>

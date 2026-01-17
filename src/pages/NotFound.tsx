@@ -13,8 +13,8 @@ const NotFound = () => {
         <ThemeToggle />
       </div>
 
-      <div className="text-center animate-fade-in p-8 rounded-3xl bg-white/30 backdrop-blur-md border border-white/20 shadow-xl max-w-md mx-4">
-        <h1 className="mb-2 text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500">404</h1>
+      <div className="text-center animate-fade-in p-8 rounded-xl bg-white/30 backdrop-blur-md border border-white/20 shadow-xl max-w-md mx-4">
+        <h1 className="mb-2 text-8xl font-bold text-primary">404</h1>
         <h2 className="mb-6 text-2xl font-semibold text-foreground">Page Not Found</h2>
         <p className="mb-8 text-muted-foreground">
           Oops! The page you are looking for doesn't exist or has been moved.
