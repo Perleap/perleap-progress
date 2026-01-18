@@ -692,6 +692,7 @@
     "filterByStudent": "Filter by Student",
     "filterByAssignment": "Filter by Assignment",
     "all": "All",
+    "allStudents": "All Students",
     "allAssignments": "All Assignments",
     "totalStudents": "Total Students",
     "assignments": "Assignments",
@@ -742,6 +743,7 @@
     "student": "Student",
     "due": "Due",
     "save": "Save",
+    "undo": "Undo",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
@@ -1065,6 +1067,15 @@
     }
   },
   "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No new notifications",
+    "success": {
+      "markedAllRead": "All notifications marked as read"
+    },
+    "errors": {
+      "markingRead": "Error marking notifications as read"
+    },
     "titles": {
       "feedbackReceived": "Feedback Received",
       "successfullyEnrolled": "Successfully Enrolled",

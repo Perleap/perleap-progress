@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -11,45 +11,10 @@ import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import { ArrowLeft, Calendar, FileText, Link as LinkIcon, Download } from 'lucide-react';
+import { assignmentKeys, useStudentAssignmentDetails } from '@/hooks/queries';
+import { Calendar, FileText, Link as LinkIcon, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
-
-interface Assignment {
-  id: string;
-  title: string;
-  instructions: string;
-  due_at: string;
-  type: string;
-  classroom_id: string;
-  materials?: string;
-  target_dimensions: {
-    vision: boolean;
-    values: boolean;
-    thinking: boolean;
-    connection: boolean;
-    action: boolean;
-  };
-  classrooms: {
-    name: string;
-    teacher_profiles: {
-      full_name: string;
-    } | null;
-  };
-}
-
-interface Submission {
-  id: string;
-  text_body: string;
-  submitted_at: string;
-}
-
-interface Feedback {
-  student_feedback: string;
-  teacher_feedback: string;
-  created_at: string;
-}
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
@@ -58,190 +23,12 @@ const AssignmentDetail = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [loading, setLoading] = useState(true);
-  const hasFetchedRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const lastIdRef = useRef(id);
-  const lastUserIdRef = useRef<string | undefined>(undefined);
 
-  useEffect(() => {
-    // ProtectedRoute handles auth, just fetch data when user is available
-    if (!user?.id) {
-      console.log('AssignmentDetail: No user ID yet');
-      return;
-    }
+  const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(id);
 
-    console.log('AssignmentDetail: User ID available', user.id, 'Assignment ID:', id);
-
-    // Reset refs if assignment ID or user ID changes
-    if (lastIdRef.current !== id || lastUserIdRef.current !== user.id) {
-      console.log('AssignmentDetail: ID changed, resetting refs');
-      hasFetchedRef.current = false;
-      isFetchingRef.current = false;
-      lastIdRef.current = id;
-      lastUserIdRef.current = user.id;
-      // Also reset loading to true when ID changes
-      setLoading(true);
-    }
-
-    // Only fetch if we haven't fetched yet and we're not currently fetching
-    if (!hasFetchedRef.current && !isFetchingRef.current) {
-      console.log('AssignmentDetail: Triggering fetchData');
-      fetchData();
-    } else {
-      console.log('AssignmentDetail: Skipping fetchData', { hasFetched: hasFetchedRef.current, isFetching: isFetchingRef.current });
-    }
-  }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
-
-  const fetchData = async () => {
-    if (isFetchingRef.current) return; // Prevent concurrent fetches
-
-    isFetchingRef.current = true;
-    console.log('AssignmentDetail: fetchData started');
-
-    try {
-      // Fetch assignment with teacher info
-      const { data: assignmentData, error: assignError } = await supabase
-        .from('assignments')
-        .select('*, classrooms(name, teacher_id)')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (assignError) {
-        console.error('AssignmentDetail: Error fetching assignment', assignError);
-        throw assignError;
-      }
-
-      if (!assignmentData) {
-        console.error('AssignmentDetail: Assignment not found');
-        toast.error(t('assignmentDetail.errors.loading'));
-        navigate('/student/dashboard');
-        return;
-      }
-
-      console.log('AssignmentDetail: Assignment fetched', assignmentData.id);
-
-      // Fetch teacher profile separately
-      let teacherProfile: { full_name: string; avatar_url: string | null } | null = null;
-      if (assignmentData.classrooms?.teacher_id) {
-        const { data: tProfile } = await supabase
-          .from('teacher_profiles')
-          .select('full_name, avatar_url')
-          .eq('user_id', assignmentData.classrooms.teacher_id)
-          .maybeSingle();
-
-        if (tProfile) {
-          teacherProfile = {
-            full_name: tProfile.full_name || t('common.teacher'),
-            avatar_url: tProfile.avatar_url
-          };
-        }
-      }
-
-      setAssignment({
-        ...assignmentData,
-        classrooms: {
-          ...assignmentData.classrooms,
-          teacher_profiles: teacherProfile,
-        },
-      } as any);
-
-      // Try to get or create submission
-      let finalSubmission = null;
-
-      // 1. Try to fetch existing submission first
-      const { data: existingSubmission, error: fetchSubError } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('assignment_id', id)
-        .eq('student_id', user!.id)
-        .maybeSingle();
-
-      if (fetchSubError) {
-        console.error('Error fetching existing submission:', fetchSubError);
-        throw fetchSubError;
-      }
-
-      if (existingSubmission) {
-        finalSubmission = existingSubmission;
-      } else {
-        // 2. If not found, try to create a new one
-        console.log('Creating new submission for assignment:', id);
-        const { data: newSubmission, error: createError } = await supabase
-          .from('submissions')
-          .insert([
-            {
-              assignment_id: id!,
-              student_id: user!.id,
-              text_body: '',
-              status: 'in_progress'
-            },
-          ])
-          .select()
-          .single();
-
-        if (createError) {
-          // Check if it's a unique constraint violation (race condition)
-          if (createError.code === '23505') {
-            console.log('Race condition detected, fetching created submission');
-            const { data: retrySubmission, error: retryError } = await supabase
-              .from('submissions')
-              .select('*')
-              .eq('assignment_id', id)
-              .eq('student_id', user!.id)
-              .maybeSingle();
-
-            if (retryError || !retrySubmission) {
-              throw retryError || createError;
-            }
-            finalSubmission = retrySubmission;
-          } else {
-            throw createError;
-          }
-        } else {
-          finalSubmission = newSubmission;
-        }
-      }
-
-      // Set submission and check for feedback
-
-      // Set submission and check for feedback
-      if (finalSubmission) {
-        setSubmission(finalSubmission);
-
-        const { data: feedbackData } = await supabase
-          .from('assignment_feedback')
-          .select('*')
-          .eq('submission_id', finalSubmission.id)
-          .maybeSingle();
-
-        if (feedbackData) {
-          setFeedback(feedbackData);
-          
-          // Auto-heal: If feedback exists but submission is not completed, mark it as completed
-          if (finalSubmission && finalSubmission.status !== 'completed') {
-            console.log('Auto-healing submission status to completed');
-            await completeSubmission(finalSubmission.id);
-            setSubmission({ ...finalSubmission, status: 'completed' });
-            // Invalidate queries to update dashboard and classroom views
-            queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('AssignmentDetail: Error in fetchData', error);
-      toast.error(t('assignmentDetail.errors.loading'));
-      navigate('/student/dashboard');
-    } finally {
-      console.log('AssignmentDetail: fetchData finished');
-      setLoading(false);
-      isFetchingRef.current = false;
-      hasFetchedRef.current = true;
-    }
-  };
+  const assignment = assignmentData;
+  const submission = assignmentData?.submission;
+  const feedback = assignmentData?.feedback;
 
   const handleActivityComplete = async () => {
     try {
@@ -269,28 +56,24 @@ const AssignmentDetail = () => {
             toast.success(t('assignmentDetail.success.completed'));
             // Invalidate queries to update dashboard and classroom views
             queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+            refetch(); // Reload assignment details to show feedback
           }
         }
       }
     } catch (error) {
       console.error('Exception generating feedback:', error);
     }
-
-    // Reset flags to allow refetch after completing activity
-    hasFetchedRef.current = false;
-    isFetchingRef.current = false;
-    fetchData();
   };
 
-  if (loading) {
+  if (loading && !assignmentData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">{t('common.loading')}</div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!assignment) {
+  if (!assignmentData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">Assignment not found or failed to load.</div>
@@ -298,7 +81,7 @@ const AssignmentDetail = () => {
     );
   }
 
-  const targetDimensions = Object.entries(assignment.target_dimensions)
+  const targetDimensions = Object.entries(assignment.target_dimensions || {})
     .filter(([_, value]) => value)
     .map(([key]) => key);
 

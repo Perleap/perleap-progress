@@ -7,18 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'lucide-react';
+import { User, Loader2, Camera, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useStudentProfile, useUpdateStudentProfile } from '@/hooks/queries';
 
-interface StudentProfile {
+interface StudentProfileState {
   full_name: string;
   avatar_url: string | null;
 }
@@ -51,11 +52,13 @@ const StudentSettings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'profile';
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const [profile, setProfile] = useState<StudentProfile>({
+  const { data: profileData, isLoading: loading } = useStudentProfile();
+  const updateProfileMutation = useUpdateStudentProfile();
+
+  const [profile, setProfile] = useState<StudentProfileState>({
     full_name: '',
     avatar_url: null,
   });
@@ -81,78 +84,44 @@ const StudentSettings = () => {
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const hasFetchedRef = useRef(false);
 
+  // Sync profile data from TanStack Query to local state
   useEffect(() => {
-    // ProtectedRoute handles auth, just fetch data when user is available
-    if (user?.id && !hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      fetchSettings();
+    if (profileData) {
+      setProfile({
+        full_name: profileData.full_name || '',
+        avatar_url: profileData.avatar_url || null,
+      });
+
+      setQuestions({
+        learning_methods: (profileData as any).learning_methods || '',
+        solo_vs_group: (profileData as any).solo_vs_group || '',
+        scheduled_vs_flexible: (profileData as any).scheduled_vs_flexible || '',
+        motivation_factors: (profileData as any).motivation_factors || '',
+        help_preferences: (profileData as any).help_preferences || '',
+        teacher_preferences: (profileData as any).teacher_preferences || '',
+        feedback_preferences: (profileData as any).feedback_preferences || '',
+        learning_goal: (profileData as any).learning_goal || '',
+        special_needs: (profileData as any).special_needs || '',
+        additional_notes: (profileData as any).additional_notes || '',
+      });
+    } else if (!loading && user) {
+      // If profile finished loading but is missing, redirect to onboarding
+      navigate('/onboarding/student', { replace: true });
     }
-  }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
+  }, [profileData, loading, user, navigate]);
 
-  const fetchSettings = async () => {
-    try {
-      // Fetch student profile with all fields
-      // Use maybeSingle() instead of single() to handle case where profile doesn't exist
-      const { data: profileData, error: profileError } = await supabase
-        .from('student_profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        throw profileError;
-      }
-
-      // If no profile exists, silently redirect to onboarding
-      if (!profileData) {
-        // This is expected for new users - not an error
-        navigate('/onboarding/student', { replace: true });
-        return;
-      }
-
-      if (profileData) {
-        setProfile({
-          full_name: profileData.full_name || '',
-          avatar_url: profileData.avatar_url || null,
-        });
-
-        setQuestions({
-          learning_methods: profileData.learning_methods || '',
-          solo_vs_group: profileData.solo_vs_group || '',
-          scheduled_vs_flexible: profileData.scheduled_vs_flexible || '',
-          motivation_factors: profileData.motivation_factors || '',
-          help_preferences: profileData.help_preferences || '',
-          teacher_preferences: profileData.teacher_preferences || '',
-          feedback_preferences: profileData.feedback_preferences || '',
-          learning_goal: profileData.learning_goal || '',
-          special_needs: profileData.special_needs || '',
-          additional_notes: profileData.additional_notes || '',
-        });
-      }
-
-      // In a real app, you would fetch notification settings from a separate table
-      // For now, we'll use localStorage as a mock
-      const savedNotifications = localStorage.getItem('student_notifications');
-      if (savedNotifications) {
+  // Load notifications from localStorage
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('student_notifications');
+    if (savedNotifications) {
+      try {
         setNotifications(JSON.parse(savedNotifications));
+      } catch (e) {
+        console.error('Error parsing notifications:', e);
       }
-    } catch (error: any) {
-      // Only log actual errors, not missing profiles (which is expected for new users)
-      if (error.code === 'PGRST116') {
-        // No rows returned - profile doesn't exist, silently redirect to onboarding
-        navigate('/onboarding/student', { replace: true });
-      } else {
-        // This is an actual error
-        console.error('Error loading settings:', error);
-        toast.error(t('settings.errors.loading'));
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -191,15 +160,10 @@ const StudentSettings = () => {
         data: { publicUrl },
       } = supabase.storage.from('student-avatars').getPublicUrl(fileName);
 
-      // Update profile with avatar URL
-      const { error: updateError } = await supabase
-        .from('student_profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('user_id', user.id);
+      // Update profile with avatar URL using mutation
+      await updateProfileMutation.mutateAsync({ avatar_url: publicUrl });
 
-      if (updateError) throw updateError;
-
-      setProfile({ ...profile, avatar_url: publicUrl });
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
       toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -214,15 +178,10 @@ const StudentSettings = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('student_profiles')
-        .update({
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-        })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await updateProfileMutation.mutateAsync({
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+      } as any);
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -237,23 +196,18 @@ const StudentSettings = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('student_profiles')
-        .update({
-          learning_methods: questions.learning_methods,
-          solo_vs_group: questions.solo_vs_group,
-          scheduled_vs_flexible: questions.scheduled_vs_flexible,
-          motivation_factors: questions.motivation_factors,
-          help_preferences: questions.help_preferences,
-          teacher_preferences: questions.teacher_preferences,
-          feedback_preferences: questions.feedback_preferences,
-          learning_goal: questions.learning_goal,
-          special_needs: questions.special_needs,
-          additional_notes: questions.additional_notes,
-        })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await updateProfileMutation.mutateAsync({
+        learning_methods: questions.learning_methods,
+        solo_vs_group: questions.solo_vs_group,
+        scheduled_vs_flexible: questions.scheduled_vs_flexible,
+        motivation_factors: questions.motivation_factors,
+        help_preferences: questions.help_preferences,
+        teacher_preferences: questions.teacher_preferences,
+        feedback_preferences: questions.feedback_preferences,
+        learning_goal: questions.learning_goal,
+        special_needs: questions.special_needs,
+        additional_notes: questions.additional_notes,
+      } as any);
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error saving interests:', error);
@@ -264,7 +218,6 @@ const StudentSettings = () => {
   };
 
   const handleSaveNotifications = () => {
-    // In a real app, you would save to database
     localStorage.setItem('student_notifications', JSON.stringify(notifications));
     toast.success(t('settings.success.saved'));
   };
@@ -279,7 +232,7 @@ const StudentSettings = () => {
       .slice(0, 2);
   };
 
-  if (loading) {
+  if (loading && !profileData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

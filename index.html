@@ -45,6 +45,17 @@
   <meta name="twitter:site" content="@PerLeap" />
   <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   <link rel="icon" href="/perleap_logo.png" />
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('theme');
+        var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+        if (!theme && supportDarkMode) theme = 'dark';
+        if (!theme) theme = 'light';
+        document.documentElement.classList.add(theme);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

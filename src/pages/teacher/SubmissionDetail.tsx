@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, MessageSquare, AlertTriangle, Sparkles, User, Calendar, BookOpen } from 'lucide-react';
+import { MessageSquare, AlertTriangle, Sparkles, User, Calendar, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
@@ -15,36 +15,7 @@ import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
-import type { StudentAlert } from '@/types/alerts';
-
-interface ConversationMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-interface Submission {
-  id: string;
-  submitted_at: string;
-  student_id: string;
-  assignment_id: string;
-  assignments: {
-    title: string;
-    instructions: string;
-    due_at: string;
-    classroom_id: string;
-    classrooms: {
-      name: string;
-      teacher_id: string;
-    };
-  };
-}
-
-interface Feedback {
-  student_feedback: string;
-  teacher_feedback: string;
-  created_at: string;
-  conversation_context: ConversationMessage[] | null;
-}
+import { useFullSubmissionDetails } from '@/hooks/queries';
 
 interface GeneratedAssignmentData {
   title: string;
@@ -62,129 +33,31 @@ const SubmissionDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [studentName, setStudentName] = useState<string>('');
-  const [studentAvatar, setStudentAvatar] = useState<string | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const [alerts, setAlerts] = useState<StudentAlert[]>([]);
+  
+  const { data: submissionData, isLoading: loading, refetch } = useFullSubmissionDetails(id);
+
   const [generatingAssignment, setGeneratingAssignment] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [generatedAssignmentData, setGeneratedAssignmentData] =
     useState<GeneratedAssignmentData | null>(null);
 
-  // Prevent refetching when tabbing in/out
-  const hasFetchedRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const lastIdRef = useRef(id);
-  const lastUserIdRef = useRef<string | undefined>(undefined);
+  const submission = submissionData;
+  const feedback = submissionData?.feedback;
+  const studentName = submissionData?.student_name || '';
+  const studentAvatar = submissionData?.student_avatar_url;
+  const alerts = submissionData?.alerts || [];
 
-  useEffect(() => {
-    // ProtectedRoute handles auth, just fetch data when user is available
-    if (!user?.id) return;
-
-    // Reset refs if submission ID or user ID changes
-    if (lastIdRef.current !== id || lastUserIdRef.current !== user.id) {
-      hasFetchedRef.current = false;
-      isFetchingRef.current = false;
-      lastIdRef.current = id;
-      lastUserIdRef.current = user.id;
-    }
-
-    // Only fetch if we haven't fetched yet and not currently fetching
-    if (!hasFetchedRef.current && !isFetchingRef.current) {
-      fetchData();
-    }
-  }, [id, user?.id]); // Use user?.id to avoid refetch on user object reference change
-
-  const fetchData = async () => {
-    if (isFetchingRef.current) return; // Prevent concurrent fetches
-    isFetchingRef.current = true;
-    try {
-      // Fetch submission with assignment info
-      const { data: submissionData, error: subError } = await supabase
-        .from('submissions')
-        .select('*, assignments(title, instructions, classroom_id, due_at, classrooms(name, teacher_id))')
-        .eq('id', id)
-        .single();
-
-      if (subError) throw subError;
-      if (!submissionData) {
-        console.error('Submission not found');
-        toast.error(t('submissionDetail.errors.loading'));
-        navigate(-1);
-        return;
-      }
-
-      // Safety check for assignment data
-      if (!submissionData.assignments) {
-        console.error('Assignment data missing for submission');
-        toast.error(t('submissionDetail.errors.loading'));
-        navigate(-1);
-        return;
-      }
-
-      // Safety check for classroom data
-      if (!submissionData.assignments.classrooms) {
-        console.error('Classroom data missing for assignment');
-        toast.error(t('submissionDetail.errors.loading'));
-        navigate(-1);
-        return;
-      }
-
-      // Check if this teacher owns the classroom
-      const teacherId = submissionData.assignments.classrooms.teacher_id;
-      if (teacherId !== user?.id) {
+  // Check ownership
+  useMemo(() => {
+    if (submissionData && user?.id) {
+      const teacherId = submissionData.assignments?.classrooms?.teacher_id;
+      if (teacherId && teacherId !== user.id) {
         console.error('Unauthorized access to submission');
         toast.error(t('submissionDetail.errors.loading'));
         navigate(-1);
-        return;
       }
-
-      setSubmission(submissionData as Submission);
-
-      // Fetch student name
-      const { data: studentProfile } = await supabase
-        .from('student_profiles')
-        .select('full_name, avatar_url')
-        .eq('user_id', submissionData.student_id)
-        .single();
-
-      setStudentName(studentProfile?.full_name || 'Unknown Student');
-      setStudentAvatar(studentProfile?.avatar_url);
-
-      // Fetch feedback
-      const { data: feedbackData } = await supabase
-        .from('assignment_feedback')
-        .select('*')
-        .eq('submission_id', id)
-        .maybeSingle();
-
-      if (feedbackData) {
-        setFeedback(feedbackData as unknown as Feedback);
-      }
-
-      // Fetch wellbeing alerts
-      const { data: alertsData } = await supabase
-        .from('student_alerts')
-        .select('*')
-        .eq('submission_id', id)
-        .order('created_at', { ascending: false });
-
-      if (alertsData) {
-        setAlerts(alertsData as unknown as StudentAlert[]);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error loading submission';
-      console.error('Error loading submission:', errorMessage);
-      toast.error('Error loading submission');
-      navigate(-1);
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-      hasFetchedRef.current = true;
     }
-  };
+  }, [submissionData, user?.id, navigate, t]);
 
   const handleGenerateFollowupAssignment = async () => {
     if (!feedback || !submission) return;
@@ -242,7 +115,7 @@ const SubmissionDetail = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !submissionData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">{t('common.loading')}</div>
@@ -250,7 +123,7 @@ const SubmissionDetail = () => {
     );
   }
 
-  if (!submission) return null;
+  if (!submissionData) return null;
 
   return (
     <DashboardLayout
@@ -312,7 +185,7 @@ const SubmissionDetail = () => {
             <WellbeingAlertCard
               alerts={alerts}
               studentName={studentName}
-              onAcknowledge={fetchData}
+              onAcknowledge={refetch}
             />
           )}
 

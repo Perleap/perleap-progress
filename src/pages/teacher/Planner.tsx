@@ -330,7 +330,12 @@ export default function Planner() {
                         <Label>Classroom</Label>
                         <Select value={selectedClassForCreate} onValueChange={setSelectedClassForCreate}>
                             <SelectTrigger>
-                                <SelectValue />
+                                <SelectValue>
+                                    {selectedClassForCreate 
+                                        ? classrooms.find(c => c.id === selectedClassForCreate)?.name 
+                                        : t('createAssignment.selectFromDomains') // or some placeholder
+                                    }
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                                 {classrooms.map((c) => (

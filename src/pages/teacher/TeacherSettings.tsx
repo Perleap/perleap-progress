@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -7,18 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, User, Bell, Loader2, Camera, MessageSquare, Trash2 } from 'lucide-react';
+import { User, Loader2, Camera, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layouts';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useTeacherProfile, useUpdateTeacherProfile } from '@/hooks/queries';
 
-interface TeacherProfile {
+interface TeacherProfileState {
   full_name: string;
   avatar_url: string | null;
   phone_number: string;
@@ -49,11 +50,13 @@ const TeacherSettings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'profile';
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const [profile, setProfile] = useState<TeacherProfile>({
+  const { data: profileData, isLoading: loading } = useTeacherProfile();
+  const updateProfileMutation = useUpdateTeacherProfile();
+
+  const [profile, setProfile] = useState<TeacherProfileState>({
     full_name: '',
     avatar_url: null,
     phone_number: '',
@@ -78,72 +81,41 @@ const TeacherSettings = () => {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Sync profile data from TanStack Query to local state
   useEffect(() => {
-    // ProtectedRoute handles auth, just fetch data when user is available
-    if (user?.id) {
-      fetchSettings();
+    if (profileData) {
+      setProfile({
+        full_name: profileData.full_name || '',
+        avatar_url: profileData.avatar_url || null,
+        phone_number: (profileData as any).phone_number || '',
+        subjects: (profileData as any).subjects || [],
+        years_experience: (profileData as any).years_experience || null,
+        student_education_level: (profileData as any).student_education_level || '',
+      });
+
+      setQuestions({
+        teaching_goals: (profileData as any).teaching_goals || '',
+        style_notes: (profileData as any).style_notes || '',
+        teaching_examples: (profileData as any).teaching_examples || '',
+        sample_explanation: (profileData as any).sample_explanation || '',
+      });
+    } else if (!loading && user) {
+      // If profile finished loading but is missing, redirect to onboarding
+      navigate('/onboarding/teacher', { replace: true });
     }
-  }, [user?.id]); // Use user?.id to avoid refetch on user object reference change
+  }, [profileData, loading, user, navigate]);
 
-  const fetchSettings = async () => {
-    try {
-      // Fetch teacher profile with all fields - use maybeSingle() to handle missing profiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('teacher_profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Profile fetch error:', profileError);
-        throw profileError;
-      }
-
-      // If no profile exists, silently redirect to onboarding
-      if (!profileData) {
-        // This is expected for new users - not an error
-        navigate('/onboarding/teacher', { replace: true });
-        return;
-      }
-
-      if (profileData) {
-        setProfile({
-          full_name: profileData.full_name || '',
-          avatar_url: profileData.avatar_url || null,
-          phone_number: profileData.phone_number || '',
-          subjects: profileData.subjects || [],
-          years_experience: profileData.years_experience || null,
-          student_education_level: profileData.student_education_level || '',
-        });
-
-        setQuestions({
-          teaching_goals: profileData.teaching_goals || '',
-          style_notes: profileData.style_notes || '',
-          teaching_examples: profileData.teaching_examples || '',
-          sample_explanation: profileData.sample_explanation || '',
-        });
-      }
-
-      // In a real app, you would fetch notification settings from a separate table
-      // For now, we'll use localStorage as a mock
-      const savedNotifications = localStorage.getItem('teacher_notifications');
-      if (savedNotifications) {
+  // Load notifications from localStorage
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('teacher_notifications');
+    if (savedNotifications) {
+      try {
         setNotifications(JSON.parse(savedNotifications));
+      } catch (e) {
+        console.error('Error parsing notifications:', e);
       }
-    } catch (error: any) {
-      // Only log actual errors, not missing profiles (which is expected for new users)
-      if (error.code === 'PGRST116') {
-        // No rows returned - profile doesn't exist, silently redirect to onboarding
-        navigate('/onboarding/teacher', { replace: true });
-      } else {
-        // This is an actual error
-        console.error('Error loading settings:', error);
-        toast.error(t('settings.errors.loading'));
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -182,15 +154,10 @@ const TeacherSettings = () => {
         data: { publicUrl },
       } = supabase.storage.from('teacher-avatars').getPublicUrl(fileName);
 
-      // Update profile with avatar URL
-      const { error: updateError } = await supabase
-        .from('teacher_profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('user_id', user.id);
+      // Update profile with avatar URL using mutation
+      await updateProfileMutation.mutateAsync({ avatar_url: publicUrl });
 
-      if (updateError) throw updateError;
-
-      setProfile({ ...profile, avatar_url: publicUrl });
+      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
       toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -205,19 +172,14 @@ const TeacherSettings = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('teacher_profiles')
-        .update({
-          full_name: profile.full_name,
-          avatar_url: profile.avatar_url,
-          phone_number: profile.phone_number,
-          subjects: profile.subjects,
-          years_experience: profile.years_experience,
-          student_education_level: profile.student_education_level,
-        })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await updateProfileMutation.mutateAsync({
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        phone_number: profile.phone_number,
+        subjects: profile.subjects,
+        years_experience: profile.years_experience,
+        student_education_level: profile.student_education_level,
+      } as any);
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -232,17 +194,12 @@ const TeacherSettings = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('teacher_profiles')
-        .update({
-          teaching_goals: questions.teaching_goals,
-          style_notes: questions.style_notes,
-          teaching_examples: questions.teaching_examples,
-          sample_explanation: questions.sample_explanation,
-        })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await updateProfileMutation.mutateAsync({
+        teaching_goals: questions.teaching_goals,
+        style_notes: questions.style_notes,
+        teaching_examples: questions.teaching_examples,
+        sample_explanation: questions.sample_explanation,
+      } as any);
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating questions:', error);
@@ -253,7 +210,6 @@ const TeacherSettings = () => {
   };
 
   const handleSaveNotifications = () => {
-    // In a real app, you would save to database
     localStorage.setItem('teacher_notifications', JSON.stringify(notifications));
     toast.success(t('settings.success.saved'));
   };
@@ -268,7 +224,7 @@ const TeacherSettings = () => {
       .slice(0, 2);
   };
 
-  if (loading) {
+  if (loading && !profileData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

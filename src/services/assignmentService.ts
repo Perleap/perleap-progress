@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { getOrCreateSubmission } from './submissionService';
 import type {
   Assignment,
   AssignmentWithClassroom,
@@ -94,6 +95,67 @@ export const getAssignmentById = async (
     } as AssignmentWithClassroom;
 
     return { data: assignmentWithSubmission, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Get full assignment details for student view, including teacher info and submission
+ */
+export const getStudentAssignmentDetails = async (
+  assignmentId: string,
+  studentId: string
+): Promise<{ data: any | null; error: ApiError | null }> => {
+  try {
+    // 1. Fetch assignment with classroom info
+    const { data: assignment, error: assignError } = await supabase
+      .from('assignments')
+      .select('*, classrooms(name, teacher_id)')
+      .eq('id', assignmentId)
+      .maybeSingle();
+
+    if (assignError) throw assignError;
+    if (!assignment) return { data: null, error: null };
+
+    // 2. Fetch teacher profile separately
+    let teacherProfile = null;
+    if (assignment.classrooms?.teacher_id) {
+      const { data: tProfile } = await supabase
+        .from('teacher_profiles')
+        .select('full_name, avatar_url')
+        .eq('user_id', assignment.classrooms.teacher_id)
+        .maybeSingle();
+      teacherProfile = tProfile;
+    }
+
+    // 3. Get or create submission
+    const { data: submission, error: subError } = await getOrCreateSubmission(assignmentId, studentId);
+    if (subError) throw subError;
+
+    // 4. Fetch feedback if submission exists
+    let feedback = null;
+    if (submission) {
+      const { data: feedbackData } = await supabase
+        .from('assignment_feedback')
+        .select('*')
+        .eq('submission_id', submission.id)
+        .maybeSingle();
+      feedback = feedbackData;
+    }
+
+    return {
+      data: {
+        ...assignment,
+        classrooms: {
+          ...assignment.classrooms,
+          teacher_profiles: teacherProfile
+        },
+        submission,
+        feedback
+      },
+      error: null
+    };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

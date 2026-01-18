@@ -73,6 +73,7 @@ export function EditAssignmentDialog({
   const [classroomMaterials, setClassroomMaterials] = useState<Array<{ type: 'pdf' | 'link'; url: string; name: string }>>([]);
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<Set<number>>(new Set());
   const [rephrasingInstructions, setRephrasingInstructions] = useState(false);
+  const [originalInstructions, setOriginalInstructions] = useState<string | null>(null);
 
   // Fetch classroom domains and materials
   useEffect(() => {
@@ -100,8 +101,10 @@ export function EditAssignmentDialog({
     fetchClassroomData();
   }, [assignment.classroom_id]);
 
-  // Update state when assignment changes and load hard_skills
+  // Update state when assignment changes and load hard_skills - only when dialog opens
   useEffect(() => {
+    if (!open) return;
+
     setTitle(assignment.title);
     setInstructions(assignment.instructions);
     setType(assignment.type);
@@ -155,7 +158,7 @@ export function EditAssignmentDialog({
     };
 
     loadAssignmentData();
-  }, [assignment, classroomDomains]);
+  }, [open, assignment.id, classroomDomains]); // assignment.id is more stable than the whole assignment object
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -254,6 +257,7 @@ export function EditAssignmentDialog({
     }
 
     setRephrasingInstructions(true);
+    setOriginalInstructions(instructions);
     try {
       const { data, error } = await supabase.functions.invoke('rephrase-text', {
         body: {
@@ -400,26 +404,42 @@ export function EditAssignmentDialog({
                   <Label htmlFor="instructions" className={`text-body font-medium mb-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('createAssignment.instructionsLabel')} <span className="text-destructive">*</span>
                   </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRephraseInstructions}
-                    disabled={!instructions.trim() || rephrasingInstructions}
-                    className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
-                  >
-                    {rephrasingInstructions ? (
-                      <>
-                        <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
-                        {t('createAssignment.rephrasing')}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
-                        {t('createAssignment.rephraseButton')}
-                      </>
+                  <div className="flex gap-2">
+                    {originalInstructions !== null && originalInstructions !== instructions && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setInstructions(originalInstructions);
+                          setOriginalInstructions(null);
+                        }}
+                        className={`rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground ${isRTL ? 'flex-row-reverse' : ''}`}
+                      >
+                        {t('common.undo')}
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRephraseInstructions}
+                      disabled={!instructions.trim() || rephrasingInstructions}
+                      className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
+                    >
+                      {rephrasingInstructions ? (
+                        <>
+                          <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
+                          {t('createAssignment.rephrasing')}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
+                          {t('createAssignment.rephraseButton')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   id="instructions"

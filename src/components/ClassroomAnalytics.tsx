@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -8,7 +8,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { supabase } from '@/integrations/supabase/client';
 import { FiveDChart } from './FiveDChart';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,249 +15,97 @@ import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronDown, Users, BookOpen, FileText, CheckCircle2, BarChart3, Filter, Sparkles, Trophy, Target } from 'lucide-react';
+import { useClassroomAnalytics } from '@/hooks/queries';
 
 interface ClassroomAnalyticsProps {
   classroomId: string;
 }
 
-interface StudentData {
-  id: string;
-  fullName: string;
-  latestScores: {
-    vision: number;
-    values: number;
-    thinking: number;
-    connection: number;
-    action: number;
-  } | null;
-  feedbackCount: number;
-}
-
-interface Assignment {
-  id: string;
-  title: string;
-}
-
-interface AllStudentsInfo {
-  id: string;
-  name: string;
-}
-
 export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
-  const [loading, setLoading] = useState(true);
-  const [studentCount, setStudentCount] = useState(0);
-  const [assignmentCount, setAssignmentCount] = useState(0);
-  const [students, setStudents] = useState<StudentData[]>([]);
-  const [allStudents, setAllStudents] = useState<AllStudentsInfo[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
-  const [classAverage, setClassAverage] = useState<{
-    vision: number;
-    values: number;
-    thinking: number;
-    connection: number;
-    action: number;
-  } | null>(null);
 
-  const hasFetchedRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const lastFiltersRef = useRef({ classroomId, selectedAssignment, selectedStudent });
+  const { data, isLoading: loading } = useClassroomAnalytics(classroomId);
 
-  useEffect(() => {
-    // Check if filters have changed
-    const filtersChanged =
-      lastFiltersRef.current.classroomId !== classroomId ||
-      lastFiltersRef.current.selectedAssignment !== selectedAssignment ||
-      lastFiltersRef.current.selectedStudent !== selectedStudent;
+  const students = data?.students || [];
+  const allStudents = data?.allStudents || [];
+  const assignments = data?.assignments || [];
+  const studentCount = data?.studentCount || 0;
+  const assignmentCount = data?.assignmentCount || 0;
 
-    if (filtersChanged) {
-      // Reset refs when filters change
-      hasFetchedRef.current = false;
-      isFetchingRef.current = false;
-      lastFiltersRef.current = { classroomId, selectedAssignment, selectedStudent };
+  // Calculate class average or individual student scores based on filter
+  const classAverage = useMemo(() => {
+    if (!data) return null;
+
+    let targetStudents = data.students;
+
+    // Filter by student first
+    if (selectedStudent !== 'all') {
+      const student = data.students.find((s) => s.id === selectedStudent);
+      if (!student) return null;
+      targetStudents = [student];
     }
 
-    if (!hasFetchedRef.current && !isFetchingRef.current) {
-      fetchAnalytics();
-    }
-  }, [classroomId, selectedAssignment, selectedStudent]);
-
-  const fetchAnalytics = async () => {
-    isFetchingRef.current = true;
-    try {
-      setLoading(true);
-
-      const { data: enrollData, count: enrollCount } = await supabase
-        .from('enrollments')
-        .select('*', { count: 'exact', head: true })
-        .eq('classroom_id', classroomId);
-
-      setStudentCount(enrollCount || 0);
-
-      const { data: assignData, error: assignError } = await supabase
-        .from('assignments')
-        .select('id, title')
-        .eq('classroom_id', classroomId);
-
-      if (!assignError && assignData) {
-        setAssignmentCount(assignData.length);
-        setAssignments(assignData);
-      }
-
-      const { data: enrollments } = await supabase
-        .from('enrollments')
-        .select('student_id')
-        .eq('classroom_id', classroomId);
-
-      const processedStudents: StudentData[] = [];
-      const allStudentsData: Array<{ id: string; name: string }> = [];
-
-      for (const enroll of enrollments || []) {
-        const { data: profile } = await supabase
-          .from('student_profiles')
-          .select('full_name')
-          .eq('user_id', enroll.student_id)
-          .single();
-
-        const fullName = profile?.full_name || 'Unknown';
-        allStudentsData.push({ id: enroll.student_id, name: fullName });
-
-        // Get scores based on assignment filter using submission_id link
-        let averageScores = null;
-
-        if (selectedAssignment !== 'all') {
-          // For specific assignment: get submissions then their snapshots
-          const { data: submissions } = await supabase
-            .from('submissions')
-            .select('id')
-            .eq('student_id', enroll.student_id)
-            .eq('assignment_id', selectedAssignment);
-
-          if (submissions && submissions.length > 0) {
-            const submissionIds = submissions.map((s) => s.id);
-
-            const { data: snapshots } = await supabase
-              .from('five_d_snapshots')
-              .select('scores')
-              .in('submission_id', submissionIds)
-              .eq('classroom_id', classroomId)
-              .neq('source', 'onboarding');
-
-            if (snapshots && snapshots.length > 0) {
-              const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
-              snapshots.forEach((snapshot) => {
-                const scores = snapshot.scores as any;
-                Object.keys(totals).forEach((key) => {
-                  totals[key as keyof typeof totals] += scores[key] || 0;
-                });
-              });
-              averageScores = Object.keys(totals).reduce(
-                (acc, key) => ({
-                  ...acc,
-                  [key]: totals[key as keyof typeof totals] / snapshots.length,
-                }),
-                {} as typeof totals
-              );
-            }
-          }
-        } else {
-          // For all assignments: get all submissions for this student, then their snapshots
-          const { data: allSubmissions } = await supabase
-            .from('submissions')
-            .select('id')
-            .eq('student_id', enroll.student_id)
-            .in('assignment_id', assignData?.map((a) => a.id) || []);
-
-          if (allSubmissions && allSubmissions.length > 0) {
-            const submissionIds = allSubmissions.map((s) => s.id);
-
-            const { data: allScoresData } = await supabase
-              .from('five_d_snapshots')
-              .select('scores')
-              .eq('user_id', enroll.student_id)
-              .in('submission_id', submissionIds);
-
-            if (allScoresData && allScoresData.length > 0) {
-              const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
-              allScoresData.forEach((snapshot) => {
-                const scores = snapshot.scores as any;
-                Object.keys(totals).forEach((key) => {
-                  totals[key as keyof typeof totals] += scores[key] || 0;
-                });
-              });
-              averageScores = Object.keys(totals).reduce(
-                (acc, key) => ({
-                  ...acc,
-                  [key]: totals[key as keyof typeof totals] / allScoresData.length,
-                }),
-                {} as typeof totals
-              );
-            }
-          }
-        }
-
-        let feedbackQuery = supabase
-          .from('assignment_feedback')
-          .select('id', { count: 'exact', head: true })
-          .eq('student_id', enroll.student_id);
-
-        if (selectedAssignment !== 'all') {
-          feedbackQuery = feedbackQuery.eq('assignment_id', selectedAssignment);
-        }
-
-        const { count: feedbackCount } = await feedbackQuery;
-
-        processedStudents.push({
-          id: enroll.student_id,
-          fullName,
-          latestScores: averageScores,
-          feedbackCount: feedbackCount || 0,
-        });
-      }
-
-      setStudents(processedStudents);
-      setAllStudents(allStudentsData);
-
-      // Calculate class average or individual student scores based on filter
+    // Now calculate average based on selected assignment
+    if (selectedAssignment === 'all') {
+      // If student was selected, we already have their overall average in student.latestScores
       if (selectedStudent !== 'all') {
-        const student = processedStudents.find((s) => s.id === selectedStudent);
-        setClassAverage(student?.latestScores || null);
-      } else {
-        const validScores = processedStudents.filter((s) => s.latestScores);
-        if (validScores.length > 0) {
-          const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
-          validScores.forEach((s) => {
-            if (s.latestScores) {
-              Object.keys(totals).forEach((key) => {
-                totals[key as keyof typeof totals] += s.latestScores![key as keyof typeof totals];
-              });
-            }
-          });
-          const avg = Object.keys(totals).reduce(
-            (acc, key) => ({
-              ...acc,
-              [key]: totals[key as keyof typeof totals] / validScores.length,
-            }),
-            {} as typeof totals
-          );
-          setClassAverage(avg);
-        } else {
-          setClassAverage(null);
-        }
+        return targetStudents[0].latestScores;
       }
-    } catch (error) {
-      // toast.error('Error loading analytics');
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-      hasFetchedRef.current = true;
-    }
-  };
+      
+      // Class average across all students and all assignments
+      const validScores = data.students.filter((s) => s.latestScores);
+      if (validScores.length === 0) return null;
 
-  if (loading) return (
+      const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
+      validScores.forEach((s) => {
+        if (s.latestScores) {
+          Object.keys(totals).forEach((key) => {
+            totals[key as keyof typeof totals] += s.latestScores![key as keyof typeof totals];
+          });
+        }
+      });
+      
+      return Object.keys(totals).reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: totals[key as keyof typeof totals] / validScores.length,
+        }),
+        {} as any
+      );
+    } else {
+      // Filter average for specific assignment
+      const snapshotsForAssignment = data.rawSnapshots.filter(s => 
+        s.assignment_id === selectedAssignment || 
+        (data.rawSubmissions.find(sub => sub.id === s.submission_id)?.assignment_id === selectedAssignment)
+      );
+
+      // If we also filtered by student
+      const finalSnapshots = selectedStudent === 'all' 
+        ? snapshotsForAssignment 
+        : snapshotsForAssignment.filter(s => s.user_id === selectedStudent);
+
+      if (finalSnapshots.length === 0) return null;
+
+      const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
+      finalSnapshots.forEach(s => {
+        const scores = s.scores as any;
+        Object.keys(totals).forEach(k => {
+          totals[k as keyof typeof totals] += scores[k] || 0;
+        });
+      });
+
+      return Object.keys(totals).reduce((acc, k) => ({
+        ...acc,
+        [k]: totals[k as keyof typeof totals] / finalSnapshots.length
+      }), {} as any);
+    }
+  }, [data, selectedAssignment, selectedStudent]);
+
+  if (loading && !data) return (
     <div className="flex items-center justify-center py-20">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
@@ -285,11 +132,13 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                 {t('analytics.filterByStudent')}
               </label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger className={`h-12 rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground`} dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectValue />
+                <SelectTrigger className={`h-12 min-w-[180px] rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground`} dir={isRTL ? 'rtl' : 'ltr'}>
+                  <SelectValue>
+                    {selectedStudent === 'all' ? t('analytics.allStudents') : allStudents.find(s => s.id === selectedStudent)?.name}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.all')}</SelectItem>
+                  <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allStudents')}</SelectItem>
                   {allStudents.map((s) => (
                     <SelectItem key={s.id} value={s.id} className="rounded-xl cursor-pointer">
                       {s.name}
@@ -304,8 +153,10 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                 {t('analytics.filterByAssignment')}
               </label>
               <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                <SelectTrigger className={`h-12 rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground`} dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectValue />
+                <SelectTrigger className={`h-12 min-w-[180px] rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground`} dir={isRTL ? 'rtl' : 'ltr'}>
+                  <SelectValue>
+                    {selectedAssignment === 'all' ? t('analytics.allAssignments') : assignments.find(a => a.id === selectedAssignment)?.title}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allAssignments')}</SelectItem>

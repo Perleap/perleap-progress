@@ -126,7 +126,7 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
   // Only show the full-page loader if:
   // 1. Initial auth is loading
   // 2. We have a user but haven't determined if they have a profile yet AND it's currently being fetched
-  const shouldShowLoader = loading || (user && hasProfile === null && isProfileLoading);
+  const shouldShowLoader = loading || (user && isProfileLoading && !hasProfile);
 
   if (shouldShowLoader) {
     return (

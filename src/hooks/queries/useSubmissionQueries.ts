@@ -8,7 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   getOrCreateSubmission,
   getSubmissionById,
+  getFullSubmissionDetails,
   getClassroomSubmissions,
+  getEnrichedClassroomSubmissions,
   getSubmissionFeedback,
   completeSubmission,
   sendChatMessage,
@@ -146,6 +148,40 @@ export const useGenerateFeedback = () => {
         queryKey: submissionKeys.detail(request.submissionId),
       });
     },
+  });
+};
+
+/**
+ * Hook to fetch enriched submissions for a classroom
+ */
+export const useEnrichedClassroomSubmissions = (classroomId: string | undefined) => {
+  return useQuery({
+    queryKey: [...submissionKeys.listByClassroom(classroomId || ''), 'enriched'],
+    queryFn: async () => {
+      if (!classroomId) throw new Error('Missing classroom ID');
+      const { data, error } = await getEnrichedClassroomSubmissions(classroomId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!classroomId,
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+/**
+ * Hook to fetch full enriched submission details for teacher view
+ */
+export const useFullSubmissionDetails = (submissionId: string | undefined) => {
+  return useQuery({
+    queryKey: [...submissionKeys.detail(submissionId || ''), 'full'],
+    queryFn: async () => {
+      if (!submissionId) throw new Error('Missing submission ID');
+      const { data, error } = await getFullSubmissionDetails(submissionId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!submissionId,
+    staleTime: 2 * 60 * 1000,
   });
 };
 

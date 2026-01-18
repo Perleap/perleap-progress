@@ -24,6 +24,7 @@ export {
   useCreateAssignment,
   useUpdateAssignment,
   useDeleteAssignment,
+  useStudentAssignmentDetails,
 } from './useAssignmentQueries';
 
 // Submission Queries
@@ -36,6 +37,8 @@ export {
   useCompleteSubmission,
   useSendChatMessage,
   useGenerateFeedback,
+  useEnrichedClassroomSubmissions,
+  useFullSubmissionDetails,
 } from './useSubmissionQueries';
 
 // Enrollment Queries
@@ -55,6 +58,25 @@ export {
   useUpdateTeacherProfile,
   useUpdateStudentProfile,
 } from './useProfileQueries';
+
+// Analytics Queries
+export {
+  analyticsKeys,
+  useClassroomAnalytics,
+} from './useAnalyticsQueries';
+
+// Activity Queries
+export {
+  activityKeys,
+  useRecentActivity,
+} from './useActivityQueries';
+
+// Calendar Queries
+export {
+  calendarKeys,
+  useTeacherCalendarData,
+  useStudentCalendarData,
+} from './useCalendarQueries';
 
 
 

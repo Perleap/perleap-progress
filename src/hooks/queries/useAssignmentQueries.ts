@@ -9,6 +9,7 @@ import {
   getClassroomAssignments,
   getAssignmentById,
   getStudentAssignments,
+  getStudentAssignmentDetails,
   createAssignment,
   updateAssignment,
   deleteAssignment,
@@ -74,6 +75,25 @@ export const useStudentAssignments = () => {
       return data || [];
     },
     enabled: !!user,
+  });
+};
+
+/**
+ * Hook to fetch full assignment details for student view
+ */
+export const useStudentAssignmentDetails = (assignmentId: string | undefined) => {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: [...assignmentKeys.detail(assignmentId || ''), 'student', user?.id],
+    queryFn: async () => {
+      if (!assignmentId || !user) throw new Error('Missing assignment ID or user');
+      const { data, error } = await getStudentAssignmentDetails(assignmentId, user.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!assignmentId && !!user,
+    staleTime: 2 * 60 * 1000,
   });
 };
 

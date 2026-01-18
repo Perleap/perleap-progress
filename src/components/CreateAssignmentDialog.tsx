@@ -74,6 +74,7 @@ export function CreateAssignmentDialog({
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [availableComponents, setAvailableComponents] = useState<string[]>([]);
   const [rephrasingInstructions, setRephrasingInstructions] = useState(false);
+  const [originalInstructions, setOriginalInstructions] = useState<string | null>(null);
 
   // AI-generated assignment metadata
   const [aiMetadata, setAiMetadata] = useState<{
@@ -181,29 +182,25 @@ export function CreateAssignmentDialog({
     };
 
     fetchData();
-  }, [classroomId, initialData, open]); // Added 'open' to dependencies
+  }, [classroomId, open]); // Only re-fetch classroom data when ID changes or dialog opens, NOT on initialData changes
 
-  // Update form data when initial data changes
+  // Update form data when initial data changes - only when dialog opens
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        title: initialData.title || '',
-        instructions: initialData.instructions || '',
-        type: initialData.type || 'text_essay',
-        due_at: initialData.due_at || '',
-        status: 'published',
-        hard_skills: [] as string[],
-        hard_skill_domain: '',
-        target_dimensions: initialData.target_dimensions || {
+    if (open && initialData) {
+      setFormData(prev => ({
+        ...prev,
+        title: initialData.title || prev.title || '',
+        instructions: initialData.instructions || prev.instructions || '',
+        type: initialData.type || prev.type || 'text_essay',
+        due_at: initialData.due_at || prev.due_at || '',
+        target_dimensions: initialData.target_dimensions || prev.target_dimensions || {
           vision: false,
           values: false,
           thinking: false,
           connection: false,
           action: false,
         },
-        personalization_flag: false,
-        materials: [] as Array<{ type: 'pdf' | 'link'; url: string; name: string }>,
-      });
+      }));
 
       // Store AI metadata separately
       setAiMetadata({
@@ -212,7 +209,7 @@ export function CreateAssignmentDialog({
         scaffolding_tips: initialData.scaffolding_tips,
       });
     }
-  }, [initialData]);
+  }, [open, initialData]); // Only re-run when open state changes or initialData reference changes while open
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -326,6 +323,7 @@ export function CreateAssignmentDialog({
     }
 
     setRephrasingInstructions(true);
+    setOriginalInstructions(formData.instructions);
     try {
       const { data, error } = await supabase.functions.invoke('rephrase-text', {
         body: {
@@ -498,26 +496,42 @@ export function CreateAssignmentDialog({
                   <Label htmlFor="instructions" className={`text-body font-medium mb-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('createAssignment.instructionsLabel')} <span className="text-destructive">*</span>
                   </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRephraseInstructions}
-                    disabled={!formData.instructions.trim() || rephrasingInstructions}
-                    className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
-                  >
-                    {rephrasingInstructions ? (
-                      <>
-                        <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
-                        {t('createAssignment.rephrasing')}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
-                        {t('createAssignment.rephraseButton')}
-                      </>
+                  <div className="flex gap-2">
+                    {originalInstructions !== null && originalInstructions !== formData.instructions && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFormData({ ...formData, instructions: originalInstructions });
+                          setOriginalInstructions(null);
+                        }}
+                        className={`rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground ${isRTL ? 'flex-row-reverse' : ''}`}
+                      >
+                        {t('common.undo')}
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRephraseInstructions}
+                      disabled={!formData.instructions.trim() || rephrasingInstructions}
+                      className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
+                    >
+                      {rephrasingInstructions ? (
+                        <>
+                          <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
+                          {t('createAssignment.rephrasing')}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
+                          {t('createAssignment.rephraseButton')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   id="instructions"
@@ -541,7 +555,7 @@ export function CreateAssignmentDialog({
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
                   >
                     <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue placeholder={t('createAssignment.type')} />
+                      <SelectValue>{t('createAssignment.type')}</SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
@@ -605,7 +619,7 @@ export function CreateAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue placeholder={t('createAssignment.selectFromDomains')} />
+                        <SelectValue>{t('createAssignment.selectFromDomains')}</SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {classroomDomains.map((domain, index) => (
@@ -643,7 +657,7 @@ export function CreateAssignmentDialog({
                 {selectedDomain && availableComponents.length > 0 && (
                   <div className="space-y-2">
                     <Select
-                      onValueChange={(value) => {
+                      onValueChange={(value: string) => {
                         // Add component if not already in the list
                         if (!formData.hard_skills.includes(value)) {
                           setFormData({
@@ -654,7 +668,7 @@ export function CreateAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue placeholder={t('createAssignment.selectFromSkills', { domain: selectedDomain })} />
+                        <SelectValue>{t('createAssignment.selectFromSkills', { domain: selectedDomain })}</SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {availableComponents.map((component, index) => (

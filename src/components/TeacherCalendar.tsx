@@ -1,16 +1,15 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
 import { format, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Calendar as CalendarIcon, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { CALENDAR_MODIFIERS_STYLES } from '@/lib/calendarUtils';
+import { useTeacherCalendarData } from '@/hooks/queries';
 
 // Utility function for date range checking
 const isDateInRange = (date: Date, startDate: string | null, endDate: string | null): boolean => {
@@ -25,236 +24,22 @@ const isDateInRange = (date: Date, startDate: string | null, endDate: string | n
   return true;
 };
 
-interface Assignment {
-  id: string;
-  title: string;
-  due_at: string;
-  type: string;
-  classroom_id: string;
-  classrooms: {
-    name: string;
-    subject: string;
-  };
-}
-
-interface Student {
-  user_id: string;
-  full_name: string;
-  avatar_url?: string;
-}
-
-interface AssignmentWithIncomplete extends Assignment {
-  incompleteStudents: Student[];
-  totalStudents: number;
-}
-
-interface Classroom {
-  id: string;
-  name: string;
-  subject: string;
-  start_date: string | null;
-  end_date: string | null;
-}
-
 interface TeacherCalendarProps {
   teacherId: string;
-  classrooms?: Classroom[];
-  loading?: boolean;
 }
 
 export function TeacherCalendar({
   teacherId,
-  classrooms: propClassrooms,
-  loading: propLoading,
 }: TeacherCalendarProps) {
   const { t } = useTranslation();
   const { language = 'en' } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
-  const [assignments, setAssignments] = useState<AssignmentWithIncomplete[]>([]);
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // Add refs to prevent refetching when tabbing in/out
-  const hasFetchedRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const lastClassroomIdsRef = useRef<string | null>(null); // Use null as sentinel for "not initialized"
-  const lastTeacherIdRef = useRef<string>('');
+  const { data, isLoading: loading } = useTeacherCalendarData(teacherId);
 
-  const fetchAssignmentsOnly = useCallback(async (classroomIds: string[]) => {
-    // Prevent duplicate fetches
-    const classroomIdsKey = classroomIds.sort().join(',');
-    if (isFetchingRef.current || (hasFetchedRef.current && lastClassroomIdsRef.current === classroomIdsKey)) {
-      return;
-    }
-
-    isFetchingRef.current = true;
-
-    try {
-      // Fetch assignments with classroom info
-      const { data: assignmentsData } = await supabase
-        .from('assignments')
-        .select('id, title, due_at, type, classroom_id, classrooms(name, subject)')
-        .in('classroom_id', classroomIds)
-        .eq('status', 'published')
-        .order('due_at', { ascending: true });
-
-      if (!assignmentsData) {
-        setAssignments([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch all data in bulk to avoid N+1 queries
-      const assignmentIds = assignmentsData.map((a) => a.id);
-
-      // Get all enrollments for these classrooms
-      const { data: allEnrollments } = await supabase
-        .from('enrollments')
-        .select('student_id, classroom_id')
-        .in('classroom_id', classroomIds);
-
-      // Get all submissions for these assignments
-      const { data: allSubmissions } = await supabase
-        .from('submissions')
-        .select('student_id, assignment_id')
-        .in('assignment_id', assignmentIds);
-
-      // Get all unique student IDs
-      const allStudentIds = [...new Set(allEnrollments?.map((e) => e.student_id) || [])];
-
-      let allStudentProfiles: any[] | null = [];
-      if (allStudentIds.length > 0) {
-        // Get all student profiles in one query
-        const { data: profiles } = await supabase
-          .from('student_profiles')
-          .select('user_id, full_name, avatar_url')
-          .in('user_id', allStudentIds);
-        allStudentProfiles = profiles;
-      }
-
-      // Create lookup maps for fast access
-      const enrollmentsByClassroom = new Map<string, string[]>();
-      allEnrollments?.forEach((e) => {
-        if (!enrollmentsByClassroom.has(e.classroom_id)) {
-          enrollmentsByClassroom.set(e.classroom_id, []);
-        }
-        enrollmentsByClassroom.get(e.classroom_id)!.push(e.student_id);
-      });
-
-      const submissionsByAssignment = new Map<string, string[]>();
-      allSubmissions?.forEach((s) => {
-        if (!submissionsByAssignment.has(s.assignment_id)) {
-          submissionsByAssignment.set(s.assignment_id, []);
-        }
-        submissionsByAssignment.get(s.assignment_id)!.push(s.student_id);
-      });
-
-      const studentProfilesMap = new Map<string, Student>();
-      allStudentProfiles?.forEach((p) => {
-        studentProfilesMap.set(p.user_id, p as Student);
-      });
-
-      // Process assignments with all data in memory
-      const assignmentsWithIncomplete = assignmentsData.map((assignment: Assignment) => {
-        const enrolledStudentIds = enrollmentsByClassroom.get(assignment.classroom_id) || [];
-        const completedStudentIds = submissionsByAssignment.get(assignment.id) || [];
-        const incompleteStudentIds = enrolledStudentIds.filter(
-          (id) => !completedStudentIds.includes(id)
-        );
-
-        const incompleteStudents = incompleteStudentIds
-          .map((id) => studentProfilesMap.get(id))
-          .filter(Boolean) as Student[];
-
-        return {
-          ...assignment,
-          incompleteStudents,
-          totalStudents: enrolledStudentIds.length,
-        };
-      });
-
-      setAssignments(assignmentsWithIncomplete);
-      lastClassroomIdsRef.current = classroomIdsKey;
-      hasFetchedRef.current = true;
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, []);
-
-  const fetchAssignments = useCallback(async () => {
-    // Prevent duplicate fetches
-    if (isFetchingRef.current || (hasFetchedRef.current && lastTeacherIdRef.current === teacherId)) {
-      return;
-    }
-
-    isFetchingRef.current = true;
-
-    try {
-      const { data: classroomsData, error: classroomError } = await supabase
-        .from('classrooms')
-        .select('id, name, subject, start_date, end_date')
-        .eq('teacher_id', teacherId);
-
-      if (classroomError) throw classroomError;
-
-      if (!classroomsData?.length) {
-        setAssignments([]);
-        setClassrooms([]);
-        setLoading(false);
-        hasFetchedRef.current = true;
-        lastTeacherIdRef.current = teacherId;
-        return;
-      }
-
-      setClassrooms(classroomsData);
-      lastTeacherIdRef.current = teacherId;
-
-      // Reset classroom fetch tracking when fetching all
-      hasFetchedRef.current = false;
-      await fetchAssignmentsOnly(classroomsData.map((c) => c.id));
-    } catch {
-      setLoading(false);
-    } finally {
-      isFetchingRef.current = false;
-    }
-  }, [teacherId, fetchAssignmentsOnly]);
-
-  useEffect(() => {
-    // Reset fetch flags if teacherId changes
-    if (lastTeacherIdRef.current !== teacherId) {
-      hasFetchedRef.current = false;
-      lastClassroomIdsRef.current = null;
-      lastTeacherIdRef.current = teacherId;
-    }
-
-    if (propClassrooms !== undefined) {
-      const classroomIds = propClassrooms.map((c) => c.id);
-      const classroomIdsKey = classroomIds.sort().join(',');
-
-      // Update if classrooms changed OR if this is the first render (null sentinel)
-      if (lastClassroomIdsRef.current === null || lastClassroomIdsRef.current !== classroomIdsKey) {
-        setClassrooms(propClassrooms);
-        setLoading(propLoading ?? false);
-
-        if (propClassrooms.length > 0) {
-          hasFetchedRef.current = false; // Reset to allow fetch
-          fetchAssignmentsOnly(classroomIds);
-        } else {
-          setAssignments([]);
-          setLoading(false);
-          hasFetchedRef.current = true;
-          lastClassroomIdsRef.current = classroomIdsKey;
-        }
-      }
-    } else {
-      // Only fetch if we haven't fetched for this teacher yet
-      if (!hasFetchedRef.current && !isFetchingRef.current) {
-        fetchAssignments();
-      }
-    }
-  }, [teacherId, propClassrooms, propLoading]);
+  const classrooms = data?.classrooms || [];
+  const assignments = data?.assignments || [];
 
   // Memoize assignment dates to avoid recalculating on every render
   const datesWithAssignments = useMemo(
@@ -291,10 +76,11 @@ export function TeacherCalendar({
     [datesWithAssignments, isDateInClassRange]
   );
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <Card className="border border-border/50 shadow-xl rounded-2xl backdrop-blur-xl bg-gradient-to-br from-card/95 to-card/80">
         <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
           <p className="text-muted-foreground">{t('common.loading')}</p>
         </CardContent>
       </Card>
@@ -342,9 +128,6 @@ export function TeacherCalendar({
             modifiers={modifiers}
             modifiersStyles={CALENDAR_MODIFIERS_STYLES}
             className="w-full"
-            components={{
-              Caption: () => null,
-            }}
             classNames={{
               month: "flex flex-col items-center w-full",
               caption: "hidden",

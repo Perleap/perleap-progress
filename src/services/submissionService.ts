@@ -62,6 +62,128 @@ export const getOrCreateSubmission = async (
 };
 
 /**
+ * Get full submission details including assignment, student profile, feedback, and alerts
+ */
+export const getFullSubmissionDetails = async (
+  submissionId: string
+): Promise<{ data: any | null; error: ApiError | null }> => {
+  try {
+    const { data: submission, error: subError } = await supabase
+      .from('submissions')
+      .select('*, assignments(title, instructions, classroom_id, due_at, classrooms(name, teacher_id))')
+      .eq('id', submissionId)
+      .single();
+
+    if (subError) throw subError;
+    if (!submission) return { data: null, error: null };
+
+    const [
+      { data: studentProfile },
+      { data: feedback },
+      { data: alerts }
+    ] = await Promise.all([
+      supabase
+        .from('student_profiles')
+        .select('full_name, avatar_url')
+        .eq('user_id', submission.student_id)
+        .single(),
+      supabase
+        .from('assignment_feedback')
+        .select('*')
+        .eq('submission_id', submissionId)
+        .maybeSingle(),
+      supabase
+        .from('student_alerts')
+        .select('*')
+        .eq('submission_id', submissionId)
+        .order('created_at', { ascending: false })
+    ]);
+
+    return {
+      data: {
+        ...submission,
+        student_name: studentProfile?.full_name || 'Unknown Student',
+        student_avatar_url: studentProfile?.avatar_url,
+        feedback: feedback || null,
+        alerts: alerts || []
+      },
+      error: null
+    };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Get all submissions for a classroom with full enrichment (profiles + feedback)
+ */
+export const getEnrichedClassroomSubmissions = async (
+  classroomId: string
+): Promise<{ data: any[] | null; error: ApiError | null }> => {
+  try {
+    // 1. Get all assignments in this classroom
+    const { data: assignments, error: assignError } = await supabase
+      .from('assignments')
+      .select('id, title')
+      .eq('classroom_id', classroomId);
+
+    if (assignError) throw assignError;
+    if (!assignments || assignments.length === 0) return { data: [], error: null };
+
+    const assignmentIds = assignments.map((a) => a.id);
+
+    // 2. Get all submissions
+    const { data: submissions, error: subError } = await supabase
+      .from('submissions')
+      .select('id, submitted_at, student_id, assignment_id, status')
+      .in('assignment_id', assignmentIds)
+      .order('submitted_at', { ascending: false });
+
+    if (subError) throw subError;
+    if (!submissions || submissions.length === 0) return { data: [], error: null };
+
+    const studentIds = [...new Set(submissions.map((s) => s.student_id))];
+    const submissionIds = submissions.map((s) => s.id);
+
+    // 3. Bulk fetch profiles and feedback
+    const [{ data: profiles }, { data: feedback }] = await Promise.all([
+      supabase
+        .from('student_profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', studentIds),
+      supabase
+        .from('assignment_feedback')
+        .select('submission_id, teacher_feedback, conversation_context')
+        .in('submission_id', submissionIds)
+    ]);
+
+    // 4. Combine data
+    const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+    const assignmentMap = new Map(assignments.map((a) => [a.id, a.title]));
+    const feedbackMap = new Map(feedback?.map((f) => [f.submission_id, f]) || []);
+
+    const enriched = submissions.map((sub) => {
+      const profile = profileMap.get(sub.student_id);
+      const fb = feedbackMap.get(sub.id);
+      
+      return {
+        ...sub,
+        student_name: profile?.full_name || 'Unknown',
+        student_avatar_url: profile?.avatar_url,
+        assignment_title: assignmentMap.get(sub.assignment_id) || 'Unknown Assignment',
+        has_feedback: !!fb,
+        teacher_feedback: fb?.teacher_feedback,
+        conversation_context: fb?.conversation_context || []
+      };
+    });
+
+    return { data: enriched, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
  * Get submission by ID
  */
 export const getSubmissionById = async (

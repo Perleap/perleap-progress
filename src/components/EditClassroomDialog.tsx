@@ -55,6 +55,7 @@ export const EditClassroomDialog = ({
   const [linkInput, setLinkInput] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
   const [rephrasingOutline, setRephrasingOutline] = useState(false);
+  const [originalOutline, setOriginalOutline] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     courseTitle: '',
@@ -70,7 +71,7 @@ export const EditClassroomDialog = ({
   });
 
   useEffect(() => {
-    if (classroom) {
+    if (open && classroom) {
       setFormData({
         courseTitle: classroom.course_title || classroom.name || '',
         courseDuration: classroom.course_duration || '',
@@ -88,7 +89,7 @@ export const EditClassroomDialog = ({
         materials: (classroom.materials || []) as CourseMaterial[],
       });
     }
-  }, [classroom]);
+  }, [open, classroom?.id]); // Only re-run when open state changes or classroom ID changes
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,6 +285,7 @@ export const EditClassroomDialog = ({
     }
 
     setRephrasingOutline(true);
+    setOriginalOutline(formData.courseOutline);
     try {
       const { data, error } = await supabase.functions.invoke('rephrase-text', {
         body: {
@@ -392,26 +394,42 @@ export const EditClassroomDialog = ({
                   <Label htmlFor="courseOutline" className={`text-body font-medium mb-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('createClassroom.courseOutline')}
                   </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRephraseOutline}
-                    disabled={!formData.courseOutline.trim() || rephrasingOutline}
-                    className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
-                  >
-                    {rephrasingOutline ? (
-                      <>
-                        <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
-                        {t('createClassroom.rephrasing')}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
-                        {t('createClassroom.rephraseButton')}
-                      </>
+                  <div className="flex gap-2">
+                    {originalOutline !== null && originalOutline !== formData.courseOutline && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFormData({ ...formData, courseOutline: originalOutline });
+                          setOriginalOutline(null);
+                        }}
+                        className={`rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground ${isRTL ? 'flex-row-reverse' : ''}`}
+                      >
+                        {t('common.undo')}
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRephraseOutline}
+                      disabled={!formData.courseOutline.trim() || rephrasingOutline}
+                      className={`rounded-full text-xs font-semibold ${isRTL ? 'flex-row-reverse' : ''}`}
+                    >
+                      {rephrasingOutline ? (
+                        <>
+                          <Loader2 className={`h-3 w-3 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
+                          {t('createClassroom.rephrasing')}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className={`h-3 w-3 ${isRTL ? 'ms-1' : 'me-1'}`} />
+                          {t('createClassroom.rephraseButton')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   id="courseOutline"
