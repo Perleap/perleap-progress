@@ -146,6 +146,7 @@ export const useConversation = ({
       if (chatError) {
         setError(chatError);
         toast.error('Error starting conversation');
+        setMessages([]); // Remove the empty assistant message
         return;
       }
     } catch (err) {
@@ -189,6 +190,8 @@ export const useConversation = ({
       if (chatError) {
         setError(chatError);
         toast.error('Error communicating with Perleap agent');
+        // Remove the empty assistant message, keep user message for retry/copy
+        setMessages(prev => prev.slice(0, -1));
         return;
       }
 

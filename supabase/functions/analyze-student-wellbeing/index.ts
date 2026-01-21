@@ -92,33 +92,35 @@ serve(async (req) => {
       
       const supabase = createSupabaseClient();
 
-      // 1. Save alert to student_alerts table
-      const { data: alertData, error: alertError } = await supabase
+      // 1. Save alert(s) to student_alerts table
+      const alertRecords = analysis.alert_types.map(alertType => ({
+        student_id: studentId,
+        submission_id: submissionId,
+        assignment_id: assignmentId,
+        alert_level: analysis.alert_level,
+        alert_type: alertType,
+        analysis: analysis.analysis,
+        triggered_messages: analysis.triggered_messages,
+      }));
+
+      const { data: alertDataArray, error: alertError } = await supabase
         .from('student_alerts')
-        .insert({
-          student_id: studentId,
-          submission_id: submissionId,
-          assignment_id: assignmentId,
-          alert_level: analysis.alert_level,
-          alert_type: analysis.alert_types,
-          analysis: analysis.analysis,
-          triggered_messages: analysis.triggered_messages,
-        })
-        .select()
-        .single();
+        .insert(alertRecords)
+        .select();
 
       if (alertError) {
         logError('Failed to save student alert', alertError);
-      } else if (teacherId) {
+      } else if (teacherId && alertDataArray && alertDataArray.length > 0) {
+        const firstAlertId = alertDataArray[0].id;
         // 2. Create in-app notification for teacher
         const { error: notifError } = await supabase.from('notifications').insert({
           user_id: teacherId,
           type: 'wellbeing_alert',
           title: analysis.alert_level === 'critical' ? 'CRITICAL Wellbeing Alert' : 'Wellbeing Concern Detected',
           message: `${studentName} showed signs of ${analysis.alert_types.join(', ')} during "${assignmentTitle || 'an assignment'}"`,
-          link: `/teacher/submission/${submissionId}?alert=${alertData.id}`,
+          link: `/teacher/submission/${submissionId}?alert=${firstAlertId}`,
           metadata: { 
-            alert_id: alertData.id, 
+            alert_id: firstAlertId, 
             student_id: studentId, 
             student_name: studentName,
             alert_level: analysis.alert_level,

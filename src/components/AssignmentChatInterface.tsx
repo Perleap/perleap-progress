@@ -74,11 +74,12 @@ export function AssignmentChatInterface({
   const [playingMessageIndex, setPlayingMessageIndex] = useState<number | null>(null);
   const [loadingAudioIndex, setLoadingAudioIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioUrlRef = useRef<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Cleanup microphone on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -87,6 +88,15 @@ export function AssignmentChatInterface({
       // If we have an active stream, stop all tracks
       if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      // Cleanup TTS audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+      if (currentAudioUrlRef.current) {
+        URL.revokeObjectURL(currentAudioUrlRef.current);
+        currentAudioUrlRef.current = null;
       }
     };
   }, []);
@@ -155,13 +165,21 @@ export function AssignmentChatInterface({
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
+      if (currentAudioUrlRef.current) {
+        URL.revokeObjectURL(currentAudioUrlRef.current);
+        currentAudioUrlRef.current = null;
+      }
       setPlayingMessageIndex(null);
       return;
     }
 
-    // Stop and cleanup any currently playing audio
+    // Stop and cleanup any currently playing audio and its URL
     if (audioRef.current) {
       audioRef.current.pause();
+      if (currentAudioUrlRef.current) {
+        URL.revokeObjectURL(currentAudioUrlRef.current);
+        currentAudioUrlRef.current = null;
+      }
       try {
         // Resetting src helps stop the actual network request/buffering
         audioRef.current.src = '';
@@ -181,6 +199,7 @@ export function AssignmentChatInterface({
       }
 
       const audioUrl = await synthesizeSpeech(cleanedText, voice);
+      currentAudioUrlRef.current = audioUrl;
       
       if (!audioRef.current) {
         audioRef.current = new Audio();
@@ -196,11 +215,16 @@ export function AssignmentChatInterface({
 
       audio.onended = () => {
         setPlayingMessageIndex(null);
-        URL.revokeObjectURL(audioUrl);
+        if (currentAudioUrlRef.current === audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+          currentAudioUrlRef.current = null;
+        }
       };
 
       audio.onpause = () => {
         setPlayingMessageIndex(null);
+        // We don't revoke here because it might be a temporary pause or we might want to resume 
+        // (though current UI doesn't support resume, just toggle)
       };
 
       audio.onerror = (e) => {
@@ -215,6 +239,10 @@ export function AssignmentChatInterface({
         });
         setLoadingAudioIndex(null);
         setPlayingMessageIndex(null);
+        if (currentAudioUrlRef.current === audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+          currentAudioUrlRef.current = null;
+        }
         toast.error(t('assignmentChat.errors.tts'));
       };
 
@@ -230,6 +258,10 @@ export function AssignmentChatInterface({
       console.error('TTS Playback catch block:', error);
       setLoadingAudioIndex(null);
       setPlayingMessageIndex(null);
+      if (currentAudioUrlRef.current) {
+        URL.revokeObjectURL(currentAudioUrlRef.current);
+        currentAudioUrlRef.current = null;
+      }
       // Only toast if it wasn't a manual abort
       if ((error as any).name !== 'AbortError') {
         toast.error(t('assignmentChat.errors.tts'));
