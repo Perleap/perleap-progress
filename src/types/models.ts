@@ -25,6 +25,7 @@ export interface StudentProfile {
   last_name: string;
   full_name: string;
   avatar_url: string | null;
+  voice_preference: string;
   created_at: string;
 }
 

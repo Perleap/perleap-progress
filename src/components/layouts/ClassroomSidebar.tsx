@@ -108,9 +108,9 @@ export function ClassroomSidebar({
               onClick={() => navigate(`${basePath}/dashboard`)}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted">
-                <ArrowLeft className="size-4" />
+                <ArrowLeft className="size-4 rtl:rotate-180" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} text-sm leading-tight`}>
                 <span className="truncate font-semibold">{classroomName || t('nav.classroom')}</span>
                 <span className="truncate text-xs text-muted-foreground">
                   {classroomSubject || t('nav.backToDashboard')}
@@ -223,7 +223,7 @@ export function ClassroomSidebar({
                   className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg cursor-pointer hover:bg-sidebar-accent/50 transition-colors"
                 >
                   <Globe className="size-5 group-data-[collapsible=icon]:size-5 opacity-70" />
-                  <span className="font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 text-left ml-1">
+                  <span className={`font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 ${isRTL ? 'text-right mr-1' : 'text-left ml-1'}`}>
                     {language === 'en' ? 'English' : 'עברית'}
                   </span>
                   <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`} />
@@ -232,6 +232,7 @@ export function ClassroomSidebar({
               <DropdownMenuContent
                 side="right"
                 align="end"
+                dir={isRTL ? 'rtl' : 'ltr'}
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-[160px] rounded-xl p-1 shadow-lg border border-border/50"
               >
                 <DropdownMenuItem
@@ -274,7 +275,7 @@ export function ClassroomSidebar({
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                  <div className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} text-sm leading-tight group-data-[collapsible=icon]:hidden`}>
                     <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {isTeacher ? t('nav.teacher') : t('nav.student')}
@@ -288,6 +289,7 @@ export function ClassroomSidebar({
                 side="bottom"
                 align={isRTL ? "start" : "end"}
                 sideOffset={8}
+                dir={isRTL ? 'rtl' : 'ltr'}
               >
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />

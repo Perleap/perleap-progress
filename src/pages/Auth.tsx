@@ -376,16 +376,16 @@ const Auth = () => {
         <Card className="shadow-xl bg-card border-border rounded-3xl overflow-hidden">
           <CardContent className="p-10 md:p-14 space-card" dir={isRTL ? 'rtl' : 'ltr'}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl mb-8 h-12">
+              <TabsList className="grid w-full grid-cols-2 bg-transparent gap-4 p-0 mb-8 h-12">
                 <TabsTrigger
                   value="signin"
-                  className="rounded-lg data-active:bg-background data-active:shadow-sm transition-all h-full text-base font-semibold"
+                  className="rounded-xl border border-transparent data-active:bg-background data-active:border-border data-active:shadow-sm bg-muted/50 transition-all h-full text-base font-semibold"
                 >
                   {t('auth.signIn')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="rounded-lg data-active:bg-background data-active:shadow-sm transition-all h-full text-base font-semibold"
+                  className="rounded-xl border border-transparent data-active:bg-background data-active:border-border data-active:shadow-sm bg-muted/50 transition-all h-full text-base font-semibold"
                 >
                   {t('auth.signUp')}
                 </TabsTrigger>

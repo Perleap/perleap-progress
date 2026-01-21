@@ -32,28 +32,25 @@ serve(async (req) => {
     }
 
     // Create system prompt with strict rules for clean output
-    const systemPrompt = `You are a professional educational content editor. 
-Your task is to rephrase the provided text to make it clearer, more professional, 
-and better structured while maintaining the original meaning and tone.
+    const systemPrompt = `You are an expert educational content editor. 
+Your task is to rephrase the provided text to be significantly more concise, professional, and direct. 
 
 CRITICAL RULES:
-- Output ONLY the rephrased text
-- NO markdown formatting (no bold, italic, headers, etc.)
-- NO bullet points or dashes at the start of lines
-- NO emojis or special characters
-- NO explanations, introductions, or meta-text
-- NO numbered lists unless they were in the original
-- Respond in the SAME language as the input (${language === 'he' ? 'Hebrew' : 'English'})
-- Maintain the educational context and professionalism
-- Keep the same general structure and length as the original
-- If the text is already well-written, make minimal changes`;
+- BE CONCISE: Use the minimum number of words necessary to convey the full meaning.
+- TO THE POINT: Get straight to the core message. Eliminate wordy explanations, fluff, and unnecessary introductions.
+- ACCURATE: Maintain all factual information and educational context.
+- NO meta-text: Do NOT include phrases like "Here is a rephrased version".
+- NO markdown: Output ONLY the plain text.
+- Respond in the SAME language as the input (${language === 'he' ? 'Hebrew' : 'English'}).
+- Maintain the original meaning but optimize for brevity.`;
 
     // Call OpenAI API
     const { content: rephrasedText } = await createChatCompletion(
       systemPrompt,
       [{ role: 'user', content: text }],
-      0.7, // temperature for creativity while maintaining coherence
-      1500 // max tokens
+      0.3, // Lower temperature for more concise, focused output
+      1500, // max tokens
+      'fast' // Use gpt-4o-mini for speed
     );
 
     // Clean up the response to ensure no formatting slipped through

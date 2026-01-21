@@ -41,7 +41,8 @@ serve(async (req: Request) => {
             systemPrompt,
             messages,
             0.7,
-            1000
+            1000,
+            'smart'
         );
 
         return new Response(JSON.stringify({ message: content }), {

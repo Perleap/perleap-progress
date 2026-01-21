@@ -11,9 +11,7 @@ import {
   getStudentName,
   getTeacherNameByAssignment,
 } from '../shared/supabase.ts';
-import { logInfo, logError, logWarn } from '../shared/logger.ts';
-import { generateFeedbackPrompt, generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
-import { parseFeedback, parseScores } from './parser.ts';
+import { logInfo, logError } from '../shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,10 +26,22 @@ serve(async (req) => {
   try {
     const { submissionId, studentId, assignmentId, language = 'en' } = await req.json();
     const supabase = createSupabaseClient();
+    const startTime = Date.now();
 
-    // Fetch student and teacher names
-    const studentName = await getStudentName(studentId);
-    const teacherName = await getTeacherNameByAssignment(assignmentId);
+    // Fetch context data in parallel
+    const [studentName, teacherName, assignmentResult] = await Promise.all([
+      getStudentName(studentId),
+      getTeacherNameByAssignment(assignmentId),
+      supabase
+        .from('assignments')
+        .select('classroom_id, title, instructions, hard_skills, hard_skill_domain, classrooms(teacher_id)')
+        .eq('id', assignmentId)
+        .single()
+    ]);
+
+    const assignmentData = assignmentResult.data;
+    const teacherId = assignmentData?.classrooms?.teacher_id;
+    const classroomId = assignmentData?.classroom_id;
 
     // Get conversation context
     const { data: conversations, error: convError } = await supabase
@@ -60,121 +70,98 @@ serve(async (req) => {
       )
       .join('\n\n');
 
-    // Get assignment details early for parallel processing
-    const { data: assignmentData } = await supabase
-      .from('assignments')
-      .select('classroom_id, title, instructions, hard_skills, hard_skill_domain, classrooms(teacher_id)')
-      .eq('id', assignmentId)
-      .single();
+    // **OPTIMIZATION: Parallelize AI calls and background tasks**
+    logInfo('Starting parallel AI calls...');
+    const aiStartTime = Date.now();
 
-    const classroomId = assignmentData?.classroom_id;
+    const hardSkillsList = assignmentData?.hard_skills ? 
+      (typeof assignmentData.hard_skills === 'string' ? JSON.parse(assignmentData.hard_skills) : assignmentData.hard_skills) 
+      : [];
 
-    // **OPTIMIZATION: Run all OpenAI calls in parallel**
-    logInfo('Starting parallel OpenAI calls...');
-    const startTime = Date.now();
-    const [feedbackResult, scoresResult, hardSkillsResult] = await Promise.all([
-      // 1. Generate feedback
-      (async () => {
-        const feedbackPrompt = await generateFeedbackPrompt(studentName, teacherName, language);
-        const { content: feedbackText } = await createChatCompletion(
-          feedbackPrompt,
-          [{ role: 'user', content: conversationText }],
-          0.4,
-          1200,
-        );
-        return parseFeedback(feedbackText);
-      })(),
-      
-      // 2. Generate 5D scores
-      (async () => {
-        const scoresPrompt = await generateScoresPrompt(studentName, language);
-        const { content: scoresText } = await createChatCompletion(
-          scoresPrompt,
-          [{ role: 'user', content: conversationText }],
-          0.5,
-          500,
-        );
-        return parseScores(scoresText);
-      })(),
-      
-      // 3. Generate hard skills assessment (if applicable)
-      (async () => {
-        if (!assignmentData?.hard_skills || !assignmentData?.hard_skill_domain) {
-          return null;
+    const feedbackPrompt = `You are an expert pedagogical AI assistant. Analyze the student's conversation and provide feedback and 5D scores.
+    
+    Student: ${studentName}
+    Teacher: ${teacherName}
+    Assignment: ${assignmentData?.title}
+    Instructions: ${assignmentData?.instructions}
+    
+    Provide your response in the following JSON format:
+    {
+      "studentFeedback": "Supportive feedback directly to the student in ${language === 'he' ? 'Hebrew' : 'English'}.",
+      "teacherFeedback": "Pedagogical insights for the teacher in ${language === 'he' ? 'Hebrew' : 'English'}.",
+      "scores": {
+        "vision": number (1-10),
+        "values": number (1-10),
+        "thinking": number (1-10),
+        "connection": number (1-10),
+        "action": number (1-10)
+      },
+      "scoreExplanations": {
+        "vision": "Brief explanation",
+        "values": "Brief explanation",
+        "thinking": "Brief explanation",
+        "connection": "Brief explanation",
+        "action": "Brief explanation"
+      }
+    }
+
+    Rules:
+    - Respond in ${language === 'he' ? 'Hebrew' : 'English'}.
+    - Be concise but insightful.
+    - Focus on growth mindset.`;
+
+    const hardSkillsPrompt = `Analyze the student's conversation and assess their performance on specific hard skills.
+    
+    Domain: ${assignmentData?.hard_skill_domain}
+    Skills to assess: ${hardSkillsList.join(', ')}
+    
+    Provide your response in the following JSON format:
+    {
+      "hardSkillsAssessment": [
+        {
+          "skill_component": "Skill name",
+          "current_level_percent": number (0-100),
+          "proficiency_description": "Brief description of current proficiency in ${language === 'he' ? 'Hebrew' : 'English'}",
+          "actionable_challenge": "One specific actionable challenge for growth in ${language === 'he' ? 'Hebrew' : 'English'}"
         }
+      ]
+    }
 
-        try {
-          let hardSkillsList: string[] = [];
-          
-          if (typeof assignmentData.hard_skills === 'string') {
-            try {
-              hardSkillsList = JSON.parse(assignmentData.hard_skills);
-            } catch {
-              hardSkillsList = assignmentData.hard_skills.split(',').map(s => s.trim()).filter(s => s);
-            }
-          } else if (Array.isArray(assignmentData.hard_skills)) {
-            hardSkillsList = assignmentData.hard_skills;
-          }
+    Rules:
+    - Respond in ${language === 'he' ? 'Hebrew' : 'English'}.
+    - Only assess the requested skills.
+    - Be objective and specific.`;
 
-          if (hardSkillsList.length === 0) {
-            return null;
-          }
-
-          logInfo('Generating hard skills assessment', { 
-            domain: assignmentData.hard_skill_domain, 
-            skillsCount: hardSkillsList.length 
-          });
-
-          const promptKey = language === 'he' ? 'hard_skill_assessment_he' : 'hard_skill_assessment_en';
-          const { data: promptData, error: promptError } = await supabase
-            .from('ai_prompts')
-            .select('prompt_template')
-            .eq('prompt_key', promptKey)
-            .eq('is_active', true)
-            .order('version', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (promptError || !promptData) {
-            logError('Error fetching hard skill assessment prompt', promptError);
-            return null;
-          }
-
-          let assessmentPrompt = promptData.prompt_template
-            .replace(/\{\{domain\}\}/g, assignmentData.hard_skill_domain)
-            .replace(/\{\{hard_skills\}\}/g, hardSkillsList.join(', '))
-            .replace(/\{\{assignment_instructions\}\}/g, assignmentData.instructions || '');
-
-          const { content: assessmentText } = await createChatCompletion(
-            assessmentPrompt,
-            [{ role: 'user', content: conversationText }],
-            0.5,
-            1000,
-          );
-
-          const cleaned = assessmentText.replace(/```json\n?|\n?```/g, '').trim();
-          const assessments = JSON.parse(cleaned);
-          
-          if (!Array.isArray(assessments)) {
-            throw new Error('Assessment response is not an array');
-          }
-
-          logInfo('Parsed hard skills assessments', { count: assessments.length });
-          return { assessments, domain: assignmentData.hard_skill_domain };
-        } catch (error) {
-          logError('Hard skills assessment error', error);
-          return null;
-        }
-      })(),
+    const [feedbackResult, hardSkillsResult] = await Promise.all([
+      // Call 1: Feedback and Scores (Smart/GPT-4o)
+      createChatCompletion(
+        feedbackPrompt,
+        [{ role: 'user', content: `Analyze this conversation:\n\n${conversationText}` }],
+        0.4,
+        2000,
+        'smart',
+        false,
+        'json_object'
+      ),
+      // Call 2: Hard Skills (Fast/GPT-4o-mini)
+      hardSkillsList.length > 0 ? createChatCompletion(
+        hardSkillsPrompt,
+        [{ role: 'user', content: `Analyze this conversation for hard skills:\n\n${conversationText}` }],
+        0.3,
+        1500,
+        'fast',
+        false,
+        'json_object'
+      ) : Promise.resolve({ content: JSON.stringify({ hardSkillsAssessment: [] }) })
     ]);
 
-    const parallelTime = Date.now() - startTime;
-    logInfo(`Parallel OpenAI calls completed in ${parallelTime}ms`);
+    const feedbackData = JSON.parse((feedbackResult as { content: string }).content);
+    const skillsData = JSON.parse((hardSkillsResult as { content: string }).content);
+    
+    logInfo(`AI calls completed in ${Date.now() - aiStartTime}ms`);
 
-    // Parse feedback results
-    let { studentFeedback, teacherFeedback } = feedbackResult;
-    const scores = scoresResult;
+    let { studentFeedback, teacherFeedback, scores, scoreExplanations } = feedbackData;
+    const { hardSkillsAssessment } = skillsData;
 
     // Additional safety clean: Remove any framework terminology
     const removeFrameworkTerms = (text: string): string => {
@@ -188,253 +175,106 @@ serve(async (req) => {
     };
 
     studentFeedback = removeFrameworkTerms(studentFeedback);
-    teacherFeedback = teacherFeedback ? removeFrameworkTerms(teacherFeedback) : null;
+    teacherFeedback = removeFrameworkTerms(teacherFeedback);
 
-    if (!teacherFeedback) {
-      logWarn('Teacher feedback not found in response');
-    }
+    // **CRITICAL FIX: Background tasks should NOT block the response**
+    // We only await the essential database saves
+    logInfo('Saving essential data to database...');
+    const dbStartTime = Date.now();
 
-    // Generate explanations for scores (this needs the scores, so can't be fully parallelized)
-    logInfo('Generating score explanations...');
-    const explanationsStartTime = Date.now();
-    
-    const scoresContext = `- Vision: ${scores.vision}/10
-- Values: ${scores.values}/10  
-- Thinking: ${scores.thinking}/10
-- Connection: ${scores.connection}/10
-- Action: ${scores.action}/10`;
-
-    const explanationsPrompt = await generateScoreExplanationsPrompt(conversationText, scoresContext, language);
-
-    const { content: explanationsText } = await createChatCompletion(
-      explanationsPrompt,
-      [],
-      0.6,
-      1500, // Increased for detailed Hebrew explanations with examples
-    );
-
-    let scoreExplanations = null;
-    try {
-      const cleaned = explanationsText.replace(/```json\n?|\n?```/g, '').trim();
-      scoreExplanations = JSON.parse(cleaned);
-    } catch (e) {
-      logWarn('Failed to parse score explanations', e);
-    }
-
-    const explanationsTime = Date.now() - explanationsStartTime;
-    logInfo(`Score explanations generated in ${explanationsTime}ms`);
-
-    // Save 5D snapshot with explanations
-    const { error: snapshotError } = await supabase.from('five_d_snapshots').insert({
-      user_id: studentId,
-      scores,
-      score_explanations: scoreExplanations,
-      source: 'assignment',
-      submission_id: submissionId,
-      classroom_id: classroomId,
-    });
-
-    if (snapshotError) {
-      logError('Error saving snapshot', snapshotError);
-    }
-
-    // Save feedback
-    const { error: feedbackError } = await supabase.from('assignment_feedback').insert({
-      submission_id: submissionId,
-      student_id: studentId,
-      assignment_id: assignmentId,
-      student_feedback: studentFeedback,
-      teacher_feedback: teacherFeedback,
-      conversation_context: conversation.messages,
-    });
-
-    if (feedbackError) {
-      logError('Error saving feedback', feedbackError);
-      throw feedbackError;
-    }
-
-    // Save hard skills assessment if it was generated
-    if (hardSkillsResult) {
-      try {
-        const assessmentRecords = hardSkillsResult.assessments.map(assessment => ({
-          submission_id: submissionId,
-          assignment_id: assignmentId,
-          student_id: studentId,
-          domain: hardSkillsResult.domain,
-          skill_component: assessment.skill_component,
-          current_level_percent: Math.min(100, Math.max(0, assessment.current_level_percent)),
-          proficiency_description: assessment.proficiency_description,
-          actionable_challenge: assessment.actionable_challenge,
-        }));
-
-        const { error: assessmentError } = await supabase
-          .from('hard_skill_assessments')
-          .insert(assessmentRecords);
-
-        if (assessmentError) {
-          logError('Error saving hard skill assessments', assessmentError);
-        } else {
-          logInfo('Successfully saved hard skill assessments', { count: assessmentRecords.length });
-        }
-      } catch (error) {
-        logError('Error saving hard skills assessment', error);
-      }
-    }
-
-    // **OPTIMIZATION: Run wellbeing analysis and notifications in parallel**
-    logInfo('Starting wellbeing analysis and notifications in parallel...');
-    const finalStartTime = Date.now();
     await Promise.all([
-      // Wellbeing analysis
-      (async () => {
+      // 1. Save 5D snapshot
+      supabase.from('five_d_snapshots').insert({
+        user_id: studentId,
+        scores,
+        score_explanations: scoreExplanations,
+        source: 'assignment',
+        submission_id: submissionId,
+        classroom_id: classroomId,
+      }),
+
+      // 2. Save feedback
+      supabase.from('assignment_feedback').insert({
+        submission_id: submissionId,
+        student_id: studentId,
+        assignment_id: assignmentId,
+        student_feedback: studentFeedback,
+        teacher_feedback: teacherFeedback,
+        conversation_context: conversation.messages,
+      }),
+
+      // 3. Save hard skills assessment
+      hardSkillsAssessment && hardSkillsAssessment.length > 0 ? (async () => {
         try {
-          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-          const wellbeingUrl = `${supabaseUrl}/functions/v1/analyze-student-wellbeing`;
-          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-          
-          const wellbeingResponse = await fetch(wellbeingUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({
-              studentName,
-              conversationMessages: conversation.messages,
-            }),
-          });
-
-          if (wellbeingResponse.ok) {
-            const wellbeingAnalysis = await wellbeingResponse.json();
-            logInfo('Wellbeing analysis result:', { 
-              alert_level: wellbeingAnalysis.alert_level, 
-              alert_types: wellbeingAnalysis.alert_types 
-            });
-
-            if (wellbeingAnalysis.alert_level !== 'none' && wellbeingAnalysis.alert_types.length > 0) {
-              logWarn('Wellbeing concerns detected', {
-                level: wellbeingAnalysis.alert_level,
-                types: wellbeingAnalysis.alert_types,
-              });
-
-              const alertInserts = wellbeingAnalysis.alert_types.map(alertType => ({
-                submission_id: submissionId,
-                student_id: studentId,
-                assignment_id: assignmentId,
-                alert_level: wellbeingAnalysis.alert_level,
-                alert_type: alertType,
-                triggered_messages: wellbeingAnalysis.triggered_messages,
-                ai_analysis: wellbeingAnalysis.analysis,
-              }));
-
-              await supabase.from('student_alerts').insert(alertInserts);
-
-              if (assignmentData) {
-                const teacherId = assignmentData.classrooms?.teacher_id;
-                const assignmentTitle = assignmentData.title;
-
-                if (teacherId) {
-                  const notifTitle = wellbeingAnalysis.alert_level === 'critical'
-                    ? '🚨 CRITICAL Student Wellbeing Alert'
-                    : '⚠️ Student Wellbeing Alert';
-                  
-                  await supabase.from('notifications').insert({
-                    user_id: teacherId,
-                    type: `student_alert_${wellbeingAnalysis.alert_level}`,
-                    title: notifTitle,
-                    message: `${studentName} showed concerning signs in "${assignmentTitle}". Please review immediately.`,
-                    link: `/teacher/submission/${submissionId}`,
-                    metadata: {
-                      assignment_id: assignmentId,
-                      assignment_title: assignmentTitle,
-                      student_id: studentId,
-                      student_name: studentName,
-                      submission_id: submissionId,
-                      alert_level: wellbeingAnalysis.alert_level,
-                      alert_types: wellbeingAnalysis.alert_types,
-                    },
-                    is_read: false,
-                  });
-
-                  try {
-                    const { sendAlertEmail } = await import('../analyze-student-wellbeing/email.ts');
-                    await sendAlertEmail(
-                      teacherId,
-                      studentName,
-                      assignmentTitle,
-                      wellbeingAnalysis.alert_level,
-                      wellbeingAnalysis.analysis,
-                      submissionId,
-                    );
-                  } catch (emailError) {
-                    logError('Error sending alert email', emailError);
-                  }
-                }
-              }
-            }
-          } else {
-            logError('Wellbeing analysis request failed', {
-              status: wellbeingResponse.status,
-              statusText: wellbeingResponse.statusText
-            });
-          }
-        } catch (wellbeingError) {
-          logError('Wellbeing analysis error', wellbeingError);
+          const assessmentRecords = hardSkillsAssessment.map((assessment: any) => ({
+            submission_id: submissionId,
+            assignment_id: assignmentId,
+            student_id: studentId,
+            domain: assignmentData?.hard_skill_domain,
+            skill_component: assessment.skill_component,
+            current_level_percent: Math.min(100, Math.max(0, assessment.current_level_percent)),
+            proficiency_description: assessment.proficiency_description,
+            actionable_challenge: assessment.actionable_challenge,
+          }));
+          const { error: err } = await supabase.from('hard_skill_assessments').insert(assessmentRecords);
+          if (err) logError('Error saving hard skills', err);
+        } catch (e) {
+          logError('Error processing hard skills', e);
         }
-      })(),
-
-      // Standard notifications
-      (async () => {
-        try {
-          if (assignmentData) {
-            const assignmentTitle = assignmentData.title;
-            const teacherId = assignmentData.classrooms?.teacher_id;
-
-            await Promise.all([
-              // Student notification
-              supabase.from('notifications').insert({
-                user_id: studentId,
-                type: 'feedback_received',
-                title: 'Feedback Received',
-                message: `Your feedback for "${assignmentTitle}" is ready`,
-                link: `/student/assignment/${assignmentId}`,
-                metadata: {
-                  assignment_id: assignmentId,
-                  assignment_title: assignmentTitle,
-                  submission_id: submissionId,
-                },
-                is_read: false,
-              }),
-
-              // Teacher notification
-              teacherId ? supabase.from('notifications').insert({
-                user_id: teacherId,
-                type: 'student_completed_activity',
-                title: 'Activity Completed',
-                message: `${studentName} completed "${assignmentTitle}"`,
-                link: `/teacher/submission/${submissionId}`,
-                metadata: {
-                  assignment_id: assignmentId,
-                  assignment_title: assignmentTitle,
-                  student_id: studentId,
-                  student_name: studentName,
-                  submission_id: submissionId,
-                },
-                is_read: false,
-              }) : Promise.resolve(),
-            ]);
-          }
-        } catch (notifError) {
-          logError('Error creating feedback notifications', notifError);
-        }
-      })(),
+      })() : Promise.resolve(),
     ]);
 
-    const finalTime = Date.now() - finalStartTime;
-    logInfo(`Wellbeing analysis and notifications completed in ${finalTime}ms`);
-    
-    const totalTime = Date.now() - startTime;
-    logInfo(`Total feedback generation time: ${totalTime}ms`);
+    logInfo(`Essential database operations completed in ${Date.now() - dbStartTime}ms`);
+
+    // 4. TRULY background tasks (don't await them)
+    (async () => {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const wellbeingUrl = `${supabaseUrl}/functions/v1/analyze-student-wellbeing`;
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        
+        // Fire and forget calls
+        fetch(wellbeingUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            studentName,
+            conversationMessages: conversation.messages,
+          }),
+        }).catch(err => logError('Wellbeing call error', err));
+
+        if (assignmentData) {
+          const assignmentTitle = assignmentData.title;
+          await Promise.all([
+            supabase.from('notifications').insert({
+              user_id: studentId,
+              type: 'feedback_received',
+              title: 'Feedback Received',
+              message: `Your feedback for "${assignmentTitle}" is ready`,
+              link: `/student/assignment/${assignmentId}`,
+              metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
+              is_read: false,
+            }),
+            teacherId ? supabase.from('notifications').insert({
+              user_id: teacherId,
+              type: 'student_completed_activity',
+              title: 'Activity Completed',
+              message: `${studentName} completed "${assignmentTitle}"`,
+              link: `/teacher/submission/${submissionId}`,
+              metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, student_id: studentId, student_name: studentName, submission_id: submissionId },
+              is_read: false,
+            }) : Promise.resolve(),
+          ]).catch(err => logError('Notifications error', err));
+        }
+      } catch (err) {
+        logError('Background tasks execution error', err);
+      }
+    })();
+
+    logInfo(`Total feedback generation time (excluding background tasks): ${Date.now() - startTime}ms`);
 
     return new Response(
       JSON.stringify({

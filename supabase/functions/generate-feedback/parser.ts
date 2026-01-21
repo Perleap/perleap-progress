@@ -11,6 +11,34 @@ interface ParsedFeedback {
 }
 
 /**
+ * Parse unified response containing feedback, scores, and explanations
+ */
+export const parseUnifiedResponse = (responseText: string) => {
+  try {
+    const cleaned = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    const data = JSON.parse(cleaned);
+    
+    return {
+      studentFeedback: data.studentFeedback || '',
+      teacherFeedback: data.teacherFeedback || '',
+      scores: data.scores || { vision: 5, values: 5, thinking: 5, connection: 5, action: 5 },
+      scoreExplanations: data.scoreExplanations || null,
+      hardSkillsAssessment: data.hardSkillsAssessment || null
+    };
+  } catch (error) {
+    logError('Failed to parse unified response', { responseText, error });
+    // Attempt fallback parsing or return defaults
+    return {
+      studentFeedback: responseText,
+      teacherFeedback: '',
+      scores: { vision: 5, values: 5, thinking: 5, connection: 5, action: 5 },
+      scoreExplanations: null,
+      hardSkillsAssessment: null
+    };
+  }
+};
+
+/**
  * Clean feedback text (remove emojis, framework terminology, and extra whitespace)
  */
 const cleanFeedbackText = (text: string): string => {

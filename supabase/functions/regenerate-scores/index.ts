@@ -79,6 +79,7 @@ serve(async (req) => {
       [{ role: 'user', content: conversationText }],
       0.5,
       500,
+      'smart'
     );
 
     // Parse scores
@@ -107,6 +108,7 @@ serve(async (req) => {
       [],
       0.6,
       1500, // Increased token limit for Hebrew explanations which can be longer
+      'smart'
     );
 
     let scoreExplanations = null;

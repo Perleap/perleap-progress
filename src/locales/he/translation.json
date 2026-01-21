@@ -211,7 +211,10 @@
       "startingConversation": "שגיאה בהתחלת השיחה",
       "loadingConversation": "שגיאה בטעינת השיחה",
       "communicating": "שגיאה בתקשורת עם עוזר הבינה המלאכותית",
-      "generatingFeedback": "שגיאה ביצירת משוב"
+      "generatingFeedback": "שגיאה ביצירת משוב",
+      "tts": "שגיאה בהשמעת אודיו",
+      "stt": "שגיאה בתמלול אודיו",
+      "micAccess": "הגישה למיקרופון נדחתה"
     },
     "success": {
       "activityCompleted": "הפעילות הושלמה! משוב נוצר."
@@ -543,11 +546,15 @@
     "notStarted": "לא התחיל",
     "inProgress": "בתהליך",
     "learningDimensions": "ממדי למידה",
+    "courseMaterials": "חומרי קורס",
+    "download": "הורד",
+    "open": "פתח",
     "success": {
       "completed": "הפעילות הושלמה בהצלחה!"
     },
     "errors": {
-      "loading": "שגיאה בטעינת משימה"
+      "loading": "שגיאה בטעינת משימה",
+      "generatingFeedback": "שגיאה ביצירת משוב"
     }
   },
   "studentClassroom": {
@@ -581,6 +588,7 @@
     "bio": "ביוגרפיה",
     "saving": "שומר...",
     "save": "שמור שינויים",
+    "saveChanges": "שמור שינויים",
     "errors": {
       "loading": "שגיאה בטעינת פרופיל",
       "saving": "שגיאה בשמירת שינויים"
@@ -664,6 +672,12 @@
     },
     "learningPreferences": "העדפות למידה",
     "learningPreferencesDesc": "ספר לנו על סגנון הלמידה וההעדפות שלך",
+    "voicePreference": "העדפת קול",
+    "voicePreferenceDesc": "בחר כיצד תרצה שעוזר ה-AI יישמע",
+    "voiceType": "סוג קול",
+    "voiceTypeDesc": "בחר קול גברי או נשי עבור עוזר ה-AI",
+    "male": "גבר",
+    "female": "אישה",
     "questions": {
       "learningMethods": "העדפות למידה"
     }

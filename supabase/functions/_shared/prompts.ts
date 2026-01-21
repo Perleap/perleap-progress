@@ -98,6 +98,29 @@ export async function getPrompt(
 }
 
 /**
+ * Generate unified feedback, scores, and explanations prompt
+ */
+export async function generateUnifiedFeedbackPrompt(
+  studentName: string,
+  teacherName: string,
+  assignmentInstructions: string,
+  hardSkillsList: string[] = [],
+  hardSkillDomain: string = '',
+  language: string = 'en'
+): Promise<string> {
+  const hardSkillsSection = hardSkillsList.length > 0 
+    ? `\n\nHard Skills to Assess in the "${hardSkillDomain}" domain:\n- ${hardSkillsList.join('\n- ')}\n\nFor each hard skill, provide a current_level_percent (0-100), proficiency_description, and actionable_challenge.`
+    : '';
+
+  return await getPrompt('unified_feedback_generation', {
+    studentName,
+    teacherName,
+    assignmentInstructions,
+    hardSkillsSection
+  }, language);
+}
+
+/**
  * Generate chat system prompt
  * Fetches and combines the chat_system prompt with dynamic greeting instructions
  */

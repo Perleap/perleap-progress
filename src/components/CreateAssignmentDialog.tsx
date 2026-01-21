@@ -432,6 +432,7 @@ export function CreateAssignmentDialog({
             teacher_id: user!.id,
             type: 'create',
             entity_type: 'assignment',
+            entity_id: assignment.id,
             title: `Created assignment: ${formData.title}`,
             route: `/teacher/classroom/${classroomId}`,
           }

@@ -26,7 +26,7 @@ export const PageHeader = ({ title, subtitle, backTo, actions }: PageHeaderProps
       <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4">
         {backTo && (
           <Button variant="ghost" size="sm" onClick={() => navigate(backTo)}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           </Button>
         )}
         <div className="flex-1 min-w-0">

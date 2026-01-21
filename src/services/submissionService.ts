@@ -300,6 +300,142 @@ export const sendChatMessage = async (
 };
 
 /**
+ * Stream chat message from Perleap agent
+ */
+export const streamChatMessage = async (
+  request: ChatRequest,
+  onToken: (token: string) => void
+): Promise<{ data: { shouldEnd: boolean } | null; error: ApiError | null }> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No active session');
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/perleap-chat`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ ...request, stream: true }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to stream chat');
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let fullContent = '';
+    let shouldEnd = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      
+      // Multi-layered JSON Safety Filter:
+      // Catch chunks that are pure JSON or contain JSON blocks
+      if (chunk.trim().startsWith('{') || chunk.trim().includes('{"message":')) {
+        try {
+          // 1. Try direct parsing of the whole chunk
+          const trimmed = chunk.trim();
+          const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const potentialJson = jsonMatch[0];
+            const parsed = JSON.parse(potentialJson);
+            if (parsed.message) {
+              const cleanMsg = String(parsed.message).replace(/\\n/g, '\n').replace(/\\"/g, '"');
+              fullContent += cleanMsg;
+              onToken(cleanMsg);
+              continue;
+            }
+          }
+          
+          // 2. Regex fallback for specifically the message property
+          const match = chunk.match(/"message"\s*:\s*"([^"]+)"/);
+          if (match && match[1]) {
+            const cleanMsg = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            fullContent += cleanMsg;
+            onToken(cleanMsg);
+            continue;
+          }
+        } catch (e) {
+          // Not valid JSON or parsing failed, continue as normal
+        }
+      }
+      
+      // Filter out the end-of-conversation signal from the visible stream
+      if (chunk.includes('__CONVERSATION_END__')) {
+        shouldEnd = true;
+        const cleanChunk = chunk.replace('__CONVERSATION_END__', '');
+        if (cleanChunk) {
+          fullContent += cleanChunk;
+          onToken(cleanChunk);
+        }
+      } else {
+        fullContent += chunk;
+        onToken(chunk);
+      }
+    }
+
+    // Check for conversation completion marker if hidden signal wasn't caught
+    if (!shouldEnd) {
+      const completionMarker = '[CONVERSATION_COMPLETE]';
+      const upperContent = fullContent.toUpperCase();
+      
+      // Technical marker check
+      shouldEnd = upperContent.includes(completionMarker);
+
+      // Semantic fallback check (case-insensitive)
+      if (!shouldEnd) {
+        const semanticPhrases = [
+          'WE ARE DONE',
+          'COMPLETED ALL THE TASKS',
+          'FINISHED ALL THE TASKS',
+          'COMPLETED THE ASSIGNMENT',
+          'FINISHED THE ASSIGNMENT',
+          'YOU HAVE COMPLETED ALL',
+          'YOU\'VE COMPLETED ALL',
+          'SUCCESSFULLY ANSWERED ALL',
+          'ACTIVITY IS COMPLETE',
+          'YES, WE ARE DONE',
+          'WE\'VE ACTUALLY COMPLETED ALL',
+          'JOB ON COMPLETING THE TASKS',
+          'COMPLETING THE TASKS',
+          'DONE WITH THE TASKS',
+          'FINISHED THE TASKS',
+          'FINISHED THE ACTIVITY',
+          'COMPLETED THE ACTIVITY',
+          'YOU HAVE FINISHED',
+          'YOU\'VE FINISHED',
+          'ALL TASKS ARE COMPLETE',
+          'סיימנו את המשימה',
+          'השלמת את כל המשימות',
+          'כל הכבוד על סיום המטלה',
+          'סיימת את המטלה',
+          'סיימת את הפעילות'
+        ];
+        
+        shouldEnd = semanticPhrases.some(phrase => upperContent.includes(phrase));
+      }
+    }
+
+    return { data: { shouldEnd }, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
  * Generate feedback for a completed submission
  */
 export const generateFeedback = async (

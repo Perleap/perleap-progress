@@ -22,6 +22,7 @@ import { useStudentProfile, useUpdateStudentProfile } from '@/hooks/queries';
 interface StudentProfileState {
   full_name: string;
   avatar_url: string | null;
+  voice_preference: string;
 }
 
 interface StudentQuestions {
@@ -61,6 +62,7 @@ const StudentSettings = () => {
   const [profile, setProfile] = useState<StudentProfileState>({
     full_name: '',
     avatar_url: null,
+    voice_preference: 'onyx',
   });
 
   const [questions, setQuestions] = useState<StudentQuestions>({
@@ -91,6 +93,7 @@ const StudentSettings = () => {
       setProfile({
         full_name: profileData.full_name || '',
         avatar_url: profileData.avatar_url || null,
+        voice_preference: (profileData as any).voice_preference || 'onyx',
       });
 
       setQuestions({
@@ -181,6 +184,7 @@ const StudentSettings = () => {
       await updateProfileMutation.mutateAsync({
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
+        voice_preference: profile.voice_preference,
       } as any);
       toast.success(t('settings.success.saved'));
     } catch (error) {
@@ -674,6 +678,65 @@ const StudentSettings = () => {
 
                 <div className="flex justify-center">
                   <Button onClick={handleSaveQuestions} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 className={isRTL ? 'ml-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4 animate-spin'} />
+                        {t('settings.saving')}
+                      </>
+                    ) : (
+                      t('settings.saveChanges')
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent >
+
+          {/* Voice Preferences Tab */}
+          < TabsContent value="preferences" className="space-y-6" >
+            <Card>
+              <CardHeader className={isRTL ? 'text-right' : 'text-left'}>
+                <CardTitle>{t('settings.voicePreference')}</CardTitle>
+                <CardDescription>{t('settings.voicePreferenceDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-6">
+                  <div className={`flex flex-col gap-2 ${isRTL ? 'items-end' : 'items-start'}`}>
+                    <Label className="text-base font-semibold">{t('settings.voiceType')}</Label>
+                    <div className={`flex flex-wrap items-center gap-x-8 gap-y-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <p className="text-sm text-muted-foreground">
+                        {t('settings.voiceTypeDesc')}
+                      </p>
+                      <RadioGroup
+                        value={profile.voice_preference || 'onyx'}
+                        onValueChange={(val) => setProfile(prev => ({ ...prev, voice_preference: val }))}
+                        className="flex flex-row gap-8 items-center"
+                      >
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="onyx" id="voice-male" className="size-5" />
+                          <Label 
+                            htmlFor="voice-male" 
+                            className="cursor-pointer font-medium text-sm leading-none m-0"
+                          >
+                            {t('settings.male')}
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="shimmer" id="voice-female" className="size-5" />
+                          <Label 
+                            htmlFor="voice-female" 
+                            className="cursor-pointer font-medium text-sm leading-none m-0"
+                          >
+                            {t('settings.female')}
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <Button onClick={handleSaveProfile} disabled={saving}>
                     {saving ? (
                       <>
                         <Loader2 className={isRTL ? 'ml-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4 animate-spin'} />
