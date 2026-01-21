@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
+import { TeacherAssistant } from '@/components/ai/TeacherAssistant';
 
 interface ClassroomLayoutProps {
   children: React.ReactNode;
@@ -108,6 +109,7 @@ export function ClassroomLayout({
             {children}
           </div>
         </div>
+        <TeacherAssistant />
       </SidebarInset>
     </SidebarProvider>
   );
