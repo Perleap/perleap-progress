@@ -6,9 +6,11 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createSupabaseClient } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { generateWellbeingAnalysisPrompt } from '../_shared/prompts.ts';
 import type { WellbeingAnalysisResult, Message } from './types.ts';
+import { sendAlertEmail } from './email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,7 +50,15 @@ serve(async (req) => {
   }
 
   try {
-    const { studentName, conversationMessages } = await req.json();
+    const { 
+      studentId, 
+      studentName, 
+      submissionId, 
+      assignmentId, 
+      teacherId, 
+      assignmentTitle, 
+      conversationMessages 
+    } = await req.json();
 
     if (!studentName || !conversationMessages || !Array.isArray(conversationMessages)) {
       throw new Error('Invalid request: studentName and conversationMessages required');
@@ -75,6 +85,61 @@ serve(async (req) => {
 
     // Parse the response
     const analysis = parseWellbeingResponse(responseText);
+
+    // If alert is detected, save to database and notify teacher
+    if (analysis.alert_level !== 'none' && studentId && submissionId) {
+      logInfo(`Wellbeing alert detected: ${analysis.alert_level}`, { studentId, alertTypes: analysis.alert_types });
+      
+      const supabase = createSupabaseClient();
+
+      // 1. Save alert to student_alerts table
+      const { data: alertData, error: alertError } = await supabase
+        .from('student_alerts')
+        .insert({
+          student_id: studentId,
+          submission_id: submissionId,
+          assignment_id: assignmentId,
+          alert_level: analysis.alert_level,
+          alert_type: analysis.alert_types,
+          analysis: analysis.analysis,
+          triggered_messages: analysis.triggered_messages,
+        })
+        .select()
+        .single();
+
+      if (alertError) {
+        logError('Failed to save student alert', alertError);
+      } else if (teacherId) {
+        // 2. Create in-app notification for teacher
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: teacherId,
+          type: 'wellbeing_alert',
+          title: analysis.alert_level === 'critical' ? 'CRITICAL Wellbeing Alert' : 'Wellbeing Concern Detected',
+          message: `${studentName} showed signs of ${analysis.alert_types.join(', ')} during "${assignmentTitle || 'an assignment'}"`,
+          link: `/teacher/submission/${submissionId}?alert=${alertData.id}`,
+          metadata: { 
+            alert_id: alertData.id, 
+            student_id: studentId, 
+            student_name: studentName,
+            alert_level: analysis.alert_level,
+            alert_types: analysis.alert_types
+          },
+          is_read: false,
+        });
+
+        if (notifError) logError('Failed to create wellbeing notification', notifError);
+
+        // 3. Send email to teacher
+        await sendAlertEmail(
+          teacherId,
+          studentName,
+          assignmentTitle || 'Assignment',
+          analysis.alert_level,
+          analysis.analysis,
+          submissionId
+        );
+      }
+    }
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

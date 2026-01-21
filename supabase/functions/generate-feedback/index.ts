@@ -74,9 +74,19 @@ serve(async (req) => {
     logInfo('Starting parallel AI calls...');
     const aiStartTime = Date.now();
 
-    const hardSkillsList = assignmentData?.hard_skills ? 
-      (typeof assignmentData.hard_skills === 'string' ? JSON.parse(assignmentData.hard_skills) : assignmentData.hard_skills) 
-      : [];
+    let hardSkillsList: string[] = [];
+    try {
+      if (assignmentData?.hard_skills) {
+        hardSkillsList = typeof assignmentData.hard_skills === 'string' 
+          ? JSON.parse(assignmentData.hard_skills) 
+          : assignmentData.hard_skills;
+      }
+    } catch (e) {
+      logError('Error parsing hard_skills, falling back to comma-separated parsing', e);
+      if (typeof assignmentData?.hard_skills === 'string') {
+        hardSkillsList = assignmentData.hard_skills.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
 
     const feedbackPrompt = `You are an expert pedagogical AI assistant. Analyze the student's conversation and provide feedback and 5D scores.
     
@@ -182,7 +192,7 @@ serve(async (req) => {
     logInfo('Saving essential data to database...');
     const dbStartTime = Date.now();
 
-    await Promise.all([
+    const [snapshotResult, feedbackSaveResult] = await Promise.all([
       // 1. Save 5D snapshot
       supabase.from('five_d_snapshots').insert({
         user_id: studentId,
@@ -221,8 +231,17 @@ serve(async (req) => {
         } catch (e) {
           logError('Error processing hard skills', e);
         }
-      })() : Promise.resolve(),
+      })() : Promise.resolve({ error: null }),
     ]);
+
+    if (snapshotResult.error) {
+      logError('Error saving 5D snapshot', snapshotResult.error);
+      throw snapshotResult.error;
+    }
+    if (feedbackSaveResult.error) {
+      logError('Error saving assignment feedback', feedbackSaveResult.error);
+      throw feedbackSaveResult.error;
+    }
 
     logInfo(`Essential database operations completed in ${Date.now() - dbStartTime}ms`);
 
@@ -241,7 +260,12 @@ serve(async (req) => {
             'Authorization': `Bearer ${serviceKey}`,
           },
           body: JSON.stringify({
+            studentId,
             studentName,
+            submissionId,
+            assignmentId,
+            teacherId,
+            assignmentTitle: assignmentData?.title,
             conversationMessages: conversation.messages,
           }),
         }).catch(err => logError('Wellbeing call error', err));

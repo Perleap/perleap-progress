@@ -123,8 +123,15 @@ export function EditAssignmentDialog({
         try {
           const parsed = JSON.parse(data.hard_skills);
           setHardSkills(Array.isArray(parsed) ? parsed : []);
-        } catch {
-          setHardSkills([]);
+        } catch (e) {
+          console.error('Error parsing hard_skills:', e);
+          // Fallback to comma-separated if it was stored that way by mistake
+          if (typeof data.hard_skills === 'string') {
+            const fallback = data.hard_skills.split(',').map(s => s.trim()).filter(Boolean);
+            setHardSkills(fallback);
+          } else {
+            setHardSkills([]);
+          }
         }
       } else {
         setHardSkills([]);

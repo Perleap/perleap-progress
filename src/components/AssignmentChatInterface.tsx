@@ -78,6 +78,19 @@ export function AssignmentChatInterface({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Cleanup microphone on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      // If we have an active stream, stop all tracks
+      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   // Use the conversation hook which handles language, greeting initialization, and API calls
   const { messages, loading, sending, conversationEnded: hookConversationEnded, sendMessage: sendConversationMessage } = useConversation({
     submissionId,
@@ -160,7 +173,7 @@ export function AssignmentChatInterface({
 
     try {
       setLoadingAudioIndex(index);
-      const voice = profile?.voice_preference || 'onyx';
+      const voice = profile?.voice_preference || 'shimmer';
       
       const cleanedText = cleanTextForTTS(text);
       if (!cleanedText) {

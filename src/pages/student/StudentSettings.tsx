@@ -62,7 +62,7 @@ const StudentSettings = () => {
   const [profile, setProfile] = useState<StudentProfileState>({
     full_name: '',
     avatar_url: null,
-    voice_preference: 'onyx',
+    voice_preference: 'shimmer',
   });
 
   const [questions, setQuestions] = useState<StudentQuestions>({
@@ -93,7 +93,7 @@ const StudentSettings = () => {
       setProfile({
         full_name: profileData.full_name || '',
         avatar_url: profileData.avatar_url || null,
-        voice_preference: (profileData as any).voice_preference || 'onyx',
+        voice_preference: (profileData as any).voice_preference || 'shimmer',
       });
 
       setQuestions({
@@ -708,7 +708,7 @@ const StudentSettings = () => {
                         {t('settings.voiceTypeDesc')}
                       </p>
                       <RadioGroup
-                        value={profile.voice_preference || 'onyx'}
+                        value={profile.voice_preference || 'shimmer'}
                         onValueChange={(val) => setProfile(prev => ({ ...prev, voice_preference: val }))}
                         className="flex flex-row gap-8 items-center"
                       >

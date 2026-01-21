@@ -153,6 +153,10 @@ export function CreateAssignmentDialog({
               }
             } catch (e) {
               console.error('Error parsing hard_skills:', e);
+              // Fallback to comma-separated if it was stored that way by mistake
+              if (typeof lastAssignment.hard_skills === 'string') {
+                parsedSkills = lastAssignment.hard_skills.split(',').map(s => s.trim()).filter(Boolean);
+              }
             }
           }
 
