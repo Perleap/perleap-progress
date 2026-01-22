@@ -49,7 +49,7 @@ export const useTeacherCalendarData = (teacherId: string | undefined) => {
       const [{ data: allEnrollments }, { data: allSubmissions }] = await Promise.all([
         supabase
           .from('enrollments')
-          .select('student_id, classroom_id')
+          .select('student_id, classroom_id, student_profiles(user_id, full_name, avatar_url)')
           .in('classroom_id', classroomIds),
         supabase
           .from('submissions')
@@ -57,18 +57,13 @@ export const useTeacherCalendarData = (teacherId: string | undefined) => {
           .in('assignment_id', assignmentIds)
       ]);
 
-      const allStudentIds = [...new Set(allEnrollments?.map(e => e.student_id) || [])];
-
-      // 4. Fetch student profiles
-      let studentProfilesMap = new Map();
-      if (allStudentIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('student_profiles')
-          .select('user_id, full_name, avatar_url')
-          .in('user_id', allStudentIds);
-        
-        profiles?.forEach(p => studentProfilesMap.set(p.user_id, p));
-      }
+      // 4. Process student profiles into a map
+      const studentProfilesMap = new Map();
+      allEnrollments?.forEach(e => {
+        if ((e as any).student_profiles) {
+          studentProfilesMap.set(e.student_id, (e as any).student_profiles);
+        }
+      });
 
       // 5. Process data
       const enrollmentsByClassroom = new Map();

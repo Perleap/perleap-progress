@@ -57,6 +57,9 @@ export interface Classroom {
   domains: Domain[] | null;
   materials: CourseMaterial[] | null;
   created_at: string;
+  _count?: {
+    enrollments: number;
+  };
 }
 
 export interface Assignment {

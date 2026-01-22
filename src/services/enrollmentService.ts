@@ -103,7 +103,8 @@ export const enrollInClassroom = async (
       {
         classroom_id: classroom.id,
         classroom_name: classroom.name,
-      }
+      },
+      classroom.teacher_id
     );
 
     return {

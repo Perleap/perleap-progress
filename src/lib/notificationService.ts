@@ -5,6 +5,7 @@ import type {
   NotificationMetadata,
   NotificationInsert,
   CreateNotificationInput,
+  NotificationWithProfile,
 } from '@/types/notifications';
 
 /**
@@ -17,10 +18,11 @@ export async function createNotification(
   title: string,
   message: string,
   link?: string,
-  metadata?: NotificationMetadata
+  metadata?: NotificationMetadata,
+  actorId?: string
 ): Promise<Notification> {
   try {
-    const insertData: NotificationInsert = {
+    const insertData: any = {
       user_id: userId,
       type,
       title,
@@ -28,7 +30,16 @@ export async function createNotification(
       link: link || null,
       metadata: metadata || {},
       is_read: false,
+      actor_id: actorId || (metadata as any)?.student_id || (metadata as any)?.teacher_id || null,
     };
+
+    // If we're in the browser and have a session, ensure actor_id is set
+    if (!insertData.actor_id) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        insertData.actor_id = session.user.id;
+      }
+    }
 
     const { data, error } = await supabase
       .from('notifications')
@@ -49,10 +60,13 @@ export async function createNotification(
  * Useful for notifying all students in a classroom
  */
 export async function createBulkNotifications(
-  notifications: CreateNotificationInput[]
+  notifications: (CreateNotificationInput & { actorId?: string })[]
 ): Promise<Notification[]> {
   try {
-    const insertData: NotificationInsert[] = notifications.map((n) => ({
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUserId = session?.user?.id;
+
+    const insertData: any[] = notifications.map((n) => ({
       user_id: n.userId,
       type: n.type,
       title: n.title,
@@ -60,6 +74,7 @@ export async function createBulkNotifications(
       link: n.link || null,
       metadata: n.metadata || {},
       is_read: false,
+      actor_id: n.actorId || (n.metadata as any)?.student_id || (n.metadata as any)?.teacher_id || currentUserId || null,
     }));
 
     const { data, error } = await supabase.from('notifications').insert(insertData).select();
@@ -73,12 +88,11 @@ export async function createBulkNotifications(
 }
 
 /**
- * Get unread notifications for a user
- * Returns data structure compatible with future real-time subscriptions
+ * Get unread notifications for a user with actor profiles
  */
-export async function getUnreadNotifications(userId: string): Promise<Notification[]> {
+export async function getUnreadNotifications(userId: string): Promise<NotificationWithProfile[]> {
   try {
-    const { data, error } = await supabase
+    const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
@@ -86,22 +100,23 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    if (!notifications || notifications.length === 0) return [];
 
-    return data as Notification[];
+    return await enrichNotificationsWithProfiles(notifications);
   } catch (error) {
     return [];
   }
 }
 
 /**
- * Get all notifications for a user (with optional limit)
+ * Get all notifications for a user with actor profiles
  */
 export async function getAllNotifications(
   userId: string,
   limit: number = 50
-): Promise<Notification[]> {
+): Promise<NotificationWithProfile[]> {
   try {
-    const { data, error } = await supabase
+    const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
@@ -109,12 +124,57 @@ export async function getAllNotifications(
       .limit(limit);
 
     if (error) throw error;
+    if (!notifications || notifications.length === 0) return [];
 
-    return data as Notification[];
+    return await enrichNotificationsWithProfiles(notifications);
   } catch (error) {
     return [];
   }
 }
+
+/**
+ * Internal helper to enrich notifications with user profiles (student or teacher)
+ */
+async function enrichNotificationsWithProfiles(notifications: Notification[]): Promise<NotificationWithProfile[]> {
+  // Get actor IDs from both actor_id column and metadata fallbacks
+  const actorIds = [...new Set(notifications.map(n => 
+    n.actor_id || 
+    (n.metadata as any)?.student_id || 
+    (n.metadata as any)?.teacher_id
+  ).filter(Boolean))] as string[];
+  
+  if (actorIds.length === 0) {
+    return notifications as NotificationWithProfile[];
+  }
+
+  // Fetch from both student and teacher profiles in parallel
+  const [studentProfiles, teacherProfiles] = await Promise.all([
+    supabase
+      .from('student_profiles')
+      .select('user_id, full_name, avatar_url')
+      .in('user_id', actorIds),
+    supabase
+      .from('teacher_profiles')
+      .select('user_id, full_name, avatar_url')
+      .in('user_id', actorIds)
+  ]);
+
+  const profileMap = new Map<string, { full_name: string, avatar_url: string | null }>();
+  
+  studentProfiles.data?.forEach(p => profileMap.set(p.user_id, p));
+  teacherProfiles.data?.forEach(p => profileMap.set(p.user_id, p));
+
+  return notifications.map(n => {
+    const actorId = n.actor_id || (n.metadata as any)?.student_id || (n.metadata as any)?.teacher_id;
+    const profile = actorId ? profileMap.get(actorId) : null;
+    
+    return {
+      ...n,
+      actor_profile: profile || null
+    };
+  });
+}
+
 
 /**
  * Get count of unread notifications for a user

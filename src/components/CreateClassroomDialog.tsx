@@ -35,6 +35,7 @@ export const CreateClassroomDialog = ({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
   const [rephrasingOutline, setRephrasingOutline] = useState(false);
@@ -195,29 +196,48 @@ export const CreateClassroomDialog = ({
   // Material management functions
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     if (file.type !== 'application/pdf') {
       toast.error(t('createClassroom.errors.uploadPdf'));
       return;
     }
 
+    /* Removing hardcoded file size limit to defer to Supabase storage settings */
+    /*
     if (file.size > 10 * 1024 * 1024) {
       toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
+    */
 
     setUploadingMaterial(true);
+    setUploadProgress(0);
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    console.log(`Starting PDF upload: ${file.name} (${fileSizeMB} MB)`, { type: file.type });
+    
     try {
       const fileExt = 'pdf';
       const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('course-materials')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+          onUploadProgress: (progress) => {
+            const percentage = Math.round((progress.loaded / progress.total) * 100);
+            setUploadProgress(percentage);
+            console.log(`Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`);
+          }
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw uploadError;
+      }
 
+      console.log('Upload successful, getting public URL...', data);
       const {
         data: { publicUrl },
       } = supabase.storage.from('course-materials').getPublicUrl(fileName);
@@ -228,10 +248,11 @@ export const CreateClassroomDialog = ({
       });
 
       toast.success(t('createClassroom.success.pdfUploaded'));
+      setSelectedFileName(''); // Clear the selected file name on success
       e.target.value = ''; // Reset file input
-    } catch (error) {
-      toast.error(t('createClassroom.errors.creating'));
-      console.error(error);
+    } catch (error: any) {
+      console.error('Detailed upload error:', error);
+      toast.error(`${t('createClassroom.errors.creating')}: ${error.message || 'Unknown error'}`);
     } finally {
       setUploadingMaterial(false);
     }
@@ -564,7 +585,14 @@ export const CreateClassroomDialog = ({
                       disabled={uploadingMaterial}
                       className="rounded-full border-border hover:bg-muted font-bold"
                     >
-                      {t('createClassroom.chooseFile')}
+                      {uploadingMaterial ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin me-2" />
+                          {uploadProgress > 0 ? `${uploadProgress}%` : t('common.loading')}
+                        </>
+                      ) : (
+                        t('createClassroom.chooseFile')
+                      )}
                     </Button>
                     <span className={`text-sm text-subtle truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}>
                       {selectedFileName || t('createClassroom.noFileChosen')}
@@ -611,15 +639,27 @@ export const CreateClassroomDialog = ({
                         )}
                       </div>
                       <span className="flex-1 text-sm truncate font-bold text-foreground">{material.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeMaterial(index)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(material.url, '_blank')}
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          title={t('common.view')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeMaterial(index)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

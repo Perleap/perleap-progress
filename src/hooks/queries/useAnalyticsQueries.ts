@@ -33,21 +33,16 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         .select('id, title')
         .eq('classroom_id', classroomId);
 
-      // 3. Fetch enrollments to get student IDs
+      // 3. Fetch enrollments with student profiles in bulk
       const { data: enrollments } = await supabase
         .from('enrollments')
-        .select('student_id')
+        .select('student_id, student_profiles(user_id, full_name, avatar_url)')
         .eq('classroom_id', classroomId);
 
       const studentIds = enrollments?.map(e => e.student_id) || [];
-
-      // 4. Fetch student profiles in bulk
-      const { data: profiles } = await supabase
-        .from('student_profiles')
-        .select('user_id, full_name, avatar_url')
-        .in('user_id', studentIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(
+        enrollments?.map(e => [e.student_id, (e as any).student_profiles]) || []
+      );
 
       // 5. Fetch all submissions for these assignments
       const assignmentIds = assignments?.map(a => a.id) || [];
@@ -72,12 +67,19 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         .select('submission_id, student_id, assignment_id')
         .in('submission_id', submissionIds);
 
+      // 8. Fetch hard skill assessments in bulk
+      const { data: hardSkills } = await supabase
+        .from('hard_skill_assessments')
+        .select('*')
+        .in('submission_id', submissionIds);
+
       // Process data into the format needed by ClassroomAnalytics
       const processedStudents = studentIds.map(sid => {
         const profile = profileMap.get(sid);
         const studentSubmissions = allSubmissions?.filter(s => s.student_id === sid) || [];
         const studentSnapshots = snapshots?.filter(s => s.user_id === sid) || [];
         const studentFeedback = feedbackData?.filter(f => f.student_id === sid) || [];
+        const studentHardSkills = hardSkills?.filter(h => h.student_id === sid) || [];
 
         // Calculate average scores for this student
         let averageScores = null;
@@ -101,7 +103,8 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
           latestScores: averageScores,
           feedbackCount: studentFeedback.length,
           submissions: studentSubmissions,
-          snapshots: studentSnapshots
+          snapshots: studentSnapshots,
+          hardSkills: studentHardSkills
         };
       });
 
@@ -113,7 +116,8 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         allStudents: processedStudents.map(s => ({ id: s.id, name: s.fullName })),
         rawSubmissions: allSubmissions || [],
         rawSnapshots: snapshots || [],
-        rawFeedback: feedbackData || []
+        rawFeedback: feedbackData || [],
+        rawHardSkills: hardSkills || []
       };
     },
     enabled: !!classroomId,

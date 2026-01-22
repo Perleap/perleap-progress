@@ -36,6 +36,7 @@ export const useTeacherProfile = (userId?: string) => {
       return data;
     },
     enabled: !!targetUserId && (!!userId || !userId && !!user?.id),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -55,6 +56,7 @@ export const useStudentProfile = (userId?: string) => {
       return data;
     },
     enabled: !!targetUserId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

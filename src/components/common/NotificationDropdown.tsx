@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,8 +10,9 @@ import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import type { Notification } from '@/types/notifications';
-import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notificationService';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { NotificationWithProfile } from '@/types/notifications';
+import { useNotificationList, useMarkAsRead, useMarkAllAsRead } from '@/hooks/queries';
 
 interface NotificationDropdownProps {
   userId: string;
@@ -20,31 +21,19 @@ interface NotificationDropdownProps {
 export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    if (userId) {
-      fetchNotifications();
-    }
-  }, [userId]);
+  // Use React Query for notifications
+  const { data: notifications = [], isLoading } = useNotificationList(userId);
+  
+  const markAsReadMutation = useMarkAsRead();
+  const markAllAsReadMutation = useMarkAllAsRead();
 
-  const fetchNotifications = async () => {
-    try {
-      const notifs = await getUnreadNotifications(userId);
-      setNotifications(notifs);
-      setUnreadCount(notifs.length);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
+  const unreadCount = notifications.length;
 
-  const handleNotificationClick = async (notification: Notification) => {
+  const handleNotificationClick = async (notification: NotificationWithProfile) => {
     try {
-      await markAsRead(notification.id);
-      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      await markAsReadMutation.mutateAsync(notification.id);
       setDropdownOpen(false);
       
       // Navigate if link exists and is a valid string
@@ -63,11 +52,36 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
     }
   };
 
+  const getInitials = (name: string, type: string) => {
+    if (name) {
+      return name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    
+    // Fallback based on notification type
+    switch (type) {
+      case 'feedback_received':
+      case 'assignment_created':
+      case 'assignment_graded':
+        return 'T'; // Teacher
+      case 'student_enrolled':
+      case 'student_completed_activity':
+      case 'wellbeing_alert':
+        return 'S'; // Student
+      case 'system':
+        return 'SYS';
+      default:
+        return '??';
+    }
+  };
+
   const handleMarkAllAsRead = async () => {
     try {
-      await markAllAsRead(userId);
-      setNotifications([]);
-      setUnreadCount(0);
+      await markAllAsReadMutation.mutateAsync(userId);
       toast.success(t('notifications.success.markedAllRead'));
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -100,12 +114,17 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
                 size="sm"
                 className="h-7 text-xs"
                 onClick={handleMarkAllAsRead}
+                disabled={markAllAsReadMutation.isPending}
               >
                 {t('notifications.markAllRead')}
               </Button>
             )}
           </div>
-          {notifications.length === 0 ? (
+          {isLoading ? (
+            <div className="py-8 text-center text-muted-foreground text-sm">
+              {t('common.loading')}
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground text-sm">
               {t('notifications.empty')}
             </div>
@@ -114,14 +133,22 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
+                  className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <p className="font-medium">{notification.title}</p>
-                  <p className="text-xs text-muted-foreground">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(notification.created_at).toLocaleDateString()}
-                  </p>
+                  <Avatar className="h-10 w-10 border border-border/50 shrink-0">
+                    <AvatarImage src={notification.actor_profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px] bg-muted uppercase">
+                      {getInitials(notification.actor_profile?.full_name || '', notification.type)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <p className="font-medium leading-none">{notification.title}</p>
+                    <p className="text-xs text-muted-foreground leading-normal">{notification.message}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {new Date(notification.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -131,3 +158,4 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
     </DropdownMenu>
   );
 };
+

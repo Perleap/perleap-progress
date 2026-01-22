@@ -23,7 +23,7 @@ export const getClassroomAssignments = async (
   try {
     const { data: assignments, error } = await supabase
       .from('assignments')
-      .select('*')
+      .select('*, student_profiles(full_name)')
       .eq('classroom_id', classroomId)
       .order('created_at', { ascending: false });
 
@@ -35,7 +35,16 @@ export const getClassroomAssignments = async (
       return { data: [], error: null };
     }
 
-    let finalAssignments = assignments;
+    // Transform to ensure student_profiles is an object, even if returned as array
+    const transformedAssignments = assignments.map(a => {
+      const profile = (a as any).student_profiles;
+      return {
+        ...a,
+        student_profiles: Array.isArray(profile) ? profile[0] : profile
+      };
+    });
+
+    let finalAssignments = transformedAssignments;
 
     if (studentId) {
       // If studentId is provided, we only want THIS student's submissions
@@ -70,7 +79,7 @@ export const getAssignmentById = async (
   try {
     const { data: assignment, error } = await supabase
       .from('assignments')
-      .select('*, classrooms(name, teacher_id)')
+      .select('*, student_profiles(full_name), classrooms(name, teacher_id)')
       .eq('id', assignmentId)
       .maybeSingle();
 
@@ -82,6 +91,13 @@ export const getAssignmentById = async (
       return { data: null, error: null };
     }
 
+    // Transform to ensure student_profiles is an object
+    const profile = (assignment as any).student_profiles;
+    const transformedAssignment = {
+      ...assignment,
+      student_profiles: Array.isArray(profile) ? profile[0] : profile
+    };
+
     // Fetch submission for this assignment for this student
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
@@ -90,7 +106,7 @@ export const getAssignmentById = async (
       .eq('student_id', studentId);
 
     const assignmentWithSubmission = {
-      ...assignment,
+      ...transformedAssignment,
       submissions: submissions || []
     } as AssignmentWithClassroom;
 
@@ -108,32 +124,28 @@ export const getStudentAssignmentDetails = async (
   studentId: string
 ): Promise<{ data: any | null; error: ApiError | null }> => {
   try {
-    // 1. Fetch assignment with classroom info
+    // 1. Fetch assignment with classroom and teacher info in one join
     const { data: assignment, error: assignError } = await supabase
       .from('assignments')
-      .select('*, classrooms(name, teacher_id)')
+      .select(`
+        *, 
+        classrooms(
+          name, 
+          teacher_id, 
+          teacher_profiles(full_name, avatar_url)
+        )
+      `)
       .eq('id', assignmentId)
       .maybeSingle();
 
     if (assignError) throw assignError;
     if (!assignment) return { data: null, error: null };
 
-    // 2. Fetch teacher profile separately
-    let teacherProfile = null;
-    if (assignment.classrooms?.teacher_id) {
-      const { data: tProfile } = await supabase
-        .from('teacher_profiles')
-        .select('full_name, avatar_url')
-        .eq('user_id', assignment.classrooms.teacher_id)
-        .maybeSingle();
-      teacherProfile = tProfile;
-    }
-
-    // 3. Get or create submission
+    // 2. Get or create submission
     const { data: submission, error: subError } = await getOrCreateSubmission(assignmentId, studentId);
     if (subError) throw subError;
 
-    // 4. Fetch feedback if submission exists
+    // 3. Fetch feedback if submission exists
     let feedback = null;
     if (submission) {
       const { data: feedbackData } = await supabase
@@ -147,10 +159,6 @@ export const getStudentAssignmentDetails = async (
     return {
       data: {
         ...assignment,
-        classrooms: {
-          ...assignment.classrooms,
-          teacher_profiles: teacherProfile
-        },
         submission,
         feedback
       },

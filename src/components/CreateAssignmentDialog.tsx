@@ -21,7 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Calendar, Target, FileText, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Calendar, Target, FileText, Plus, Trash2, Eye } from 'lucide-react';
 import { createBulkNotifications } from '@/lib/notificationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -67,6 +67,7 @@ export function CreateAssignmentDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
   const [classroomDomains, setClassroomDomains] = useState<Array<{ name: string; components: string[] }>>([]);
   const [classroomMaterials, setClassroomMaterials] = useState<Array<{ type: 'pdf' | 'link'; url: string; name: string }>>([]);
@@ -217,29 +218,48 @@ export function CreateAssignmentDialog({
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     if (file.type !== 'application/pdf') {
       toast.error(t('createAssignment.errors.creating'));
       return;
     }
 
+    /* Removing hardcoded file size limit to defer to Supabase storage settings */
+    /*
     if (file.size > 10 * 1024 * 1024) {
       toast.error(t('createClassroom.errors.fileSize'));
       return;
     }
+    */
 
     setUploadingMaterial(true);
+    setUploadProgress(0);
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    console.log(`Starting PDF upload: ${file.name} (${fileSizeMB} MB)`, { type: file.type });
+    
     try {
       const fileExt = 'pdf';
       const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('assignment-materials')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+          onUploadProgress: (progress) => {
+            const percentage = Math.round((progress.loaded / progress.total) * 100);
+            setUploadProgress(percentage);
+            console.log(`Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`);
+          }
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw uploadError;
+      }
 
+      console.log('Upload successful, getting public URL...', data);
       const {
         data: { publicUrl },
       } = supabase.storage.from('assignment-materials').getPublicUrl(fileName);
@@ -251,9 +271,9 @@ export function CreateAssignmentDialog({
 
       toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = ''; // Reset file input
-    } catch (error) {
-      toast.error(t('createAssignment.errors.creating'));
-      console.error(error);
+    } catch (error: any) {
+      console.error('Detailed upload error:', error);
+      toast.error(`${t('createAssignment.errors.creating')}: ${error.message || 'Unknown error'}`);
     } finally {
       setUploadingMaterial(false);
     }
@@ -394,6 +414,7 @@ export function CreateAssignmentDialog({
                 title: 'New Personalized Assignment',
                 message: `A follow-up assignment "${formData.title}" has been created for you`,
                 link: `/student/assignment/${assignment.id}`,
+                actorId: user!.id,
                 metadata: {
                   assignment_id: assignment.id,
                   classroom_id: classroomId,
@@ -415,6 +436,7 @@ export function CreateAssignmentDialog({
                 title: 'New Assignment',
                 message: `New assignment "${formData.title}" has been posted`,
                 link: `/student/assignment/${assignment.id}`,
+                actorId: user!.id,
                 metadata: {
                   assignment_id: assignment.id,
                   classroom_id: classroomId,
@@ -787,7 +809,12 @@ export function CreateAssignmentDialog({
                       dir={isRTL ? 'rtl' : 'ltr'}
                       autoDirection
                     />
-                    {uploadingMaterial && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                    {uploadingMaterial && (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span className="text-xs font-medium text-muted-foreground">{uploadProgress > 0 ? `${uploadProgress}%` : ''}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -835,15 +862,27 @@ export function CreateAssignmentDialog({
                       <span className={`flex-1 text-sm truncate font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                         {material.name}
                       </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveMaterial(index)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(material.url, '_blank')}
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          title={t('common.view')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveMaterial(index)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

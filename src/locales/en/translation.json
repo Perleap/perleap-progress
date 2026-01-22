@@ -284,7 +284,7 @@
     "errors": {
       "creatingClassroom": "Error creating classroom",
       "uploadPdf": "Please upload a PDF file",
-      "fileSize": "File size must be less than 10MB",
+      "fileSize": "File is too large",
       "enterUrl": "Please enter a URL",
       "validUrl": "Please enter a valid URL"
     },
@@ -514,7 +514,9 @@
     "completed": "Completed",
     "conversation": "Conversation History",
     "teacherFeedback": "Teacher Feedback",
-    "ai": "Perleap AI"
+    "ai": "Perleap AI",
+    "notStarted": "Not Started",
+    "fullReport": "Full Report"
   },
   "submissionDetail": {
     "title": "Submission Details",
@@ -640,7 +642,7 @@
     "noNameSet": "No name set",
     "emailCannotChange": "Email cannot be changed",
     "clickCameraUpload": "Click camera icon to upload",
-    "fileSizeTooLarge": "File size too large (max 5MB)",
+    "fileSizeTooLarge": "File is too large",
     "uploadImageFile": "Please upload an image file",
     "photoUploadFailed": "Photo upload failed",
     "photoUploadSuccess": "Profile photo updated successfully!",
@@ -848,7 +850,7 @@
       "fullName": "Full Name *",
       "profilePicture": "Profile Picture (Optional)",
       "uploadPhoto": "Upload Photo",
-      "fileSize": "PNG, JPG up to 5MB",
+      "fileSize": "PNG, JPG",
       "learningMethodsQuestion": "Which types of activities or methods help you learn best?",
       "visual": "Visual Learning",
       "visualDesc": "I learn best by reading textbooks, looking at diagrams, graphs, and pictures",
@@ -916,7 +918,7 @@
     "next": "Next",
     "completeSetup": "Complete Setup",
     "errors": {
-      "fileSize": "File size should be less than 5MB",
+      "fileSize": "File is too large",
       "notAuthenticated": "User not authenticated. Please log in again.",
       "uploadAvatar": "Failed to upload profile picture. Continuing without profile picture.",
       "profileExists": "Profile already exists for this account. Redirecting to dashboard...",
@@ -937,7 +939,7 @@
       "fullNamePlaceholder": "John Doe",
       "profilePicture": "Profile Picture (Optional)",
       "uploadPhoto": "Upload Photo",
-      "fileSize": "PNG, JPG up to 5MB",
+      "fileSize": "PNG, JPG",
       "phoneNumber": "Phone Number",
       "phoneNumberPlaceholder": "+1 555-123-4567",
       "subjects": "Subjects You Teach *",
@@ -965,7 +967,7 @@
     "next": "Next",
     "completeSetup": "Complete Setup",
     "errors": {
-      "fileSize": "File size should be less than 5MB",
+      "fileSize": "File is too large",
       "notAuthenticated": "User not authenticated. Please log in again.",
       "uploadAvatar": "Failed to upload profile picture. Continuing without profile picture.",
       "profileExists": "Profile already exists for this account. Redirecting to dashboard...",
@@ -1103,5 +1105,14 @@
     "quiz": "Quiz",
     "project": "Project",
     "interactive": "Interactive"
+  },
+  "teacherAssistant": {
+    "title": "Teaching Assistant",
+    "clearChat": "Clear Chat",
+    "howCanIHelp": "How can I help you today?",
+    "suggestions": "Ask about lesson plans, rubrics, or classroom activities.",
+    "generating": "Generating response...",
+    "placeholder": "Ask anything...",
+    "error": "Failed to get response"
   }
 }

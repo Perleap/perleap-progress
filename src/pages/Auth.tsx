@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
@@ -34,6 +34,22 @@ const Auth = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'he'>(language);
   const [activeTab, setActiveTab] = useState<string>('signin');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Check if we're in the middle of an OAuth callback or email confirmation
+  const isOAuthCallback = searchParams.has('code') || 
+                           searchParams.has('access_token') || 
+                           searchParams.has('error') || 
+                           searchParams.has('type');
+
+  // If we detect OAuth or email callback parameters on the auth page,
+  // redirect to the dedicated callback handler
+  useEffect(() => {
+    if (isOAuthCallback) {
+      console.log('🔄 Auth: OAuth callback detected, redirecting to /auth/callback');
+      navigate(`/auth/callback${window.location.search}`, { replace: true });
+    }
+  }, [isOAuthCallback, navigate]);
 
   // Handle language selection - apply immediately
   const handleLanguageSelect = (lang: 'en' | 'he') => {
@@ -44,6 +60,9 @@ const Auth = () => {
   // Check if user is already authenticated and redirect
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
+      // Don't redirect if we're already handling a callback
+      if (isOAuthCallback) return;
+
       // Wait for auth loading and profile loading
       if (authLoading || isProfileLoading) return;
       // If user is logged in but profile check is not done, wait
@@ -78,12 +97,16 @@ const Auth = () => {
           navigate('/teacher/dashboard');
         } else if (userRole === 'student') {
           navigate('/student/dashboard');
+        } else {
+          // User is authenticated but has no role metadata
+          console.log('⚠️ Auth: User has no role, redirecting to role selection');
+          navigate('/role-selection', { replace: true });
         }
       }
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading]); // Use user?.id to avoid refetch on user object reference change
+  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]); // Use user?.id to avoid refetch on user object reference change
 
   // Set the active tab based on the route
   useEffect(() => {
@@ -234,6 +257,12 @@ const Auth = () => {
   const handleGoogleSignIn = async (selectedRole?: 'teacher' | 'student') => {
     setLoading(true);
     try {
+      if (selectedRole) {
+        // Mark signup as in progress for recovery logic in AuthCallback
+        markSignupInProgress();
+        savePendingRole(selectedRole);
+      }
+
       // Check if user is already authenticated with an existing profile
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -273,7 +302,8 @@ const Auth = () => {
       });
 
       if (error) throw error;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Google Sign In Error:', error);
       toast.error(error.message || t('auth.errors2.signingInGoogle'));
       setLoading(false);
     }
@@ -312,12 +342,13 @@ const Auth = () => {
       }
 
       // Redirect based on role and profile status
-      const userRole = data.user.user_metadata.role;
-      const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
-      const dashboardPath = `/${userRole}/dashboard`;
-      const onboardingPath = `/onboarding/${userRole}`;
-
+      const userRole = data.user.user_metadata?.role;
+      
       if (userRole === 'teacher' || userRole === 'student') {
+        const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+        const dashboardPath = `/${userRole}/dashboard`;
+        const onboardingPath = `/onboarding/${userRole}`;
+
         const { data: profile } = await supabase
           .from(profileTable)
           .select('id')
@@ -325,17 +356,25 @@ const Auth = () => {
           .maybeSingle();
 
         navigate(profile ? dashboardPath : onboardingPath);
+      } else {
+        // No role in metadata - redirect to role selection
+        console.warn('⚠️ Sign in successful but no role metadata found');
+        navigate('/role-selection');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Sign In Error:', error);
       toast.error(error.message || t('auth.errors2.signingIn'));
     } finally {
       setLoading(false);
     }
   };
 
-  // If user is already authenticated and auth is not loading, show loading state
+  // If OAuth callback is in progress or user is already authenticated, show loading state
   // This prevents the Auth page from rendering and causing a flicker
-  if ((!authLoading && user) || isProfileLoading || (user && hasProfile === null)) {
+  // CRITICAL: Added safety check for missing role to prevent infinite spinner
+  const hasUserButNoRole = user && !user.user_metadata?.role;
+  
+  if (isOAuthCallback || (!authLoading && user && !hasUserButNoRole) || isProfileLoading || (user && hasProfile === null && !hasUserButNoRole)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -344,6 +383,12 @@ const Auth = () => {
         </div>
       </div>
     );
+  }
+
+  // If user is logged in but has no role, redirect to role selection instead of showing spinner
+  if (user && hasUserButNoRole && !authLoading && !isOAuthCallback) {
+    navigate('/role-selection', { replace: true });
+    return null;
   }
 
   return (

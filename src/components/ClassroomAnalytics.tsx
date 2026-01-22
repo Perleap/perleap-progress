@@ -348,6 +348,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                               studentId={student.id}
                               assignmentId="all"
                               classroomId={classroomId}
+                              initialData={student.hardSkills as any}
                               title={t('cra.title')}
                               description={t('classroomAnalytics.allHardSkills')}
                             />
@@ -395,6 +396,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
                         studentId={student.id}
                         assignmentId={selectedAssignment}
                         classroomId={classroomId}
+                        initialData={(data?.rawHardSkills?.filter(h => h.student_id === student.id && h.assignment_id === selectedAssignment) || []) as any}
                         title=""
                         description=""
                       />

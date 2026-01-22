@@ -13,38 +13,46 @@ import type {
 } from '@/types';
 
 /**
- * Fetch all classrooms for a teacher
+ * Fetch all classrooms for a teacher with enrollment counts
  */
 export const getTeacherClassrooms = async (
   teacherId: string
-): Promise<{ data: Classroom[] | null; error: ApiError | null }> => {
+): Promise<{ data: any[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
       .from('classrooms')
-      .select('*')
+      .select('*, enrollments(count)')
       .eq('teacher_id', teacherId);
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    // Transform Supabase response to include _count.enrollments
+    const transformed = data?.map(classroom => ({
+      ...classroom,
+      _count: {
+        enrollments: (classroom.enrollments?.[0] as any)?.count || 0
+      }
+    }));
+
+    return { data: transformed, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
 };
 
 /**
- * Fetch classroom by ID
+ * Fetch classroom by ID with enrollment count
  */
 export const getClassroomById = async (
   classroomId: string,
   teacherId?: string
-): Promise<{ data: Classroom | null; error: ApiError | null }> => {
+): Promise<{ data: any | null; error: ApiError | null }> => {
   try {
     let query = supabase
       .from('classrooms')
-      .select('*')
+      .select('*, enrollments(count)')
       .eq('id', classroomId);
 
     if (teacherId) {
@@ -57,7 +65,17 @@ export const getClassroomById = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    if (!data) return { data: null, error: null };
+
+    // Transform Supabase response to include _count.enrollments
+    const transformed = {
+      ...data,
+      _count: {
+        enrollments: (data.enrollments?.[0] as any)?.count || 0
+      }
+    };
+
+    return { data: transformed, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -139,7 +157,12 @@ export const getEnrolledStudents = async (
   try {
     const { data: enrollments, error: enrollError } = await supabase
       .from('enrollments')
-      .select('id, created_at, student_id')
+      .select(`
+        id, 
+        created_at, 
+        student_id,
+        student_profiles(user_id, full_name, avatar_url, created_at)
+      `)
       .eq('classroom_id', classroomId)
       .order('created_at', { ascending: false });
 
@@ -147,22 +170,7 @@ export const getEnrolledStudents = async (
       return { data: null, error: handleSupabaseError(enrollError) };
     }
 
-    if (enrollments.length === 0) {
-      return { data: [], error: null };
-    }
-
-    const studentIds = enrollments.map((e) => e.student_id);
-    const { data: profiles } = await supabase
-      .from('student_profiles')
-      .select('user_id, full_name, avatar_url, created_at')
-      .in('user_id', studentIds);
-
-    const studentsWithProfiles: EnrolledStudent[] = enrollments.map((enrollment) => ({
-      ...enrollment,
-      student_profiles: profiles?.find((p) => p.user_id === enrollment.student_id) || null,
-    }));
-
-    return { data: studentsWithProfiles, error: null };
+    return { data: enrollments as unknown as EnrolledStudent[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

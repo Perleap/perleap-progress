@@ -18,12 +18,27 @@ const Landing = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Check if we're in the middle of an OAuth callback
-  const isOAuthCallback = searchParams.has('code') || searchParams.has('access_token') || searchParams.has('error');
+  // Check if we're in the middle of an OAuth callback or email confirmation
+  const isOAuthCallback = searchParams.has('code') || 
+                           searchParams.has('access_token') || 
+                           searchParams.has('error') || 
+                           searchParams.has('type');
+
+  // If we detect OAuth or email callback parameters on the landing page,
+  // redirect to the dedicated callback handler
+  useEffect(() => {
+    if (isOAuthCallback) {
+      console.log('🔄 Landing: OAuth callback detected, redirecting to /auth/callback');
+      navigate(`/auth/callback${window.location.search}`, { replace: true });
+    }
+  }, [isOAuthCallback, navigate]);
 
   // Check if user is already authenticated and redirect
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
+      // Don't redirect if we're already handling a callback
+      if (isOAuthCallback) return;
+
       // Wait for auth loading and profile loading
       if (authLoading || isProfileLoading) return;
       // If user is logged in but profile check is not done, wait
@@ -60,16 +75,23 @@ const Landing = () => {
         } else if (userRole === 'student') {
           console.log('🚀 Landing: Redirecting authenticated student to dashboard');
           navigate('/student/dashboard');
+        } else {
+          // User is authenticated but has no role metadata
+          console.log('⚠️ Landing: User has no role, redirecting to role selection');
+          navigate('/role-selection', { replace: true });
         }
       }
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading]);
+  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]);
 
   // If OAuth callback is in progress or user is already authenticated, show loading state
   // This prevents the Landing page from rendering and causing a flicker
-  if (isOAuthCallback || (!authLoading && user) || isProfileLoading || (user && hasProfile === null)) {
+  // CRITICAL: Added safety check for missing role to prevent infinite spinner
+  const hasUserButNoRole = user && !user.user_metadata?.role;
+
+  if (isOAuthCallback || (!authLoading && user && !hasUserButNoRole) || isProfileLoading || (user && hasProfile === null && !hasUserButNoRole)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -78,6 +100,14 @@ const Landing = () => {
         </div>
       </div>
     );
+  }
+
+  // If user is logged in but has no role, redirect to role selection instead of showing spinner
+  // Only do this if we are not currently handling a callback
+  if (user && hasUserButNoRole && !authLoading && !isOAuthCallback) {
+    console.log('⚠️ Landing: User has no role metadata, redirecting to role selection');
+    navigate('/role-selection', { replace: true });
+    return null;
   }
 
   return (

@@ -45,6 +45,7 @@ export const useSubmission = (assignmentId: string | undefined) => {
       return data;
     },
     enabled: !!user && !!assignmentId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -61,6 +62,7 @@ export const useSubmissionDetails = (submissionId: string | undefined) => {
       return data;
     },
     enabled: !!submissionId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -77,6 +79,7 @@ export const useClassroomSubmissions = (classroomId: string | undefined) => {
       return data || [];
     },
     enabled: !!classroomId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 

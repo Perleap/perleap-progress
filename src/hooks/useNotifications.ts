@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import type { Notification } from '@/types/notifications';
+import type { Notification, NotificationWithProfile } from '@/types/notifications';
 import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notificationService';
 
 /**
@@ -13,7 +13,7 @@ import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notific
  */
 export const useNotifications = (userId: string | undefined) => {
   const { t } = useTranslation();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationWithProfile[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
