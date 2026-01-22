@@ -284,7 +284,7 @@
     "errors": {
       "creatingClassroom": "שגיאה ביצירת כיתה",
       "uploadPdf": "אנא העלה קובץ PDF",
-      "fileSize": "גודל הקובץ חייב להיות פחות מ-10MB",
+      "fileSize": "קובץ גדול מדי",
       "enterUrl": "אנא הזן כתובת URL",
       "validUrl": "אנא הזן כתובת URL תקינה"
     },
@@ -501,7 +501,9 @@
     "completed": "הושלם",
     "conversation": "היסטוריית שיחה",
     "teacherFeedback": "משוב מורה",
-    "ai": "Perleap AI"
+    "ai": "Perleap AI",
+    "notStarted": "טרם התחיל",
+    "fullReport": "דוח מלא"
   },
   "submissionDetail": {
     "title": "פרטי הגשה",
@@ -627,7 +629,7 @@
     "noNameSet": "לא הוגדר שם",
     "emailCannotChange": "לא ניתן לשנות את האימייל",
     "clickCameraUpload": "לחץ על אייקון המצלמה להעלאה",
-    "fileSizeTooLarge": "גודל הקובץ גדול מדי (מקסימום 5MB)",
+    "fileSizeTooLarge": "קובץ גדול מדי",
     "uploadImageFile": "אנא העלה קובץ תמונה",
     "photoUploadFailed": "העלאת התמונה נכשלה",
     "photoUploadSuccess": "תמונת הפרופיל עודכנה בהצלחה!",
@@ -839,7 +841,7 @@
       "fullName": "שם מלא *",
       "profilePicture": "תמונת פרופיל (אופציונלי)",
       "uploadPhoto": "העלה תמונה",
-      "fileSize": "PNG, JPG עד 5MB",
+      "fileSize": "PNG, JPG",
       "learningMethodsQuestion": "איזה סוגי פעילויות או שיטות עוזרים לך ללמוד הכי טוב?",
       "visual": "למידה ויזואלית",
       "visualDesc": "אני לומד הכי טוב על ידי קריאת ספרי לימוד, הסתכלות על דיאגרמות, גרפים ותמונות",
@@ -907,7 +909,7 @@
     "next": "הבא",
     "completeSetup": "השלם הקמה",
     "errors": {
-      "fileSize": "גודל הקובץ צריך להיות פחות מ-5MB",
+      "fileSize": "קובץ גדול מדי",
       "notAuthenticated": "משתמש לא מאומת. אנא התחבר שוב.",
       "uploadAvatar": "נכשל להעלות תמונת פרופיל. ממשיך ללא תמונת פרופיל.",
       "profileExists": "פרופיל כבר קיים לחשבון זה. מפנה ללוח הבקרה...",
@@ -928,7 +930,7 @@
       "fullNamePlaceholder": "יוחנן דו",
       "profilePicture": "תמונת פרופיל (אופציונלי)",
       "uploadPhoto": "העלה תמונה",
-      "fileSize": "PNG, JPG עד 5MB",
+      "fileSize": "PNG, JPG",
       "phoneNumber": "מספר טלפון",
       "phoneNumberPlaceholder": "+972 50-123-4567",
       "subjects": "מקצועות שאתה מלמד *",
@@ -956,7 +958,7 @@
     "next": "הבא",
     "completeSetup": "השלם הקמה",
     "errors": {
-      "fileSize": "גודל הקובץ צריך להיות פחות מ-5MB",
+      "fileSize": "קובץ גדול מדי",
       "notAuthenticated": "משתמש לא מאומת. אנא התחבר שוב.",
       "uploadAvatar": "נכשל להעלות תמונת פרופיל. ממשיך ללא תמונת פרופיל.",
       "profileExists": "פרופיל כבר קיים לחשבון זה. מפנה ללוח הבקרה...",
@@ -1094,5 +1096,14 @@
     "quiz": "חידון",
     "project": "פרויקט",
     "interactive": "אינטראקטיבי"
+  },
+  "teacherAssistant": {
+    "title": "עוזר הוראה",
+    "clearChat": "נקה צ'אט",
+    "howCanIHelp": "איך אני יכול לעזור לך היום?",
+    "suggestions": "שאל על מערכי שיעור, מחוונים או פעילויות בכיתה.",
+    "generating": "מייצר תגובה...",
+    "placeholder": "שאל כל דבר...",
+    "error": "נכשל בקבלת תגובה"
   }
 }

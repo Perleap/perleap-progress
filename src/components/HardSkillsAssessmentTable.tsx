@@ -14,6 +14,7 @@ interface HardSkillsAssessmentTableProps {
   studentId?: string;
   title?: string;
   description?: string;
+  initialData?: HardSkillAssessmentWithStudent[];
 }
 
 export function HardSkillsAssessmentTable({
@@ -23,18 +24,24 @@ export function HardSkillsAssessmentTable({
   studentId,
   title,
   description,
+  initialData,
 }: HardSkillsAssessmentTableProps) {
   const { t } = useTranslation();
 
   // Use translation defaults if title/description not provided
   const displayTitle = title || t('cra.title');
   const displayDescription = description || t('cra.description');
-  const [assessments, setAssessments] = useState<HardSkillAssessmentWithStudent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [assessments, setAssessments] = useState<HardSkillAssessmentWithStudent[]>(initialData || []);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
+    if (initialData) {
+      setAssessments(initialData);
+      setLoading(false);
+      return;
+    }
     fetchAssessments();
-  }, [submissionId, assignmentId, classroomId, studentId]);
+  }, [submissionId, assignmentId, classroomId, studentId, initialData]);
 
   const fetchAssessments = async () => {
     setLoading(true);

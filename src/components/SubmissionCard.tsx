@@ -19,6 +19,7 @@ interface SubmissionCardProps {
     submitted_at: string;
     student_name: string;
     assignment_title: string;
+    status: 'in_progress' | 'completed';
     has_feedback: boolean;
     teacher_feedback?: string;
     conversation_context?: ConversationMessage[];
@@ -42,17 +43,17 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
     <Card className="group rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border overflow-hidden flex flex-col h-[400px] relative">
       {/* Status Badge - Absolute Top Right */}
       <div className="absolute top-4 right-4 z-10">
-        <Badge
-          variant={submission.has_feedback ? 'default' : 'secondary'}
-          className={`rounded-full px-2.5 py-0.5 font-medium text-[10px] shadow-sm backdrop-blur-sm ${submission.has_feedback
-            ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
-            : 'bg-warning/20 text-warning dark:bg-warning/30 dark:text-warning-foreground'
-            }`}
-        >
-          {submission.has_feedback
-            ? t('submissionCard.completed')
-            : t('submissionCard.inProgress')}
-        </Badge>
+    <Badge
+      variant={submission.has_feedback ? 'default' : 'secondary'}
+      className={`rounded-full px-2.5 py-0.5 font-medium text-[10px] shadow-sm backdrop-blur-sm ${submission.has_feedback
+        ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
+        : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400'
+        }`}
+    >
+      {submission.has_feedback
+        ? t('submissionCard.completed')
+        : t('submissionCard.inProgress')}
+    </Badge>
       </div>
 
       {/* Main Content */}
@@ -120,9 +121,10 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
       <div className="p-4 pt-0 z-30 bg-card">
         <Button
           onClick={() => navigate(`/teacher/submission/${submission.id}`)}
+          disabled={submission.id.startsWith('pending-')}
           className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all h-11 text-sm font-medium"
         >
-          Full Report
+          {submission.id.startsWith('pending-') ? t('submissionCard.notStarted') : t('submissionCard.fullReport', 'Full Report')}
         </Button>
       </div>
     </Card>

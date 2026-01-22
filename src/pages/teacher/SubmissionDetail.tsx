@@ -43,7 +43,10 @@ const SubmissionDetail = () => {
 
   const submission = submissionData;
   const feedback = submissionData?.feedback;
-  const studentName = submissionData?.student_name || '';
+  const rawStudentName = submissionData?.student_name;
+  const studentName = rawStudentName && rawStudentName.trim() !== '' 
+    ? rawStudentName 
+    : t('common.student');
   const studentAvatar = submissionData?.student_avatar_url;
   const alerts = submissionData?.alerts || [];
 
@@ -63,6 +66,7 @@ const SubmissionDetail = () => {
     if (!feedback || !submission) return;
 
     setGeneratingAssignment(true);
+    console.log('Generating follow-up for student:', studentName, 'ID:', submission.student_id);
     try {
       const { data, error } = await supabase.functions.invoke('generate-followup-assignment', {
         body: {

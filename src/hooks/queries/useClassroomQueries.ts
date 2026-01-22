@@ -46,6 +46,7 @@ export const useClassrooms = (role: 'teacher' | 'student') => {
       return data || [];
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -65,6 +66,7 @@ export const useClassroom = (classroomId: string | undefined) => {
       return data;
     },
     enabled: !!user && !!classroomId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -81,6 +83,7 @@ export const useEnrolledStudents = (classroomId: string | undefined) => {
       return data || [];
     },
     enabled: !!classroomId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

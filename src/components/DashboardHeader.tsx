@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -9,16 +8,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
-import { Bell, Settings, Moon, Sun, Globe, LogOut, Languages } from 'lucide-react';
+import { Settings, Moon, Sun, LogOut, Languages } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'next-themes';
-import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notificationService';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { NotificationDropdown } from './common/NotificationDropdown';
 
 interface DashboardHeaderProps {
   title: string;
@@ -26,11 +22,6 @@ interface DashboardHeaderProps {
   userType: 'teacher' | 'student';
   showBackButton?: boolean;
   onBackClick?: () => void;
-}
-
-interface Profile {
-  full_name: string;
-  avatar_url: string | null;
 }
 
 export function DashboardHeader({
@@ -42,32 +33,14 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const { user, signOut, profile: authProfile } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { language = 'en', setLanguage } = useLanguage();
+  
   // Use auth profile if available, otherwise fall back to empty state
-  // This prevents the flicker by using the already loaded profile from context
   const profile = authProfile || { full_name: '', avatar_url: null };
 
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    if (user?.id) {
-      fetchNotifications();
-    }
-  }, [user?.id]);
-
-  const fetchNotifications = async () => {
-    if (user?.id) {
-      const notifs = await getUnreadNotifications(user.id);
-      setNotifications(notifs);
-      setUnreadCount(notifs.length);
-    }
-  };
-
-  const getInitials = () => {
+  const getHeaderInitials = () => {
     if (!profile.full_name) return 'U';
     return profile.full_name
       .split(' ')
@@ -75,25 +48,6 @@ export function DashboardHeader({
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const handleNotificationClick = async (notification: any) => {
-    await markAsRead(notification.id);
-    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-    setNotificationDropdownOpen(false);
-    if (notification.link) {
-      navigate(notification.link);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    if (user?.id) {
-      await markAllAsRead(user.id);
-      setNotifications([]);
-      setUnreadCount(0);
-      toast.success(t('common.notificationsRead'));
-    }
   };
 
   const handleLogout = async () => {
@@ -139,86 +93,8 @@ export function DashboardHeader({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Notifications Dropdown */}
-          <DropdownMenu open={notificationDropdownOpen} onOpenChange={setNotificationDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-              <div className="p-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">{t('common.notifications')}</h3>
-                  {unreadCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleMarkAllAsRead}
-                    >
-                      {t('common.markAllRead')}
-                    </Button>
-                  )}
-                </div>
-                {notifications.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground text-sm">
-                    {t('common.noNotifications')}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className="p-3 rounded-lg bg-accent/50 text-sm hover:bg-accent cursor-pointer transition-colors"
-                        onClick={() => handleNotificationClick(notification)}
-                        dir={i18n.dir()}
-                      >
-                        <p className="font-medium">
-                          {(() => {
-                            const titleMap: Record<string, string> = {
-                              'Feedback Received': 'notifications.titles.feedbackReceived',
-                              'Successfully Enrolled': 'notifications.titles.successfullyEnrolled',
-                              'New Personalized Assignment': 'notifications.titles.newAssignment',
-                              'New Student Enrolled': 'notifications.titles.studentEnrolled',
-                            };
-                            return titleMap[notification.title] ? t(titleMap[notification.title]) : notification.title;
-                          })()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(() => {
-                            // Simple heuristic to translate common notification bodies
-                            if (notification.message.startsWith("You've joined")) {
-                              const classroomName = notification.message.replace("You've joined ", "");
-                              return i18n.language === 'he' ? `הצטרפת ל${classroomName}` : notification.message;
-                            }
-                            if (notification.message.includes("is ready")) {
-                              return i18n.language === 'he' ? "המשוב שלך מוכן" : notification.message;
-                            }
-                            if (notification.message.includes("has been created for you")) {
-                              return i18n.language === 'he' ? "נוצרה עבורך מטלת המשך" : notification.message;
-                            }
-                            return notification.message;
-                          })()}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(notification.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Notifications Dropdown - Refactored to use shared component with React Query */}
+          {user?.id && <NotificationDropdown userId={user.id} />}
 
           {/* Profile Dropdown */}
           <DropdownMenu>
@@ -228,7 +104,7 @@ export function DashboardHeader({
                   {profile.avatar_url && (
                     <AvatarImage src={profile.avatar_url} alt={profile.full_name} className="object-cover" />
                   )}
-                  <AvatarFallback className="bg-primary/5 text-primary font-medium">{getInitials()}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/5 text-primary font-medium">{getHeaderInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>

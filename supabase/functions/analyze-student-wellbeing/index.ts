@@ -119,6 +119,7 @@ serve(async (req) => {
           title: analysis.alert_level === 'critical' ? 'CRITICAL Wellbeing Alert' : 'Wellbeing Concern Detected',
           message: `${studentName} showed signs of ${analysis.alert_types.join(', ')} during "${assignmentTitle || 'an assignment'}"`,
           link: `/teacher/submission/${submissionId}?alert=${firstAlertId}`,
+          actor_id: studentId,
           metadata: { 
             alert_id: firstAlertId, 
             student_id: studentId, 

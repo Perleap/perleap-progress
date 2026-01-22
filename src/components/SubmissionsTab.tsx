@@ -29,7 +29,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   // Filter states
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('in_progress');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -56,6 +56,9 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   // Memoize filtered submissions to avoid recalculating on every render
   const filteredSubmissions = useMemo(() => {
+    // Default to in_progress if no status is selected (initial view)
+    const effectiveStatus = selectedStatus;
+    
     let filtered = [...submissions];
 
     if (selectedStudent !== 'all') {
@@ -66,12 +69,10 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
       filtered = filtered.filter((s) => s.assignment_id === selectedAssignment);
     }
 
-    if (selectedStatus !== 'all') {
-      if (selectedStatus === 'completed') {
-        filtered = filtered.filter((s) => s.has_feedback);
-      } else if (selectedStatus === 'in_progress') {
-        filtered = filtered.filter((s) => !s.has_feedback);
-      }
+    if (effectiveStatus === 'completed') {
+      filtered = filtered.filter((s) => s.has_feedback);
+    } else if (effectiveStatus === 'in_progress') {
+      filtered = filtered.filter((s) => !s.has_feedback);
     }
 
     if (startDate) {
@@ -275,7 +276,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                     <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground">
                         <SelectValue>
-                          {selectedStatus === 'all' ? t('submissionsTab.allStatuses') : t(`common.${selectedStatus}`)}
+                          {selectedStatus === 'all' ? t('submissionsTab.allStatuses') : (selectedStatus === 'in_progress' ? t('submissionsTab.inProgress') : t('submissionCard.completed'))}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>

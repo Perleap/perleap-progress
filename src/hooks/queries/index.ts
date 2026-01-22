@@ -78,6 +78,16 @@ export {
   useStudentCalendarData,
 } from './useCalendarQueries';
 
+// Notification Queries
+export {
+  notificationKeys,
+  useNotifications as useNotificationList,
+  useUnreadCount,
+  useMarkAsRead,
+  useMarkAllAsRead,
+} from './useNotificationQueries';
+
+
 
 
 

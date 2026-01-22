@@ -40,7 +40,7 @@ serve(async (req) => {
     ]);
 
     const assignmentData = assignmentResult.data;
-    const teacherId = assignmentData?.classrooms?.teacher_id;
+    const teacherId = (assignmentData?.classrooms as any)?.teacher_id;
     const classroomId = assignmentData?.classroom_id;
 
     // Get conversation context
@@ -279,6 +279,7 @@ serve(async (req) => {
               title: 'Feedback Received',
               message: `Your feedback for "${assignmentTitle}" is ready`,
               link: `/student/assignment/${assignmentId}`,
+              actor_id: teacherId,
               metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
               is_read: false,
             }),
@@ -288,6 +289,7 @@ serve(async (req) => {
               title: 'Activity Completed',
               message: `${studentName} completed "${assignmentTitle}"`,
               link: `/teacher/submission/${submissionId}`,
+              actor_id: studentId,
               metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, student_id: studentId, student_name: studentName, submission_id: submissionId },
               is_read: false,
             }) : Promise.resolve(),

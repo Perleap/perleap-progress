@@ -19,6 +19,7 @@ export type NotificationType =
 export interface Notification {
   id: string;
   user_id: string;
+  actor_id?: string | null;
   type: NotificationType;
   title: string;
   message: string;
@@ -28,6 +29,14 @@ export interface Notification {
   created_at: string;
   updated_at: string;
 }
+
+export interface NotificationWithProfile extends Notification {
+  actor_profile?: {
+    full_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
 
 export interface NotificationMetadata {
   classroom_id?: string;

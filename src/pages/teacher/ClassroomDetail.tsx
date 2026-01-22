@@ -557,7 +557,7 @@ const ClassroomDetail = () => {
                                 variant="outline"
                                 className="rounded-full bg-primary/10 text-primary border-primary/20"
                               >
-                                {t('classroomDetail.assignedTo')} {assignment.student_profiles?.full_name || 'Student'}
+                                {t('classroomDetail.assignedTo')} {assignment.student_profiles?.full_name || t('common.student')}
                               </Badge>
                             )}
                             <Badge

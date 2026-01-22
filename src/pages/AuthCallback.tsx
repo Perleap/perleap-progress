@@ -10,11 +10,11 @@ const AuthCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Safety timeout: if callback takes more than 10 seconds, force redirect to login
+    // Safety timeout: if callback takes more than 20 seconds, force redirect to login
     const timeout = setTimeout(() => {
       console.warn('⚠️ AuthCallback: Operation timed out, redirecting to /auth');
       navigate('/auth', { replace: true });
-    }, 10000);
+    }, 20000);
 
     const handleCallback = async () => {
       try {
@@ -94,23 +94,26 @@ const AuthCallback = () => {
         });
 
         // Detect and CLEAN UP orphaned profiles immediately
-        if (teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id) {
-          console.warn('⚠️ AuthCallback: Found orphaned teacher_profile with email', userEmail, 
-            'but different user_id. Cleaning up now...');
-          // Delete the orphaned profile by its user_id (which doesn't exist in auth anymore)
-          await supabase
-            .from('teacher_profiles')
-            .delete()
-            .eq('user_id', teacherProfileByEmail.user_id);
-        }
-        if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
-          console.warn('⚠️ AuthCallback: Found orphaned student_profile with email', userEmail, 
-            'but different user_id. Cleaning up now...');
-          // Delete the orphaned profile by its user_id (which doesn't exist in auth anymore)
-          await supabase
-            .from('student_profiles')
-            .delete()
-            .eq('user_id', studentProfileByEmail.user_id);
+        // Note: Wrapped in try-catch to prevent blocking the main flow if RLS or other errors occur
+        try {
+          if (teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id) {
+            console.warn('⚠️ AuthCallback: Found orphaned teacher_profile with email', userEmail, 
+              'but different user_id. Attempting cleanup...');
+            await supabase
+              .from('teacher_profiles')
+              .delete()
+              .eq('user_id', teacherProfileByEmail.user_id);
+          }
+          if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
+            console.warn('⚠️ AuthCallback: Found orphaned student_profile with email', userEmail, 
+              'but different user_id. Attempting cleanup...');
+            await supabase
+              .from('student_profiles')
+              .delete()
+              .eq('user_id', studentProfileByEmail.user_id);
+          }
+        } catch (cleanupError) {
+          console.error('⚠️ AuthCallback: Non-blocking error during orphaned data cleanup:', cleanupError);
         }
 
         let userRole = user.user_metadata?.role;

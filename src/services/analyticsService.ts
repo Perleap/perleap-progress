@@ -165,24 +165,25 @@ export const getClassroomAnalytics = async (
   studentId: string | null = null
 ): Promise<{ data: ClassroomAnalytics | null; error: ApiError | null }> => {
   try {
-    // Get student count
+    // 1. Get student count
     const { count: studentCount } = await supabase
       .from('enrollments')
       .select('*', { count: 'exact', head: true })
       .eq('classroom_id', classroomId);
 
-    // Get assignment count
+    // 2. Get assignments in this classroom
     const { data: assignments } = await supabase
       .from('assignments')
       .select('id, title')
       .eq('classroom_id', classroomId);
 
     const assignmentCount = assignments?.length || 0;
+    const assignmentIds = assignments?.map(a => a.id) || [];
 
-    // Get enrollments
+    // 3. Get enrollments with student profiles in bulk
     const { data: enrollments } = await supabase
       .from('enrollments')
-      .select('student_id')
+      .select('student_id, student_profiles(user_id, full_name, avatar_url)')
       .eq('classroom_id', classroomId);
 
     if (!enrollments || enrollments.length === 0) {
@@ -201,49 +202,57 @@ export const getClassroomAnalytics = async (
 
     const studentIds = enrollments.map(e => e.student_id);
 
-    // Fetch all student profiles in one query
-    const { data: profiles } = await supabase
-      .from('student_profiles')
-      .select('user_id, full_name')
-      .in('user_id', studentIds);
+    // 4. Fetch all submissions for these assignments in bulk
+    const { data: allSubmissions } = await supabase
+      .from('submissions')
+      .select('id, student_id, assignment_id, status')
+      .in('assignment_id', assignmentIds);
 
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+    const submissionIds = allSubmissions?.map(s => s.id) || [];
 
-    const studentAnalytics: StudentAnalytics[] = [];
-    let totalSubmissions = 0;
+    // 5. Fetch all 5D snapshots for these submissions in bulk
+    const { data: allSnapshots } = await supabase
+      .from('five_d_snapshots')
+      .select('user_id, submission_id, scores')
+      .in('submission_id', submissionIds)
+      .eq('classroom_id', classroomId);
 
-    for (const enrollment of enrollments) {
-      const fullName = profileMap.get(enrollment.student_id) || 'Unknown';
+    // 6. Fetch all feedback records in bulk
+    let feedbackQuery = supabase
+      .from('assignment_feedback')
+      .select('student_id, assignment_id')
+      .in('submission_id', submissionIds);
 
-      // Get scores for this classroom
-      const { data: snapshots } = await getUserSnapshots(enrollment.student_id, true, classroomId);
+    if (assignmentId) {
+      feedbackQuery = feedbackQuery.eq('assignment_id', assignmentId);
+    }
 
-      let averageScores: FiveDScores | null = null;
-      if (snapshots && snapshots.length > 0) {
-        averageScores = calculateAverageScores(snapshots);
-      }
+    const { data: allFeedback } = await feedbackQuery;
 
-      // Get feedback count
-      let feedbackQuery = supabase
-        .from('assignment_feedback')
-        .select('id', { count: 'exact', head: true })
-        .eq('student_id', enrollment.student_id);
+    // 7. Process data into student analytics
+    const studentAnalytics: StudentAnalytics[] = enrollments.map(enrollment => {
+      const studentId = enrollment.student_id;
+      const profile = (enrollment as any).student_profiles;
+      const fullName = profile?.full_name || 'Unknown';
 
-      if (assignmentId) {
-        feedbackQuery = feedbackQuery.eq('assignment_id', assignmentId);
-      }
+      // Filter snapshots for this student
+      const studentSnapshots = allSnapshots?.filter(s => s.user_id === studentId) || [];
+      const averageScores = studentSnapshots.length > 0 
+        ? calculateAverageScores(studentSnapshots as any)
+        : null;
 
-      const { count: feedbackCount } = await feedbackQuery;
+      // Filter feedback for this student
+      const studentFeedback = allFeedback?.filter(f => f.student_id === studentId) || [];
 
-      totalSubmissions += feedbackCount || 0;
-
-      studentAnalytics.push({
-        id: enrollment.student_id,
+      return {
+        id: studentId,
         fullName,
         latestScores: averageScores,
-        feedbackCount: feedbackCount || 0,
-      });
-    }
+        feedbackCount: studentFeedback.length,
+      };
+    });
+
+    const totalSubmissions = allFeedback?.length || 0;
 
     // Calculate class average or individual student scores
     let classAverage: FiveDScores | null = null;
@@ -254,7 +263,7 @@ export const getClassroomAnalytics = async (
     } else {
       const validScores = studentAnalytics.filter((s) => s.latestScores);
       if (validScores.length > 0) {
-        const allSnapshots: FiveDSnapshot[] = validScores
+        const allStudentSnapshots: FiveDSnapshot[] = validScores
           .map((s) =>
             s.latestScores
               ? ({
@@ -263,7 +272,7 @@ export const getClassroomAnalytics = async (
               : null
           )
           .filter((s): s is FiveDSnapshot => s !== null);
-        classAverage = calculateAverageScores(allSnapshots);
+        classAverage = calculateAverageScores(allStudentSnapshots);
       }
     }
 

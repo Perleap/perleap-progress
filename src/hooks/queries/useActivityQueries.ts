@@ -40,29 +40,17 @@ export const useRecentActivity = (userId: string | undefined, teacherProfile: an
       if (submissionIds.length > 0) {
         const { data: submissions } = await supabase
           .from('submissions')
-          .select('id, student_id')
+          .select('id, student_id, student_profiles(user_id, full_name, avatar_url)')
           .in('id', submissionIds);
 
         if (submissions && submissions.length > 0) {
-          const studentIds = submissions.map(s => s.student_id);
-          const { data: profiles } = await supabase
-            .from('student_profiles')
-            .select('user_id, full_name, avatar_url')
-            .in('user_id', studentIds);
-
-          if (profiles) {
-            const profileLookup = profiles.reduce((acc, p) => {
-              acc[p.user_id] = { name: p.full_name, avatar_url: p.avatar_url };
-              return acc;
-            }, {} as any);
-
-            studentProfilesMap = submissions.reduce((acc, s) => {
-              if (profileLookup[s.student_id]) {
-                acc[s.id] = profileLookup[s.student_id];
-              }
-              return acc;
-            }, {} as any);
-          }
+          studentProfilesMap = submissions.reduce((acc, s) => {
+            const profile = (s as any).student_profiles;
+            if (profile) {
+              acc[s.id] = { name: profile.full_name, avatar_url: profile.avatar_url };
+            }
+            return acc;
+          }, {} as any);
         }
       }
 
