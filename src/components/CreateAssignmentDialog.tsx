@@ -247,11 +247,6 @@ export function CreateAssignmentDialog({
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true,
-          onUploadProgress: (progress) => {
-            const percentage = Math.round((progress.loaded / progress.total) * 100);
-            setUploadProgress(percentage);
-            console.log(`Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`);
-          }
         });
 
       if (uploadError) {
@@ -582,7 +577,9 @@ export function CreateAssignmentDialog({
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
                   >
                     <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>{t('createAssignment.type')}</SelectValue>
+                      <SelectValue>
+                        {formData.type ? t(`createAssignment.typeOptions.${formData.type}`) : t('createAssignment.type')}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
@@ -646,7 +643,9 @@ export function CreateAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue>{t('createAssignment.selectFromDomains')}</SelectValue>
+                        <SelectValue>
+                          {selectedDomain || t('createAssignment.selectFromDomains')}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {classroomDomains.map((domain, index) => (
@@ -695,7 +694,9 @@ export function CreateAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue>{t('createAssignment.selectFromSkills', { domain: selectedDomain })}</SelectValue>
+                        <SelectValue>
+                          {t('createAssignment.selectFromSkills', { domain: selectedDomain })}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {availableComponents.map((component, index) => (

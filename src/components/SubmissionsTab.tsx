@@ -29,7 +29,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   // Filter states
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('in_progress');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -56,7 +56,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   // Memoize filtered submissions to avoid recalculating on every render
   const filteredSubmissions = useMemo(() => {
-    // Default to in_progress if no status is selected (initial view)
+    // Use selectedStatus for filtering
     const effectiveStatus = selectedStatus;
     
     let filtered = [...submissions];
@@ -209,7 +209,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       <Filter className="h-4 w-4 me-2" />
                       {t('common.advancedFilters')}
                       {activeFiltersCount > 0 && (
-                        <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary hover:bg-primary/30">
+                        <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-full w-5 h-5 p-0 flex items-center justify-center text-[10px]">
                           {activeFiltersCount}
                         </Badge>
                       )}
@@ -235,8 +235,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                 <div className="pt-4 mt-2 border-t border-border grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1.5">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
-                    <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground">
+                    <Select value={selectedStudent} onValueChange={setSelectedStudent} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedStudent === 'all' ? t('submissionsTab.allStudents') : students.find(s => s.id === selectedStudent)?.name}
                         </SelectValue>
@@ -254,8 +254,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
                   <div className="space-y-1.5">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
-                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground">
+                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedAssignment === 'all' ? t('submissionsTab.allAssignments') : assignments.find(a => a.id === selectedAssignment)?.title}
                         </SelectValue>
@@ -273,8 +273,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
                   <div className="space-y-1.5">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
-                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground">
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedStatus === 'all' ? t('submissionsTab.allStatuses') : (selectedStatus === 'in_progress' ? t('submissionsTab.inProgress') : t('submissionCard.completed'))}
                         </SelectValue>

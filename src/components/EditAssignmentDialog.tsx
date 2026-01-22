@@ -199,11 +199,6 @@ export function EditAssignmentDialog({
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true,
-          onUploadProgress: (progress) => {
-            const percentage = Math.round((progress.loaded / progress.total) * 100);
-            setUploadProgress(percentage);
-            console.log(`Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`);
-          }
         });
 
       if (uploadError) {
@@ -491,7 +486,9 @@ export function EditAssignmentDialog({
                     onValueChange={setType}
                   >
                     <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue />
+                      <SelectValue>
+                        {type ? t(`createAssignment.typeOptions.${type}`) : t('createAssignment.type')}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
@@ -528,7 +525,9 @@ export function EditAssignmentDialog({
                 </Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectValue />
+                    <SelectValue>
+                      {status ? t(`assignments.status.${status}`) : t('assignments.status.label')}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.draft')}</SelectItem>
@@ -570,7 +569,9 @@ export function EditAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue />
+                        <SelectValue>
+                          {selectedDomain || t('createAssignment.selectFromDomains')}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {classroomDomains.map((domain, index) => (
@@ -608,7 +609,7 @@ export function EditAssignmentDialog({
                 {selectedDomain && availableComponents.length > 0 && (
                   <div className="space-y-2">
                     <Select
-                      onValueChange={(value) => {
+                      onValueChange={(value: string) => {
                         // Add component if not already in the list
                         if (!hardSkills.includes(value)) {
                           setHardSkills([...hardSkills, value]);
@@ -616,7 +617,9 @@ export function EditAssignmentDialog({
                       }}
                     >
                       <SelectTrigger className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue />
+                        <SelectValue>
+                          {t('createAssignment.selectFromSkills', { domain: selectedDomain })}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {availableComponents.map((component, index) => (

@@ -368,6 +368,7 @@
     "addLink": "Add Link",
     "typeOptions": {
       "text_essay": "Text Essay",
+      "file_upload": "File Upload",
       "quiz": "Quiz",
       "project": "Project",
       "presentation": "Presentation",

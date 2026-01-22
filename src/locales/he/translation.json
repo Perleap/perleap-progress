@@ -367,6 +367,7 @@
     "addLink": "הוסף קישור",
     "typeOptions": {
       "text_essay": "חיבור / טקסט",
+      "file_upload": "העלאת קובץ",
       "quiz": "בוחן",
       "project": "פרויקט",
       "presentation": "מצגת",
