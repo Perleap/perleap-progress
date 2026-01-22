@@ -122,6 +122,7 @@ Based on this information, design a personalized follow-up assignment that will 
       [{ role: 'user', content: userPrompt }],
       0.7,
       800,
+      'smart'
     );
 
     logInfo('Raw OpenAI response', { length: assignmentText.length });

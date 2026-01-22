@@ -211,7 +211,10 @@
       "startingConversation": "Error starting conversation",
       "loadingConversation": "Error loading conversation",
       "communicating": "Error communicating with AI assistant",
-      "generatingFeedback": "Error generating feedback"
+      "generatingFeedback": "Error generating feedback",
+      "tts": "Error playing audio",
+      "stt": "Error transcribing audio",
+      "micAccess": "Microphone access denied"
     },
     "success": {
       "activityCompleted": "Activity completed! Feedback generated."
@@ -556,11 +559,15 @@
     "notStarted": "Not Started",
     "inProgress": "In Progress",
     "learningDimensions": "Learning Dimensions",
+    "courseMaterials": "Course Materials",
+    "download": "Download",
+    "open": "Open",
     "success": {
       "completed": "Activity completed successfully!"
     },
     "errors": {
-      "loading": "Error loading assignment"
+      "loading": "Error loading assignment",
+      "generatingFeedback": "Error generating feedback"
     }
   },
   "studentClassroom": {
@@ -594,6 +601,7 @@
     "bio": "Bio",
     "saving": "Saving...",
     "save": "Save Changes",
+    "saveChanges": "Save Changes",
     "errors": {
       "loading": "Error loading profile",
       "saving": "Error saving changes"
@@ -675,7 +683,13 @@
       "feedbackNotificationsDesc": "Get notified when you receive feedback"
     },
     "learningPreferences": "Learning Preferences",
-    "learningPreferencesDesc": "Tell us about your learning style and preferences"
+    "learningPreferencesDesc": "Tell us about your learning style and preferences",
+    "voicePreference": "Voice Preference",
+    "voicePreferenceDesc": "Choose how you want the AI assistant to sound",
+    "voiceType": "Voice Type",
+    "voiceTypeDesc": "Select a male or female voice for the AI assistant",
+    "male": "Male",
+    "female": "Female"
   },
   "analytics": {
     "overview": "Overview",

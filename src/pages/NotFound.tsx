@@ -21,7 +21,7 @@ const NotFound = () => {
         </p>
         <Link to="/">
           <Button className="bg-black text-white hover:bg-black/90 rounded-full px-8 gap-2">
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
             Return to Home
           </Button>
         </Link>

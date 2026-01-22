@@ -8,7 +8,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export const LanguageSwitcher = () => {
-  const { language = 'en', setLanguage } = useLanguage();
+  const { language = 'en', setLanguage, isRTL } = useLanguage();
 
   return (
     <DropdownMenu>
@@ -18,7 +18,7 @@ export const LanguageSwitcher = () => {
           <span className="sr-only">Switch language</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" dir={isRTL ? 'rtl' : 'ltr'}>
         <DropdownMenuItem
           onClick={() => setLanguage('en')}
           className={language === 'en' ? 'bg-accent' : ''}

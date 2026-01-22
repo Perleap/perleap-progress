@@ -102,6 +102,7 @@ export const CreateClassroomDialog = ({
             teacher_id: user.id,
             type: 'create',
             entity_type: 'classroom',
+            entity_id: data.id,
             title: `Created classroom: ${formData.courseTitle || 'New Classroom'}`,
             route: `/teacher/classroom/${data.id}`,
           }
