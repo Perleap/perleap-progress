@@ -17,6 +17,7 @@ interface UseConversationResult {
   sending: boolean;
   error: ApiError | null;
   conversationEnded: boolean;
+  language: string;
   sendMessage: (content: string) => Promise<void>;
   initializeConversation: () => Promise<void>;
 }
@@ -222,6 +223,7 @@ export const useConversation = ({
     sending,
     error,
     conversationEnded,
+    language,
     sendMessage,
     initializeConversation,
   };

@@ -102,7 +102,14 @@ export function AssignmentChatInterface({
   }, []);
 
   // Use the conversation hook which handles language, greeting initialization, and API calls
-  const { messages, loading, sending, conversationEnded: hookConversationEnded, sendMessage: sendConversationMessage } = useConversation({
+  const { 
+    messages, 
+    loading, 
+    sending, 
+    conversationEnded: hookConversationEnded, 
+    language: conversationLanguage,
+    sendMessage: sendConversationMessage 
+  } = useConversation({
     submissionId,
     assignmentInstructions,
     studentId: user?.id || '',
@@ -270,8 +277,9 @@ export function AssignmentChatInterface({
   };
 
   const startRecording = async () => {
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       // Choose supported MIME type
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
@@ -293,7 +301,7 @@ export function AssignmentChatInterface({
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         try {
-          const text = await transcribeAudio(audioBlob, isRTL ? 'he' : 'en');
+          const text = await transcribeAudio(audioBlob, conversationLanguage);
           if (text.trim()) {
             setInput((prev) => prev + (prev ? ' ' : '') + text.trim());
           }
@@ -302,14 +310,20 @@ export function AssignmentChatInterface({
         }
         
         // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
       };
 
       // Set a small timeslice to get data regularly (can help with large recordings)
       mediaRecorder.start(1000);
       setIsRecording(true);
     } catch (error) {
-      toast.error(t('assignmentChat.errors.micAccess', 'Microphone access denied'));
+      console.error('Recording error:', error);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      toast.error(t('assignmentChat.errors.micAccess', 'Microphone access denied or recording failed'));
     }
   };
 
