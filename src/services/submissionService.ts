@@ -13,6 +13,7 @@ import type {
   ChatResponse,
   FeedbackRequest,
   FeedbackResponse,
+  Message,
 } from '@/types';
 import { SUBMISSION_STATUS } from '@/config/constants';
 
@@ -36,7 +37,7 @@ export const getOrCreateSubmission = async (
     }
 
     if (existing) {
-      return { data: existing, error: null };
+      return { data: existing as any as Submission, error: null };
     }
 
     const { data: newSubmission, error: createError } = await supabase
@@ -45,7 +46,7 @@ export const getOrCreateSubmission = async (
         {
           assignment_id: assignmentId,
           student_id: studentId,
-          status: SUBMISSION_STATUS.IN_PROGRESS,
+          status: SUBMISSION_STATUS.IN_PROGRESS as any,
         },
       ])
       .select()
@@ -55,7 +56,7 @@ export const getOrCreateSubmission = async (
       return { data: null, error: handleSupabaseError(createError) };
     }
 
-    return { data: newSubmission, error: null };
+    return { data: newSubmission as any as Submission, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -177,7 +178,7 @@ export const getEnrichedClassroomSubmissions = async (
         assignment_title: assignment?.title || 'Unknown Assignment',
         has_feedback: !!fb,
         teacher_feedback: fb?.teacher_feedback,
-        conversation_context: fb?.conversation_context || []
+        conversation_context: (fb?.conversation_context as unknown as Message[]) || []
       };
     });
 
@@ -188,7 +189,7 @@ export const getEnrichedClassroomSubmissions = async (
         const studentProfile = Array.isArray(profile) ? profile[0] : profile;
 
         if (studentProfile) {
-          enriched.push({
+          const pendingSub: any = {
             id: `pending-${assign.id}-${assign.assigned_student_id}`,
             submitted_at: assign.created_at,
             student_id: assign.assigned_student_id,
@@ -200,7 +201,8 @@ export const getEnrichedClassroomSubmissions = async (
             has_feedback: false,
             teacher_feedback: null,
             conversation_context: []
-          });
+          };
+          enriched.push(pendingSub);
         }
       }
     });
@@ -238,7 +240,7 @@ export const getSubmissionById = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as any as SubmissionWithDetails, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -273,14 +275,14 @@ export const getClassroomSubmissions = async (
       `
       )
       .in('assignment_id', assignmentIds)
-      .eq('status', SUBMISSION_STATUS.COMPLETED)
+      .eq('status', SUBMISSION_STATUS.COMPLETED as any)
       .order('submitted_at', { ascending: false });
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as any as SubmissionWithDetails[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -303,7 +305,7 @@ export const getSubmissionFeedback = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as unknown as AssignmentFeedback, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

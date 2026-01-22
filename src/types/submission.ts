@@ -9,10 +9,10 @@ export interface Submission {
   id: string;
   assignment_id: string;
   student_id: string;
-  text_body: string;
-  submitted_at: string | null;
-  created_at: string;
-  updated_at: string;
+  text_body: string | null;
+  file_url: string | null;
+  status: SubmissionStatus;
+  submitted_at: string;
 }
 
 /**
@@ -76,7 +76,7 @@ export interface HardSkillsAssessment {
 /**
  * Submission status
  */
-export type SubmissionStatus = 'draft' | 'submitted' | 'pending' | 'graded' | 'returned';
+export type SubmissionStatus = 'in_progress' | 'completed';
 
 /**
  * Submission with student details
@@ -84,13 +84,20 @@ export type SubmissionStatus = 'draft' | 'submitted' | 'pending' | 'graded' | 'r
 export interface SubmissionWithDetails extends Submission {
   assignments?: {
     title: string;
-    due_at: string;
-    type: string;
-    instructions: string;
+    due_at?: string;
+    type?: string;
+    instructions?: string;
   };
   student_profiles?: {
     full_name: string;
     avatar_url?: string;
+    user_id?: string;
+    created_at?: string;
+  };
+  assignment_feedback?: {
+    student_feedback: string | null;
+    teacher_feedback: string | null;
+    created_at: string;
   };
 }
 

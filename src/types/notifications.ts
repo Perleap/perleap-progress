@@ -27,7 +27,6 @@ export interface Notification {
   metadata?: NotificationMetadata | null;
   is_read: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface NotificationWithProfile extends Notification {
