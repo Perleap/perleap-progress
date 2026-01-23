@@ -19,7 +19,7 @@ interface AuthContextType {
   session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
-  signOut: () => Promise<void>;
+  signOut: (redirectPath?: string) => Promise<void>;
   refreshProfile: (force?: boolean) => Promise<void>;
   hasProfile: boolean | null;
   isProfileLoading: boolean;
@@ -292,28 +292,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = async (redirectPath: string = '/') => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Sign out error:', error);
-      }
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Sign out failed, cleaning up locally:', error);
     } finally {
-      clearAllPersistedForms();
-      clearAllSignupState();
-      sessionStorage.clear();
-      queryClient.clear();
-      
-      const keysToKeep = ['language_preference'];
-      const allKeys = Object.keys(localStorage);
-      allKeys.forEach((key) => {
-        if (!keysToKeep.includes(key)) {
-          localStorage.removeItem(key);
-        }
-      });
-      navigate('/');
+      // Perform heavy cleanup in the next tick to prevent blocking the UI
+      setTimeout(() => {
+        clearAllPersistedForms();
+        clearAllSignupState();
+        sessionStorage.clear();
+        queryClient.clear();
+        
+        const keysToKeep = ['language_preference'];
+        const allKeys = Object.keys(localStorage);
+        allKeys.forEach((key) => {
+          if (!keysToKeep.includes(key)) {
+            localStorage.removeItem(key);
+          }
+        });
+        navigate(redirectPath);
+      }, 0);
     }
   };
 

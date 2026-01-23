@@ -82,6 +82,34 @@ serve(async (req) => {
           .in('id', classroomIds);
       }
 
+      // Delete teacher reviews
+      console.log('Deleting teacher reviews...');
+      await supabaseClient
+        .from('teacher_reviews')
+        .delete()
+        .eq('reviewer_id', userId);
+
+      // Delete AI lesson plans
+      console.log('Deleting AI lesson plans...');
+      await supabaseClient
+        .from('ai_lesson_plans')
+        .delete()
+        .eq('teacher_id', userId);
+
+      // Delete activity events
+      console.log('Deleting activity events...');
+      await supabaseClient
+        .from('activity_events')
+        .delete()
+        .eq('teacher_id', userId);
+
+      // Handle acknowledged alerts (set to NULL to avoid blocking deletion)
+      console.log('Cleaning up acknowledged alerts...');
+      await supabaseClient
+        .from('student_alerts')
+        .update({ acknowledged_by: null })
+        .eq('acknowledged_by', userId);
+
       // Delete teacher notifications
       await supabaseClient
         .from('notifications')
@@ -130,6 +158,27 @@ serve(async (req) => {
       // Delete student alerts
       await supabaseClient
         .from('student_alerts')
+        .delete()
+        .eq('student_id', userId);
+
+      // Delete chat history
+      console.log('Deleting assignment chat history...');
+      await supabaseClient
+        .from('assignment_chat_history')
+        .delete()
+        .eq('user_id', userId);
+
+      // Delete conversations
+      console.log('Deleting assignment conversations...');
+      await supabaseClient
+        .from('assignment_conversations')
+        .delete()
+        .eq('student_id', userId);
+
+      // Delete assignment feedback
+      console.log('Deleting assignment feedback...');
+      await supabaseClient
+        .from('assignment_feedback')
         .delete()
         .eq('student_id', userId);
 

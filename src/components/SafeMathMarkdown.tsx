@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Props {
   content: string;
@@ -18,12 +20,13 @@ declare global {
 }
 
 /**
- * SafeMathMarkdown - Renders text content with MathJax support
+ * SafeMathMarkdown - Renders text content with Markdown and MathJax support
  * 
- * Uses MathJax from CDN (loaded in index.html) for stable LaTeX rendering
- * Automatically re-renders when content changes
+ * Uses react-markdown for basic formatting and MathJax from CDN (loaded in index.html)
+ * for stable LaTeX rendering.
  * 
  * Supports:
+ * - Markdown: Bold (**), Italic (*), Lists, Headlines (#), etc.
  * - Inline math: $...$ or \(...\)
  * - Display math: $$...$$ or \[...\]
  */
@@ -49,15 +52,17 @@ function SafeMathMarkdown({ content, className }: Props) {
     };
 
     // Small delay to ensure DOM is ready
-    const timeoutId = setTimeout(typesetMath, 10);
+    const timeoutId = setTimeout(typesetMath, 50);
     
     return () => clearTimeout(timeoutId);
   }, [content]); // Re-run when content changes
 
   return (
     <div className={className} ref={containerRef}>
-      <div className="whitespace-pre-wrap m-0">
-        {content || ''}
+      <div className="markdown-content prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-100 dark:prose-pre:bg-slate-800 prose-headings:mb-2 prose-headings:mt-4 first:prose-headings:mt-0">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {content || ''}
+        </ReactMarkdown>
       </div>
     </div>
   );

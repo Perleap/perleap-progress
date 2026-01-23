@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import type { StudentAlert, AlertLevel } from '@/types/alerts';
 import { ALERT_TYPE_LABELS, ALERT_LEVEL_COLORS } from '@/types/alerts';
 import { useTranslation } from 'react-i18next';
+import SafeMathMarkdown from './SafeMathMarkdown';
 
 interface WellbeingAlertCardProps {
   alerts: StudentAlert[];
@@ -166,7 +167,7 @@ export function WellbeingAlertCard({
 
           <div className="mb-3">
             <h4 className="font-semibold text-sm mb-2 text-foreground">AI Analysis:</h4>
-            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{bestAnalysis}</p>
+            <SafeMathMarkdown content={bestAnalysis} className="text-sm text-foreground/80" />
           </div>
 
           {allTriggeredMessages.length > 0 && (
@@ -175,7 +176,7 @@ export function WellbeingAlertCard({
               <div className="space-y-2">
                 {allTriggeredMessages.map((msg, idx) => (
                   <div key={idx} className="bg-destructive/10 border-l-4 border-destructive p-3 text-sm">
-                    <p className="text-foreground font-medium mb-1">"{msg.content}"</p>
+                    <SafeMathMarkdown content={`"${msg.content}"`} className="text-foreground font-medium mb-1" />
                     <p className="text-destructive text-xs italic">{msg.reason}</p>
                   </div>
                 ))}

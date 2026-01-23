@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
+import SafeMathMarkdown from '../SafeMathMarkdown';
 
 interface Message {
     role: 'user' | 'assistant' | 'system';
@@ -146,7 +147,7 @@ export function TeacherAssistant() {
                                                 ? 'bg-indigo-600 text-white rounded-br-none'
                                                 : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-bl-none text-slate-800 dark:text-slate-200'
                                             }`}>
-                                            {m.content}
+                                            <SafeMathMarkdown content={m.content} />
                                         </div>
                                     </div>
                                 ))}

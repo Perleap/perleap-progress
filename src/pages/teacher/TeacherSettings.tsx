@@ -100,6 +100,12 @@ const TeacherSettings = () => {
         sample_explanation: (profileData as any).sample_explanation || '',
       });
     } else if (!loading && user) {
+      // Check if we're currently deleting the account
+      if (sessionStorage.getItem('is_deleting_account') === 'true') {
+        console.log('ℹ️ TeacherSettings: Account deletion in progress, skipping onboarding redirect');
+        return;
+      }
+
       // If profile finished loading but is missing, redirect to onboarding
       navigate('/onboarding/teacher', { replace: true });
     }

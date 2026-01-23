@@ -27,7 +27,7 @@ interface DeleteAccountDialogProps {
 export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAccountDialogProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,45 +44,55 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
     }
 
     setIsDeleting(true);
+    
+    // Set a flag in sessionStorage to prevent premature redirects in settings pages
+    sessionStorage.setItem('is_deleting_account', 'true');
+
     try {
       // Call the edge function to handle complete account deletion
-      const { data, error } = await supabase.functions.invoke('delete-user-account', {
+      const { data, error: invokeError } = await supabase.functions.invoke('delete-user-account', {
         body: { userId: user.id, userRole },
       });
 
-      if (error) {
-        console.error('Delete account error:', error);
-        throw new Error(error.message || 'Failed to delete account');
+      if (invokeError) {
+        console.error('Delete account invoke error:', invokeError);
+        // Try to parse the error message if it's a JSON response
+        let errorMessage = 'Failed to delete account';
+        try {
+          if (invokeError instanceof Error) {
+            errorMessage = invokeError.message;
+          } else if (typeof invokeError === 'object' && (invokeError as any).message) {
+            errorMessage = (invokeError as any).message;
+          }
+        } catch (e) {
+          console.error('Error parsing invoke error:', e);
+        }
+        throw new Error(errorMessage);
       }
 
       if (data?.error) {
+        console.error('Delete account data error:', data.error);
         throw new Error(data.error);
       }
 
       // Success - sign out and redirect
       toast.success(t('settings.deleteAccount.success'));
 
-      // Preserve language preference before clearing storage
-      const languagePreference = localStorage.getItem('language_preference');
+      // Close the dialog immediately to provide instant feedback
+      onOpenChange(false);
 
-      // Clear all local storage and session storage
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Restore language preference (user's UI preference should persist)
-      if (languagePreference) {
-        localStorage.setItem('language_preference', languagePreference);
-      }
-
-      // Sign out
-      await supabase.auth.signOut();
-
-      // Redirect to home page
-      navigate('/', { replace: true });
+      // Sign out and redirect to home page with a 'deleted' flag
+      // The signOut function already handles clearing storage and preserving language preference
+      await signOut('/?deleted=true');
     } catch (error: any) {
       console.error('Error deleting account:', error);
-      toast.error(error.message || t('settings.deleteAccount.errors.deleteFailed'));
+      // Extract a more helpful error message if possible
+      const errorMessage = error.message || t('settings.deleteAccount.errors.deleteFailed');
+      toast.error(errorMessage, {
+        duration: 5000, // Show for longer to ensure user sees it
+      });
       setIsDeleting(false);
+      sessionStorage.removeItem('is_deleting_account');
     }
   };
 

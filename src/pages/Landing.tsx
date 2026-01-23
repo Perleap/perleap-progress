@@ -39,6 +39,12 @@ const Landing = () => {
       // Don't redirect if we're already handling a callback
       if (isOAuthCallback) return;
 
+      // Don't redirect if we just deleted the account
+      if (searchParams.get('deleted') === 'true') {
+        console.log('ℹ️ Landing: Account deletion detected, staying on landing page');
+        return;
+      }
+
       // Wait for auth loading and profile loading
       if (authLoading || isProfileLoading) return;
       // If user is logged in but profile check is not done, wait

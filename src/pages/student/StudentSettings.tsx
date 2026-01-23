@@ -109,6 +109,12 @@ const StudentSettings = () => {
         additional_notes: (profileData as any).additional_notes || '',
       });
     } else if (!loading && user) {
+      // Check if we're currently deleting the account
+      if (sessionStorage.getItem('is_deleting_account') === 'true') {
+        console.log('ℹ️ StudentSettings: Account deletion in progress, skipping onboarding redirect');
+        return;
+      }
+
       // If profile finished loading but is missing, redirect to onboarding
       navigate('/onboarding/student', { replace: true });
     }
