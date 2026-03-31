@@ -113,6 +113,12 @@ export interface AssignmentFeedback {
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+  fileContext?: {
+    name: string;
+    content: string;
+    url?: string;
+    type?: string;
+  };
 }
 
 export interface AssignmentConversation {

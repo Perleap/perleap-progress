@@ -41,6 +41,7 @@ import { SubmissionsTab } from '@/components/SubmissionsTab';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
+import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { useClassroom, useClassroomAssignments, useClassroomStudents, useDeleteAssignment } from '@/hooks/queries';
 
@@ -117,6 +118,8 @@ const ClassroomDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
   const [activeSection, setActiveSection] = useState('overview');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
 
   // Memoize data transformations
   const assignments = useMemo(() => rawAssignments as unknown as Assignment[], [rawAssignments]);
@@ -703,7 +706,11 @@ const ClassroomDetail = () => {
                       return (
                         <div
                           key={enrollment.id}
-                          className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors bg-card/30"
+                          className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors bg-card/30 cursor-pointer"
+                          onClick={() => {
+                            setSelectedStudentId(enrollment.student_profiles?.user_id || enrollment.student_id);
+                            setSelectedStudentName(enrollment.student_profiles?.full_name || undefined);
+                          }}
                         >
                           <Avatar className="h-12 w-12 border-2 border-card shadow-sm">
                             {enrollment.student_profiles?.avatar_url && (
@@ -735,6 +742,13 @@ const ClassroomDetail = () => {
             </Card>
           </div>
         )}
+
+        <StudentProfileModal
+          studentId={selectedStudentId}
+          studentName={selectedStudentName}
+          open={!!selectedStudentId}
+          onClose={() => { setSelectedStudentId(null); setSelectedStudentName(undefined); }}
+        />
 
         {/* Submissions Section */}
         {activeSection === 'submissions' && (

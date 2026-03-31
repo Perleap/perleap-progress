@@ -58,10 +58,10 @@ export function ClassroomTableView({ classrooms, onCopyInviteCode }: ClassroomTa
     e.stopPropagation();
     try {
       await copyToClipboard(inviteCode);
-      toast.success(t('teacherDashboard.inviteCodeCopied') || 'Invite code copied!');
+      toast.success(t('teacherDashboard.success.inviteCodeCopied'));
       onCopyInviteCode?.(inviteCode);
     } catch (error) {
-      toast.error(t('common.error') || 'Failed to copy');
+      toast.error(t('common.error'));
     }
   };
 

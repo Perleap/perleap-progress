@@ -24,7 +24,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         .eq('classroom_id', classroomId);
 
       if (!assignments || assignments.length === 0) {
-        toast.info(t('components.analytics.noAssignments'));
+        toast.info(t('analytics.noAssignments'));
         setLoading(false);
         return;
       }
@@ -38,7 +38,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
         .in('assignment_id', assignmentIds);
 
       if (!submissions || submissions.length === 0) {
-        toast.info(t('components.analytics.noCompletedSubmissions'));
+        toast.info(t('analytics.noCompletedSubmissions'));
         setLoading(false);
         return;
       }
@@ -55,7 +55,7 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
       const completedSubmissionIds = feedbackData?.map((f) => f.submission_id) || [];
 
       if (completedSubmissionIds.length === 0) {
-        toast.info(t('components.analytics.noCompletedSubmissions'));
+        toast.info(t('analytics.noCompletedSubmissions'));
         setLoading(false);
         return;
       }
@@ -81,15 +81,15 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
       }
 
       if (successCount > 0) {
-        toast.success(`Regenerated ${successCount} student 5D profiles`);
+        toast.success(t('analytics.regenerateSuccess', { count: successCount }));
         onComplete();
       }
 
       if (failCount > 0) {
-        toast.error(`Failed to regenerate ${failCount} profiles`);
+        toast.error(t('analytics.regenerateFail', { count: failCount }));
       }
     } catch (error) {
-      toast.error(t('components.analytics.regenerateError'));
+      toast.error(t('analytics.regenerateError'));
     } finally {
       setLoading(false);
     }

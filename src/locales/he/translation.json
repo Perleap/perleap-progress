@@ -198,7 +198,8 @@
       "loadingClassrooms": "שגיאה בטעינת כיתות"
     },
     "success": {
-      "notificationsRead": "כל ההתראות סומנו כנקראו"
+      "notificationsRead": "כל ההתראות סומנו כנקראו",
+      "inviteCodeCopied": "קוד ההזמנה הועתק ללוח!"
     }
   },
   "assignmentChat": {
@@ -214,10 +215,13 @@
       "generatingFeedback": "שגיאה ביצירת משוב",
       "tts": "שגיאה בהשמעת אודיו",
       "stt": "שגיאה בתמלול אודיו",
-      "micAccess": "הגישה למיקרופון נדחתה"
+      "micAccess": "הגישה למיקרופון נדחתה",
+      "fileUpload": "נכשל בצירוף הקובץ",
+      "completing": "שגיאה בהשלמת הפעילות"
     },
     "success": {
-      "activityCompleted": "הפעילות הושלמה! משוב נוצר."
+      "activityCompleted": "הפעילות הושלמה! משוב נוצר.",
+      "fileAttached": "קובץ צורף"
     },
     "completionDialog": {
       "turnLimitTitle": "בדוק את ההבנה שלך",
@@ -494,7 +498,9 @@
     "inProgress": "בתהליך",
     "dateRange": "טווח תאריכים",
     "clearFilters": "נקה מסננים",
-    "clearAllFilters": "נקה את כל המסננים"
+    "clearAllFilters": "נקה את כל המסננים",
+    "noSubmissions": "אין הגשות לייצוא",
+    "exportSuccess": "הדוח יוצא בהצלחה"
   },
   "submissionCard": {
     "submitted": "הוגש",
@@ -594,10 +600,14 @@
     "saveChanges": "שמור שינויים",
     "errors": {
       "loading": "שגיאה בטעינת פרופיל",
-      "saving": "שגיאה בשמירת שינויים"
+      "saving": "שגיאה בשמירת שינויים",
+      "invalidFileType": "סוג קובץ לא תקין. אנא העלה תמונה.",
+      "fileTooLarge": "הקובץ גדול מדי. הגודל המקסימלי הוא 2MB.",
+      "uploadFailed": "נכשל בהעלאת התמונה"
     },
     "success": {
-      "saved": "הפרופיל עודכן בהצלחה!"
+      "saved": "הפרופיל עודכן בהצלחה!",
+      "photoUploaded": "התמונה הועלתה בהצלחה!"
     },
     "deleteAccount": {
       "title": "מחק חשבון",
@@ -717,7 +727,14 @@
     "activeStudents": "תלמידים פעילים",
     "avgSubmissions": "ממוצע הגשות לתלמיד",
     "engagementRate": "שיעור מעורבות כיתתית",
-    "average5D": "ממוצע ציוני 5D"
+    "average5D": "ממוצע ציוני 5D",
+    "loadError": "שגיאה בטעינת נתוני ניתוח",
+    "scoresError": "שגיאה בטעינת ציונים",
+    "noAssignments": "לא נמצאו משימות",
+    "noCompletedSubmissions": "לא נמצאו הגשות שהושלמו",
+    "regenerateError": "שגיאה ביצירת ציונים מחדש",
+    "regenerateSuccess": "נוצרו מחדש {{count}} פרופילי 5D של תלמידים",
+    "regenerateFail": "נכשל ביצירת {{count}} פרופילים מחדש"
   },
   "wellbeing": {
     "alert": "התראת רווחה",
@@ -734,7 +751,12 @@
     },
     "viewDetails": "צפה בפרטים",
     "analysis": "ניתוח",
-    "triggeredMessages": "הודעות שהופעלו"
+    "triggeredMessages": "הודעות שהופעלו",
+    "success": "ההתראה עודכנה בהצלחה",
+    "error": "שגיאה בעדכון ההתראה",
+    "successAll": "כל ההתראות עודכנו בהצלחה",
+    "errorAll": "שגיאה בעדכון כל ההתראות",
+    "acknowledgeAll": "אשר הכל"
   },
   "onboarding": {
     "welcome": "ברוכים הבאים ל-PerLeap",

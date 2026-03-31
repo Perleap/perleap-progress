@@ -198,7 +198,8 @@
       "loadingClassrooms": "Error loading classrooms"
     },
     "success": {
-      "notificationsRead": "All notifications marked as read"
+      "notificationsRead": "All notifications marked as read",
+      "inviteCodeCopied": "Invite code copied to clipboard!"
     }
   },
   "assignmentChat": {
@@ -214,10 +215,13 @@
       "generatingFeedback": "Error generating feedback",
       "tts": "Error playing audio",
       "stt": "Error transcribing audio",
-      "micAccess": "Microphone access denied"
+      "micAccess": "Microphone access denied",
+      "fileUpload": "Failed to attach file",
+      "completing": "Error completing activity"
     },
     "success": {
-      "activityCompleted": "Activity completed! Feedback generated."
+      "activityCompleted": "Activity completed! Feedback generated.",
+      "fileAttached": "File attached"
     },
     "completionDialog": {
       "turnLimitTitle": "Check Your Understanding",
@@ -507,7 +511,9 @@
     "inProgress": "In Progress",
     "dateRange": "Date Range",
     "clearFilters": "Clear Filters",
-    "clearAllFilters": "Clear All Filters"
+    "clearAllFilters": "Clear All Filters",
+    "noSubmissions": "No submissions to export",
+    "exportSuccess": "Report exported successfully"
   },
   "submissionCard": {
     "submitted": "Submitted",
@@ -607,10 +613,14 @@
     "saveChanges": "Save Changes",
     "errors": {
       "loading": "Error loading profile",
-      "saving": "Error saving changes"
+      "saving": "Error saving changes",
+      "invalidFileType": "Invalid file type. Please upload an image.",
+      "fileTooLarge": "File is too large. Maximum size is 2MB.",
+      "uploadFailed": "Failed to upload photo"
     },
     "success": {
-      "saved": "Profile updated successfully!"
+      "saved": "Profile updated successfully!",
+      "photoUploaded": "Photo uploaded successfully!"
     },
     "deleteAccount": {
       "title": "Delete Account",
@@ -726,7 +736,14 @@
     "activeStudents": "Active Students",
     "avgSubmissions": "Avg. Submissions per Student",
     "engagementRate": "Class Engagement Rate",
-    "average5D": "Average 5D Scores"
+    "average5D": "Average 5D Scores",
+    "loadError": "Error loading analytics data",
+    "scoresError": "Error loading scores",
+    "noAssignments": "No assignments found",
+    "noCompletedSubmissions": "No completed submissions found",
+    "regenerateError": "Error regenerating scores",
+    "regenerateSuccess": "Regenerated {{count}} student 5D profiles",
+    "regenerateFail": "Failed to regenerate {{count}} profiles"
   },
   "wellbeing": {
     "alert": "Wellbeing Alert",
@@ -743,7 +760,12 @@
     },
     "viewDetails": "View Details",
     "analysis": "Analysis",
-    "triggeredMessages": "Triggered Messages"
+    "triggeredMessages": "Triggered Messages",
+    "success": "Wellbeing alert updated successfully",
+    "error": "Failed to update wellbeing alert",
+    "successAll": "All alerts updated successfully",
+    "errorAll": "Failed to update all alerts",
+    "acknowledgeAll": "Acknowledge All"
   },
   "onboarding": {
     "welcome": "Welcome to PerLeap",

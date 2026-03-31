@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
@@ -48,7 +49,7 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
                     <React.Fragment key={index}>
                       <BreadcrumbItem className={index === breadcrumbs.length - 1 ? '' : 'hidden md:block'}>
                         {item.href ? (
-                          <BreadcrumbLink href={item.href} className="font-medium hover:text-primary transition-colors">
+                          <BreadcrumbLink render={<Link to={item.href} />} className="font-medium hover:text-primary transition-colors">
                             {item.label}
                           </BreadcrumbLink>
                         ) : (

@@ -69,6 +69,7 @@ export interface ChatRequest {
   assignmentId: string;
   isInitialGreeting?: boolean;
   language?: string;
+  fileContext?: { name: string; content: string; url?: string; type?: string };
 }
 
 export interface ChatResponse {

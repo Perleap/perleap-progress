@@ -11,6 +11,7 @@ import {
   updateTeacherProfile,
   updateStudentProfile,
 } from '@/services/profileService';
+import { supabase } from '@/integrations/supabase/client';
 import type { TeacherProfile, StudentProfile } from '@/types';
 
 // Query Keys
@@ -57,6 +58,27 @@ export const useStudentProfile = (userId?: string) => {
     },
     enabled: !!targetUserId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Hook to fetch any student's full profile by their user ID (teacher use)
+ */
+export const useStudentProfileById = (studentId: string | null | undefined) => {
+  return useQuery({
+    queryKey: [...profileKeys.student(studentId || ''), 'full'],
+    queryFn: async () => {
+      if (!studentId) throw new Error('Missing student ID');
+      const { data, error } = await supabase
+        .from('student_profiles')
+        .select('*')
+        .eq('user_id', studentId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentId,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

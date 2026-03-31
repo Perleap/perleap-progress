@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,8 +14,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Send, Loader2, CheckCircle, Volume2, VolumeX, Mic, Square, Play, Pause } from 'lucide-react';
+import { Send, Loader2, CheckCircle, Volume2, VolumeX, Mic, Square, Play, Pause, Paperclip, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useConversation } from '@/hooks/useConversation';
@@ -26,6 +27,12 @@ import SafeMathMarkdown from './SafeMathMarkdown';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  fileContext?: {
+    name: string;
+    content: string;
+    url?: string;
+    type?: string;
+  };
 }
 
 interface AssignmentChatInterfaceProps {
@@ -36,6 +43,15 @@ interface AssignmentChatInterfaceProps {
   submissionId: string;
   onComplete: () => void;
 }
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { FileText, Image as ImageIcon, ExternalLink } from 'lucide-react';
 
 // Helper to clean markdown for TTS
 const cleanTextForTTS = (text: string) => {
@@ -69,6 +85,13 @@ export function AssignmentChatInterface({
   const [completing, setCompleting] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [dialogType, setDialogType] = useState<'turnLimit' | 'aiDetected'>('turnLimit');
+  const [activeTab, setActiveTab] = useState('chat');
+  const [previewResource, setPreviewResource] = useState<{ name: string; content: string; url?: string; type?: string; messageIndex: number } | null>(null);
+
+  // File attachment state
+  const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; url?: string; type?: string } | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Audio & Recording states
   const [playingMessageIndex, setPlayingMessageIndex] = useState<number | null>(null);
@@ -102,13 +125,13 @@ export function AssignmentChatInterface({
   }, []);
 
   // Use the conversation hook which handles language, greeting initialization, and API calls
-  const { 
-    messages, 
-    loading, 
-    sending, 
-    conversationEnded: hookConversationEnded, 
+  const {
+    messages,
+    loading,
+    sending,
+    conversationEnded: hookConversationEnded,
     language: conversationLanguage,
-    sendMessage: sendConversationMessage 
+    sendMessage: sendConversationMessage
   } = useConversation({
     submissionId,
     assignmentInstructions,
@@ -139,14 +162,61 @@ export function AssignmentChatInterface({
     }
   }, [messages, loading, sending]);
 
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    try {
+      const isText = file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.txt');
+
+      if (isText) {
+        const text = await file.text();
+        setAttachedFile({ name: file.name, content: text, type: 'text' });
+      } else {
+        // Upload binary files (PDF, images) to Supabase storage
+        const filePath = `${submissionId}/${Date.now()}_${file.name}`;
+        
+        const { error } = await supabase.storage
+          .from('submission-files')
+          .upload(filePath, file, { upsert: true });
+
+        if (error) {
+          throw error;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('submission-files')
+          .getPublicUrl(filePath);
+
+        const isImage = file.type.startsWith('image/');
+        setAttachedFile({ 
+          name: file.name, 
+          content: `[File: ${file.name}]\nURL: ${urlData.publicUrl}`,
+          url: urlData.publicUrl,
+          type: isImage ? 'image' : 'pdf'
+        });
+      }
+      toast.success(t('assignmentChat.success.fileAttached'));
+    } catch (err) {
+      toast.error(t('assignmentChat.errors.fileUpload'));
+    } finally {
+      setUploadingFile(false);
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [submissionId, t]);
+
   const handleSendMessage = async () => {
-    if (!input.trim() || loading || sending) return;
+    if ((!input.trim() && !attachedFile) || loading || sending) return;
 
     const userMessage = input.trim();
     setInput('');
+    const fileCtx = attachedFile ?? undefined;
+    setAttachedFile(null);
     shouldScrollRef.current = true;
 
-    await sendConversationMessage(userMessage);
+    await sendConversationMessage(userMessage, fileCtx);
   };
 
   const handleComplete = async () => {
@@ -306,7 +376,7 @@ export function AssignmentChatInterface({
             setInput((prev) => prev + (prev ? ' ' : '') + text.trim());
           }
         } catch (error) {
-          toast.error(t('assignmentChat.errors.stt', 'Error transcribing audio'));
+          toast.error(t('assignmentChat.errors.stt'));
         }
         
         // Stop all tracks to release microphone
@@ -323,7 +393,7 @@ export function AssignmentChatInterface({
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      toast.error(t('assignmentChat.errors.micAccess', 'Microphone access denied or recording failed'));
+      toast.error(t('assignmentChat.errors.micAccess'));
     }
   };
 
@@ -337,141 +407,315 @@ export function AssignmentChatInterface({
   const isDisabled = loading || sending; // Allow chatting after end
   const canComplete = messages.length > 0;
 
+  const handleViewInChat = (index: number) => {
+    setPreviewResource(null);
+    setActiveTab('chat');
+    // Give tab time to render before scrolling
+    setTimeout(() => {
+      const messageElement = document.getElementById(`message-${index}`);
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Optional: Add a brief highlight effect
+        messageElement.classList.add('bg-primary/10');
+        setTimeout(() => messageElement.classList.remove('bg-primary/10'), 2000);
+      }
+    }, 100);
+  };
+
+  const resources = messages
+    .map((m, i) => ({ ...m, originalIndex: i }))
+    .filter(m => m.role === 'user' && m.fileContext);
+
   return (
     <>
       <Card className="h-full flex flex-col">
         <CardHeader className="px-4 py-3 border-b">
-          <CardTitle className="text-base font-medium">
-            {teacherName} - {assignmentTitle}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium">
+              {teacherName} - {assignmentTitle}
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4 pt-2">
-              {messages.map((message, index) => {
-                const isUser = message.role === 'user';
-                // User messages always on the right side of the chat (end)
-                // Assistant messages always on the left side of the chat (start)
-                // This is standard chat convention regardless of language direction
-                return (
-                  <div
-                    key={index}
-                    className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
+        <CardContent className="space-y-4 pt-4 flex-1 flex flex-col min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-2 mb-2">
+              <TabsTrigger value="chat">{t('assignmentChat.tabs.chat', 'Chat')}</TabsTrigger>
+              <TabsTrigger value="resources">
+                {t('assignmentChat.tabs.resources', 'Resources')}
+                {resources.length > 0 && (
+                  <span className="ml-2 bg-primary/20 text-primary text-xs rounded-full px-2 py-0.5">
+                    {resources.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Chat Tab - Using CSS hidden instead of conditional rendering to preserve state/scroll */}
+            <div className={`flex-1 flex flex-col min-h-0 ${activeTab !== 'chat' ? 'hidden' : ''}`}>
+              <ScrollArea className="flex-1 pr-4 mb-4">
+                <div className="space-y-4 pt-2 pb-4">
+                  {messages.map((message, index) => {
+                    const isUser = message.role === 'user';
+                    // User messages always on the right side of the chat (end)
+                    // Assistant messages always on the left side of the chat (start)
+                    // This is standard chat convention regardless of language direction
+                    return (
                       <div
-                        className={`rounded-lg p-3 ${isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                          }`}
-                        dir="auto"
-                        style={{ unicodeBidi: 'plaintext' }}
+                        key={index}
+                        id={`message-${index}`}
+                        className={`flex ${isUser ? 'justify-end' : 'justify-start'} transition-colors duration-500 rounded-lg`}
                       >
-                        <div className={`text-sm markdown-content ${isUser ? 'text-primary-foreground' : ''}`}>
-                          <SafeMathMarkdown content={String(message.content || '')} />
+                        <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                          <div
+                            className={`rounded-lg p-3 bg-muted`}
+                            dir="auto"
+                            style={{ unicodeBidi: 'plaintext' }}
+                          >
+                            <div className={`text-sm markdown-content`}>
+                              {message.content && <SafeMathMarkdown content={String(message.content || '')} />}
+                            </div>
+                            
+                            {/* Render attachment underneath the message text */}
+                            {message.fileContext && (
+                              <div 
+                                className={`mt-2 p-2 rounded-md border bg-background/50 flex items-center gap-2 cursor-pointer hover:bg-background transition-colors ${!message.content ? 'mt-0' : ''}`}
+                                onClick={() => setPreviewResource({ ...message.fileContext!, messageIndex: index })}
+                              >
+                                {message.fileContext.type === 'image' ? (
+                                  <ImageIcon className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-primary" />
+                                )}
+                                <span className="text-sm font-medium truncate max-w-[200px]">
+                                  {message.fileContext.name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {!isUser && message.content && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-1 h-8 w-8 p-0"
+                              onClick={() => handlePlayTTS(message.content, index)}
+                              disabled={loadingAudioIndex !== null && loadingAudioIndex !== index}
+                            >
+                              {loadingAudioIndex === index ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : playingMessageIndex === index ? (
+                                <VolumeX className="h-4 w-4 text-primary" />
+                              ) : (
+                                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      {!isUser && message.content && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-1 h-8 w-8 p-0"
-                          onClick={() => handlePlayTTS(message.content, index)}
-                          disabled={loadingAudioIndex !== null && loadingAudioIndex !== index}
-                        >
-                          {loadingAudioIndex === index ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : playingMessageIndex === index ? (
-                            <VolumeX className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Volume2 className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </Button>
-                      )}
+                    );
+                  })}
+                  {(loading || sending) && (
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-lg p-3">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              {(loading || sending) && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg p-3">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+
+              {conversationEnded && (
+                <div
+                  className={`bg-success/10 border border-success/20 rounded-lg p-3 text-sm text-success mb-4 ${isRTL ? 'text-right' : 'text-left'}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                >
+                  {isRTL ? '✓ ' : ''}
+                  {t('assignmentChat.conversationComplete', 'Conversation complete! You can now finish the activity.')}
+                  {!isRTL ? ' ✓' : ''}
                 </div>
               )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
 
-          {conversationEnded && (
-            <div
-              className={`bg-success/10 border border-success/20 rounded-lg p-3 text-sm text-success ${isRTL ? 'text-right' : 'text-left'}`}
-              dir={isRTL ? 'rtl' : 'ltr'}
-            >
-              {isRTL ? '✓ ' : ''}
-              {t('assignmentChat.conversationComplete', 'Conversation complete! You can now finish the activity.')}
-              {!isRTL ? ' ✓' : ''}
-            </div>
-          )}
-
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 relative">
-              <Textarea
-                placeholder={conversationEnded ? t('assignmentChat.conversationEndedPlaceholder', 'Conversation ended - please complete the activity') : t('assignmentChat.placeholder')}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    if (!isDisabled && input.trim()) {
-                      handleSendMessage();
-                    }
-                  }
-                }}
-                disabled={isDisabled}
-                className={`min-h-[60px] max-h-[200px] resize-none pr-10 ${isRTL ? 'text-right' : 'text-left'}`}
-                rows={2}
-                dir={isRTL ? 'rtl' : 'ltr'}
-                autoDirection
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.pdf,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={handleFileSelect}
               />
+
+              {attachedFile && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm mb-2">
+                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate text-foreground">{attachedFile.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 p-0 ml-auto shrink-0"
+                    onClick={() => setAttachedFile(null)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex gap-1.5 items-end mb-4">
+                <div className="flex-1 relative">
+                  <Textarea
+                    placeholder={conversationEnded ? t('assignmentChat.conversationEndedPlaceholder', 'Conversation ended - please complete the activity') : t('assignmentChat.placeholder')}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!isDisabled && (input.trim() || attachedFile)) {
+                          handleSendMessage();
+                        }
+                      }
+                    }}
+                    disabled={isDisabled}
+                    className={`min-h-[44px] max-h-[200px] resize-none pr-10 ${isRTL ? 'text-right' : 'text-left'}`}
+                    rows={1}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    autoDirection
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`absolute bottom-1.5 ${isRTL ? 'left-2' : 'right-2'} h-8 w-8 rounded-full ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isDisabled}
+                  >
+                    {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-10 w-10 shrink-0 rounded-full ${uploadingFile ? 'text-primary animate-pulse' : attachedFile ? 'text-primary' : 'text-muted-foreground'}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isDisabled || uploadingFile}
+                  type="button"
+                >
+                  {uploadingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                </Button>
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={isDisabled || (!input.trim() && !attachedFile)}
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                >
+                  {(loading || sending) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+
               <Button
-                variant="ghost"
-                size="icon"
-                className={`absolute bottom-2 ${isRTL ? 'left-2' : 'right-2'} h-8 w-8 rounded-full ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isDisabled}
+                onClick={handleComplete}
+                disabled={!canComplete}
+                className="w-full mt-auto"
+                variant={conversationEnded ? "default" : "secondary"}
               >
-                {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                {completing ? (
+                  <>
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                    {t('assignmentChat.generatingFeedback')}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="me-2 h-4 w-4" />
+                    {t('assignmentChat.completeActivity')}
+                  </>
+                )}
               </Button>
             </div>
-            <Button
-              onClick={handleSendMessage}
-              disabled={isDisabled || !input.trim()}
-              size="icon"
-              className="h-10 w-10 shrink-0"
-            >
-              {(loading || sending) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </div>
 
-          <Button
-            onClick={handleComplete}
-            disabled={!canComplete}
-            className="w-full"
-            variant={conversationEnded ? "default" : "secondary"}
-          >
-            {completing ? (
-              <>
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                {t('assignmentChat.generatingFeedback')}
-              </>
-            ) : (
-              <>
-                <CheckCircle className="me-2 h-4 w-4" />
-                {t('assignmentChat.completeActivity')}
-              </>
-            )}
-          </Button>
+            <TabsContent value="resources" className="flex-1 mt-0">
+              <ScrollArea className="h-[400px] pr-4">
+                {resources.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2 py-10">
+                    <Paperclip className="h-8 w-8 opacity-50" />
+                    <p>{t('assignmentChat.resources.empty', 'No resources uploaded yet')}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {resources.map((msg, idx) => (
+                      <Card 
+                        key={idx} 
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setPreviewResource({ ...msg.fileContext!, messageIndex: msg.originalIndex })}
+                      >
+                        <CardContent className="p-3 flex items-start gap-3">
+                          <div className="bg-primary/10 p-2 rounded-md shrink-0">
+                            {msg.fileContext?.type === 'image' ? (
+                              <ImageIcon className="h-5 w-5 text-primary" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" title={msg.fileContext?.name}>
+                              {msg.fileContext?.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {msg.fileContext?.type === 'image' ? 'Image' : 'Document'}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card >
+
+      <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
+        <DialogContent showCloseButton={false} className="max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <DialogTitle className="truncate flex-1 pr-4">
+              {previewResource?.name}
+            </DialogTitle>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => previewResource && handleViewInChat(previewResource.messageIndex)}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View in Chat
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setPreviewResource(null)}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto min-h-[300px] border rounded-md p-4 bg-muted/30">
+            {previewResource?.type === 'image' && previewResource.url ? (
+              <img 
+                src={previewResource.url} 
+                alt={previewResource.name} 
+                className="max-w-full h-auto object-contain mx-auto"
+              />
+            ) : previewResource?.type === 'pdf' && previewResource.url ? (
+              <iframe 
+                src={previewResource.url} 
+                className="w-full h-full min-h-[500px]" 
+                title={previewResource.name}
+              />
+            ) : (
+              <pre className="whitespace-pre-wrap font-mono text-sm">
+                {previewResource?.content}
+              </pre>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
         <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'}>

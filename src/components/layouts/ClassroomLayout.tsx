@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Link } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { ClassroomSidebar } from './ClassroomSidebar';
 import { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from '@/config/classroomSections';
@@ -79,7 +80,7 @@ export function ClassroomLayout({
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href={`${basePath}/dashboard`}>
+                  <BreadcrumbLink render={<Link to={`${basePath}/dashboard`} />}>
                     {t('nav.dashboard')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>

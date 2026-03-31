@@ -276,9 +276,7 @@ const SubmissionDetail = () => {
                             <div
                               className={`max-w-[85%] p-4 rounded-lg relative shadow-sm ${isConcerning
                                 ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
-                                : isUser
-                                  ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
                                 }`}
                             >
                               {isConcerning && (

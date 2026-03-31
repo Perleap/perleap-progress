@@ -24,7 +24,7 @@ export const getOpenAIConfig = (): OpenAIConfig => {
  */
 export const createChatCompletion = async (
   systemPrompt: string,
-  messages: Message[],
+  messages: any[],
   temperature = 0.7,
   maxTokens = 2000,
   modelTier: 'fast' | 'smart' = 'smart',

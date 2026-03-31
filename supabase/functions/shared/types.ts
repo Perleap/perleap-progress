@@ -6,6 +6,12 @@
 export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  fileContext?: {
+    name: string;
+    content: string;
+    url?: string;
+    type?: string;
+  };
 }
 
 export interface FiveDScores {

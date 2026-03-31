@@ -124,7 +124,7 @@ export function StudentAnalytics({
         }
       }
     } catch (error) {
-      toast.error(t('components.analytics.loadError'));
+      toast.error(t('analytics.loadError'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +150,7 @@ export function StudentAnalytics({
           : null
       );
     } catch {
-      toast.error(t('components.analytics.scoresError'));
+      toast.error(t('analytics.scoresError'));
     }
   };
 

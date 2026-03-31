@@ -18,7 +18,7 @@ interface UseConversationResult {
   error: ApiError | null;
   conversationEnded: boolean;
   language: string;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, fileContext?: { name: string; content: string; url?: string; type?: string }) => Promise<void>;
   initializeConversation: () => Promise<void>;
 }
 
@@ -161,10 +161,10 @@ export const useConversation = ({
   /**
    * Send a user message (Streaming)
    */
-  const sendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  const sendMessage = async (content: string, fileContext?: { name: string; content: string; url?: string; type?: string }) => {
+    if (!content.trim() && !fileContext) return;
 
-    const userMessage: Message = { role: 'user', content };
+    const userMessage: Message = { role: 'user', content, fileContext };
     setMessages((prev) => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setSending(true);
 
@@ -176,6 +176,7 @@ export const useConversation = ({
         studentId,
         assignmentId,
         language,
+        ...(fileContext ? { fileContext } : {}),
       };
 
       const { data, error: chatError } = await streamChatMessage(request, (token) => {

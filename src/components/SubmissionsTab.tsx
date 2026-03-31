@@ -132,7 +132,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
 
   const handleBulkExport = () => {
     if (submissions.length === 0) {
-      toast.error(t('components.submissions.noSubmissions'));
+      toast.error(t('submissionsTab.noSubmissions'));
       return;
     }
 
@@ -155,7 +155,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success(t('components.submissions.exportSuccess'));
+    toast.success(t('submissionsTab.exportSuccess'));
   };
 
   if (loading && submissions.length === 0) {

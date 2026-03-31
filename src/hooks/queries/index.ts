@@ -55,6 +55,7 @@ export {
   profileKeys,
   useTeacherProfile,
   useStudentProfile,
+  useStudentProfileById,
   useUpdateTeacherProfile,
   useUpdateStudentProfile,
 } from './useProfileQueries';
