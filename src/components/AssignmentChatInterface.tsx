@@ -51,7 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FileText, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { FileText, Image as ImageIcon, ExternalLink, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 // Helper to clean markdown for TTS
 const cleanTextForTTS = (text: string) => {
@@ -87,6 +87,7 @@ export function AssignmentChatInterface({
   const [dialogType, setDialogType] = useState<'turnLimit' | 'aiDetected'>('turnLimit');
   const [activeTab, setActiveTab] = useState('chat');
   const [previewResource, setPreviewResource] = useState<{ name: string; content: string; url?: string; type?: string; messageIndex: number } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // File attachment state
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; url?: string; type?: string } | null>(null);
@@ -426,14 +427,6 @@ export function AssignmentChatInterface({
     .map((m, i) => ({ ...m, originalIndex: i }))
     .filter(m => m.role === 'user' && m.fileContext);
 
-  // #region agent log
-  useEffect(() => {
-    if (messages.length > 0) {
-      const userMsgs = messages.filter(m => m.role === 'user');
-      fetch('http://127.0.0.1:7584/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'951aeb'},body:JSON.stringify({sessionId:'951aeb',hypothesisId:'B',location:'AssignmentChatInterface.tsx:resources',message:'Resources tab data',data:{resourceCount:resources.length,userMessagesCount:userMsgs.length,userMsgsFileContext:userMsgs.map(m=>({hasFileContext:!!m.fileContext,contentHasAttachment:m.content?.includes('--- Attached File:')}))},timestamp:Date.now()})}).catch(()=>{});
-    }
-  }, [messages]);
-  // #endregion
 
   return (
     <>
@@ -637,15 +630,15 @@ export function AssignmentChatInterface({
               </Button>
             </div>
 
-            <TabsContent value="resources" className="flex-1 mt-0">
-              <ScrollArea className="h-[400px] pr-4">
+            <TabsContent value="resources" className="flex-1 mt-0 overflow-visible">
+              <ScrollArea className="h-[400px]">
                 {resources.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2 py-10">
                     <Paperclip className="h-8 w-8 opacity-50" />
                     <p>{t('assignmentChat.resources.empty', 'No resources uploaded yet')}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 px-3 pb-3">
                     {resources.map((msg, idx) => (
                       <Card 
                         key={idx} 
@@ -679,13 +672,59 @@ export function AssignmentChatInterface({
         </CardContent>
       </Card >
 
-      <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
-        <DialogContent showCloseButton={false} className="max-w-3xl max-h-[90vh] flex flex-col">
-          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <DialogTitle className="truncate flex-1 pr-4">
-              {previewResource?.name}
-            </DialogTitle>
-            <div className="flex items-center gap-2 shrink-0">
+      <Dialog open={!!previewResource} onOpenChange={(open) => { if (!open) { setPreviewResource(null); setZoomLevel(1); } }}>
+        <DialogContent showCloseButton={false} className="max-w-5xl w-[90vw] max-h-[92vh] flex flex-col">
+          <DialogHeader className="space-y-0 pb-2">
+            <div className="flex items-start justify-between gap-3">
+              <DialogTitle className="text-base font-semibold break-words line-clamp-2 min-w-0 pt-0.5">
+                {previewResource?.name}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+                onClick={() => { setPreviewResource(null); setZoomLevel(1); }}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              {previewResource?.type === 'image' && (
+                <div className="flex items-center gap-1 border rounded-md px-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setZoomLevel(z => Math.max(0.25, z - 0.25))}
+                    disabled={zoomLevel <= 0.25}
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                    <span className="sr-only">Zoom out</span>
+                  </Button>
+                  <span className="text-xs font-medium min-w-[3rem] text-center tabular-nums">
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setZoomLevel(z => Math.min(5, z + 0.25))}
+                    disabled={zoomLevel >= 5}
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                    <span className="sr-only">Zoom in</span>
+                  </Button>
+                  {zoomLevel !== 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setZoomLevel(1)}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span className="sr-only">Reset zoom</span>
+                    </Button>
+                  )}
+                </div>
+              )}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -694,23 +733,18 @@ export function AssignmentChatInterface({
                 <ExternalLink className="h-4 w-4 mr-2" />
                 View in Chat
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setPreviewResource(null)}
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
             </div>
           </DialogHeader>
-          <div className="flex-1 overflow-auto min-h-[300px] border rounded-md p-4 bg-muted/30">
+          <div className="flex-1 overflow-auto min-h-[50vh] border rounded-md p-4 bg-muted/30">
             {previewResource?.type === 'image' && previewResource.url ? (
-              <img 
-                src={previewResource.url} 
-                alt={previewResource.name} 
-                className="max-w-full h-auto object-contain mx-auto"
-              />
+              <div className="flex items-center justify-center min-h-full">
+                <img 
+                  src={previewResource.url} 
+                  alt={previewResource.name} 
+                  className="w-full h-auto object-contain transition-transform duration-200"
+                  style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
+                />
+              </div>
             ) : previewResource?.type === 'pdf' && previewResource.url ? (
               <iframe 
                 src={previewResource.url} 

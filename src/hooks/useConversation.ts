@@ -30,6 +30,43 @@ interface UseConversationParams {
 }
 
 /**
+ * Rehydrate fileContext from saved message content.
+ * The server embeds file metadata into content as:
+ *   "user text\n\n--- Attached File: name ---\n[File: name]\nURL: https://..."
+ * This function extracts that back into a structured fileContext object
+ * and strips the raw metadata from the displayed content.
+ */
+const rehydrateMessages = (msgs: Message[]): Message[] => {
+  return msgs.map(msg => {
+    if (msg.role !== 'user' || msg.fileContext) return msg;
+
+    const attachmentMatch = msg.content.match(/\n\n--- Attached File: (.+?) ---\n([\s\S]*)$/);
+    if (!attachmentMatch) return msg;
+
+    const fileName = attachmentMatch[1];
+    const fileBody = attachmentMatch[2];
+    const cleanContent = msg.content.substring(0, attachmentMatch.index || 0);
+
+    const urlMatch = fileBody.match(/\[File:\s*[^\]]+\]\s*URL:\s*(https?:\/\/\S+)/);
+    if (urlMatch) {
+      const url = urlMatch[1];
+      const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(fileName);
+      return {
+        ...msg,
+        content: cleanContent,
+        fileContext: { name: fileName, content: fileBody, url, type: isImage ? 'image' : 'pdf' },
+      };
+    }
+
+    return {
+      ...msg,
+      content: cleanContent,
+      fileContext: { name: fileName, content: fileBody, type: 'text' },
+    };
+  });
+};
+
+/**
  * Hook to manage assignment conversation state
  */
 export const useConversation = ({
@@ -65,11 +102,8 @@ export const useConversation = ({
       }
 
       if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-        const loadedMessages = data.messages as Message[];
-        // #region agent log
-        const userMsgs = loadedMessages.filter(m => m.role === 'user');
-        fetch('http://127.0.0.1:7584/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'951aeb'},body:JSON.stringify({sessionId:'951aeb',hypothesisId:'A',location:'useConversation.ts:loadConversation',message:'Loaded user messages from DB',data:{totalMessages:loadedMessages.length,userMessages:userMsgs.map(m=>({hasFileContext:!!m.fileContext,fileContext:m.fileContext,contentPreview:m.content?.substring(0,200),hasAttachmentPattern:m.content?.includes('--- Attached File:')}))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+        const rawMessages = data.messages as Message[];
+        const loadedMessages = rehydrateMessages(rawMessages);
         setMessages(loadedMessages);
         
         // Check if any existing assistant message indicates completion

@@ -28,6 +28,7 @@ import AboutUs from './pages/AboutUs';
 import Product from './pages/Product';
 import Solutions from './pages/Solutions';
 import NotFound from './pages/NotFound';
+import { TeacherAssistant } from './components/ai/TeacherAssistant';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +55,7 @@ const App = () => (
         >
           <AuthProvider>
             <LanguageProvider>
+              <TeacherAssistant />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/product" element={<Product />} />

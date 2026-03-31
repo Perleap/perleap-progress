@@ -307,6 +307,7 @@
 
 .markdown-content pre {
   background-color: rgba(0, 0, 0, 0.05);
+  color: inherit;
   padding: 0.5em;
   border-radius: 5px;
   overflow-x: auto;
@@ -315,6 +316,7 @@
 
 .markdown-content pre code {
   background-color: transparent;
+  color: inherit;
   padding: 0;
 }
 

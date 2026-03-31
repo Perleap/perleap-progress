@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { TeacherAssistant } from '@/components/ai/TeacherAssistant';
+
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -74,7 +74,6 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
         <div ref={contentRef} className="flex flex-1 flex-col gap-10 p-6 md:p-8 lg:p-10 bg-gradient-to-br from-background via-background to-muted/5 min-h-0">
           {children}
         </div>
-        <TeacherAssistant />
       </SidebarInset>
     </SidebarProvider>
   );

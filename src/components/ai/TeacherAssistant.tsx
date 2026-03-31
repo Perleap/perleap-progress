@@ -110,42 +110,59 @@ export function TeacherAssistant() {
     return (
         <>
             <Button
-                className={`fixed bottom-6 ${isRTL ? 'left-6' : 'right-6'} h-14 w-14 rounded-full shadow-xl z-50 transition-all duration-300 ${isOpen ? 'rotate-90 scale-90 bg-slate-200 text-slate-900 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white animate-in zoom-in slide-in-from-bottom-4'}`}
+                className={`fixed bottom-6 ${isRTL ? 'left-6' : 'right-6'} z-[9999] w-14 h-14 rounded-full shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 flex items-center justify-center overflow-hidden group border ${
+                    isOpen 
+                        ? 'bg-muted text-muted-foreground border-border' 
+                        : 'bg-primary text-primary-foreground border-primary/20'
+                }`}
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Toggle AI Assistant"
             >
-                {isOpen ? <X className="h-6 w-6" /> : <Bot className="h-7 w-7" />}
+                {/* Background Glow Effect */}
+                {!isOpen && (
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                )}
+                
+                {isOpen ? (
+                    <X className="h-6 w-6 relative z-10" />
+                ) : (
+                    <div className="relative flex items-center justify-center w-full h-full">
+                        <div className="absolute inset-0 animate-pulse bg-primary-foreground/10 rounded-full scale-110" />
+                        <Sparkles className="h-7 w-7 relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                    </div>
+                )}
             </Button>
 
             {isOpen && (
-                <Card className={`fixed bottom-24 ${isRTL ? 'left-6' : 'right-6'} w-[90vw] md:w-96 h-[500px] max-h-[80vh] shadow-2xl z-50 flex flex-col animate-in fade-in slide-in-from-bottom-10 border-indigo-100 dark:border-indigo-900 overflow-hidden`} dir={isRTL ? 'rtl' : 'ltr'}>
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                    <CardHeader className="flex flex-row items-center justify-between pb-3 py-3 border-b bg-slate-50/50 dark:bg-slate-900/50">
+                <Card className={`fixed bottom-24 ${isRTL ? 'left-6' : 'right-6'} w-[90vw] md:w-96 h-[550px] max-h-[80vh] shadow-2xl z-[9999] flex flex-col animate-in fade-in slide-in-from-bottom-8 zoom-in-95 duration-300 border-border/50 overflow-hidden rounded-2xl`} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-3 py-4 border-b bg-muted/30">
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
-                            <span className="p-1.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <div className="p-2 bg-primary rounded-xl text-primary-foreground shadow-md">
                                 <Sparkles className="h-4 w-4" />
+                            </div>
+                            <span className="text-foreground">
+                                {t('teacherAssistant.title')}
                             </span>
-                            {t('teacherAssistant.title')}
                         </CardTitle>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500" onClick={clearChat} title={t('teacherAssistant.clearChat')}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={clearChat} title={t('teacherAssistant.clearChat')}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </CardHeader>
-                    <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30 dark:bg-slate-900/30">
+                    <CardContent className="flex-1 p-0 overflow-hidden bg-muted/10">
                         <ScrollArea className="h-full p-4">
                             <div className="space-y-4 min-h-full">
                                 {messages.length === 0 && (
-                                    <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground bg-white/50 dark:bg-slate-800/50 rounded-xl my-8 mx-2 border border-dashed">
-                                        <Bot className="h-10 w-10 mb-3 text-indigo-400 opacity-50" />
-                                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('teacherAssistant.howCanIHelp')}</p>
+                                    <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground bg-card rounded-xl my-8 mx-2 border border-dashed">
+                                        <Bot className="h-10 w-10 mb-3 text-muted-foreground/50" />
+                                        <p className="text-sm font-medium text-foreground/80">{t('teacherAssistant.howCanIHelp')}</p>
                                         <p className="text-xs mt-2 opacity-70">{t('teacherAssistant.suggestions')}</p>
                                     </div>
                                 )}
                                 {messages.map((m, i) => (
                                     <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${m.role === 'user'
-                                                ? 'bg-indigo-600 text-white rounded-br-none'
-                                                : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-bl-none text-slate-800 dark:text-slate-200'
+                                                ? 'bg-primary text-primary-foreground rounded-br-none'
+                                                : 'bg-card border border-border rounded-bl-none text-card-foreground'
                                             }`}>
                                             <SafeMathMarkdown content={m.content} />
                                         </div>
@@ -153,8 +170,8 @@ export function TeacherAssistant() {
                                 ))}
                                 {isLoading && (
                                     <div className="flex justify-start w-full">
-                                        <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm flex items-center gap-2">
-                                            <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
+                                        <div className="bg-card border border-border rounded-2xl rounded-bl-none px-4 py-3 shadow-sm flex items-center gap-2">
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground" />
                                             <span className="text-xs text-muted-foreground animate-pulse">{t('teacherAssistant.generating')}</span>
                                         </div>
                                     </div>
@@ -163,7 +180,7 @@ export function TeacherAssistant() {
                             </div>
                         </ScrollArea>
                     </CardContent>
-                    <CardFooter className="p-3 bg-white dark:bg-slate-900 border-t">
+                    <CardFooter className="p-3 bg-card border-t">
                         <form
                             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                             className="flex w-full items-end gap-2"
@@ -173,13 +190,13 @@ export function TeacherAssistant() {
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
                                 disabled={isLoading}
-                                className="flex-1 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus-visible:ring-indigo-500 min-h-[44px]"
+                                className="flex-1 rounded-xl bg-muted/50 border-border focus-visible:ring-ring min-h-[44px]"
                             />
                             <Button
                                 type="submit"
                                 size="icon"
                                 disabled={isLoading || !input.trim()}
-                                className="h-11 w-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
+                                className="h-11 w-11 rounded-xl shrink-0"
                             >
                                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className={`h-5 w-5 ${isRTL ? 'rotate-180' : ''}`} />}
                             </Button>
