@@ -426,6 +426,15 @@ export function AssignmentChatInterface({
     .map((m, i) => ({ ...m, originalIndex: i }))
     .filter(m => m.role === 'user' && m.fileContext);
 
+  // #region agent log
+  useEffect(() => {
+    if (messages.length > 0) {
+      const userMsgs = messages.filter(m => m.role === 'user');
+      fetch('http://127.0.0.1:7584/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'951aeb'},body:JSON.stringify({sessionId:'951aeb',hypothesisId:'B',location:'AssignmentChatInterface.tsx:resources',message:'Resources tab data',data:{resourceCount:resources.length,userMessagesCount:userMsgs.length,userMsgsFileContext:userMsgs.map(m=>({hasFileContext:!!m.fileContext,contentHasAttachment:m.content?.includes('--- Attached File:')}))},timestamp:Date.now()})}).catch(()=>{});
+    }
+  }, [messages]);
+  // #endregion
+
   return (
     <>
       <Card className="h-full flex flex-col">

@@ -66,6 +66,10 @@ export const useConversation = ({
 
       if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         const loadedMessages = data.messages as Message[];
+        // #region agent log
+        const userMsgs = loadedMessages.filter(m => m.role === 'user');
+        fetch('http://127.0.0.1:7584/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'951aeb'},body:JSON.stringify({sessionId:'951aeb',hypothesisId:'A',location:'useConversation.ts:loadConversation',message:'Loaded user messages from DB',data:{totalMessages:loadedMessages.length,userMessages:userMsgs.map(m=>({hasFileContext:!!m.fileContext,fileContext:m.fileContext,contentPreview:m.content?.substring(0,200),hasAttachmentPattern:m.content?.includes('--- Attached File:')}))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         setMessages(loadedMessages);
         
         // Check if any existing assistant message indicates completion
