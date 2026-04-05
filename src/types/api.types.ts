@@ -41,6 +41,7 @@ export interface CreateAssignmentInput {
   status: Assignment['status'];
   target_dimensions: Assignment['target_dimensions'];
   personalization_flag: boolean;
+  auto_publish_ai_feedback?: boolean;
 }
 
 export interface UpdateAssignmentInput extends Partial<CreateAssignmentInput> {

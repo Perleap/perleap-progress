@@ -8,9 +8,11 @@ import { RefreshCw } from 'lucide-react';
 interface RegenerateScoresButtonProps {
   classroomId: string;
   onComplete: () => void;
+  /** Short label + small button for inline toolbars (e.g. analytics filter card) */
+  compact?: boolean;
 }
 
-export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateScoresButtonProps) {
+export function RegenerateScoresButton({ classroomId, onComplete, compact = false }: RegenerateScoresButtonProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
@@ -96,9 +98,19 @@ export function RegenerateScoresButton({ classroomId, onComplete }: RegenerateSc
   };
 
   return (
-    <Button variant="outline" onClick={regenerateAllScores} disabled={loading}>
-      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-      {loading ? 'Regenerating...' : 'Regenerate All 5D Scores'}
+    <Button
+      variant="outline"
+      size={compact ? 'sm' : 'default'}
+      className={compact ? 'shrink-0 gap-1.5' : undefined}
+      onClick={regenerateAllScores}
+      disabled={loading}
+    >
+      <RefreshCw className={`${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} ${loading ? 'animate-spin' : ''}`} />
+      {loading
+        ? t('analytics.regeneratingScores')
+        : compact
+          ? t('analytics.refresh5D')
+          : t('analytics.regenerateAll5DScores')}
     </Button>
   );
 }

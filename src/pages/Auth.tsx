@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { PerleapLogo } from '@/components/PerleapLogo';
 import { savePendingRole } from '@/utils/roleRecovery';
 import { markSignupInProgress } from '@/utils/sessionState';
 
@@ -409,9 +410,7 @@ const Auth = () => {
 
       <div className="w-full max-w-4xl animate-fade-in relative z-10">
         <div className="flex flex-col items-center mb-12">
-          <div className="w-20 h-20 rounded-2xl bg-card flex items-center justify-center border border-border shadow-sm mb-6">
-            <img src="/perleap_logo.png" alt="PerLeap" className="h-12 w-12 object-contain" />
-          </div>
+          <PerleapLogo className="h-16 w-16 mb-6" title="Perleap" />
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-center text-heading">{t('auth.welcome')}</h1>
           <p className="text-muted-foreground text-lg text-center max-w-lg text-body">
             {t('auth.tagline')}
@@ -424,13 +423,13 @@ const Auth = () => {
               <TabsList className="grid w-full grid-cols-2 bg-transparent gap-4 p-0 mb-8 h-12">
                 <TabsTrigger
                   value="signin"
-                  className="rounded-xl border border-transparent data-active:bg-background data-active:border-border data-active:shadow-sm bg-muted/50 transition-all h-full text-base font-semibold"
+                  className="rounded-xl border border-transparent data-[active]:bg-background data-[active]:border-border data-[active]:shadow-sm bg-muted/50 transition-all h-full text-base font-semibold"
                 >
                   {t('auth.signIn')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="rounded-xl border border-transparent data-active:bg-background data-active:border-border data-active:shadow-sm bg-muted/50 transition-all h-full text-base font-semibold"
+                  className="rounded-xl border border-transparent data-[active]:bg-background data-[active]:border-border data-[active]:shadow-sm bg-muted/50 transition-all h-full text-base font-semibold"
                 >
                   {t('auth.signUp')}
                 </TabsTrigger>

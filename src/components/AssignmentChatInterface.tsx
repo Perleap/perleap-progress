@@ -35,6 +35,13 @@ interface Message {
   };
 }
 
+interface NuanceTrackingCallbacks {
+  trackResponseSubmitted: (responseTimeMs: number, messageIndex: number) => void;
+  trackResponseStarted: (messageIndex: number) => void;
+  recordAiMessageArrival: () => void;
+  getTimeSinceLastAiMessage: () => number | null;
+}
+
 interface AssignmentChatInterfaceProps {
   assignmentId: string;
   assignmentTitle: string;
@@ -42,6 +49,7 @@ interface AssignmentChatInterfaceProps {
   assignmentInstructions: string;
   submissionId: string;
   onComplete: () => void;
+  nuanceTracking?: NuanceTrackingCallbacks;
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -74,6 +82,7 @@ export function AssignmentChatInterface({
   assignmentInstructions,
   submissionId,
   onComplete,
+  nuanceTracking,
 }: AssignmentChatInterfaceProps) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -93,6 +102,10 @@ export function AssignmentChatInterface({
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; url?: string; type?: string } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Nuance tracking: detect first keystroke after AI message
+  const hasTrackedTypingStart = useRef(false);
+  const prevSendingRef = useRef(false);
 
   // Audio & Recording states
   const [playingMessageIndex, setPlayingMessageIndex] = useState<number | null>(null);
@@ -145,9 +158,20 @@ export function AssignmentChatInterface({
     if (hookConversationEnded && !conversationEnded) {
       setConversationEnded(true);
       setDialogType('aiDetected');
-      // setShowCompletionDialog(true); // Disable auto-popup as requested
     }
   }, [hookConversationEnded, conversationEnded]);
+
+  // Nuance: record AI message arrival when streaming finishes
+  useEffect(() => {
+    if (prevSendingRef.current && !sending && nuanceTracking) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg?.role === 'assistant' && lastMsg.content) {
+        nuanceTracking.recordAiMessageArrival();
+        hasTrackedTypingStart.current = false;
+      }
+    }
+    prevSendingRef.current = sending;
+  }, [sending, messages, nuanceTracking]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldScrollRef = useRef(false);
@@ -210,6 +234,13 @@ export function AssignmentChatInterface({
 
   const handleSendMessage = async () => {
     if ((!input.trim() && !attachedFile) || loading || sending) return;
+
+    if (nuanceTracking) {
+      const elapsed = nuanceTracking.getTimeSinceLastAiMessage();
+      if (elapsed !== null) {
+        nuanceTracking.trackResponseSubmitted(elapsed, messages.length);
+      }
+    }
 
     const userMessage = input.trim();
     setInput('');
@@ -565,7 +596,13 @@ export function AssignmentChatInterface({
                   <Textarea
                     placeholder={conversationEnded ? t('assignmentChat.conversationEndedPlaceholder', 'Conversation ended - please complete the activity') : t('assignmentChat.placeholder')}
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      if (!hasTrackedTypingStart.current && e.target.value && nuanceTracking) {
+                        nuanceTracking.trackResponseStarted(messages.length);
+                        hasTrackedTypingStart.current = true;
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();

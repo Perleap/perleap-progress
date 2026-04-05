@@ -16,6 +16,8 @@ import type {
   Message,
 } from '@/types';
 import { SUBMISSION_STATUS } from '@/config/constants';
+import { createNotification } from '@/lib/notificationService';
+import { rehydrateMessages } from '@/lib/conversationMessages';
 
 /**
  * Get or create submission for a student and assignment
@@ -73,7 +75,7 @@ export const getFullSubmissionDetails = async (
       .from('submissions')
       .select(`
         *,
-        assignments(title, instructions, classroom_id, due_at, classrooms(name, teacher_id)),
+        assignments(id, title, instructions, classroom_id, due_at, type, auto_publish_ai_feedback, classrooms(name, teacher_id)),
         student_profiles(full_name, avatar_url)
       `)
       .eq('id', submissionId)
@@ -115,6 +117,35 @@ export const getFullSubmissionDetails = async (
       },
       error: null
     };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Load chat messages for a submission (teacher or student; RLS applies).
+ * Returns null when no conversation row or empty messages.
+ */
+export const getAssignmentConversationMessages = async (
+  submissionId: string
+): Promise<{ data: Message[] | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('assignment_conversations')
+      .select('messages')
+      .eq('submission_id', submissionId)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+
+    if (!data?.messages || !Array.isArray(data.messages) || data.messages.length === 0) {
+      return { data: null, error: null };
+    }
+
+    const raw = data.messages as Message[];
+    return { data: rehydrateMessages(raw), error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -493,19 +524,105 @@ export const generateFeedback = async (
  * Mark submission as completed
  */
 export const completeSubmission = async (
-  submissionId: string
+  submissionId: string,
+  options?: { awaitingTeacherFeedbackRelease?: boolean }
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { error } = await supabase
-      .from('submissions')
-      .update({
-        status: SUBMISSION_STATUS.COMPLETED,
-        submitted_at: new Date().toISOString(),
-      })
-      .eq('id', submissionId);
+    const update: Record<string, unknown> = {
+      status: SUBMISSION_STATUS.COMPLETED,
+      submitted_at: new Date().toISOString(),
+    };
+    if (options?.awaitingTeacherFeedbackRelease) {
+      update.awaiting_teacher_feedback_release = true;
+    }
+
+    const { error } = await supabase.from('submissions').update(update).eq('id', submissionId);
 
     if (error) {
       return { success: false, error: handleSupabaseError(error) };
+    }
+
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Teacher edits stored feedback text before publishing to the student.
+ */
+export const updateAssignmentFeedbackText = async (params: {
+  submissionId: string;
+  teacher_feedback?: string | null;
+  student_feedback?: string | null;
+}): Promise<{ success: boolean; error: ApiError | null }> => {
+  try {
+    const { submissionId, teacher_feedback, student_feedback } = params;
+    const payload: Record<string, string | null> = {};
+    if (teacher_feedback !== undefined) payload.teacher_feedback = teacher_feedback;
+    if (student_feedback !== undefined) payload.student_feedback = student_feedback;
+    if (Object.keys(payload).length === 0) {
+      return { success: true, error: null };
+    }
+
+    const { error } = await supabase
+      .from('assignment_feedback')
+      .update(payload)
+      .eq('submission_id', submissionId);
+
+    if (error) {
+      return { success: false, error: handleSupabaseError(error) };
+    }
+
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Teacher releases AI feedback to the student (when assignment uses teacher approval gate).
+ */
+export const releaseAiFeedbackToStudent = async (params: {
+  submissionId: string;
+  studentId: string;
+  assignmentId: string;
+  assignmentTitle: string;
+  teacherId: string | null;
+}): Promise<{ success: boolean; error: ApiError | null }> => {
+  try {
+    const { submissionId, studentId, assignmentId, assignmentTitle, teacherId } = params;
+
+    const { error: fbErr } = await supabase
+      .from('assignment_feedback')
+      .update({ visible_to_student: true })
+      .eq('submission_id', submissionId);
+
+    if (fbErr) {
+      return { success: false, error: handleSupabaseError(fbErr) };
+    }
+
+    const { error: subErr } = await supabase
+      .from('submissions')
+      .update({ awaiting_teacher_feedback_release: false })
+      .eq('id', submissionId);
+
+    if (subErr) {
+      return { success: false, error: handleSupabaseError(subErr) };
+    }
+
+    try {
+      await createNotification(
+        studentId,
+        'feedback_received',
+        'Feedback Received',
+        `Your feedback for "${assignmentTitle}" is ready`,
+        `/student/assignment/${assignmentId}`,
+        { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
+        teacherId ?? undefined,
+      );
+    } catch (notifErr) {
+      return { success: false, error: handleSupabaseError(notifErr) };
     }
 
     return { success: true, error: null };

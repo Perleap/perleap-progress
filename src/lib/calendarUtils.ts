@@ -69,9 +69,9 @@ export const getAssignmentsForDate = <T extends { due_at: string }>(
  */
 export const CALENDAR_MODIFIERS_STYLES = {
   hasAssignment: {
-    fontWeight: 'bold' as const,
+    fontWeight: 600 as const,
     position: 'relative' as const,
-    color: '#ef4444',
+    color: 'hsl(var(--primary))',
   },
   hasClass: {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',

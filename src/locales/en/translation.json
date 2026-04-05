@@ -13,7 +13,9 @@
     "user": "User",
     "darkMode": "Dark Mode",
     "lightMode": "Light Mode",
-    "logout": "Logout"
+    "logout": "Logout",
+    "logoutConfirmTitle": "Log out?",
+    "logoutConfirmDescription": "You will need to sign in again to access your account."
   },
   "landing": {
     "nav": {
@@ -371,12 +373,13 @@
     "uploadPDF": "Upload PDF",
     "addLink": "Add Link",
     "typeOptions": {
+      "chatbot": "Chatbot",
+      "questions": "Questions",
       "text_essay": "Text Essay",
-      "file_upload": "File Upload",
-      "quiz": "Quiz",
+      "test": "Test",
       "project": "Project",
       "presentation": "Presentation",
-      "other": "Other"
+      "langchain": "Langchain"
     },
     "cancel": "Cancel",
     "createButton": "Create Assignment",
@@ -386,7 +389,24 @@
     "rephraseButton": "Rephrase with AI",
     "rephrasing": "Rephrasing...",
     "rephraseSuccess": "Text rephrased successfully!",
-    "rephraseError": "Failed to rephrase text. Please try again."
+    "rephraseError": "Failed to rephrase text. Please try again.",
+    "aiFeedback": "AI feedback to students",
+    "testBuilder": {
+      "title": "Test Questions",
+      "description": "Build the test questions for this assignment",
+      "addQuestion": "Add Question",
+      "questionPlaceholder": "Enter question text...",
+      "questionType": "Question Type",
+      "multipleChoice": "Multiple Choice",
+      "openEnded": "Open Ended",
+      "optionPlaceholder": "Option {{index}}",
+      "addOption": "Add Option",
+      "correctAnswer": "Correct Answer",
+      "selectCorrectAnswer": "Select the correct answer",
+      "removeQuestion": "Remove question",
+      "removeOption": "Remove option",
+      "noQuestions": "No questions added yet. Click \"Add Question\" to start building your test."
+    }
   },
   "editAssignment": {
     "title": "Edit Assignment",
@@ -513,9 +533,28 @@
     "clearFilters": "Clear Filters",
     "clearAllFilters": "Clear All Filters",
     "noSubmissions": "No submissions to export",
-    "exportSuccess": "Report exported successfully"
+    "exportSuccess": "Report exported successfully",
+    "view": {
+      "grid": "Grid",
+      "compact": "Compact",
+      "list": "List",
+      "detailed": "Detailed",
+      "table": "Table",
+      "timeline": "Timeline"
+    },
+    "tableAssignment": "Assignment",
+    "tableStudent": "Student",
+    "tableStatus": "Status",
+    "tableSubmitted": "Submitted",
+    "tableMessages": "Chat",
+    "tableFeedback": "Feedback"
   },
   "submissionCard": {
+    "chatMessages": "{{count}} messages in chat",
+    "feedbackLabel": "Feedback:",
+    "latestInChat": "Latest in chat:",
+    "feedbackRecorded": "Feedback recorded.",
+    "awaitingFeedback": "Awaiting teacher feedback.",
     "submitted": "Submitted",
     "inProgress": "In Progress",
     "completed": "Completed",
@@ -554,7 +593,89 @@
     "studentFeedbackDesc": "What {{student}} saw after completing the assignment",
     "conversationHistory": "Conversation History",
     "conversationHistoryDesc": "Complete transcript between {{student}} and Perleap",
-    "noFeedbackDesc": "This student hasn't completed the assignment yet, or feedback is still being generated."
+    "conversationEmpty": "No messages in this conversation yet.",
+    "feedbackEmpty": {
+      "chatPrompt": "No AI feedback yet. Open the Assignment tab to read the student’s chat and generate AI feedback."
+    },
+    "noFeedbackDesc": "This student hasn't completed the assignment yet, or feedback is still being generated.",
+    "tabs": {
+      "feedback": "Feedback",
+      "assignment": "Assignment",
+      "evaluation": "Evaluation"
+    },
+    "testResults": {
+      "title": "Test Results",
+      "description": "Student answers for this test",
+      "question": "Question",
+      "studentAnswer": "Student Answer",
+      "correctAnswer": "Correct Answer",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "openEnded": "Open-ended response",
+      "noAnswer": "No answer provided",
+      "summary": "{{correct}} of {{total}} correct",
+      "mcqScore": "Multiple Choice Score",
+      "openEndedCount": "Open-ended Questions"
+    },
+    "teacherEvaluation": {
+      "writeEvaluation": "Write Evaluation",
+      "placeholder": "Write your evaluation and feedback for this student's submission...",
+      "submit": "Submit Evaluation",
+      "submitting": "Evaluating...",
+      "success": "Evaluation submitted successfully! Scores have been generated.",
+      "error": "Error submitting evaluation. Please try again.",
+      "awaitingEvaluation": "Awaiting your evaluation in the Assignment tab"
+    },
+    "projectView": {
+      "title": "Project Submission",
+      "download": "Download File",
+      "preview": "File Preview",
+      "noFile": "No file submitted"
+    },
+    "presentationView": {
+      "title": "Presentation Submission",
+      "playback": "Playback",
+      "download": "Download Video",
+      "downloadFailed": "Could not download the file. Opened in a new tab instead.",
+      "noVideo": "No video submitted"
+    },
+    "langchainView": {
+      "title": "Langchain Pipeline",
+      "pipelineViewer": "Pipeline Viewer",
+      "noPipeline": "No pipeline submitted"
+    },
+    "essaySubmission": "Essay",
+    "essaySubmissionDesc": "Written response from {{student}}",
+    "essayEmpty": "No text submitted",
+    "editFeedback": {
+      "teacherHint": "Private notes for you (not shown to the student).",
+      "studentHint": "This text is what the student sees after you publish. Edit the AI draft as needed.",
+      "teacherPlaceholder": "Notes for your own reference…",
+      "studentPlaceholder": "Feedback the student will see…",
+      "save": "Save changes",
+      "saved": "Feedback saved.",
+      "visibleToStudent": "The student can already see the published feedback below. Saving updates what they see on refresh."
+    },
+    "generateAiEvaluation": {
+      "title": "Run AI evaluation",
+      "description": "The student submitted without automatic AI feedback. Generate it here, then release it to the student from this tab when ready.",
+      "action": "Generate AI evaluation",
+      "success": "AI evaluation generated. Review the Feedback tab, then release to the student if needed."
+    },
+    "releaseFeedback": {
+      "title": "Release AI feedback to student",
+      "description": "AI feedback has been generated but is hidden from the student until you release it.",
+      "action": "Release to student",
+      "success": "Feedback is now visible to the student.",
+      "alreadyVisible": "This feedback is already published to the student. You can still edit the text above and save changes."
+    }
+  },
+  "essaySubmission": {
+    "title": "Your response",
+    "placeholder": "Write your essay here…",
+    "submit": "Submit for feedback",
+    "saving": "Saving…",
+    "empty": "Please write something before submitting."
   },
   "assignmentDetail": {
     "title": "Assignment Details",
@@ -572,11 +693,126 @@
     "download": "Download",
     "open": "Open",
     "success": {
-      "completed": "Activity completed successfully!"
+      "completed": "Activity completed successfully!",
+      "submittedAwaitingTeacher": "Your work was submitted. Your teacher will run AI evaluation; you will be notified when feedback is ready."
     },
     "errors": {
       "loading": "Error loading assignment",
       "generatingFeedback": "Error generating feedback"
+    },
+    "awaitingTeacherFeedback": "Your teacher has not released the AI feedback yet. You will be notified when it is available.",
+    "testTaking": {
+      "title": "Test",
+      "submitTest": "Submit Test",
+      "submitting": "Submitting...",
+      "question": "Question {{number}}",
+      "selectAnswer": "Select your answer",
+      "typeAnswer": "Type your answer here...",
+      "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submitting.",
+      "allQuestionsRequired": "Please answer all questions before submitting.",
+      "submitSuccess": "Test submitted successfully!",
+      "submitError": "Error submitting test. Please try again."
+    },
+    "project": {
+      "uploadFile": "Upload Project File",
+      "dragDrop": "Drag and drop your file here, or click to browse",
+      "fileTypes": "Supported: PDF, DOC, DOCX, ZIP, images, and more",
+      "submit": "Submit Project",
+      "submitting": "Submitting...",
+      "awaitingReview": "Your project has been submitted and is awaiting teacher review.",
+      "fileSelected": "File selected",
+      "uploadError": "Error uploading file. Please try again.",
+      "removeFile": "Remove file"
+    },
+    "presentation": {
+      "title": "Presentation",
+      "uploadTab": "Upload Video",
+      "recordTab": "Record Live",
+      "upload": "Upload a video file",
+      "dragDrop": "Drag and drop your video here, or click to browse",
+      "fileTypes": "Supported: MP4, WebM, MOV",
+      "startRecording": "Start Recording",
+      "stopRecording": "Stop Recording",
+      "recording": "Recording...",
+      "preview": "Preview Recording",
+      "recordAgain": "Record Again",
+      "submit": "Submit Presentation",
+      "submitting": "Submitting...",
+      "awaitingReview": "Your presentation has been submitted and is awaiting teacher review.",
+      "cameraPermission": "Camera and microphone access is required to record.",
+      "cameraNotReadable": "Could not start the camera. Close other apps or browser tabs using it, then try again—or use Upload Video.",
+      "recordingVideoOnly": "Recording video only (microphone unavailable).",
+      "uploadError": "Error uploading video. Please try again.",
+      "selectCamera": "Camera",
+      "selectMicrophone": "Microphone",
+      "noAudio": "No microphone",
+      "refreshDevices": "Refresh devices",
+      "reviewHeading": "Review your video",
+      "reviewHelper": "This is what will be submitted.",
+      "reviewDialogTitle": "Your edited video",
+      "reviewDialogDescription": "Play the video below. Continue when you're ready to submit.",
+      "reviewDialogContinue": "Continue",
+      "editor": {
+        "trim": "Trim",
+        "crop": "Crop",
+        "speed": "Speed",
+        "text": "Text",
+        "none": "Tools",
+        "addText": "Add text",
+        "preview": "Preview",
+        "previewSelection": "Preview selection",
+        "previewExport": "Preview export",
+        "previewExportDescription": "Renders trim, crop, speed, and text like the final file.",
+        "previewExportFailed": "Could not build preview. Try again.",
+        "play": "Play",
+        "pause": "Pause",
+        "seekBack5s": "Back 5 seconds",
+        "seekForward5s": "Forward 5 seconds",
+        "frameBack": "Previous frame",
+        "frameForward": "Next frame",
+        "timelineAria": "Timeline: move playhead or trim range",
+        "timelineTrimHint": "Drag the black lines to set trim in/out. Drag elsewhere to move the playhead.",
+        "doneTrim": "Done trimming",
+        "doneCrop": "Done cropping",
+        "trimConfirmed": "Trim saved",
+        "cropConfirmed": "Crop saved",
+        "apply": "Apply and save",
+        "discard": "Discard",
+        "exporting": "Exporting…",
+        "textLabel": "Text",
+        "fontSize": "Size",
+        "cropPresets": {
+          "free": "Free",
+          "16_9": "16:9",
+          "4_3": "4:3",
+          "1_1": "1:1"
+        }
+      }
+    },
+    "langchain": {
+      "title": "Langchain Builder",
+      "buildPipeline": "Build Your Pipeline",
+      "addNode": "Add Node",
+      "save": "Save Pipeline",
+      "submit": "Submit Pipeline",
+      "submitting": "Submitting...",
+      "awaitingReview": "Your pipeline has been submitted and is awaiting teacher review.",
+      "nodes": {
+        "input": "Input",
+        "output": "Output",
+        "llm": "LLM",
+        "prompt": "Prompt Template",
+        "chain": "Chain",
+        "memory": "Memory"
+      },
+      "nodeDescriptions": {
+        "input": "User input entry point",
+        "output": "Final output node",
+        "llm": "Large Language Model",
+        "prompt": "Template for prompts",
+        "chain": "Sequential processing chain",
+        "memory": "Conversation memory"
+      }
     }
   },
   "studentClassroom": {
@@ -716,6 +952,7 @@
     "students": "Students",
     "noData": "No data available yet",
     "filtersTitle": "Analytics Filters",
+    "filtersDescription": "Refine charts and class metrics by student or assignment.",
     "filterByStudent": "Filter by Student",
     "filterByAssignment": "Filter by Assignment",
     "all": "All",
@@ -741,9 +978,50 @@
     "scoresError": "Error loading scores",
     "noAssignments": "No assignments found",
     "noCompletedSubmissions": "No completed submissions found",
+    "regenerateAll5DScores": "Regenerate All 5D Scores",
+    "refresh5D": "Refresh 5D",
+    "regeneratingScores": "Refreshing…",
     "regenerateError": "Error regenerating scores",
     "regenerateSuccess": "Regenerated {{count}} student 5D profiles",
     "regenerateFail": "Failed to regenerate {{count}} profiles"
+  },
+  "nuance": {
+    "title": "Student Behavioral Insights",
+    "description": "Nuance system recommendations based on activity patterns",
+    "filterStudent": "Student",
+    "filterActivity": "Activity",
+    "refresh": "Refresh insights",
+    "noData": "No behavioral data available yet. Data will appear as students complete activities.",
+    "noRecommendation": "No recommendations — activity patterns are within normal range.",
+    "whyTriggered": "Why this was triggered",
+    "supportingData": "Supporting data",
+    "columns": {
+      "student": "Student",
+      "activity": "Activity",
+      "responseTime": "Avg Response",
+      "idleRatio": "Idle Ratio",
+      "completion": "Completion",
+      "sessions": "Sessions",
+      "status": "Status"
+    },
+    "tooltips": {
+      "student": "The student's name, or the activity name when filtered to a specific student.",
+      "responseTime": "Average time between the AI sending a message and the student replying.",
+      "idleRatio": "Percentage of session time the student spent inactive or tabbed away.",
+      "completion": "Percentage of started assignments the student actually finished.",
+      "sessions": "Average number of times the student opened each assignment.",
+      "status": "Green = normal patterns, Amber = recommendation generated."
+    },
+    "types": {
+      "engagement_support": "Engagement Support",
+      "pacing_support": "Pacing Support",
+      "persistence_support": "Persistence Support"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    }
   },
   "wellbeing": {
     "alert": "Wellbeing Alert",
@@ -1123,10 +1401,16 @@
     }
   },
   "assignmentTypes": {
+    "chatbot": "Chatbot",
+    "questions": "Questions",
     "text_essay": "Text Essay",
+    "test": "Test",
+    "project": "Project",
+    "presentation": "Presentation",
+    "langchain": "Langchain",
     "file_upload": "File Upload",
     "quiz": "Quiz",
-    "project": "Project",
+    "quiz_mcq": "Quiz",
     "interactive": "Interactive"
   },
   "teacherAssistant": {

@@ -72,6 +72,14 @@ export const enrollInClassroom = async (
     });
 
     if (enrollError) {
+      const code = (enrollError as { code?: string }).code;
+      const msg = (enrollError as { message?: string }).message ?? '';
+      if (code === '23505' || msg.includes('enrollments_classroom_id_student_id_key')) {
+        return {
+          success: false,
+          error: 'You are already enrolled in this classroom',
+        };
+      }
       return {
         success: false,
         error: 'Failed to join classroom',
@@ -93,7 +101,7 @@ export const enrollInClassroom = async (
       }
     );
 
-    // Notify student
+    // Notify student (actor must be the enrolling user — RLS requires actor_id = auth.uid())
     await createNotification(
       studentId,
       'enrolled_in_classroom',
@@ -104,7 +112,7 @@ export const enrollInClassroom = async (
         classroom_id: classroom.id,
         classroom_name: classroom.name,
       },
-      classroom.teacher_id
+      studentId
     );
 
     return {

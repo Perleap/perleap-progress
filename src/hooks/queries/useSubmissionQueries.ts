@@ -9,6 +9,7 @@ import {
   getOrCreateSubmission,
   getSubmissionById,
   getFullSubmissionDetails,
+  getAssignmentConversationMessages,
   getClassroomSubmissions,
   getEnrichedClassroomSubmissions,
   getSubmissionFeedback,
@@ -28,6 +29,8 @@ export const submissionKeys = {
   forAssignment: (assignmentId: string, studentId: string) =>
     [...submissionKeys.all, 'assignment', assignmentId, studentId] as const,
   feedback: (submissionId: string) => [...submissionKeys.all, 'feedback', submissionId] as const,
+  conversation: (submissionId: string) =>
+    [...submissionKeys.all, 'conversation', submissionId] as const,
 };
 
 /**
@@ -185,6 +188,26 @@ export const useFullSubmissionDetails = (submissionId: string | undefined) => {
     },
     enabled: !!submissionId,
     staleTime: 2 * 60 * 1000,
+  });
+};
+
+/**
+ * Live chat messages for a submission (teacher view; requires RLS policy).
+ */
+export const useTeacherConversationMessages = (
+  submissionId: string | undefined,
+  enabled: boolean
+) => {
+  return useQuery({
+    queryKey: submissionKeys.conversation(submissionId || ''),
+    queryFn: async () => {
+      if (!submissionId) throw new Error('Missing submission ID');
+      const { data, error } = await getAssignmentConversationMessages(submissionId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!submissionId && enabled,
+    staleTime: 30 * 1000,
   });
 };
 

@@ -10,6 +10,7 @@ import type { Message, ApiError, ChatRequest } from '@/types';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
+import { rehydrateMessages } from '@/lib/conversationMessages';
 
 interface UseConversationResult {
   messages: Message[];
@@ -28,43 +29,6 @@ interface UseConversationParams {
   studentId: string;
   assignmentId: string;
 }
-
-/**
- * Rehydrate fileContext from saved message content.
- * The server embeds file metadata into content as:
- *   "user text\n\n--- Attached File: name ---\n[File: name]\nURL: https://..."
- * This function extracts that back into a structured fileContext object
- * and strips the raw metadata from the displayed content.
- */
-const rehydrateMessages = (msgs: Message[]): Message[] => {
-  return msgs.map(msg => {
-    if (msg.role !== 'user' || msg.fileContext) return msg;
-
-    const attachmentMatch = msg.content.match(/\n\n--- Attached File: (.+?) ---\n([\s\S]*)$/);
-    if (!attachmentMatch) return msg;
-
-    const fileName = attachmentMatch[1];
-    const fileBody = attachmentMatch[2];
-    const cleanContent = msg.content.substring(0, attachmentMatch.index || 0);
-
-    const urlMatch = fileBody.match(/\[File:\s*[^\]]+\]\s*URL:\s*(https?:\/\/\S+)/);
-    if (urlMatch) {
-      const url = urlMatch[1];
-      const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(fileName);
-      return {
-        ...msg,
-        content: cleanContent,
-        fileContext: { name: fileName, content: fileBody, url, type: isImage ? 'image' : 'pdf' },
-      };
-    }
-
-    return {
-      ...msg,
-      content: cleanContent,
-      fileContext: { name: fileName, content: fileBody, type: 'text' },
-    };
-  });
-};
 
 /**
  * Hook to manage assignment conversation state

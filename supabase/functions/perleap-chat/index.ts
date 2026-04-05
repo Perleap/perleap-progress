@@ -150,6 +150,13 @@ CORRECT example:
       return msg;
     });
 
+    // Build a deterministic greeting prefix for initial messages
+    const greetingPrefix = isInitialGreeting
+      ? (language === 'he'
+          ? `שלום! אני Perleap, עוזר ההוראה של ${teacherName}.\n\n`
+          : `Hello! I am Perleap, ${teacherName}'s AI teaching assistant.\n\n`)
+      : '';
+
     if (!stream) {
       const { content: aiMessage } = await createChatCompletion(
         systemPrompt,
@@ -163,7 +170,7 @@ CORRECT example:
       const completionMarker = '[CONVERSATION_COMPLETE]';
       let shouldEnd = false;
       let endReason = '';
-      let cleanedMessage = aiMessage;
+      let cleanedMessage = greetingPrefix + aiMessage;
 
       // Check if marker exists anywhere in the message (more robust)
       const markerIndex = aiMessage.toUpperCase().indexOf(completionMarker);
@@ -220,6 +227,12 @@ CORRECT example:
 
     const readableStream = new ReadableStream({
       async start(controller) {
+        // Send deterministic greeting prefix before AI stream begins
+        if (greetingPrefix) {
+          controller.enqueue(encoder.encode(greetingPrefix));
+          fullContent += greetingPrefix;
+        }
+
         const reader = response.body?.getReader();
         if (!reader) {
           controller.close();

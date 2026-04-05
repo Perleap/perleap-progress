@@ -3,19 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layouts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { MessageSquare, AlertTriangle, Sparkles, User, Calendar, BookOpen } from 'lucide-react';
+import { MessageSquare, Sparkles, Calendar, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
-import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
-import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
-import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { useFullSubmissionDetails } from '@/hooks/queries';
+import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
 
 interface GeneratedAssignmentData {
   title: string;
@@ -166,17 +162,17 @@ const SubmissionDetail = () => {
               <Button
                 onClick={handleGenerateFollowupAssignment}
                 disabled={generatingAssignment}
-                className="rounded-full shadow-md hover:shadow-lg transition-all"
-                size="lg"
+                className="rounded-full shadow-sm hover:shadow-md transition-all text-sm h-9 px-4"
+                size="sm"
               >
                 {generatingAssignment ? (
                   <>
-                    <span className="animate-spin mr-2">⏳</span>
+                    <span className="animate-spin me-2">⏳</span>
                     Generating...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <Sparkles className="me-2 h-3.5 w-3.5" />
                     {t('submissionDetail.generateFollowUp')}
                   </>
                 )}
@@ -184,144 +180,39 @@ const SubmissionDetail = () => {
             )}
           </div>
 
-          {/* Wellbeing Alerts - Show prominently at top */}
-          {alerts.length > 0 && (
-            <WellbeingAlertCard
-              alerts={alerts}
-              studentName={studentName}
-              onAcknowledge={refetch}
-            />
-          )}
+          {(() => {
+            const MANUAL_EVAL_TYPES = ['project', 'presentation', 'langchain'];
+            const AI_EVAL_TYPES = ['text_essay', 'test', 'questions', 'chatbot'];
+            const isManualEvalType = MANUAL_EVAL_TYPES.includes(submission.assignments?.type);
+            const needsTeacherAiEvaluation =
+              submission.status === 'completed' &&
+              !feedback &&
+              AI_EVAL_TYPES.includes(submission.assignments?.type);
+            const showTabs = feedback || isManualEvalType || needsTeacherAiEvaluation;
 
-          {feedback ? (
-            <div className="grid lg:grid-cols-12 gap-8">
-              {/* Left Column: Feedback & Analytics */}
-              <div className="lg:col-span-7 space-y-8">
-                <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
-                  <CardHeader className="bg-accent dark:bg-accent/30 pb-6">
-                    <CardTitle className="text-foreground flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      {t('submissionDetail.teacherFeedback')}
-                    </CardTitle>
-                    <CardDescription className="text-accent-foreground/70">
-                      {t('submissionDetail.teacherFeedbackDesc')}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="prose prose-slate dark:prose-invert max-w-none">
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-                        {feedback.teacher_feedback
-                          ?.replace(/\*\*/g, '')
-                          ?.replace(/\/\//g, '')
-                          ?.trim() || 'No teacher feedback generated'}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-slate-500" />
-                      {t('submissionDetail.studentFeedback')}
-                    </CardTitle>
-                    <CardDescription>
-                      {t('submissionDetail.studentFeedbackDesc', { student: studentName })}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-lg text-slate-600 dark:text-slate-400 italic">
-                      "{feedback.student_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}"
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="space-y-8">
-                  <StudentAnalytics
-                    studentId={submission.student_id}
-                    classroomId={submission.assignments.classroom_id}
-                    currentSubmissionId={submission.id}
-                  />
-                </div>
-              </div>
-
-              {/* Right Column: Conversation History & CRA */}
-              <div className="lg:col-span-5 space-y-6">
-                <Card className="h-[600px] flex flex-col rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
-                  <CardHeader className="bg-slate-50/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 z-10 shrink-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <MessageSquare className="h-5 w-5 text-primary" />
-                      {t('submissionDetail.conversationHistory')}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      {t('submissionDetail.conversationHistoryDesc', { student: studentName })}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                    {feedback.conversation_context &&
-                      Array.isArray(feedback.conversation_context) &&
-                      feedback.conversation_context.map((msg, idx) => {
-                        // Check if this message triggered any alerts
-                        const triggeredAlerts = alerts.flatMap((alert) =>
-                          alert.triggered_messages.filter((tm) => tm.message_index === idx)
-                        );
-                        const isConcerning = triggeredAlerts.length > 0;
-                        const isUser = msg.role === 'user';
-
-                        return (
-                          <div
-                            key={idx}
-                            className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
-                          >
-                            <div
-                              className={`max-w-[85%] p-4 rounded-lg relative shadow-sm ${isConcerning
-                                ? 'bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 text-red-900 dark:text-red-100'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
-                                }`}
-                            >
-                              {isConcerning && (
-                                <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm z-10">
-                                  <AlertTriangle className="h-3 w-3" />
-                                </div>
-                              )}
-
-                              <SafeMathMarkdown content={msg.content} className="text-sm leading-relaxed" />
-
-                              {isConcerning && triggeredAlerts.length > 0 && (
-                                <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-800/50 text-xs text-red-700 dark:text-red-300 bg-red-100/50 dark:bg-red-900/20 -mx-4 -mb-4 p-3 rounded-b-2xl">
-                                  <strong>Why flagged:</strong> {triggeredAlerts[0].reason}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-slate-400 mt-1 px-1">
-                              {isUser ? studentName : 'Perleap'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </CardContent>
-                </Card>
-
-                <HardSkillsAssessmentTable
-                  submissionId={submission.id}
-                  title={t('cra.title')}
-                  description={t('classroomAnalytics.hardSkillsFor', { student: studentName })}
-                />
-              </div>
-            </div>
-          ) : (
-            <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-6">
-                  <MessageSquare className="h-10 w-10 text-slate-300" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{t('submissionDetail.noFeedback')}</h3>
-                <p className="text-slate-500 dark:text-slate-400 max-w-md">
-                  {t('submissionDetail.noFeedbackDesc')}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+            return showTabs ? (
+              <SubmissionTabs
+                submission={submission}
+                feedback={feedback}
+                studentName={studentName}
+                alerts={alerts}
+                onAcknowledgeAlert={refetch}
+                onEvaluationComplete={refetch}
+              />
+            ) : (
+              <Card className="rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm mb-6">
+                    <MessageSquare className="h-10 w-10 text-slate-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{t('submissionDetail.noFeedback')}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-md">
+                    {t('submissionDetail.noFeedbackDesc')}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
       </div>
 

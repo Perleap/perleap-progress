@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,8 +26,7 @@ import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Calendar, Tar
 import { createBulkNotifications } from '@/lib/notificationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-console.log('FILE_LOAD: CreateAssignmentDialog.tsx loaded');
+import { TestQuestionBuilder, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
 
 interface CreateAssignmentDialogProps {
   open: boolean;
@@ -76,6 +76,7 @@ export function CreateAssignmentDialog({
   const [availableComponents, setAvailableComponents] = useState<string[]>([]);
   const [rephrasingInstructions, setRephrasingInstructions] = useState(false);
   const [originalInstructions, setOriginalInstructions] = useState<string | null>(null);
+  const [testQuestions, setTestQuestions] = useState<TestQuestionDraft[]>([]);
 
   // AI-generated assignment metadata
   const [aiMetadata, setAiMetadata] = useState<{
@@ -83,10 +84,11 @@ export function CreateAssignmentDialog({
     success_criteria?: string[];
     scaffolding_tips?: string;
   }>({});
+
   const [formData, setFormData] = useState({
     title: '',
     instructions: '',
-    type: 'text_essay',
+    type: 'chatbot',
     due_at: '',
     status: 'published',
     hard_skills: [] as string[],
@@ -99,6 +101,7 @@ export function CreateAssignmentDialog({
       action: false,
     },
     personalization_flag: false,
+    auto_publish_ai_feedback: true,
     materials: [] as Array<{ type: 'pdf' | 'link'; url: string; name: string }>,
   });
 
@@ -196,7 +199,7 @@ export function CreateAssignmentDialog({
         ...prev,
         title: initialData.title || prev.title || '',
         instructions: initialData.instructions || prev.instructions || '',
-        type: initialData.type || prev.type || 'text_essay',
+        type: initialData.type || prev.type || 'chatbot',
         due_at: initialData.due_at || prev.due_at || '',
         target_dimensions: initialData.target_dimensions || prev.target_dimensions || {
           vision: false,
@@ -213,6 +216,9 @@ export function CreateAssignmentDialog({
         success_criteria: initialData.success_criteria,
         scaffolding_tips: initialData.scaffolding_tips,
       });
+    }
+    if (!open) {
+      setTestQuestions([]);
     }
   }, [open, initialData]); // Only re-run when open state changes or initialData reference changes while open
 
@@ -381,14 +387,15 @@ export function CreateAssignmentDialog({
             classroom_id: classroomId,
             title: formData.title,
             instructions: formData.instructions,
-            type: formData.type as any,
+            type: formData.type as Database["public"]["Enums"]["assignment_type"],
             due_at: formData.due_at || null,
-            status: formData.status as any,
+            status: formData.status as Database["public"]["Enums"]["assignment_status"],
             hard_skills: JSON.stringify(formData.hard_skills),
             hard_skill_domain: formData.hard_skill_domain || null,
             materials: formData.materials, // JSONB column - pass as object, not stringified
             target_dimensions: formData.target_dimensions as any,
             personalization_flag: formData.personalization_flag,
+            auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
             assigned_student_id: assignedStudentId || null,
           },
         ])
@@ -396,6 +403,26 @@ export function CreateAssignmentDialog({
         .single();
 
       if (error) throw error;
+
+      // Insert test questions if this is a test-type assignment
+      if (formData.type === 'test' && testQuestions.length > 0 && assignment) {
+        const questionsToInsert = testQuestions.map((q) => ({
+          assignment_id: assignment.id,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          options: q.question_type === 'multiple_choice' ? q.options : null,
+          correct_option_id: q.question_type === 'multiple_choice' ? q.correct_option_id : null,
+          order_index: q.order_index,
+        }));
+
+        const { error: questionsError } = await supabase
+          .from('test_questions')
+          .insert(questionsToInsert);
+
+        if (questionsError) {
+          console.error('Error inserting test questions:', questionsError);
+        }
+      }
 
       // If assignment is published, notify students
       if (assignment && formData.status === 'published') {
@@ -582,11 +609,13 @@ export function CreateAssignmentDialog({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="chatbot" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.chatbot')}</SelectItem>
+                      <SelectItem value="questions" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.questions')}</SelectItem>
                       <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
-                      <SelectItem value="quiz" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.quiz')}</SelectItem>
+                      <SelectItem value="test" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.test')}</SelectItem>
                       <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.project')}</SelectItem>
                       <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
-                      <SelectItem value="other" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.other')}</SelectItem>
+                      <SelectItem value="langchain" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.langchain')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -609,7 +638,61 @@ export function CreateAssignmentDialog({
                   </div>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="status" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('assignments.status.label')}
+                  </Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, status: value as typeof formData.status })
+                    }
+                  >
+                    <SelectTrigger id="status" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {formData.status ? t(`assignments.status.${formData.status}`) : t('assignments.status.label')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.draft')}</SelectItem>
+                      <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.published')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="auto_publish_ai_feedback" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.aiFeedback')}
+                  </Label>
+                  <Select
+                    value={formData.auto_publish_ai_feedback ? 'yes' : 'no'}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, auto_publish_ai_feedback: value === 'yes' })
+                    }
+                  >
+                    <SelectTrigger id="auto_publish_ai_feedback" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {formData.auto_publish_ai_feedback ? t('common.yes') : t('common.no')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>{t('common.yes')}</SelectItem>
+                      <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>{t('common.no')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+
+            {/* Test Question Builder - shown only for test type */}
+            {formData.type === 'test' && (
+              <TestQuestionBuilder
+                questions={testQuestions}
+                onQuestionsChange={setTestQuestions}
+              />
+            )}
 
             {/* Skills & Domain */}
             <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">

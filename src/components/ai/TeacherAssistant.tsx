@@ -135,7 +135,7 @@ export function TeacherAssistant() {
 
             {isOpen && (
                 <Card className={`fixed bottom-24 ${isRTL ? 'left-6' : 'right-6'} w-[90vw] md:w-96 h-[550px] max-h-[80vh] shadow-2xl z-[9999] flex flex-col animate-in fade-in slide-in-from-bottom-8 zoom-in-95 duration-300 border-border/50 overflow-hidden rounded-2xl`} dir={isRTL ? 'rtl' : 'ltr'}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-3 py-4 border-b bg-muted/30">
+                    <CardHeader className="flex flex-row items-center justify-between pb-3 py-4 border-b bg-transparent">
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                             <div className="p-2 bg-primary rounded-xl text-primary-foreground shadow-md">
                                 <Sparkles className="h-4 w-4" />

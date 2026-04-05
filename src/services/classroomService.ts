@@ -199,6 +199,22 @@ export const findClassroomByInviteCode = async (
   }
 };
 
+/** Stable code for i18n; message is English fallback for logs/non-UI callers */
+const ALREADY_ENROLLED_ERROR: ApiError = {
+  code: 'ALREADY_ENROLLED',
+  message: 'You are already enrolled in this classroom',
+};
+
+function isEnrollmentUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string };
+  return (
+    e.code === '23505' ||
+    (typeof e.message === 'string' &&
+      e.message.includes('enrollments_classroom_id_student_id_key'))
+  );
+}
+
 /**
  * Join a classroom (create enrollment)
  */
@@ -207,6 +223,14 @@ export const joinClassroom = async (
   studentId: string
 ): Promise<{ data: Enrollment | null; error: ApiError | null }> => {
   try {
+    const { enrolled, error: checkError } = await isStudentEnrolled(classroomId, studentId);
+    if (checkError) {
+      return { data: null, error: checkError };
+    }
+    if (enrolled) {
+      return { data: null, error: ALREADY_ENROLLED_ERROR };
+    }
+
     const { data, error } = await supabase
       .from('enrollments')
       .insert([{ classroom_id: classroomId, student_id: studentId }])
@@ -214,11 +238,17 @@ export const joinClassroom = async (
       .single();
 
     if (error) {
+      if (isEnrollmentUniqueViolation(error)) {
+        return { data: null, error: ALREADY_ENROLLED_ERROR };
+      }
       return { data: null, error: handleSupabaseError(error) };
     }
 
     return { data, error: null };
   } catch (error) {
+    if (isEnrollmentUniqueViolation(error)) {
+      return { data: null, error: ALREADY_ENROLLED_ERROR };
+    }
     return { data: null, error: handleSupabaseError(error) };
   }
 };

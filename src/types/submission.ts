@@ -13,6 +13,7 @@ export interface Submission {
   file_url: string | null;
   status: SubmissionStatus;
   submitted_at: string;
+  awaiting_teacher_feedback_release?: boolean;
 }
 
 /**
