@@ -1,17 +1,33 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Eye, ChevronDown, ChevronUp, MessageSquare, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Clock, MessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
 }
+
+function stripFeedbackPreview(s: string, max: number) {
+  const plain = s.replace(/\*\*/g, '').replace(/\n/g, ' ').trim();
+  if (plain.length <= max) return plain;
+  return `${plain.slice(0, max)}…`;
+}
+
+function lastChatSnippet(messages: ConversationMessage[] | undefined, max: number) {
+  if (!messages?.length) return '';
+  const last = [...messages].reverse().find((m) => m.content?.trim());
+  if (!last?.content) return '';
+  const plain = last.content.replace(/\n/g, ' ').trim();
+  if (plain.length <= max) return plain;
+  return `${plain.slice(0, max)}…`;
+}
+
+export type SubmissionCardVariant = 'stack' | 'compact' | 'detailed' | 'list';
 
 interface SubmissionCardProps {
   submission: {
@@ -25,12 +41,31 @@ interface SubmissionCardProps {
     conversation_context?: ConversationMessage[];
     student_avatar_url?: string;
   };
+  /** Default stack: tall card with title top, student bottom-left, date bottom-right */
+  variant?: SubmissionCardVariant;
 }
 
-export function SubmissionCard({ submission }: SubmissionCardProps) {
+export function SubmissionCard({ submission, variant = 'stack' }: SubmissionCardProps) {
   const { t } = useTranslation();
+  const { isRTL } = useLanguage();
   const navigate = useNavigate();
-  const [showFeedback, setShowFeedback] = useState(false);
+
+  const showDetails = variant !== 'list';
+  /** Detailed layout + timeline use richer metadata and larger type */
+  const isRich = variant === 'detailed';
+  const msgCount = submission.conversation_context?.length ?? 0;
+  const feedbackMaxLen = isRich ? 280 : 160;
+  const chatPreviewMax = isRich ? 140 : 0;
+
+  const feedbackPreview = useMemo(() => {
+    if (!submission.teacher_feedback?.trim()) return '';
+    return stripFeedbackPreview(submission.teacher_feedback, feedbackMaxLen);
+  }, [submission.teacher_feedback, feedbackMaxLen]);
+
+  const chatPreview = useMemo(
+    () => (isRich && chatPreviewMax > 0 ? lastChatSnippet(submission.conversation_context, chatPreviewMax) : ''),
+    [isRich, submission.conversation_context, chatPreviewMax],
+  );
 
   const initials = submission.student_name
     .split(' ')
@@ -39,94 +74,219 @@ export function SubmissionCard({ submission }: SubmissionCardProps) {
     .toUpperCase()
     .slice(0, 2);
 
-  return (
-    <Card className="group rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border overflow-hidden flex flex-col h-[400px] relative">
-      {/* Status Badge - Absolute Top Right */}
-      <div className="absolute top-4 right-4 z-10">
+  const pending = submission.id.startsWith('pending-');
+
+  const avatarClass =
+    variant === 'list' || variant === 'compact'
+      ? 'h-9 w-9'
+      : variant === 'detailed'
+        ? 'h-11 w-11'
+        : 'h-10 w-10';
+
+  const titleClass = cn(
+    'font-bold text-foreground leading-snug line-clamp-2 min-w-0 flex-1',
+    variant === 'detailed' && 'text-xl sm:text-2xl',
+    variant === 'compact' && 'text-base',
+    variant === 'stack' && 'text-lg',
+  );
+
+  const detailRowClass = cn(
+    'flex items-start gap-2 text-muted-foreground',
+    isRich ? 'text-base' : 'text-sm',
+  );
+  const detailIconClass = cn('shrink-0', isRich ? 'h-4 w-4 mt-1' : 'h-4 w-4 mt-0.5');
+
+  const studentBlock = (
+    <div className="flex items-center gap-2 min-w-0 justify-start">
+      <Avatar
+        className={cn(
+          avatarClass,
+          'shrink-0 rounded-full border-2 border-border shadow-sm overflow-hidden',
+        )}
+      >
+        <AvatarImage src={submission.student_avatar_url} alt="" className="h-full w-full object-cover" />
+        <AvatarFallback
+          className={cn(
+            'bg-primary/10 text-primary font-bold',
+            variant === 'compact' || variant === 'list' ? 'text-xs' : 'text-sm',
+          )}
+        >
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      <span
+        className={cn(
+          'font-medium text-foreground truncate',
+          variant === 'list' && 'text-sm sm:text-base',
+          variant !== 'list' && (isRich ? 'text-base sm:text-lg' : 'text-base'),
+        )}
+      >
+        {submission.student_name}
+      </span>
+    </div>
+  );
+
+  const dateBlock = (
+    <time
+      className={cn(
+        'text-muted-foreground tabular-nums shrink-0',
+        variant === 'list' && 'text-sm sm:text-base font-medium',
+        variant !== 'list' && (isRich ? 'text-sm sm:text-base' : 'text-sm'),
+      )}
+      dateTime={submission.submitted_at}
+    >
+      {new Date(submission.submitted_at).toLocaleDateString()}
+    </time>
+  );
+
+  const statusBadge = (
     <Badge
       variant={submission.has_feedback ? 'default' : 'secondary'}
-      className={`rounded-full px-2.5 py-0.5 font-medium text-[10px] shadow-sm backdrop-blur-sm ${submission.has_feedback
-        ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
-        : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400'
-        }`}
+      className={cn(
+        'shrink-0 rounded-full px-2.5 py-0.5 font-medium text-xs',
+        submission.has_feedback
+          ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
+          : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
+      )}
     >
-      {submission.has_feedback
-        ? t('submissionCard.completed')
-        : t('submissionCard.inProgress')}
+      {pending ? t('submissionCard.notStarted') : submission.has_feedback ? t('submissionCard.completed') : t('submissionCard.inProgress')}
     </Badge>
-      </div>
+  );
 
-      {/* Main Content */}
-      <div className={`flex-1 flex flex-col items-center text-center p-6 transition-opacity duration-300 ${showFeedback ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <Avatar className="h-24 w-24 rounded-full border-4 border-card shadow-sm mb-4 ring-1 ring-border overflow-hidden">
-          <AvatarImage src={submission.student_avatar_url} alt={submission.student_name} className="h-full w-full object-cover" />
-          <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+  const topRow = (
+    <div className="flex items-start justify-between gap-3">
+      <h3 className={titleClass}>{submission.assignment_title}</h3>
+      {statusBadge}
+    </div>
+  );
 
-        <CardTitle className="text-xl font-bold text-foreground truncate w-full px-2 mb-1">
-          {submission.student_name}
-        </CardTitle>
-
-        <CardDescription className="text-muted-foreground truncate w-full px-2 text-sm font-medium mb-4">
-          {submission.assignment_title}
-        </CardDescription>
-
-        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30"></span>
-          {new Date(submission.submitted_at).toLocaleDateString()}
+  const detailsBlock =
+    showDetails && (
+      <div className={cn('w-full text-start space-y-2', isRich && 'space-y-3')}>
+        <p className={detailRowClass}>
+          <Clock className={detailIconClass} aria-hidden />
+          <span className="leading-snug">
+            {new Date(submission.submitted_at).toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
+          </span>
         </p>
-
-        {submission.has_feedback && submission.teacher_feedback && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowFeedback(true)}
-            className="mt-auto text-primary hover:text-primary/80 hover:bg-primary/10"
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {t('submissionCard.teacherFeedback')}
-          </Button>
+        {!pending && (
+          <p className={detailRowClass}>
+            <MessageSquare className={detailIconClass} aria-hidden />
+            <span>{t('submissionCard.chatMessages', { count: msgCount })}</span>
+          </p>
         )}
-      </div>
-
-      {/* Feedback Overlay */}
-      <div
-        className={`absolute inset-0 bg-card/95 backdrop-blur-sm z-20 flex flex-col p-6 transition-all duration-300 transform ${showFeedback ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="font-semibold text-foreground flex items-center gap-2">
-            <User className="h-4 w-4 text-primary" />
-            {t('submissionCard.teacherFeedback')}
-          </h4>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full hover:bg-muted"
-            onClick={() => setShowFeedback(false)}
-          >
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
-          <div className="prose prose-sm max-w-none dark:prose-invert text-foreground/80 whitespace-pre-wrap">
-            {submission.teacher_feedback?.replace(/\*\*/g, '')?.replace(/\/\//g, '')?.trim()}
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Action */}
-      <div className="p-4 pt-0 z-30 bg-card">
-        <Button
-          onClick={() => navigate(`/teacher/submission/${submission.id}`)}
-          disabled={submission.id.startsWith('pending-')}
-          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all h-11 text-sm font-medium"
+        {isRich && !pending && chatPreview && (
+          <p className={detailRowClass}>
+            <MessageSquare className={detailIconClass} aria-hidden />
+            <span>
+              <span className="font-medium text-foreground/90">{t('submissionCard.latestInChat')} </span>
+              <span className="line-clamp-4 text-foreground/80">{chatPreview}</span>
+            </span>
+          </p>
+        )}
+        <p
+          className={cn(
+            'leading-snug text-muted-foreground',
+            isRich ? 'text-base' : 'text-sm',
+          )}
         >
-          {submission.id.startsWith('pending-') ? t('submissionCard.notStarted') : t('submissionCard.fullReport', 'Full Report')}
-        </Button>
+          <span className={cn('font-medium text-foreground', isRich && 'text-foreground')}>
+            {t('submissionCard.feedbackLabel')}{' '}
+          </span>
+          {pending ? (
+            <span>{t('submissionCard.notStarted')}</span>
+          ) : submission.has_feedback ? (
+            feedbackPreview ? (
+              <span className={cn('text-foreground/90', isRich ? 'line-clamp-6' : 'line-clamp-3')}>
+                {feedbackPreview}
+              </span>
+            ) : (
+              <span>{t('submissionCard.feedbackRecorded')}</span>
+            )
+          ) : (
+            <span>{t('submissionCard.awaitingFeedback')}</span>
+          )}
+        </p>
       </div>
-    </Card>
+    );
+
+  const bottomRow = (
+    <div className="flex w-full justify-between items-center gap-3">
+      {studentBlock}
+      {dateBlock}
+    </div>
+  );
+
+  const isList = variant === 'list';
+
+  const listAvatar = (
+    <Avatar
+      className={cn(
+        'h-10 w-10 shrink-0 rounded-full border-2 border-border bg-muted/40 shadow-sm overflow-hidden',
+      )}
+    >
+      <AvatarImage src={submission.student_avatar_url} alt="" className="h-full w-full object-cover" />
+      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{initials}</AvatarFallback>
+    </Avatar>
+  );
+
+  const listRow = (
+    <div className="flex w-full gap-3">
+      <div className="pt-0.5 shrink-0">{listAvatar}</div>
+      <div className="min-w-0 flex-1 flex flex-col gap-2">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <h3 className="min-w-0 flex-1 text-start font-semibold leading-snug text-foreground line-clamp-2 text-base sm:text-[1.0625rem]">
+            {submission.assignment_title}
+          </h3>
+          <div className="shrink-0 pt-0.5">{statusBadge}</div>
+        </div>
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <p className="text-start text-sm text-muted-foreground truncate min-w-0 flex-1 pe-2">
+            {submission.student_name}
+          </p>
+          <time
+            className="shrink-0 tabular-nums text-sm font-medium text-muted-foreground whitespace-nowrap"
+            dateTime={submission.submitted_at}
+          >
+            {new Date(submission.submitted_at).toLocaleDateString()}
+          </time>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <button
+      type="button"
+      dir={isRTL ? 'rtl' : 'ltr'}
+      disabled={pending}
+      onClick={() => navigate(`/teacher/submission/${submission.id}`)}
+      className={cn(
+        'w-full text-start flex flex-col transition-all',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'disabled:opacity-60 disabled:pointer-events-none cursor-pointer disabled:cursor-not-allowed',
+        isList &&
+          'rounded-xl border border-border/80 bg-card p-4 shadow-sm hover:border-border hover:bg-muted/20 hover:shadow-md sm:p-4',
+        !isList && 'rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border',
+        isList && 'min-h-0',
+        !isList && variant === 'compact' && 'gap-3 p-4 min-h-[280px]',
+        !isList && variant === 'detailed' && 'gap-6 p-6 sm:p-8 min-h-[480px]',
+        !isList && variant === 'stack' && 'gap-4 p-5 sm:p-6 min-h-[400px]',
+      )}
+    >
+      {isList ? (
+        listRow
+      ) : (
+        <>
+          {topRow}
+          {detailsBlock}
+          <div className={cn('flex-1 w-full', isRich ? 'min-h-[2rem]' : 'min-h-[3rem]')} aria-hidden />
+          <div className="mt-auto w-full pt-1">{bottomRow}</div>
+        </>
+      )}
+    </button>
   );
 }

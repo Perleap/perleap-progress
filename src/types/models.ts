@@ -67,7 +67,7 @@ export interface Assignment {
   classroom_id: string;
   title: string;
   instructions: string;
-  type: 'text_essay' | 'file_upload' | 'quiz' | 'project';
+  type: 'text_essay' | 'chatbot' | 'questions' | 'test' | 'project' | 'presentation' | 'langchain';
   status: 'draft' | 'published';
   due_at: string | null;
   target_dimensions: TargetDimensions;
@@ -75,6 +75,8 @@ export interface Assignment {
   materials?: CourseMaterial[] | null;
   hard_skills?: string[] | null;
   hard_skill_domain?: string | null;
+  /** When true (default), students see AI feedback as soon as it is generated. */
+  auto_publish_ai_feedback?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +97,8 @@ export interface Submission {
   file_urls: string[] | null;
   status: 'in_progress' | 'completed';
   submitted_at: string | null;
+  /** True when AI feedback exists but teacher has not released it to the student. */
+  awaiting_teacher_feedback_release?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -153,6 +157,31 @@ export interface FiveDSnapshot {
     connection?: string;
     action?: string;
   } | null;
+  created_at: string;
+}
+
+export interface TestQuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface TestQuestion {
+  id: string;
+  assignment_id: string;
+  question_text: string;
+  question_type: 'multiple_choice' | 'open_ended';
+  options: TestQuestionOption[] | null;
+  correct_option_id: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface TestResponse {
+  id: string;
+  submission_id: string;
+  question_id: string;
+  selected_option_id: string | null;
+  text_answer: string | null;
   created_at: string;
 }
 

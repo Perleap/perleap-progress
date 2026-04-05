@@ -39,6 +39,7 @@ export {
   useGenerateFeedback,
   useEnrichedClassroomSubmissions,
   useFullSubmissionDetails,
+  useTeacherConversationMessages,
 } from './useSubmissionQueries';
 
 // Enrollment Queries
@@ -87,6 +88,26 @@ export {
   useMarkAsRead,
   useMarkAllAsRead,
 } from './useNotificationQueries';
+
+// Test Queries
+export {
+  testKeys,
+  useTestQuestions,
+  useTestResponses,
+  useSubmitTestResponses,
+} from './useTestQueries';
+
+// Nuance Queries
+export {
+  nuanceKeys,
+  useNuanceInsights,
+} from './useNuanceQueries';
+
+export type {
+  NuanceMetric,
+  NuanceRecommendation,
+  NuanceInsightsResponse,
+} from './useNuanceQueries';
 
 
 

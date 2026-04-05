@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -9,23 +10,73 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FileText, Filter, Download, Search, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { SubmissionCard } from './SubmissionCard';
+import {
+  FileText,
+  Filter,
+  Download,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  X,
+  LayoutGrid,
+  LayoutTemplate,
+  List,
+  Rows3,
+  Table2,
+  Calendar,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { SubmissionCard, type SubmissionCardVariant } from './SubmissionCard';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { useEnrichedClassroomSubmissions } from '@/hooks/queries';
+import { cn } from '@/lib/utils';
 
 interface SubmissionsTabProps {
   classroomId: string;
 }
 
+export type SubmissionViewMode =
+  | 'grid'
+  | 'compact'
+  | 'list'
+  | 'detailed'
+  | 'table'
+  | 'timeline';
+
+const VIEW_MODE_ICONS: Record<SubmissionViewMode, LucideIcon> = {
+  list: List,
+  grid: LayoutGrid,
+  compact: LayoutTemplate,
+  detailed: Rows3,
+  table: Table2,
+  timeline: Calendar,
+};
+
+/** Ensures Latin labels show a capital first letter when i18n or the control leaks raw values. */
+function capitalizeLatinFirstLetter(s: string) {
+  if (!s) return s;
+  const c = s.charAt(0);
+  if (c >= 'a' && c <= 'z') return c.toUpperCase() + s.slice(1);
+  return s;
+}
+
 export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
-  
+  const navigate = useNavigate();
+
   // Filter states
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
@@ -33,7 +84,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [viewMode, setViewMode] = useState<SubmissionViewMode>('list');
 
   const { data: submissions = [], isLoading: loading } = useEnrichedClassroomSubmissions(classroomId);
 
@@ -113,6 +165,29 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     return filtered;
   }, [submissions, selectedStudent, selectedAssignment, selectedStatus, searchQuery, startDate, endDate]);
 
+  const timelineSubmissions = useMemo(
+    () =>
+      [...filteredSubmissions].sort(
+        (a, b) =>
+          new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime(),
+      ),
+    [filteredSubmissions],
+  );
+
+  const cardVariantForView = useMemo((): SubmissionCardVariant => {
+    switch (viewMode) {
+      case 'compact':
+        return 'compact';
+      case 'detailed':
+        return 'detailed';
+      case 'list':
+        return 'list';
+      case 'grid':
+      default:
+        return 'stack';
+    }
+  }, [viewMode]);
+
   const activeFiltersCount = [
     selectedStudent !== 'all',
     selectedAssignment !== 'all',
@@ -158,6 +233,9 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     toast.success(t('submissionsTab.exportSuccess'));
   };
 
+  const ViewModeIcon = VIEW_MODE_ICONS[viewMode];
+  const viewModeDisplayLabel = capitalizeLatinFirstLetter(t(`submissionsTab.view.${viewMode}`));
+
   if (loading && submissions.length === 0) {
     return <div className="text-center py-12 text-muted-foreground animate-pulse">{t('common.loading')}</div>;
   }
@@ -184,23 +262,67 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
     <div className="space-y-6">
       <Card className="rounded-xl border-none shadow-sm bg-card ring-1 ring-border overflow-hidden">
         <CardContent className="p-6">
-          <div className="space-y-4">
-            {/* Top Row: Search, Filter Toggle, Export */}
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative flex-1 w-full">
-                <Search
-                  className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`}
-                />
-                <Input
-                  placeholder={t('submissionsTab.searchPlaceholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={`${isRTL ? 'pr-12' : 'pl-12'} h-12 rounded-full border-border bg-muted/30 focus:bg-card transition-all text-base shadow-sm text-foreground`}
-                />
-              </div>
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <div className="space-y-4">
+              {/* Top Row: Search, Filter Toggle, Export */}
+              <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                <div className="relative flex-1 w-full min-w-0">
+                  <Search
+                    className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`}
+                  />
+                  <Input
+                    placeholder={t('submissionsTab.searchPlaceholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`${isRTL ? 'pr-12' : 'pl-12'} h-12 rounded-full border-border bg-muted/30 focus:bg-card transition-all text-base shadow-sm text-foreground`}
+                  />
+                </div>
 
-              <div className="flex gap-2 w-full md:w-auto">
-                <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="w-full md:w-auto">
+                <div className="flex gap-4 w-full md:w-auto flex-wrap items-center">
+                  <Select
+                    value={viewMode}
+                    onValueChange={(v) => setViewMode(v as SubmissionViewMode)}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
+                    <SelectTrigger
+                      className="rounded-xl h-10 min-h-10 w-full min-w-0 border-border bg-muted/30 text-sm text-foreground sm:w-auto sm:min-w-[160px] [&_svg:not([class*='size-'])]:size-4"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <SelectValue>
+                        <span className="flex items-center gap-2 min-w-0">
+                          <ViewModeIcon className="size-4 shrink-0 opacity-90" aria-hidden />
+                          <span className="truncate">{viewModeDisplayLabel}</span>
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'} align="start">
+                      <SelectItem value="list">
+                        <List className="h-4 w-4" />
+                        <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.list'))}</span>
+                      </SelectItem>
+                      <SelectItem value="grid">
+                        <LayoutGrid className="h-4 w-4" />
+                        <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.grid'))}</span>
+                      </SelectItem>
+                      <SelectItem value="compact">
+                        <LayoutTemplate className="h-4 w-4" />
+                        <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.compact'))}</span>
+                      </SelectItem>
+                      <SelectItem value="detailed">
+                        <Rows3 className="h-4 w-4" />
+                        <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.detailed'))}</span>
+                      </SelectItem>
+                      <SelectItem value="table">
+                        <Table2 className="h-4 w-4" />
+                        <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.table'))}</span>
+                      </SelectItem>
+                      <SelectItem value="timeline">
+                        <Calendar className="h-4 w-4" />
+                        <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.timeline'))}</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="outline"
@@ -216,24 +338,22 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                       {isFiltersOpen ? <ChevronUp className="h-4 w-4 ms-2" /> : <ChevronDown className="h-4 w-4 ms-2" />}
                     </Button>
                   </CollapsibleTrigger>
-                </Collapsible>
 
-                <Button
-                  onClick={handleBulkExport}
-                  disabled={submissions.length === 0}
-                  variant="outline"
-                  className="rounded-full h-12 px-4 border-border hover:bg-muted/50"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+                  <Button
+                    onClick={handleBulkExport}
+                    disabled={submissions.length === 0}
+                    variant="outline"
+                    className="rounded-full h-12 px-4 border-border hover:bg-muted/50"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Collapsible Advanced Filters */}
-            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-              <CollapsibleContent className="animate-in slide-in-from-top-2 fade-in duration-300">
-                <div className="pt-4 mt-2 border-t border-border grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1.5">
+              {/* Advanced Filters panel (same Collapsible root as trigger) */}
+              <CollapsibleContent className="overflow-hidden">
+                <div className="pt-2 flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-4 md:gap-x-8 lg:gap-x-10">
+                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
                     <Select value={selectedStudent} onValueChange={setSelectedStudent} dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -252,7 +372,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
                     <Select value={selectedAssignment} onValueChange={setSelectedAssignment} dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -271,7 +391,7 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
                     <Select value={selectedStatus} onValueChange={setSelectedStatus} dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -287,9 +407,9 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[280px] sm:max-w-[340px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.dateRange')}</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-4 sm:gap-5">
                       <div className="relative flex-1 min-w-0">
                         <Input
                           type="date"
@@ -324,8 +444,8 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                   </div>
                 )}
               </CollapsibleContent>
-            </Collapsible>
-          </div>
+            </div>
+          </Collapsible>
         </CardContent>
       </Card>
 
@@ -348,10 +468,118 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
             )}
           </CardContent>
         </Card>
+      ) : viewMode === 'table' ? (
+        <div
+          className="rounded-xl border border-border bg-card ring-1 ring-border overflow-hidden"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-start">{t('submissionsTab.tableAssignment')}</TableHead>
+                <TableHead className="text-start">{t('submissionsTab.tableStudent')}</TableHead>
+                <TableHead className="text-start">{t('submissionsTab.tableStatus')}</TableHead>
+                <TableHead className="text-start">{t('submissionsTab.tableSubmitted')}</TableHead>
+                <TableHead className="text-start">{t('submissionsTab.tableMessages')}</TableHead>
+                <TableHead className="text-start min-w-[140px]">{t('submissionsTab.tableFeedback')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSubmissions.map((submission) => {
+                const pending = submission.id.startsWith('pending-');
+                const msgCount = submission.conversation_context?.length ?? 0;
+                let feedbackText: string;
+                if (pending) {
+                  feedbackText = '—';
+                } else if (!submission.has_feedback) {
+                  feedbackText = t('submissionCard.awaitingFeedback');
+                } else if (submission.teacher_feedback?.trim()) {
+                  const plain = submission.teacher_feedback
+                    .replace(/\*\*/g, '')
+                    .replace(/\n/g, ' ')
+                    .trim();
+                  feedbackText = plain.length > 120 ? `${plain.slice(0, 120)}…` : plain;
+                } else {
+                  feedbackText = t('submissionCard.feedbackRecorded');
+                }
+                return (
+                  <TableRow
+                    key={submission.id}
+                    className={cn(!pending && 'cursor-pointer')}
+                    onClick={() => {
+                      if (!pending) navigate(`/teacher/submission/${submission.id}`);
+                    }}
+                  >
+                    <TableCell className="max-w-[min(100%,280px)] whitespace-normal align-middle text-start font-medium">
+                      {submission.assignment_title}
+                    </TableCell>
+                    <TableCell className="text-start align-middle">{submission.student_name}</TableCell>
+                    <TableCell className="align-middle">
+                      <Badge
+                        variant={submission.has_feedback ? 'default' : 'secondary'}
+                        className={cn(
+                          'rounded-full px-2 py-0.5 font-medium text-[10px]',
+                          submission.has_feedback
+                            ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
+                            : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
+                        )}
+                      >
+                        {pending
+                          ? t('submissionCard.notStarted')
+                          : submission.has_feedback
+                            ? t('submissionCard.completed')
+                            : t('submissionCard.inProgress')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="tabular-nums text-muted-foreground align-middle whitespace-nowrap">
+                      {new Date(submission.submitted_at).toLocaleString(undefined, {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-muted-foreground align-middle">
+                      {pending ? '—' : msgCount}
+                    </TableCell>
+                    <TableCell className="align-middle text-muted-foreground max-w-[min(100vw,320px)] whitespace-normal text-start text-xs">
+                      {feedbackText}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      ) : viewMode === 'timeline' ? (
+        <div
+          className="relative space-y-0 ps-6 sm:ps-8 border-s border-border ms-3 sm:ms-4"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          {timelineSubmissions.map((submission) => (
+            <div key={submission.id} className="relative pb-8 last:pb-0">
+              <div
+                className="-start-[22px] sm:-start-[26px] absolute top-2 size-3 rounded-full bg-primary ring-4 ring-background"
+                aria-hidden
+              />
+              <SubmissionCard submission={submission} variant="detailed" />
+            </div>
+          ))}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className={cn(
+            viewMode === 'grid' && 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4',
+            viewMode === 'compact' &&
+              'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2',
+            viewMode === 'list' && 'flex flex-col gap-2 w-full max-w-4xl',
+            viewMode === 'detailed' && 'grid grid-cols-1 lg:grid-cols-2 gap-6',
+          )}
+        >
           {filteredSubmissions.map((submission) => (
-            <SubmissionCard key={submission.id} submission={submission} />
+            <SubmissionCard
+              key={submission.id}
+              submission={submission}
+              variant={cardVariantForView}
+            />
           ))}
         </div>
       )}

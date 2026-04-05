@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -75,6 +76,7 @@ export function EditAssignmentDialog({
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<Set<number>>(new Set());
   const [rephrasingInstructions, setRephrasingInstructions] = useState(false);
   const [originalInstructions, setOriginalInstructions] = useState<string | null>(null);
+  const [autoPublishAiFeedback, setAutoPublishAiFeedback] = useState(true);
 
   // Fetch classroom domains and materials
   useEffect(() => {
@@ -116,9 +118,11 @@ export function EditAssignmentDialog({
     const loadAssignmentData = async () => {
       const { data } = await supabase
         .from('assignments')
-        .select('hard_skills, hard_skill_domain, materials')
+        .select('hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback')
         .eq('id', assignment.id)
         .single();
+
+      setAutoPublishAiFeedback(data?.auto_publish_ai_feedback !== false);
 
       if (data?.hard_skills) {
         try {
@@ -315,12 +319,13 @@ export function EditAssignmentDialog({
         .update({
           title,
           instructions,
-          type: type as any,
-          status: status as any,
+          type: type as Database["public"]["Enums"]["assignment_type"],
+          status: status as Database["public"]["Enums"]["assignment_status"],
           due_at: dueDate || null,
           hard_skills: JSON.stringify(hardSkills),
           hard_skill_domain: hardSkillDomain || null,
           materials: materials, // JSONB column - pass as object, not stringified
+          auto_publish_ai_feedback: autoPublishAiFeedback,
         })
         .eq('id', assignment.id);
 
@@ -491,11 +496,13 @@ export function EditAssignmentDialog({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="chatbot" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.chatbot')}</SelectItem>
+                      <SelectItem value="questions" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.questions')}</SelectItem>
                       <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
-                      <SelectItem value="quiz" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.quiz')}</SelectItem>
+                      <SelectItem value="test" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.test')}</SelectItem>
                       <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.project')}</SelectItem>
                       <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
-                      <SelectItem value="other" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.other')}</SelectItem>
+                      <SelectItem value="langchain" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.langchain')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -519,21 +526,43 @@ export function EditAssignmentDialog({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="status" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('assignments.status.label')}
-                </Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectValue>
-                      {status ? t(`assignments.status.${status}`) : t('assignments.status.label')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.draft')}</SelectItem>
-                    <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.published')}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="status" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('assignments.status.label')}
+                  </Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger id="status" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {status ? t(`assignments.status.${status}`) : t('assignments.status.label')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.draft')}</SelectItem>
+                      <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.published')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_auto_publish_ai_feedback" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createAssignment.aiFeedback')}
+                  </Label>
+                  <Select
+                    value={autoPublishAiFeedback ? 'yes' : 'no'}
+                    onValueChange={(value) => setAutoPublishAiFeedback(value === 'yes')}
+                  >
+                    <SelectTrigger id="edit_auto_publish_ai_feedback" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {autoPublishAiFeedback ? t('common.yes') : t('common.no')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>{t('common.yes')}</SelectItem>
+                      <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>{t('common.no')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 

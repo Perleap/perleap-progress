@@ -13,7 +13,9 @@
     "user": "משתמש",
     "darkMode": "מצב כהה",
     "lightMode": "מצב בהיר",
-    "logout": "התנתק"
+    "logout": "התנתק",
+    "logoutConfirmTitle": "להתנתק?",
+    "logoutConfirmDescription": "תצטרך להתחבר שוב כדי לגשת לחשבון."
   },
   "landing": {
     "nav": {
@@ -370,12 +372,13 @@
     "uploadPDF": "העלה PDF",
     "addLink": "הוסף קישור",
     "typeOptions": {
+      "chatbot": "צ'אטבוט",
+      "questions": "שאלות",
       "text_essay": "חיבור / טקסט",
-      "file_upload": "העלאת קובץ",
-      "quiz": "בוחן",
+      "test": "מבחן",
       "project": "פרויקט",
       "presentation": "מצגת",
-      "other": "אחר"
+      "langchain": "Langchain"
     },
     "errors": {
       "creating": "שגיאה ביצירת משימה"
@@ -386,7 +389,24 @@
     "rephraseButton": "נסח מחדש עם בינה מלאכותית",
     "rephrasing": "מנסח מחדש...",
     "rephraseSuccess": "הטקסט נוסח מחדש בהצלחה!",
-    "rephraseError": "שגיאה בניסוח מחדש. אנא נסה שוב."
+    "rephraseError": "שגיאה בניסוח מחדש. אנא נסה שוב.",
+    "aiFeedback": "משוב AI לתלמידים",
+    "testBuilder": {
+      "title": "שאלות מבחן",
+      "description": "בנה את שאלות המבחן למשימה זו",
+      "addQuestion": "הוסף שאלה",
+      "questionPlaceholder": "הכנס טקסט שאלה...",
+      "questionType": "סוג שאלה",
+      "multipleChoice": "רב ברירה",
+      "openEnded": "שאלה פתוחה",
+      "optionPlaceholder": "אפשרות {{index}}",
+      "addOption": "הוסף אפשרות",
+      "correctAnswer": "תשובה נכונה",
+      "selectCorrectAnswer": "בחר את התשובה הנכונה",
+      "removeQuestion": "הסר שאלה",
+      "removeOption": "הסר אפשרות",
+      "noQuestions": "לא נוספו שאלות עדיין. לחץ על \"הוסף שאלה\" כדי להתחיל לבנות את המבחן."
+    }
   },
   "editAssignment": {
     "title": "ערוך משימה",
@@ -500,9 +520,28 @@
     "clearFilters": "נקה מסננים",
     "clearAllFilters": "נקה את כל המסננים",
     "noSubmissions": "אין הגשות לייצוא",
-    "exportSuccess": "הדוח יוצא בהצלחה"
+    "exportSuccess": "הדוח יוצא בהצלחה",
+    "view": {
+      "grid": "רשת",
+      "compact": "קומפקטי",
+      "list": "רשימה",
+      "detailed": "מפורט",
+      "table": "טבלה",
+      "timeline": "ציר זמן"
+    },
+    "tableAssignment": "משימה",
+    "tableStudent": "תלמיד",
+    "tableStatus": "סטטוס",
+    "tableSubmitted": "הוגש",
+    "tableMessages": "צ'אט",
+    "tableFeedback": "משוב"
   },
   "submissionCard": {
+    "chatMessages": "{{count}} הודעות בצ'אט",
+    "feedbackLabel": "משוב:",
+    "latestInChat": "אחרון בצ׳אט:",
+    "feedbackRecorded": "נרשם משוב.",
+    "awaitingFeedback": "ממתין למשוב מורה.",
     "submitted": "הוגש",
     "inProgress": "בתהליך",
     "completed": "הושלם",
@@ -541,7 +580,89 @@
     "studentFeedbackDesc": "מה {{student}} ראה לאחר השלמת המטלה",
     "conversationHistory": "היסטוריית שיחה",
     "conversationHistoryDesc": "תמליל מלא בין {{student}} ל-Perleap",
-    "noFeedbackDesc": "התלמיד טרם השלים את המטלה, או שהמשוב עדיין בתהליך יצירה."
+    "conversationEmpty": "אין עדיין הודעות בשיחה זו.",
+    "feedbackEmpty": {
+      "chatPrompt": "עדיין אין משוב בינה מלאכותית. פתח את לשונית המשימה כדי לקרוא את הצ'אט של התלמיד וליצור משוב בינה מלאכותית."
+    },
+    "noFeedbackDesc": "התלמיד טרם השלים את המטלה, או שהמשוב עדיין בתהליך יצירה.",
+    "tabs": {
+      "feedback": "משוב",
+      "assignment": "משימה",
+      "evaluation": "הערכה"
+    },
+    "testResults": {
+      "title": "תוצאות מבחן",
+      "description": "תשובות התלמיד למבחן זה",
+      "question": "שאלה",
+      "studentAnswer": "תשובת התלמיד",
+      "correctAnswer": "תשובה נכונה",
+      "correct": "נכון",
+      "incorrect": "שגוי",
+      "openEnded": "תשובה פתוחה",
+      "noAnswer": "לא ניתנה תשובה",
+      "summary": "{{correct}} מתוך {{total}} נכונות",
+      "mcqScore": "ציון רב ברירה",
+      "openEndedCount": "שאלות פתוחות"
+    },
+    "teacherEvaluation": {
+      "writeEvaluation": "כתוב הערכה",
+      "placeholder": "כתוב את ההערכה והמשוב שלך להגשת התלמיד...",
+      "submit": "הגש הערכה",
+      "submitting": "מעריך...",
+      "success": "ההערכה הוגשה בהצלחה! הציונים נוצרו.",
+      "error": "שגיאה בהגשת ההערכה. אנא נסה שוב.",
+      "awaitingEvaluation": "ממתין להערכתך בלשונית המשימה"
+    },
+    "projectView": {
+      "title": "הגשת פרויקט",
+      "download": "הורד קובץ",
+      "preview": "תצוגה מקדימה",
+      "noFile": "לא הוגש קובץ"
+    },
+    "presentationView": {
+      "title": "הגשת מצגת",
+      "playback": "הפעלה",
+      "download": "הורד וידאו",
+      "downloadFailed": "לא ניתן להוריד את הקובץ. נפתח בלשונית חדשה.",
+      "noVideo": "לא הוגש וידאו"
+    },
+    "langchainView": {
+      "title": "צינור Langchain",
+      "pipelineViewer": "צפייה בצינור",
+      "noPipeline": "לא הוגש צינור"
+    },
+    "essaySubmission": "חיבור",
+    "essaySubmissionDesc": "תשובה בכתב של {{student}}",
+    "essayEmpty": "לא הוגש טקסט",
+    "editFeedback": {
+      "teacherHint": "הערות פרטיות בשבילך בלבד (לא מוצגות לתלמיד).",
+      "studentHint": "הטקסט שהתלמיד יראה אחרי שתפרסם. ניתן לערוך את טיוטת הבינה המלאכותית.",
+      "teacherPlaceholder": "הערות לעצמך…",
+      "studentPlaceholder": "משוב שהתלמיד יראה…",
+      "save": "שמור שינויים",
+      "saved": "המשוב נשמר.",
+      "visibleToStudent": "התלמיד כבר רואה את המשוב המפורסם למטה. שמירה מעדכנת את מה שיראה ברענון."
+    },
+    "generateAiEvaluation": {
+      "title": "הפעלת הערכת בינה מלאכותית",
+      "description": "התלמיד הגיש בלי משוב אוטומטי. יצור כאן הערכה, ואז שחרר לתלמיד מלשונית זו כשתהיה מוכן.",
+      "action": "צור הערכת בינה מלאכותית",
+      "success": "ההערכה נוצרה. עבור ללשונית משוב, ואז שחרר לתלמיד במידת הצורך."
+    },
+    "releaseFeedback": {
+      "title": "שחרור משוב הבינה המלאכותית לתלמיד",
+      "description": "משוב הבינה המלאכותית נוצר אך מוסתר מהתלמיד עד שתשחרר אותו.",
+      "action": "שחרר לתלמיד",
+      "success": "המשוב גלוי כעת לתלמיד.",
+      "alreadyVisible": "המשוב כבר פורסם לתלמיד. ניתן עדיין לערוך את הטקסט למעלה ולשמור שינויים."
+    }
+  },
+  "essaySubmission": {
+    "title": "תשובתך",
+    "placeholder": "כתוב את החיבור שלך כאן…",
+    "submit": "הגש לקבלת משוב",
+    "saving": "שומר…",
+    "empty": "אנא כתוב משהו לפני ההגשה."
   },
   "assignmentDetail": {
     "title": "פרטי משימה",
@@ -559,11 +680,126 @@
     "download": "הורד",
     "open": "פתח",
     "success": {
-      "completed": "הפעילות הושלמה בהצלחה!"
+      "completed": "הפעילות הושלמה בהצלחה!",
+      "submittedAwaitingTeacher": "העבודה הוגשה. המורה יפעיל הערכת בינה מלאכותית; תקבל התראה כשהמשוב יהיה מוכן."
     },
     "errors": {
       "loading": "שגיאה בטעינת משימה",
       "generatingFeedback": "שגיאה ביצירת משוב"
+    },
+    "awaitingTeacherFeedback": "המורה עדיין לא שחרר את משוב הבינה המלאכותית. תקבל התראה כשיהיה זמין.",
+    "testTaking": {
+      "title": "מבחן",
+      "submitTest": "הגש מבחן",
+      "submitting": "מגיש...",
+      "question": "שאלה {{number}}",
+      "selectAnswer": "בחר תשובה",
+      "typeAnswer": "הקלד את תשובתך כאן...",
+      "confirmSubmit": "האם אתה בטוח שברצונך להגיש? לא ניתן לשנות תשובות לאחר ההגשה.",
+      "allQuestionsRequired": "אנא ענה על כל השאלות לפני ההגשה.",
+      "submitSuccess": "המבחן הוגש בהצלחה!",
+      "submitError": "שגיאה בהגשת המבחן. אנא נסה שוב."
+    },
+    "project": {
+      "uploadFile": "העלה קובץ פרויקט",
+      "dragDrop": "גרור ושחרר את הקובץ כאן, או לחץ לעיון",
+      "fileTypes": "נתמך: PDF, DOC, DOCX, ZIP, תמונות ועוד",
+      "submit": "הגש פרויקט",
+      "submitting": "מגיש...",
+      "awaitingReview": "הפרויקט שלך הוגש וממתין לבדיקת המורה.",
+      "fileSelected": "קובץ נבחר",
+      "uploadError": "שגיאה בהעלאת הקובץ. אנא נסה שוב.",
+      "removeFile": "הסר קובץ"
+    },
+    "presentation": {
+      "title": "מצגת",
+      "uploadTab": "העלה וידאו",
+      "recordTab": "הקלט בזמן אמת",
+      "upload": "העלה קובץ וידאו",
+      "dragDrop": "גרור ושחרר את הוידאו כאן, או לחץ לעיון",
+      "fileTypes": "נתמך: MP4, WebM, MOV",
+      "startRecording": "התחל הקלטה",
+      "stopRecording": "עצור הקלטה",
+      "recording": "מקליט...",
+      "preview": "תצוגה מקדימה",
+      "recordAgain": "הקלט שוב",
+      "submit": "הגש מצגת",
+      "submitting": "מגיש...",
+      "awaitingReview": "המצגת שלך הוגשה וממתינה לבדיקת המורה.",
+      "cameraPermission": "נדרשת גישה למצלמה ולמיקרופון להקלטה.",
+      "cameraNotReadable": "לא ניתן להפעיל את המצלמה. סגור אפליקציות או לשוניות אחרות שמשתמשות בה, ונסה שוב—או השתמש בהעלאת וידאו.",
+      "recordingVideoOnly": "מקליט וידאו בלבד (מיקרופון לא זמין).",
+      "uploadError": "שגיאה בהעלאת הוידאו. אנא נסה שוב.",
+      "selectCamera": "מצלמה",
+      "selectMicrophone": "מיקרופון",
+      "noAudio": "ללא מיקרופון",
+      "refreshDevices": "רענן מכשירים",
+      "reviewHeading": "צפה בווידאו שלך",
+      "reviewHelper": "זה מה שיוגש.",
+      "reviewDialogTitle": "הווידאו אחרי העריכה",
+      "reviewDialogDescription": "נגן את הווידאו למטה. לחץ המשך כשאתה מוכן להגיש.",
+      "reviewDialogContinue": "המשך",
+      "editor": {
+        "trim": "חיתוך",
+        "crop": "חיתוך מסגרת",
+        "speed": "מהירות",
+        "text": "טקסט",
+        "none": "כלים",
+        "addText": "הוסף טקסט",
+        "preview": "תצוגה מקדימה",
+        "previewSelection": "תצוגה מקדימה של הבחירה",
+        "previewExport": "תצוגה מקדימה של הייצוא",
+        "previewExportDescription": "מציג חיתוך, מסגרת, מהירות וטקסט כמו הקובץ הסופי.",
+        "previewExportFailed": "לא ניתן ליצור תצוגה מקדימה. נסה שוב.",
+        "play": "נגן",
+        "pause": "השהה",
+        "seekBack5s": "אחורה 5 שניות",
+        "seekForward5s": "קדימה 5 שניות",
+        "frameBack": "פריים קודם",
+        "frameForward": "פריים הבא",
+        "timelineAria": "ציר זמן: הזז את מצביע הניגון או את גבולות החיתוך",
+        "timelineTrimHint": "גרור את הקווים השחורים לנקודת כניסה/יציאה. גרור במקום אחר להזזת מצביע הניגון.",
+        "doneTrim": "סיום חיתוך",
+        "doneCrop": "סיום חיתוך מסגרת",
+        "trimConfirmed": "החיתוך נשמר",
+        "cropConfirmed": "חיתוך המסגרת נשמר",
+        "apply": "החל ושמור",
+        "discard": "בטל",
+        "exporting": "מייצא…",
+        "textLabel": "טקסט",
+        "fontSize": "גודל",
+        "cropPresets": {
+          "free": "חופשי",
+          "16_9": "16:9",
+          "4_3": "4:3",
+          "1_1": "1:1"
+        }
+      }
+    },
+    "langchain": {
+      "title": "בונה Langchain",
+      "buildPipeline": "בנה את הצינור שלך",
+      "addNode": "הוסף צומת",
+      "save": "שמור צינור",
+      "submit": "הגש צינור",
+      "submitting": "מגיש...",
+      "awaitingReview": "הצינור שלך הוגש וממתין לבדיקת המורה.",
+      "nodes": {
+        "input": "קלט",
+        "output": "פלט",
+        "llm": "LLM",
+        "prompt": "תבנית פרומפט",
+        "chain": "שרשרת",
+        "memory": "זיכרון"
+      },
+      "nodeDescriptions": {
+        "input": "נקודת כניסת קלט משתמש",
+        "output": "צומת פלט סופי",
+        "llm": "מודל שפה גדול",
+        "prompt": "תבנית לפרומפטים",
+        "chain": "שרשרת עיבוד רציפה",
+        "memory": "זיכרון שיחה"
+      }
     }
   },
   "studentClassroom": {
@@ -707,6 +943,7 @@
     "students": "תלמידים",
     "noData": "אין נתונים זמינים עדיין",
     "filtersTitle": "מסנני ניתוח",
+    "filtersDescription": "סינון תרשימים ומדדי כיתה לפי תלמיד או משימה.",
     "filterByStudent": "סנן לפי תלמיד",
     "filterByAssignment": "סנן לפי משימה",
     "all": "הכל",
@@ -732,9 +969,50 @@
     "scoresError": "שגיאה בטעינת ציונים",
     "noAssignments": "לא נמצאו משימות",
     "noCompletedSubmissions": "לא נמצאו הגשות שהושלמו",
+    "regenerateAll5DScores": "חשב מחדש את כל ציוני 5D",
+    "refresh5D": "רענן 5D",
+    "regeneratingScores": "מרענן…",
     "regenerateError": "שגיאה ביצירת ציונים מחדש",
     "regenerateSuccess": "נוצרו מחדש {{count}} פרופילי 5D של תלמידים",
     "regenerateFail": "נכשל ביצירת {{count}} פרופילים מחדש"
+  },
+  "nuance": {
+    "title": "תובנות התנהגותיות של תלמידים",
+    "description": "המלצות מערכת הנואנס מבוססות על דפוסי פעילות",
+    "filterStudent": "תלמיד",
+    "filterActivity": "פעילות",
+    "refresh": "רענן תובנות",
+    "noData": "אין נתונים התנהגותיים עדיין. הנתונים יופיעו כשהתלמידים ישלימו פעילויות.",
+    "noRecommendation": "אין המלצות — דפוסי הפעילות בטווח הנורמלי.",
+    "whyTriggered": "למה זה הופעל",
+    "supportingData": "נתונים תומכים",
+    "columns": {
+      "student": "תלמיד",
+      "activity": "פעילות",
+      "responseTime": "תגובה ממוצעת",
+      "idleRatio": "יחס חוסר פעילות",
+      "completion": "השלמה",
+      "sessions": "סשנים",
+      "status": "סטטוס"
+    },
+    "tooltips": {
+      "student": "שם התלמיד, או שם הפעילות כאשר מסננים לתלמיד מסוים.",
+      "responseTime": "זמן ממוצע בין שליחת הודעת AI לתגובת התלמיד.",
+      "idleRatio": "אחוז זמן הסשן בו התלמיד היה לא פעיל או עבר לחלון אחר.",
+      "completion": "אחוז המשימות שהתלמיד התחיל ובאמת סיים.",
+      "sessions": "מספר ממוצע של פעמים שהתלמיד פתח כל משימה.",
+      "status": "ירוק = דפוסים תקינים, כתום = נוצרה המלצה."
+    },
+    "types": {
+      "engagement_support": "תמיכה במעורבות",
+      "pacing_support": "תמיכה בקצב",
+      "persistence_support": "תמיכה בהתמדה"
+    },
+    "confidence": {
+      "high": "גבוה",
+      "medium": "בינוני",
+      "low": "נמוך"
+    }
   },
   "wellbeing": {
     "alert": "התראת רווחה",
@@ -1114,10 +1392,16 @@
     }
   },
   "assignmentTypes": {
+    "chatbot": "צ'אטבוט",
+    "questions": "שאלות",
     "text_essay": "חיבור טקסט",
+    "test": "מבחן",
+    "project": "פרויקט",
+    "presentation": "מצגת",
+    "langchain": "Langchain",
     "file_upload": "העלאת קובץ",
     "quiz": "חידון",
-    "project": "פרויקט",
+    "quiz_mcq": "חידון",
     "interactive": "אינטראקטיבי"
   },
   "teacherAssistant": {

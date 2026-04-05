@@ -1,20 +1,13 @@
 import * as React from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
-  GraduationCap,
-  BookOpen,
-  BarChart3,
   Settings,
   LogOut,
   ChevronDown,
-  User2,
   Moon,
   Sun,
-  Users,
-  FileText,
-  Info,
   ArrowLeft,
   Globe,
   Calendar,
@@ -37,9 +30,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
@@ -69,6 +72,8 @@ export function ClassroomSidebar({
   const { isRTL, language = 'en', setLanguage } = useLanguage();
   const location = useLocation();
 
+  const [logoutOpen, setLogoutOpen] = React.useState(false);
+
   const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
 
@@ -76,7 +81,8 @@ export function ClassroomSidebar({
   const isPlannerActive = location.pathname === '/teacher/planner';
   const isSettingsActive = location.pathname.startsWith(`${basePath}/settings`);
 
-  const handleSignOut = async () => {
+  const confirmLogout = async () => {
+    setLogoutOpen(false);
     await signOut();
     navigate('/');
   };
@@ -97,8 +103,17 @@ export function ClassroomSidebar({
     return 'U';
   }, [profile?.full_name]);
 
+  /** Second row: real subject, or "Back to dashboard" when unset — omit when subject duplicates the course name */
+  const sidebarHeaderSecondLine = React.useMemo(() => {
+    const nameTrim = (classroomName ?? '').trim();
+    const subjectTrim = (classroomSubject ?? '').trim();
+    if (subjectTrim && subjectTrim !== nameTrim) return subjectTrim;
+    if (!subjectTrim) return t('nav.backToDashboard');
+    return null;
+  }, [classroomName, classroomSubject, t]);
+
   return (
-    <Sidebar collapsible="icon" side={isRTL ? "right" : "left"}>
+    <Sidebar collapsible="icon" side={isRTL ? 'right' : 'left'}>
       <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -110,11 +125,13 @@ export function ClassroomSidebar({
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted">
                 <ArrowLeft className="size-4 rtl:rotate-180" />
               </div>
-              <div className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} text-sm leading-tight`}>
+              <div
+                className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} text-sm leading-tight ${sidebarHeaderSecondLine === null ? 'grid-rows-1' : ''}`}
+              >
                 <span className="truncate font-semibold">{classroomName || t('nav.classroom')}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {classroomSubject || t('nav.backToDashboard')}
-                </span>
+                {sidebarHeaderSecondLine !== null && (
+                  <span className="truncate text-xs text-muted-foreground">{sidebarHeaderSecondLine}</span>
+                )}
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -122,7 +139,6 @@ export function ClassroomSidebar({
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
-        {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             {t('nav.navigation')}
@@ -153,22 +169,10 @@ export function ClassroomSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip={t('nav.settings')}
-                  onClick={() => navigate(`${basePath}/settings`)}
-                  isActive={isSettingsActive}
-                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isSettingsActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
-                >
-                  <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
-                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Classroom Sections */}
         <SidebarSeparator className="my-2" />
         <SidebarGroup>
           <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -196,7 +200,18 @@ export function ClassroomSidebar({
 
       <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
         <SidebarMenu className="space-y-1">
-          {/* Theme Toggle */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => navigate(`${basePath}/settings`)}
+              isActive={isSettingsActive}
+              tooltip={t('nav.settings')}
+              className={`min-h-[40px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isSettingsActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+            >
+              <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
+              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleTheme}
@@ -214,7 +229,6 @@ export function ClassroomSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Language - Dropdown */}
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -223,10 +237,14 @@ export function ClassroomSidebar({
                   className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg cursor-pointer hover:bg-sidebar-accent/50 transition-colors"
                 >
                   <Globe className="size-5 group-data-[collapsible=icon]:size-5 opacity-70" />
-                  <span className={`font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 ${isRTL ? 'text-right mr-1' : 'text-left ml-1'}`}>
+                  <span
+                    className={`font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 ${isRTL ? 'text-right mr-1' : 'text-left ml-1'}`}
+                  >
                     {language === 'en' ? 'English' : 'עברית'}
                   </span>
-                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`} />
+                  <ChevronDown
+                    className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`}
+                  />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -261,51 +279,82 @@ export function ClassroomSidebar({
 
           <SidebarSeparator className="my-2" />
 
-          {/* Profile - Dropdown Menu */}
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
-                >
-                  <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
-                    <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
-                    <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} text-sm leading-tight group-data-[collapsible=icon]:hidden`}>
-                    <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {isTeacher ? t('nav.teacher') : t('nav.student')}
-                    </span>
-                  </div>
-                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 group-data-[collapsible=icon]:hidden`} />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="bottom"
-                align={isRTL ? "start" : "end"}
-                sideOffset={8}
-                dir={isRTL ? 'rtl' : 'ltr'}
+          <SidebarMenuItem className="hidden group-data-[collapsible=icon]:block">
+            <SidebarMenuButton
+              onClick={() => setLogoutOpen(true)}
+              tooltip={t('nav.logout')}
+              className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg text-destructive hover:text-destructive"
+            >
+              <LogOut className="size-5 group-data-[collapsible=icon]:size-5" />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem className="hidden group-data-[collapsible=icon]:block">
+            <div className="flex justify-center py-1">
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={profile?.avatar_url || undefined} alt="" />
+                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+            <div
+              className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
+              <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
+                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div
+                className={`grid flex-1 min-w-0 text-sm leading-tight ${isRTL ? 'text-right' : 'text-left'}`}
               >
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
-                  <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  {t('nav.logout')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {isTeacher ? t('nav.teacher') : t('nav.student')}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label={t('nav.logout')}
+                onClick={() => setLogoutOpen(true)}
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
 
       <SidebarRail />
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('nav.logoutConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('nav.logoutConfirmDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:space-x-reverse' : ''}>
+            <AlertDialogCancel className="mt-0">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmLogout();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('nav.logout')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   );
 }
-
-// Pre-defined sections removed - now in @/config/classroomSections
-
-

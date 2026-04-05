@@ -44,6 +44,7 @@ interface Assignment {
   id: string;
   title: string;
   due_at: string;
+  type?: string;
   classrooms: {
     name: string;
     subject: string;
@@ -277,7 +278,7 @@ const StudentDashboard = () => {
             classroom_id: classroom.id,
             classroom_name: classroom.name,
           },
-          classroom.teacher_id
+          user.id
         );
       } catch (e) { }
 
@@ -286,8 +287,13 @@ const StudentDashboard = () => {
       setDialogOpen(false);
       refetchClassrooms();
       refetchAssignments();
-    } catch (error: any) {
-      toast.error(error.message || t('studentDashboard.errors.unexpected'));
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
+      if (err?.code === 'ALREADY_ENROLLED') {
+        toast.error(t('studentDashboard.errors.alreadyEnrolled'));
+      } else {
+        toast.error(err?.message || t('studentDashboard.errors.unexpected'));
+      }
     } finally {
       setJoining(false);
     }
@@ -306,6 +312,16 @@ const StudentDashboard = () => {
         return sorted;
     }
   };
+
+  const sortByLabel =
+    sortBy === 'recent'
+      ? t('studentDashboard.sortOptions.recent')
+      : sortBy === 'oldest'
+        ? t('studentDashboard.sortOptions.oldest')
+        : t('studentDashboard.sortOptions.dueDate');
+
+  const assignmentTypeLabel = (type: string | undefined) =>
+    type ? t(`assignmentTypes.${type}`, { defaultValue: type }) : t('assignmentTypes.questions');
 
   return (
     <DashboardLayout breadcrumbs={[{ label: t('nav.dashboard') }]}>
@@ -652,21 +668,21 @@ const StudentDashboard = () => {
 
           {/* Assignments Section */}
           <section>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row justify-start items-start gap-4 flex-wrap mb-6">
               <h2 className="text-xl font-semibold text-foreground">{t('studentDashboard.myAssignments')}</h2>
 
-              <div className="flex items-center gap-3 bg-muted/50 p-1 rounded-full border border-border/50">
+              <div className="flex items-center gap-3 bg-muted/50 p-1 rounded-full">
                 <Tabs value={assignmentsTab} onValueChange={(v) => setAssignmentsTab(v as 'active' | 'finished')} className="w-auto">
                   <TabsList className="h-9 bg-transparent p-0 flex gap-1 border-none">
                     <TabsTrigger
                       value="active"
-                      className="rounded-full px-6 py-1.5 text-sm font-medium text-muted-foreground data-active:bg-background data-active:text-foreground data-active:shadow-sm hover:text-foreground transition-all border-none"
+                      className="rounded-full px-6 py-1.5 text-sm text-muted-foreground data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm hover:text-foreground transition-all border-none"
                     >
                       {t('common.active')}
                     </TabsTrigger>
                     <TabsTrigger
                       value="finished"
-                      className="rounded-full px-6 py-1.5 text-sm font-medium text-muted-foreground data-active:bg-background data-active:text-foreground data-active:shadow-sm hover:text-foreground transition-all border-none"
+                      className="rounded-full px-6 py-1.5 text-sm text-muted-foreground data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm hover:text-foreground transition-all border-none"
                     >
                       {t('common.finished')}
                     </TabsTrigger>
@@ -683,7 +699,7 @@ const StudentDashboard = () => {
                     onValueChange={(value) => setSortBy(value as typeof sortBy)}
                   >
                     <SelectTrigger className="w-[180px] rounded-full border-border bg-card text-foreground">
-                      <SelectValue>{t('studentDashboard.sortBy')}</SelectValue>
+                      <SelectValue>{sortByLabel}</SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl bg-card">
                       <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
@@ -704,7 +720,7 @@ const StudentDashboard = () => {
                     description={t('studentDashboard.empty.noAssignmentsDescription')}
                   />
                 ) : (
-                  <div ref={assignmentsRef} className="space-y-3">
+                  <div ref={assignmentsRef} className="space-y-6">
                     {getSortedAssignments().map((assignment) => {
                       const teacherProfile = Array.isArray(assignment.classrooms.teacher_profiles)
                         ? assignment.classrooms.teacher_profiles[0]
@@ -720,27 +736,29 @@ const StudentDashboard = () => {
                       return (
                         <Card
                           key={assignment.id}
-                          className="group hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-xl bg-card overflow-hidden ring-1 ring-border"
+                          className="group py-0 hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-xl bg-card overflow-hidden ring-1 ring-border"
                           onClick={() => navigate(`/student/assignment/${assignment.id}`)}
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center p-2">
-                            <div className="p-4 flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-primary/10">
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-3 px-4 py-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold group-hover:text-primary transition-colors text-foreground mb-2">
+                                {assignment.title}
+                              </h3>
+                              <Badge className="rounded-full px-3 py-0.5 mb-2 bg-primary/10 text-primary hover:bg-primary/20 border-none">
+                                {assignmentTypeLabel(assignment.type)}
+                              </Badge>
+                              <div className="flex flex-wrap items-center gap-2 text-sm">
+                                <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-transparent font-normal">
                                   {assignment.classrooms.name}
                                 </Badge>
-                                <span className="text-xs text-muted-foreground">•</span>
                                 <span className="text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                                  <Clock className="h-3.5 w-3.5" />
+                                  <Clock className="h-3.5 w-3.5 shrink-0" />
                                   {t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}
                                 </span>
                               </div>
-                              <h3 className="text-lg font-bold group-hover:text-primary transition-colors text-foreground">
-                                {assignment.title}
-                              </h3>
                             </div>
 
-                            <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-s border-border sm:ps-6">
+                            <div className="flex items-center gap-3 sm:ps-4 sm:border-s border-border shrink-0">
                               <div className="text-end hidden sm:block">
                                 <p className="text-xs text-muted-foreground">{t('common.teacher')}</p>
                                 <p className="text-sm font-medium truncate max-w-[100px] text-foreground">
@@ -772,7 +790,7 @@ const StudentDashboard = () => {
                     description={t('studentClassroom.noFinishedAssignmentsDesc')}
                   />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-6">
                     {getSortedAssignments(finishedAssignments).map((assignment) => {
                       const teacherProfile = Array.isArray(assignment.classrooms.teacher_profiles)
                         ? assignment.classrooms.teacher_profiles[0]
@@ -788,25 +806,28 @@ const StudentDashboard = () => {
                       return (
                         <Card
                           key={assignment.id}
-                          className="group hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-xl bg-muted/20 overflow-hidden opacity-80 hover:opacity-100 ring-1 ring-border"
+                          className="group py-0 hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-xl bg-muted/20 overflow-hidden opacity-80 hover:opacity-100 ring-1 ring-border"
                           onClick={() => navigate(`/student/assignment/${assignment.id}`)}
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center p-2">
-                            <div className="p-4 flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground">
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-3 px-4 py-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold text-foreground/80 mb-2">
+                                {assignment.title}
+                              </h3>
+                              <Badge className="rounded-full px-3 py-0.5 mb-2 bg-primary/10 text-primary hover:bg-primary/20 border-none">
+                                {assignmentTypeLabel(assignment.type)}
+                              </Badge>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="secondary" className="rounded-full bg-muted text-muted-foreground font-normal">
                                   {assignment.classrooms.name}
                                 </Badge>
                                 <Badge className="rounded-full bg-success/10 text-success hover:bg-success/20 border-none">
                                   {t('common.completed')}
                                 </Badge>
                               </div>
-                              <h3 className="text-lg font-bold text-foreground/80">
-                                {assignment.title}
-                              </h3>
                             </div>
 
-                            <div className="flex items-center gap-3 px-4 pb-4 sm:pb-0 sm:border-s border-border sm:ps-6">
+                            <div className="flex items-center gap-3 sm:ps-4 sm:border-s border-border shrink-0">
                               <Avatar className="h-8 w-8 grayscale opacity-70">
                                 {teacherProfile?.avatar_url && (
                                   <AvatarImage

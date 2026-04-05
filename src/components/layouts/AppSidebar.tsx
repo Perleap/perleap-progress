@@ -3,13 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
-  GraduationCap,
-  BookOpen,
-  BarChart3,
   Settings,
   LogOut,
   ChevronDown,
-  ChevronRight,
   User,
   Moon,
   Sun,
@@ -32,9 +28,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -42,10 +35,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PerleapLogo } from '@/components/PerleapLogo';
 
 interface NavItem {
   title: string;
@@ -62,11 +67,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { theme, setTheme } = useTheme();
   const { language = 'en', setLanguage, isRTL } = useLanguage();
 
+  const [logoutOpen, setLogoutOpen] = React.useState(false);
+
   const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
   const isOnSettingsPage = location.pathname.includes('/settings');
 
-  // Define navigation items based on role
   const navItems: NavItem[] = React.useMemo(() => {
     const items: NavItem[] = [
       {
@@ -82,16 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: '/teacher/planner',
         icon: Calendar,
       });
-
     }
-
-    // Removed generic Settings link in favor of detailed account items
-    // items.push({
-    //   title: t('nav.settings'),
-    //   url: isTeacher ? '/teacher/settings' : '/student/settings',
-    //   icon: Settings,
-    // });
-
 
     return items;
   }, [t, basePath, isTeacher]);
@@ -113,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (isTeacher) {
       items.splice(1, 0, {
         title: t('settings.teachingPreferences'),
-        url: '/teacher/settings?tab=questions', // Using questions tab for preferences
+        url: '/teacher/settings?tab=questions',
         icon: MessageSquare,
       });
     } else {
@@ -132,21 +129,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return items;
   }, [t, basePath, isTeacher]);
 
-  // Mark active item
   const navItemsWithActive = navItems.map((item) => ({
     ...item,
-    isActive: location.pathname === item.url || (location.pathname !== '/' && location.pathname.startsWith(item.url) && item.url !== `${basePath}/dashboard`),
+    isActive:
+      location.pathname === item.url ||
+      (location.pathname !== '/' &&
+        location.pathname.startsWith(item.url) &&
+        item.url !== `${basePath}/dashboard`),
   }));
 
   const accountItemsWithActive = accountItems.map((item) => {
-    // Check if base URL matches AND query param matches
-    const currentUrl = location.pathname + location.search;
-    // Simple check: if path matches and tab param matches (or defaults)
-    const itemUrl = new URL(item.url, 'http://localhost'); // dummy host for parsing
+    const currentTab = new URLSearchParams(location.search).get('tab') || 'profile';
+    const itemUrl = new URL(item.url, 'http://localhost');
     const itemPath = itemUrl.pathname;
     const itemTab = itemUrl.searchParams.get('tab');
-
-    const currentTab = new URLSearchParams(location.search).get('tab') || 'profile';
 
     return {
       ...item,
@@ -154,7 +150,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
   });
 
-  const handleSignOut = async () => {
+  const confirmLogout = async () => {
+    setLogoutOpen(false);
     await signOut();
     navigate('/');
   };
@@ -176,35 +173,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [profile?.full_name]);
 
   return (
-    <Sidebar collapsible="icon" side={isRTL ? "right" : "left"}>
+    <Sidebar collapsible="icon" side={isRTL ? 'right' : 'left'} {...props}>
       <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center px-5 group-data-[collapsible=icon]:px-2">
         <SidebarMenu>
           <SidebarMenuItem className="list-none">
-            <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-              <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-card border border-border shadow-sm group-data-[collapsible=icon]:size-8">
-                <img
-                  src="/perleap_logo.png"
-                  alt="PerLeap Logo"
-                  className="size-7 object-contain group-data-[collapsible=icon]:size-6"
-                  onError={(e) => {
-                    console.error('Logo failed to load');
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-              <div className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} leading-tight group-data-[collapsible=icon]:hidden`}>
-                <span className="truncate font-bold text-xl">PerLeap</span>
-                <span className="truncate text-base text-muted-foreground font-semibold">
-                  {isTeacher ? t('nav.teacherPortal') : t('nav.studentPortal')}
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center min-w-0">
+              <PerleapLogo className="size-10 group-data-[collapsible=icon]:size-8" />
+              <span
+                className={`truncate font-bold text-lg leading-none text-foreground group-data-[collapsible=icon]:hidden ${isRTL ? 'text-right' : 'text-left'}`}
+              >
+                Perleap
+              </span>
             </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
-        {/* MENU Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             {t('nav.menu')}
@@ -224,26 +209,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-
-              {/* Settings button */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => navigate(`${basePath}/settings`)}
-                  isActive={isOnSettingsPage}
-                  tooltip={t('nav.settings')}
-                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isOnSettingsPage ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
-                >
-                  <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
-                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarSeparator className="my-2" />
 
-        {/* SETTINGS Section - Visible only on settings page */}
         {isOnSettingsPage && (
           <SidebarGroup>
             <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -251,7 +222,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {/* All Settings Items */}
                 {accountItemsWithActive.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
@@ -272,7 +242,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
         <SidebarMenu className="space-y-1">
-          {/* Theme Toggle */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => navigate(`${basePath}/settings`)}
+              isActive={isOnSettingsPage}
+              tooltip={t('nav.settings')}
+              className={`min-h-[40px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isOnSettingsPage ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+            >
+              <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
+              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleTheme}
@@ -290,7 +271,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Language - Dropdown */}
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -299,10 +279,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg cursor-pointer hover:bg-sidebar-accent/50 transition-colors"
                 >
                   <Globe className="size-5 group-data-[collapsible=icon]:size-5 opacity-70" />
-                  <span className={`font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 ${isRTL ? 'text-right mr-1' : 'text-left ml-1'}`}>
+                  <span
+                    className={`font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 ${isRTL ? 'text-right mr-1' : 'text-left ml-1'}`}
+                  >
                     {language === 'en' ? 'English' : 'עברית'}
                   </span>
-                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`} />
+                  <ChevronDown
+                    className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`}
+                  />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -337,49 +321,82 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
           <SidebarSeparator className="my-2" />
 
-          {/* Profile - Dropdown Menu */}
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
-                >
-                  <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
-                    <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
-                    <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className={`grid flex-1 ${isRTL ? 'text-right' : 'text-left'} text-sm leading-tight group-data-[collapsible=icon]:hidden`}>
-                    <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {isTeacher ? t('nav.teacher') : t('nav.student')}
-                    </span>
-                  </div>
-                  <ChevronDown className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 group-data-[collapsible=icon]:hidden`} />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="bottom"
-                align={isRTL ? "start" : "end"}
-                sideOffset={8}
-                dir={isRTL ? 'rtl' : 'ltr'}
+          <SidebarMenuItem className="hidden group-data-[collapsible=icon]:block">
+            <SidebarMenuButton
+              onClick={() => setLogoutOpen(true)}
+              tooltip={t('nav.logout')}
+              className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg text-destructive hover:text-destructive"
+            >
+              <LogOut className="size-5 group-data-[collapsible=icon]:size-5" />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem className="hidden group-data-[collapsible=icon]:block">
+            <div className="flex justify-center py-1">
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={profile?.avatar_url || undefined} alt="" />
+                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+            <div
+              className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
+              <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
+                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div
+                className={`grid flex-1 min-w-0 text-sm leading-tight ${isRTL ? 'text-right' : 'text-left'}`}
               >
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
-                  <LogOut className={`${isRTL ? 'ml-2' : 'mr-2'} size-4`} />
-                  {t('nav.logout')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {isTeacher ? t('nav.teacher') : t('nav.student')}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label={t('nav.logout')}
+                onClick={() => setLogoutOpen(true)}
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
 
       <SidebarRail />
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('nav.logoutConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('nav.logoutConfirmDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:space-x-reverse' : ''}>
+            <AlertDialogCancel className="mt-0">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmLogout();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('nav.logout')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   );
 }
-
-

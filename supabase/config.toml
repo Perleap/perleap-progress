@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.rephrase-text]
 verify_jwt = false
+
+[functions.compute-nuance-insights]
+verify_jwt = false

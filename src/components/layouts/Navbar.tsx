@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { PerleapLogo } from "@/components/PerleapLogo";
 
 export const Navbar = () => {
     const { t } = useTranslation();
@@ -37,9 +38,7 @@ export const Navbar = () => {
             <div className="container mx-auto px-4 md:px-6">
                 <div className="flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
-                        <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-black/5 group-hover:bg-black/10 transition-colors">
-                            <img src="/perleap_logo.png" alt="Perleap Logo" className="w-6 h-6 object-contain" />
-                        </div>
+                        <PerleapLogo className="w-8 h-8" />
                         <span className="text-xl font-bold text-foreground tracking-tight">
                             Perleap
                         </span>

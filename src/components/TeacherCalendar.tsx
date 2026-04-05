@@ -89,7 +89,7 @@ export function TeacherCalendar({
 
   return (
     <Card className="border border-border/50 shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-gradient-to-br from-card/95 to-card/80 hover:shadow-2xl transition-shadow duration-300">
-      <div className="p-6 pb-0 bg-gradient-to-br from-primary/5 to-transparent">
+      <div className="px-4 pt-6 pb-0 sm:px-6 bg-gradient-to-br from-primary/5 to-transparent">
         <div className="flex items-center gap-3 mb-6">
           <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
             <CalendarIcon className="h-5 w-5 text-white" />
@@ -98,8 +98,8 @@ export function TeacherCalendar({
         </div>
       </div>
 
-      <CardContent className="p-6 pt-0 space-y-6">
-        <div className="border border-border/30 rounded-2xl p-3 bg-gradient-to-br from-muted/30 to-transparent backdrop-blur-sm calendar-custom-selected">
+      <CardContent className="px-4 pb-4 pt-0 space-y-6 sm:px-6">
+        <div className="border border-border/30 rounded-2xl p-2 bg-gradient-to-br from-muted/30 to-transparent backdrop-blur-sm calendar-custom-selected">
           <div className="flex flex-col items-center mb-2">
             <div className="text-sm font-bold uppercase tracking-wider mb-1">
               {format(month, 'MMMM yyyy', { locale: language === 'he' ? he : undefined })}

@@ -1,12 +1,5 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { FiveDChart } from './FiveDChart';
 import { Badge } from '@/components/ui/badge';
@@ -16,12 +9,16 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChevronDown, Users, BookOpen, FileText, CheckCircle2, BarChart3, Filter, Sparkles, Trophy, Target } from 'lucide-react';
 import { useClassroomAnalytics } from '@/hooks/queries';
+import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
+import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
+import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 
 interface ClassroomAnalyticsProps {
   classroomId: string;
+  onRegenerateComplete?: () => void;
 }
 
-export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
+export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: ClassroomAnalyticsProps) {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   
@@ -113,118 +110,108 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Filters Section */}
+      <NuanceInsightsTable
+        classroomId={classroomId}
+        students={allStudents}
+        assignments={assignments}
+        selectedStudent={selectedStudent}
+        selectedAssignment={selectedAssignment}
+        onStudentChange={setSelectedStudent}
+        onAssignmentChange={setSelectedAssignment}
+      />
+
       <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="h-1.5 bg-primary" />
-        <CardHeader className="pb-4">
-          <CardTitle className={`flex items-center gap-3 text-xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-            <div className="p-2.5 bg-primary/10 rounded-lg">
-              <Filter className="h-6 w-6 text-primary" />
+        <CardHeader className="pb-2 space-y-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <CardTitle className={`flex items-center gap-3 text-xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className="p-2.5 bg-primary/10 rounded-lg shrink-0">
+                  <Filter className="h-6 w-6 text-primary" />
+                </div>
+                {t('analytics.filtersTitle')}
+              </CardTitle>
+              <CardDescription className={`ms-12 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('analytics.filtersDescription')}
+              </CardDescription>
             </div>
-            {t('analytics.filtersTitle')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label className={`text-sm font-semibold text-muted-foreground ms-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                <Users className="h-4 w-4" />
-                {t('analytics.filterByStudent')}
-              </label>
-              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger className={`h-12 min-w-[180px] rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground`} dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectValue>
-                    {selectedStudent === 'all' ? t('analytics.allStudents') : allStudents.find(s => s.id === selectedStudent)?.name}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allStudents')}</SelectItem>
-                  {allStudents.map((s) => (
-                    <SelectItem key={s.id} value={s.id} className="rounded-xl cursor-pointer">
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className={`text-sm font-semibold text-muted-foreground ms-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                <BookOpen className="h-4 w-4" />
-                {t('analytics.filterByAssignment')}
-              </label>
-              <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                <SelectTrigger className={`h-12 min-w-[180px] rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground`} dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectValue>
-                    {selectedAssignment === 'all' ? t('analytics.allAssignments') : assignments.find(a => a.id === selectedAssignment)?.title}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectItem value="all" className="rounded-xl cursor-pointer">{t('analytics.allAssignments')}</SelectItem>
-                  {assignments.map((a) => (
-                    <SelectItem key={a.id} value={a.id} className="rounded-xl cursor-pointer">
-                      {a.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {onRegenerateComplete ? (
+              <RegenerateScoresButton
+                classroomId={classroomId}
+                onComplete={onRegenerateComplete}
+                compact
+              />
+            ) : null}
           </div>
+        </CardHeader>
+        <CardContent className="pt-0 pb-4">
+          <AnalyticsFilterControls
+            allStudents={allStudents}
+            assignments={assignments}
+            selectedStudent={selectedStudent}
+            selectedAssignment={selectedAssignment}
+            onStudentChange={setSelectedStudent}
+            onAssignmentChange={setSelectedAssignment}
+          />
         </CardContent>
       </Card>
 
       {/* Key Metrics Grid */}
       <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-[28px] border-none shadow-md bg-info text-info-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              <Users className="h-4 w-4" />
+        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div className="p-1.5 bg-primary/10 rounded-md">
+                <Users className="h-3.5 w-3.5 text-primary" />
+              </div>
               {t('analytics.totalStudents')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-4xl font-bold">{studentCount}</div>
+          <CardContent>
+            <div className="text-4xl font-bold text-foreground">{studentCount}</div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-success text-success-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              <BookOpen className="h-4 w-4" />
+        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div className="p-1.5 bg-primary/10 rounded-md">
+                <BookOpen className="h-3.5 w-3.5 text-primary" />
+              </div>
               {t('analytics.assignments')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-4xl font-bold">{assignmentCount}</div>
+          <CardContent>
+            <div className="text-4xl font-bold text-foreground">{assignmentCount}</div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-warning text-warning-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              <FileText className="h-4 w-4" />
+        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div className="p-1.5 bg-primary/10 rounded-md">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+              </div>
               {t('analytics.totalSubmissions')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-4xl font-bold">
+          <CardContent>
+            <div className="text-4xl font-bold text-foreground">
               {students.reduce((s, st) => s + st.feedbackCount, 0)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-primary text-primary-foreground overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-500" />
-          <CardHeader className="pb-2 relative z-10">
-            <CardTitle className={`text-sm font-medium opacity-90 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              <CheckCircle2 className="h-4 w-4" />
+        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div className="p-1.5 bg-primary/10 rounded-md">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+              </div>
               {t('analytics.completionRate')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-4xl font-bold">
+          <CardContent>
+            <div className="text-4xl font-bold text-foreground">
               {studentCount > 0
                 ? Math.round(
                   (students.filter((s) => s.feedbackCount > 0).length / studentCount) * 100
@@ -411,7 +398,7 @@ export function ClassroomAnalytics({ classroomId }: ClassroomAnalyticsProps) {
         {/* Right Column: Summary Stats */}
         <div className="space-y-6">
           <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden sticky top-6" dir={isRTL ? 'rtl' : 'ltr'}>
-            <CardHeader className="bg-muted/30 border-b border-border pb-6">
+            <CardHeader className="bg-transparent border-b border-border pb-6">
               <CardTitle className={`text-lg font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <Trophy className="h-5 w-5 text-primary" />

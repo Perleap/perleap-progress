@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -8,6 +9,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Settings, Moon, Sun, LogOut, Languages } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -35,9 +46,9 @@ export function DashboardHeader({
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const { language = 'en', setLanguage } = useLanguage();
-  
-  // Use auth profile if available, otherwise fall back to empty state
+  const { language = 'en', setLanguage, isRTL } = useLanguage();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
   const profile = authProfile || { full_name: '', avatar_url: null };
 
   const getHeaderInitials = () => {
@@ -50,7 +61,8 @@ export function DashboardHeader({
       .slice(0, 2);
   };
 
-  const handleLogout = async () => {
+  const confirmLogout = async () => {
+    setLogoutOpen(false);
     await signOut();
     navigate('/login');
   };
@@ -93,10 +105,8 @@ export function DashboardHeader({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Notifications Dropdown - Refactored to use shared component with React Query */}
           {user?.id && <NotificationDropdown userId={user.id} />}
 
-          {/* Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-primary/10 hover:border-primary/20 transition-colors">
@@ -112,9 +122,7 @@ export function DashboardHeader({
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{profile.full_name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user?.email}
-                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -122,13 +130,13 @@ export function DashboardHeader({
                 <Settings className="me-2 h-4 w-4" />
                 <span>{t('settings.title')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? (
+              <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                {theme === 'dark' ? (
                   <Sun className="me-2 h-4 w-4" />
                 ) : (
                   <Moon className="me-2 h-4 w-4" />
                 )}
-                <span>{theme === "dark" ? t('common.lightMode') : t('common.darkMode')}</span>
+                <span>{theme === 'dark' ? t('common.lightMode') : t('common.darkMode')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setLanguage(language === 'en' ? 'he' : 'en')}>
                 <Languages className="me-2 h-4 w-4" />
@@ -136,7 +144,7 @@ export function DashboardHeader({
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                 <LogOut className="me-2 h-4 w-4" />
                 <span>{t('common.logout')}</span>
               </DropdownMenuItem>
@@ -144,6 +152,27 @@ export function DashboardHeader({
           </DropdownMenu>
         </div>
       </div>
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('nav.logoutConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('nav.logoutConfirmDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:space-x-reverse' : ''}>
+            <AlertDialogCancel className="mt-0">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmLogout();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('nav.logout')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }

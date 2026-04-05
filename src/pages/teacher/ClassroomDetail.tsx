@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -38,12 +39,17 @@ import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
 import { SubmissionsTab } from '@/components/SubmissionsTab';
-import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
-import { useClassroom, useClassroomAssignments, useClassroomStudents, useDeleteAssignment } from '@/hooks/queries';
+import {
+  classroomKeys,
+  useClassroom,
+  useClassroomAssignments,
+  useClassroomStudents,
+  useDeleteAssignment,
+} from '@/hooks/queries';
 
 interface CourseMaterial {
   type: 'pdf' | 'link';
@@ -104,6 +110,7 @@ const ClassroomDetail = () => {
   const { user } = useAuth();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: rawClassroom, isLoading: classroomLoading, refetch: refetchClassroom } = useClassroom(id);
   const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useClassroomAssignments(id);
@@ -151,13 +158,24 @@ const ClassroomDetail = () => {
   const deleteClassroom = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
+      const { data: deletedRows, error } = await supabase
         .from('classrooms')
         .delete()
         .eq('id', id)
-        .eq('teacher_id', user?.id);
+        .eq('teacher_id', user?.id)
+        .select('id');
 
       if (error) throw error;
+
+      if (!deletedRows?.length) {
+        toast.error(t('classroomDetail.errors.deleting'));
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
+      if (id) {
+        queryClient.removeQueries({ queryKey: classroomKeys.detail(id) });
+      }
 
       toast.success(t('classroomDetail.success.deleted'));
       navigate('/teacher/dashboard');
@@ -575,7 +593,7 @@ const ClassroomDetail = () => {
                           </div>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
-                              {t('classroomDetail.type')} {t(`assignments.types.${assignment.type}`)}
+                              {t('classroomDetail.type')} {t(`assignmentTypes.${assignment.type}`)}
                             </span>
                             {assignment.due_at && (
                               <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
@@ -768,18 +786,15 @@ const ClassroomDetail = () => {
         {/* Analytics Section */}
         {activeSection === 'analytics' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-muted/50 rounded-xl">
-                  <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
-                </div>
-                <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('classroomDetail.analytics')}
-                </h2>
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-muted/50 rounded-xl">
+                <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
               </div>
-              <RegenerateScoresButton classroomId={id!} onComplete={refetchClassroom} />
+              <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('classroomDetail.analytics')}
+              </h2>
             </div>
-            <ClassroomAnalytics classroomId={id!} />
+            <ClassroomAnalytics classroomId={id!} onRegenerateComplete={refetchClassroom} />
           </div>
         )}
       </div>

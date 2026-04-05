@@ -66,7 +66,7 @@ export const ClassroomAssignments = ({
                   <div>
                     <CardTitle>{assignment.title}</CardTitle>
                     <CardDescription className="mt-2">
-                      Type: {t(`assignments.types.${assignment.type}`)} •
+                      {t('classroomDetail.type')} {t(`assignmentTypes.${assignment.type}`)} •
                       {assignment.due_at && ` Due: ${new Date(assignment.due_at).toLocaleString()}`}
                     </CardDescription>
                   </div>

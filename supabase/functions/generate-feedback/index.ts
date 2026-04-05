@@ -34,7 +34,7 @@ serve(async (req) => {
       getTeacherNameByAssignment(assignmentId),
       supabase
         .from('assignments')
-        .select('classroom_id, title, instructions, hard_skills, hard_skill_domain, classrooms(teacher_id)')
+        .select('classroom_id, title, instructions, hard_skills, hard_skill_domain, type, auto_publish_ai_feedback, classrooms(teacher_id)')
         .eq('id', assignmentId)
         .single()
     ]);
@@ -42,33 +42,106 @@ serve(async (req) => {
     const assignmentData = assignmentResult.data;
     const teacherId = (assignmentData?.classrooms as any)?.teacher_id;
     const classroomId = assignmentData?.classroom_id;
+    const assignmentType = assignmentData?.type;
+    const autoPublishAiFeedback = assignmentData?.auto_publish_ai_feedback !== false;
 
-    // Get conversation context
-    const { data: conversations, error: convError } = await supabase
-      .from('assignment_conversations')
-      .select('*')
-      .eq('submission_id', submissionId)
-      .order('updated_at', { ascending: false })
-      .limit(1);
+    let conversationText: string;
+    let conversationMessages: any[] = [];
+    let contextType: string;
 
-    if (convError || !conversations || conversations.length === 0) {
-      throw new Error(
-        'No conversation found for this submission. Please chat with Perleap before completing.',
-      );
+    if (assignmentType === 'test') {
+      // For test-type assignments, build context from test questions and responses
+      const [questionsResult, responsesResult] = await Promise.all([
+        supabase
+          .from('test_questions')
+          .select('*')
+          .eq('assignment_id', assignmentId)
+          .order('order_index', { ascending: true }),
+        supabase
+          .from('test_responses')
+          .select('*')
+          .eq('submission_id', submissionId),
+      ]);
+
+      const questions = questionsResult.data || [];
+      const responses = responsesResult.data || [];
+
+      if (questions.length === 0) {
+        throw new Error('No test questions found for this assignment.');
+      }
+
+      const responseMap = new Map(responses.map((r: any) => [r.question_id, r]));
+
+      conversationText = questions.map((q: any, i: number) => {
+        const response = responseMap.get(q.id);
+        const parts = [`Question ${i + 1} (${q.question_type}): ${q.question_text}`];
+
+        if (q.question_type === 'multiple_choice' && q.options) {
+          const options = q.options as { id: string; text: string }[];
+          parts.push('Options: ' + options.map((o: any) => `${o.id}) ${o.text}`).join(', '));
+          if (q.correct_option_id) {
+            const correctOption = options.find((o: any) => o.id === q.correct_option_id);
+            parts.push(`Correct Answer: ${correctOption?.text || q.correct_option_id}`);
+          }
+          const selectedOption = response?.selected_option_id
+            ? options.find((o: any) => o.id === response.selected_option_id)
+            : null;
+          parts.push(`Student Answer: ${selectedOption?.text || response?.selected_option_id || 'No answer'}`);
+        } else {
+          parts.push(`Student Answer: ${response?.text_answer || 'No answer'}`);
+        }
+
+        return parts.join('\n');
+      }).join('\n\n');
+
+      conversationMessages = [{ role: 'user', content: `Test submission with ${questions.length} questions` }];
+      contextType = 'test responses';
+    } else if (assignmentType === 'text_essay') {
+      const { data: subRow, error: subErr } = await supabase
+        .from('submissions')
+        .select('text_body')
+        .eq('id', submissionId)
+        .single();
+
+      if (subErr || !subRow?.text_body?.trim()) {
+        throw new Error(
+          'No essay text found for this submission. Please write your essay before submitting.',
+        );
+      }
+
+      const body = subRow.text_body.trim();
+      conversationMessages = [{ role: 'user', content: body }];
+      conversationText = `Essay submission:\n\n${body}`;
+      contextType = 'essay';
+    } else {
+      // For conversation-based assignments, load chat messages
+      const { data: conversations, error: convError } = await supabase
+        .from('assignment_conversations')
+        .select('*')
+        .eq('submission_id', submissionId)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (convError || !conversations || conversations.length === 0) {
+        throw new Error(
+          'No conversation found for this submission. Please chat with Perleap before completing.',
+        );
+      }
+
+      const conversation = conversations[0];
+
+      if (!conversation.messages || conversation.messages.length === 0) {
+        throw new Error('No conversation messages found. Please chat with Perleap first.');
+      }
+
+      conversationMessages = conversation.messages;
+      conversationText = conversation.messages
+        .map((msg: { role: string; content: string }) =>
+          `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`
+        )
+        .join('\n\n');
+      contextType = 'conversation';
     }
-
-    const conversation = conversations[0];
-
-    if (!conversation.messages || conversation.messages.length === 0) {
-      throw new Error('No conversation messages found. Please chat with Perleap first.');
-    }
-
-    // Prepare conversation text
-    const conversationText = conversation.messages
-      .map((msg: { role: string; content: string }) =>
-        `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`
-      )
-      .join('\n\n');
 
     // **OPTIMIZATION: Parallelize AI calls and background tasks**
     logInfo('Starting parallel AI calls...');
@@ -88,11 +161,12 @@ serve(async (req) => {
       }
     }
 
-    const feedbackPrompt = `You are an expert pedagogical AI assistant. Analyze the student's conversation and provide feedback and 5D scores.
+    const feedbackPrompt = `You are an expert pedagogical AI assistant. Analyze the student's ${contextType === 'essay' ? 'written essay' : contextType} and provide feedback and 5D scores.
     
     Student: ${studentName}
     Teacher: ${teacherName}
     Assignment: ${assignmentData?.title}
+    Assignment Type: ${assignmentType || 'questions'}
     Instructions: ${assignmentData?.instructions}
     
     Provide your response in the following JSON format:
@@ -120,7 +194,7 @@ serve(async (req) => {
     - Be concise but insightful.
     - Focus on growth mindset.`;
 
-    const hardSkillsPrompt = `Analyze the student's conversation and assess their performance on specific hard skills.
+    const hardSkillsPrompt = `Analyze the student's ${contextType === 'essay' ? 'essay' : 'conversation'} and assess their performance on specific hard skills.
     
     Domain: ${assignmentData?.hard_skill_domain}
     Skills to assess: ${hardSkillsList.join(', ')}
@@ -146,7 +220,7 @@ serve(async (req) => {
       // Call 1: Feedback and Scores (Smart/GPT-4o)
       createChatCompletion(
         feedbackPrompt,
-        [{ role: 'user', content: `Analyze this conversation:\n\n${conversationText}` }],
+        [{ role: 'user', content: `Analyze this ${contextType}:\n\n${conversationText}` }],
         0.4,
         2000,
         'smart',
@@ -156,7 +230,7 @@ serve(async (req) => {
       // Call 2: Hard Skills (Fast/GPT-4o-mini)
       hardSkillsList.length > 0 ? createChatCompletion(
         hardSkillsPrompt,
-        [{ role: 'user', content: `Analyze this conversation for hard skills:\n\n${conversationText}` }],
+        [{ role: 'user', content: `Analyze this ${contextType} for hard skills:\n\n${conversationText}` }],
         0.3,
         1500,
         'fast',
@@ -192,6 +266,8 @@ serve(async (req) => {
     logInfo('Saving essential data to database...');
     const dbStartTime = Date.now();
 
+    const visibleToStudent = autoPublishAiFeedback;
+
     const [snapshotResult, feedbackSaveResult] = await Promise.all([
       // 1. Save 5D snapshot
       supabase.from('five_d_snapshots').insert({
@@ -210,7 +286,8 @@ serve(async (req) => {
         assignment_id: assignmentId,
         student_feedback: studentFeedback,
         teacher_feedback: teacherFeedback,
-        conversation_context: conversation.messages,
+        conversation_context: conversationMessages,
+        visible_to_student: visibleToStudent,
       }),
 
       // 3. Save hard skills assessment
@@ -243,6 +320,16 @@ serve(async (req) => {
       throw feedbackSaveResult.error;
     }
 
+    const { error: submissionFlagError } = await supabase
+      .from('submissions')
+      .update({ awaiting_teacher_feedback_release: !visibleToStudent })
+      .eq('id', submissionId);
+
+    if (submissionFlagError) {
+      logError('Error updating submission release flags', submissionFlagError);
+      throw submissionFlagError;
+    }
+
     logInfo(`Essential database operations completed in ${Date.now() - dbStartTime}ms`);
 
     // 4. TRULY background tasks (don't await them)
@@ -266,24 +353,30 @@ serve(async (req) => {
             assignmentId,
             teacherId,
             assignmentTitle: assignmentData?.title,
-            conversationMessages: conversation.messages,
+            conversationMessages,
           }),
         }).catch(err => logError('Wellbeing call error', err));
 
         if (assignmentData) {
           const assignmentTitle = assignmentData.title;
-          await Promise.all([
-            supabase.from('notifications').insert({
-              user_id: studentId,
-              type: 'feedback_received',
-              title: 'Feedback Received',
-              message: `Your feedback for "${assignmentTitle}" is ready`,
-              link: `/student/assignment/${assignmentId}`,
-              actor_id: teacherId,
-              metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
-              is_read: false,
-            }),
-            teacherId ? supabase.from('notifications').insert({
+          const notifications: PromiseLike<unknown>[] = [];
+          if (autoPublishAiFeedback) {
+            notifications.push(
+              supabase.from('notifications').insert({
+                user_id: studentId,
+                type: 'feedback_received',
+                title: 'Feedback Received',
+                message: `Your feedback for "${assignmentTitle}" is ready`,
+                link: `/student/assignment/${assignmentId}`,
+                actor_id: teacherId,
+                metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
+                is_read: false,
+              }),
+            );
+          }
+          if (teacherId) {
+            notifications.push(
+              supabase.from('notifications').insert({
               user_id: teacherId,
               type: 'student_completed_activity',
               title: 'Activity Completed',
@@ -292,8 +385,10 @@ serve(async (req) => {
               actor_id: studentId,
               metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, student_id: studentId, student_name: studentName, submission_id: submissionId },
               is_read: false,
-            }) : Promise.resolve(),
-          ]).catch(err => logError('Notifications error', err));
+            }),
+            );
+          }
+          await Promise.all(notifications).catch(err => logError('Notifications error', err));
         }
       } catch (err) {
         logError('Background tasks execution error', err);

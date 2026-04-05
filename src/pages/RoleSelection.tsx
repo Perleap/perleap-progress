@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { PerleapLogo } from '@/components/PerleapLogo';
 import { updateUserRole, clearPendingRole, resetRecoveryAttempts } from '@/utils/roleRecovery';
 
 /**
@@ -74,7 +75,7 @@ const RoleSelection = () => {
         <Card className="shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-2xl border-border/50 rounded-[2.5rem]">
           <CardHeader className="text-center pb-8 pt-12 px-12">
             <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm mb-6 mx-auto">
-              <img src="/perleap_logo.png" alt="PerLeap" className="h-12 w-12 object-contain" />
+              <PerleapLogo className="h-12 w-12" title="Perleap" />
             </div>
             <CardTitle className="text-3xl font-bold mb-3" dir={isRTL ? 'rtl' : 'ltr'}>
               {t('roleSelection.title')}

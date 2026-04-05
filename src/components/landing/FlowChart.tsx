@@ -12,6 +12,7 @@ import {
     Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PerleapLogo } from "@/components/PerleapLogo";
 
 export const FlowChart = () => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +52,7 @@ export const FlowChart = () => {
                         <div className="relative group">
                             <div className="absolute -inset-12 bg-primary rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 animate-pulse" />
                             <div className="w-40 h-20 md:w-48 md:h-24 bg-black/80 border border-white/20 rounded-lg shadow-2xl flex items-center justify-center gap-3 relative z-10 backdrop-blur-xl">
-                                <img src="/perleap_logo.png" alt="Perleap" className="w-8 h-8 object-contain" />
+                                <PerleapLogo className="w-8 h-8" />
                                 <span className="font-bold text-xl md:text-2xl tracking-wide">Perleap</span>
                             </div>
                         </div>

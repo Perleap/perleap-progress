@@ -18,44 +18,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
   
-  <!-- MathJax Configuration -->
-  <script>
-    window.MathJax = {
-      tex: {
-        inlineMath: [['$', '$'], ['\\(', '\\)']],
-        displayMath: [['$$', '$$'], ['\\[', '\\]']],
-        processEscapes: true,
-        processEnvironments: true
-      },
-      options: {
-        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-        ignoreHtmlClass: 'tex2jax_ignore',
-        processHtmlClass: 'tex2jax_process'
-      },
-      startup: {
-        pageReady: () => {
-          return MathJax.startup.defaultPageReady();
-        }
-      }
-    };
-  </script>
+  <!-- MathJax config must be external when CSP uses nonces (unsafe-inline is ignored). -->
+  <script src="/mathjax-config.js"></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@PerLeap" />
   <meta name="twitter:image" content="https://perleap.ai/og-image.png" />
-  <link rel="icon" href="/perleap_logo.png" />
-  <script>
-    (function() {
-      try {
-        var theme = localStorage.getItem('theme');
-        var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
-        if (!theme && supportDarkMode) theme = 'dark';
-        if (!theme) theme = 'light';
-        document.documentElement.classList.add(theme);
-      } catch (e) {}
-    })();
-  </script>
+  <link rel="icon" href="/src/assets/perleap.svg" type="image/svg+xml" />
+  <script src="/theme-init.js"></script>
 </head>
 
 <body>

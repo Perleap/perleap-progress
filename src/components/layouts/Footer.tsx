@@ -11,7 +11,7 @@ export const Footer = () => {
                             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10">
                                 <Sparkles className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-lg font-bold text-white">PerLeap</span>
+                            <span className="text-lg font-bold text-white">Perleap</span>
                         </Link>
                         <p className="text-white/60 text-sm leading-relaxed">
                             Empowering education with intelligent agents. Transform your classroom with AI-driven insights and automation.
@@ -50,7 +50,7 @@ export const Footer = () => {
 
                 <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
                     <p className="text-white/40 text-sm">
-                        © 2024 PerLeap Inc. All rights reserved.
+                        © 2024 Perleap Inc. All rights reserved.
                     </p>
                     <div className="flex items-center gap-6">
                         <a href="#" className="text-white/40 hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>

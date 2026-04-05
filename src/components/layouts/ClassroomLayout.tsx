@@ -73,7 +73,7 @@ export function ClassroomLayout({
         sections={sections}
       />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-6 shadow-sm sticky top-0 z-30">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-4 md:px-5 shadow-sm sticky top-0 z-30">
           <div className="flex items-center gap-4 flex-1">
             <SidebarTrigger className="hover:bg-accent hover:scale-110 rounded-lg p-2.5 transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-accent-foreground/10" />
             <Separator orientation="vertical" className="h-6 bg-border/60" />
@@ -83,10 +83,6 @@ export function ClassroomLayout({
                   <BreadcrumbLink render={<Link to={`${basePath}/dashboard`} />}>
                     {t('nav.dashboard')}
                   </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbPage>{classroomName || t('nav.classroom')}</BreadcrumbPage>
                 </BreadcrumbItem>
                 {currentSection && (
                   <>
@@ -105,10 +101,11 @@ export function ClassroomLayout({
             </div>
           )}
         </header>
-        <div ref={contentRef} className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-gradient-to-br from-background via-background to-muted/5 min-h-0">
-          <div className="pt-4">
-            {children}
-          </div>
+        <div
+          ref={contentRef}
+          className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-5 pt-3 sm:pt-4 bg-gradient-to-br from-background via-background to-muted/5 min-h-0"
+        >
+          <div className="pt-4 sm:pt-6 md:pt-8">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>
