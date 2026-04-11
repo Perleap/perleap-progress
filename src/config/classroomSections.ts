@@ -1,4 +1,4 @@
-import { Info, BookOpen, Users, FileText, BarChart3 } from 'lucide-react';
+import { Info, BookOpen, Users, FileText, BarChart3, Map } from 'lucide-react';
 import React from 'react';
 
 export interface ClassroomSection {
@@ -10,6 +10,7 @@ export interface ClassroomSection {
 // Pre-defined sections for teacher classroom
 export const TEACHER_CLASSROOM_SECTIONS: ClassroomSection[] = [
   { id: 'overview', title: 'Overview', icon: Info },
+  { id: 'outline', title: 'Course Outline', icon: Map },
   { id: 'assignments', title: 'Assignments', icon: BookOpen },
   { id: 'students', title: 'Students', icon: Users },
   { id: 'submissions', title: 'Submissions', icon: FileText },

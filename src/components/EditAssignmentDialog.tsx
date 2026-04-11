@@ -26,6 +26,7 @@ import { createBulkNotifications } from '@/lib/notificationService';
 import { Sparkles, X, Upload, Link as LinkIcon, Loader2, BookOpen, Calendar, Target, FileText, Plus, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useSyllabus } from '@/hooks/queries';
 
 interface Assignment {
   id: string;
@@ -77,6 +78,10 @@ export function EditAssignmentDialog({
   const [rephrasingInstructions, setRephrasingInstructions] = useState(false);
   const [originalInstructions, setOriginalInstructions] = useState<string | null>(null);
   const [autoPublishAiFeedback, setAutoPublishAiFeedback] = useState(true);
+  const [syllabusSectionId, setSyllabusSectionId] = useState<string>('');
+  const [gradingCategoryId, setGradingCategoryId] = useState<string>('');
+  const classroomIdForSyllabus = assignment.classroom_id;
+  const { data: syllabus } = useSyllabus(classroomIdForSyllabus);
 
   // Fetch classroom domains and materials
   useEffect(() => {
@@ -118,11 +123,13 @@ export function EditAssignmentDialog({
     const loadAssignmentData = async () => {
       const { data } = await supabase
         .from('assignments')
-        .select('hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback')
+        .select('hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, syllabus_section_id, grading_category_id')
         .eq('id', assignment.id)
         .single();
 
       setAutoPublishAiFeedback(data?.auto_publish_ai_feedback !== false);
+      setSyllabusSectionId((data as any)?.syllabus_section_id || '');
+      setGradingCategoryId((data as any)?.grading_category_id || '');
 
       if (data?.hard_skills) {
         try {
@@ -326,6 +333,8 @@ export function EditAssignmentDialog({
           hard_skill_domain: hardSkillDomain || null,
           materials: materials, // JSONB column - pass as object, not stringified
           auto_publish_ai_feedback: autoPublishAiFeedback,
+          syllabus_section_id: syllabusSectionId || null,
+          grading_category_id: gradingCategoryId || null,
         })
         .eq('id', assignment.id);
 
@@ -565,6 +574,48 @@ export function EditAssignmentDialog({
                 </div>
               </div>
             </div>
+
+            {/* Syllabus Section & Grading Category Linking */}
+            {syllabus && (syllabus.sections.length > 0 || syllabus.grading_categories.length > 0) && (
+              <div className="p-6 rounded-xl border border-border shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
+                {syllabus.sections.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t('syllabus.syllabusSection', 'Syllabus Section')}
+                    </Label>
+                    <Select value={syllabusSectionId || '_none'} onValueChange={(v) => setSyllabusSectionId(v === '_none' ? '' : v)}>
+                      <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <SelectValue placeholder={t('syllabus.linkToSection', 'Link to a section (optional)')} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
+                        {syllabus.sections.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {syllabus.grading_categories.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t('syllabus.gradingCategory', 'Grading Category')}
+                    </Label>
+                    <Select value={gradingCategoryId || '_none'} onValueChange={(v) => setGradingCategoryId(v === '_none' ? '' : v)}>
+                      <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <SelectValue placeholder={t('syllabus.selectCategory', 'Select category (optional)')} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
+                        {syllabus.grading_categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name} ({c.weight}%)</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Skills & Domain */}
             <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">

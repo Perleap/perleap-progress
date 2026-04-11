@@ -32,6 +32,7 @@ import {
   ChevronDown,
   ChevronRight,
   Info,
+  Map,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditClassroomDialog } from '@/components/EditClassroomDialog';
@@ -43,6 +44,7 @@ import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
+import { CourseOutlineSection } from '@/components/features/syllabus';
 import {
   classroomKeys,
   useClassroom,
@@ -71,7 +73,6 @@ interface Classroom {
   course_duration: string;
   start_date: string;
   end_date: string;
-  course_outline: string;
   resources: string;
   learning_outcomes: string[] | null;
   key_challenges: string[] | null;
@@ -217,6 +218,7 @@ const ClassroomDetail = () => {
   // Define classroom sections with translated titles
   const classroomSections = [
     { id: 'overview', title: t('studentClassroom.about'), icon: Info },
+    { id: 'outline', title: 'Course Outline', icon: Map },
     { id: 'assignments', title: t('studentClassroom.assignments'), icon: BookOpen },
     { id: 'students', title: t('classroomDetail.students'), icon: Users },
     { id: 'submissions', title: t('classroomDetail.submissionsTab'), icon: FileText },
@@ -325,39 +327,21 @@ const ClassroomDetail = () => {
                 </Card>
               )}
 
-              {/* Outline & Resources */}
-              {(classroom.course_outline || classroom.resources) && (
+              {/* Resources */}
+              {classroom.resources && (
                 <Card className="md:col-span-2 lg:col-span-2 rounded-xl border-none shadow-sm bg-card ring-1 ring-border" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <div className="p-2 bg-muted/50 rounded-xl">
                         <FileText className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      {t('classroomDetail.details')}
+                      {t('classroomDetail.overview.resources')}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    {classroom.course_outline && (
-                      <div>
-                        <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {t('classroomDetail.overview.courseOutline')}
-                        </h3>
-                        <p className={`text-foreground/80 whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {classroom.course_outline}
-                        </p>
-                      </div>
-                    )}
-
-                    {classroom.resources && (
-                      <div>
-                        <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {t('classroomDetail.overview.resources')}
-                        </h3>
-                        <p className={`text-foreground/80 whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {classroom.resources}
-                        </p>
-                      </div>
-                    )}
+                  <CardContent>
+                    <p className={`text-foreground/80 whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {classroom.resources}
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -521,6 +505,11 @@ const ClassroomDetail = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Course Outline Section */}
+        {activeSection === 'outline' && (
+          <CourseOutlineSection classroomId={id!} isRTL={isRTL} />
         )}
 
         {/* Assignments Section */}

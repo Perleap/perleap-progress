@@ -109,6 +109,25 @@ export type {
   NuanceInsightsResponse,
 } from './useNuanceQueries';
 
+// Syllabus Queries
+export {
+  syllabusKeys,
+  useSyllabus,
+  useCreateSyllabus,
+  useUpdateSyllabus,
+  usePublishSyllabus,
+  useArchiveSyllabus,
+  useCreateSyllabusSection,
+  useUpdateSyllabusSection,
+  useDeleteSyllabusSection,
+  useReorderSyllabusSections,
+  useCreateGradingCategory,
+  useUpdateGradingCategory,
+  useDeleteGradingCategory,
+  useLinkAssignment,
+  useUnlinkAssignment,
+} from './useSyllabusQueries';
+
 
 
 

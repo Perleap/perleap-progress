@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BookOpen, Calendar, FileText, Clock, CheckCircle2, AlertCircle, Sparkles, Info, Users } from 'lucide-react';
+import { BookOpen, Calendar, FileText, Clock, CheckCircle2, AlertCircle, Sparkles, Info, Users, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ClassroomLayout } from '@/components/layouts';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
-import { useClassroom, useClassroomAssignments, useTeacherProfile } from '@/hooks/queries';
+import { useClassroom, useClassroomAssignments, useTeacherProfile, useSyllabus } from '@/hooks/queries';
+import { SyllabusRoadmap } from '@/components/features/syllabus/SyllabusRoadmap';
+import { Loader2 } from 'lucide-react';
 
 interface Classroom {
   id: string;
@@ -27,7 +29,6 @@ interface Classroom {
   course_duration: string;
   start_date: string;
   end_date: string;
-  course_outline: string;
   resources: string;
   learning_outcomes: string[];
   key_challenges: string[];
@@ -54,6 +55,7 @@ const StudentClassroomDetail = () => {
   
   const teacherId = rawClassroom?.teacher_id;
   const { data: teacher } = useTeacherProfile(teacherId);
+  const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(id);
 
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
   const [assignmentsSubTab, setAssignmentsSubTab] = useState<'active' | 'finished'>('active');
@@ -96,13 +98,24 @@ const StudentClassroomDetail = () => {
         ? t('studentDashboard.sortOptions.oldest')
         : t('studentDashboard.sortOptions.dueDate');
 
-  const loading = classroomLoading || assignmentsLoading;
+  const assignmentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (rawAssignments as any[]).forEach((a: any) => {
+      if (a.syllabus_section_id) {
+        counts[a.syllabus_section_id] = (counts[a.syllabus_section_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [rawAssignments]);
 
   if (!classroom) return null;
+
+  const hasPublishedSyllabus = syllabus && syllabus.status === 'published';
 
   // Define classroom sections with translated titles
   const classroomSections = [
     { id: 'overview', title: t('studentClassroom.about'), icon: Info },
+    ...(hasPublishedSyllabus ? [{ id: 'outline', title: t('syllabus.courseOutline'), icon: Map }] : []),
     { id: 'assignments', title: t('studentClassroom.assignments'), icon: BookOpen },
   ];
 
@@ -131,15 +144,6 @@ const StudentClassroomDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
-                  {classroom.course_outline && (
-                    <div>
-                      <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t('studentClassroom.courseOutline')}</h3>
-                      <p className={`text-foreground/80 whitespace-pre-wrap leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
-                        {classroom.course_outline}
-                      </p>
-                    </div>
-                  )}
-
                   {classroom.resources && (
                     <div>
                       <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t('studentClassroom.resources')}</h3>
@@ -273,6 +277,34 @@ const StudentClassroomDetail = () => {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Course Outline Section (Student — read-only) */}
+        {activeSection === 'outline' && hasPublishedSyllabus && (
+          <div className="space-y-6">
+            <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('syllabus.courseOutline')}
+            </h2>
+            {syllabus.summary && (
+              <Card className="rounded-xl border-border shadow-sm">
+                <CardContent className="p-4">
+                  <p className={`text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>{syllabus.summary}</p>
+                </CardContent>
+              </Card>
+            )}
+            {syllabusLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <SyllabusRoadmap
+                sections={syllabus.sections}
+                assignmentCounts={assignmentCounts}
+                classroomId={id!}
+                mode="student"
+              />
+            )}
           </div>
         )}
 
