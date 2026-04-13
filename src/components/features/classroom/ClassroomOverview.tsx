@@ -3,9 +3,11 @@
  * Display classroom information and invite code
  */
 
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Calendar, Edit } from 'lucide-react';
+import { formatCourseDuration } from '@/lib/dateUtils';
 import type { Classroom } from '@/types';
 
 interface ClassroomOverviewProps {
@@ -17,6 +19,7 @@ interface ClassroomOverviewProps {
  * Display classroom overview with invite code and course information
  */
 export const ClassroomOverview = ({ classroom, onEdit }: ClassroomOverviewProps) => {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -55,10 +58,10 @@ export const ClassroomOverview = ({ classroom, onEdit }: ClassroomOverviewProps)
               <p className="text-muted-foreground">{classroom.course_title}</p>
             </div>
 
-            {classroom.course_duration && (
+            {formatCourseDuration(classroom.start_date, classroom.end_date) && (
               <div>
                 <h3 className="font-semibold mb-1">Duration</h3>
-                <p className="text-muted-foreground">{classroom.course_duration}</p>
+                <p className="text-muted-foreground">{formatCourseDuration(classroom.start_date, classroom.end_date)}</p>
               </div>
             )}
 
@@ -89,9 +92,11 @@ export const ClassroomOverview = ({ classroom, onEdit }: ClassroomOverviewProps)
             )}
 
             {classroom.resources && (
-              <div>
-                <h3 className="font-semibold mb-1">Resources</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{classroom.resources}</p>
+              <div className="min-w-0">
+                <h3 className="font-semibold mb-1">{t('classroomDetail.overview.about')}</h3>
+                <p className="text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
+                  {classroom.resources}
+                </p>
               </div>
             )}
 

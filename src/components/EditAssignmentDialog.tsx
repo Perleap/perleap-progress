@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,9 +24,14 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createBulkNotifications } from '@/lib/notificationService';
-import { Sparkles, X, Upload, Link as LinkIcon, Loader2, BookOpen, Calendar, Target, FileText, Plus, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Sparkles, X, Upload, Link as LinkIcon, Loader2, BookOpen, Target, FileText, Plus, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AssignmentCourseOutlineLinkCard } from '@/components/AssignmentCourseOutlineLinkCard';
+import { useSyllabus, syllabusKeys, assignmentKeys } from '@/hooks/queries';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface Assignment {
   id: string;
@@ -53,13 +59,18 @@ export function EditAssignmentDialog({
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState(assignment.title);
   const [instructions, setInstructions] = useState(assignment.instructions);
   const [type, setType] = useState(assignment.type);
   const [status, setStatus] = useState(assignment.status);
-  const [dueDate, setDueDate] = useState(
-    assignment.due_at ? new Date(assignment.due_at).toISOString().slice(0, 16) : ''
-  );
+  const [dueDate, setDueDate] = useState(() => {
+    if (!assignment.due_at) return '';
+    const d = new Date(assignment.due_at);
+    if (Number.isNaN(d.getTime())) return '';
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  });
   const [hardSkills, setHardSkills] = useState<string[]>([]);
   const [hardSkillDomain, setHardSkillDomain] = useState('');
   const [materials, setMaterials] = useState<
@@ -77,6 +88,10 @@ export function EditAssignmentDialog({
   const [rephrasingInstructions, setRephrasingInstructions] = useState(false);
   const [originalInstructions, setOriginalInstructions] = useState<string | null>(null);
   const [autoPublishAiFeedback, setAutoPublishAiFeedback] = useState(true);
+  const [syllabusSectionId, setSyllabusSectionId] = useState<string>('');
+  const [gradingCategoryId, setGradingCategoryId] = useState<string>('');
+  const classroomIdForSyllabus = assignment.classroom_id;
+  const { data: syllabus, isLoading: isSyllabusLoading } = useSyllabus(classroomIdForSyllabus);
 
   // Fetch classroom domains and materials
   useEffect(() => {
@@ -118,11 +133,13 @@ export function EditAssignmentDialog({
     const loadAssignmentData = async () => {
       const { data } = await supabase
         .from('assignments')
-        .select('hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback')
+        .select('hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, syllabus_section_id, grading_category_id')
         .eq('id', assignment.id)
         .single();
 
       setAutoPublishAiFeedback(data?.auto_publish_ai_feedback !== false);
+      setSyllabusSectionId((data as any)?.syllabus_section_id || '');
+      setGradingCategoryId((data as any)?.grading_category_id || '');
 
       if (data?.hard_skills) {
         try {
@@ -326,6 +343,8 @@ export function EditAssignmentDialog({
           hard_skill_domain: hardSkillDomain || null,
           materials: materials, // JSONB column - pass as object, not stringified
           auto_publish_ai_feedback: autoPublishAiFeedback,
+          syllabus_section_id: syllabusSectionId || null,
+          grading_category_id: gradingCategoryId || null,
         })
         .eq('id', assignment.id);
 
@@ -378,6 +397,11 @@ export function EditAssignmentDialog({
       }
 
       toast.success(t('editAssignment.success.saved'));
+      const cid = assignment.classroom_id;
+      if (cid) {
+        await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(cid) });
+        await queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(cid) });
+      }
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -480,90 +504,236 @@ export function EditAssignmentDialog({
                   autoDirection
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="type" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createAssignment.type')}
-                  </Label>
-                  <Select
-                    value={type}
-                    onValueChange={setType}
-                  >
-                    <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>
-                        {type ? t(`createAssignment.typeOptions.${type}`) : t('createAssignment.type')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="chatbot" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.chatbot')}</SelectItem>
-                      <SelectItem value="questions" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.questions')}</SelectItem>
-                      <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
-                      <SelectItem value="test" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.test')}</SelectItem>
-                      <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.project')}</SelectItem>
-                      <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
-                      <SelectItem value="langchain" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.langchain')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="due_at" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createAssignment.dueDate')}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="due_at"
-                      type="datetime-local"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      className="rounded-xl h-11 ps-10"
+            <div
+              className={cn(
+                'grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-x-6',
+                isRTL && 'lg:[direction:ltr]',
+              )}
+            >
+              <Card className="flex h-full min-h-0 min-w-0 flex-col shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+                <CardHeader
+                  className={cn(
+                    'space-y-1 px-6 pb-0 pt-4',
+                    isRTL && 'text-right',
+                  )}
+                >
+                  <CardTitle className="text-heading text-base font-semibold">
+                    {t('createAssignment.metadata.assignmentDetailsTitle')}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs leading-relaxed">
+                    {t('createAssignment.metadata.assignmentDetailsDescription')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex min-h-0 flex-1 flex-col space-y-3 px-6 pb-4 pt-4">
+                  <div className="space-y-1.5">
+                    <div
+                      className="flex w-fit max-w-full flex-col gap-2 sm:flex-row sm:items-start sm:gap-x-2"
                       dir={isRTL ? 'rtl' : 'ltr'}
-                      autoDirection
-                    />
-                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-muted-foreground" />
+                    >
+                      <div className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]">
+                        <Label
+                          htmlFor="edit_type"
+                          className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                        >
+                          {t('createAssignment.metadata.assignmentType')}
+                        </Label>
+                        <Select value={type} onValueChange={setType}>
+                          <SelectTrigger
+                            id="edit_type"
+                            className={cn(
+                              'h-9 w-full min-w-0 rounded-lg text-sm',
+                              isRTL ? 'text-right' : 'text-left',
+                            )}
+                            dir={isRTL ? 'rtl' : 'ltr'}
+                          >
+                            <SelectValue>
+                              {type
+                                ? t(`createAssignment.typeOptions.${type}`)
+                                : t('createAssignment.metadata.assignmentType')}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                            <SelectItem value="chatbot" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.chatbot')}</SelectItem>
+                            <SelectItem value="questions" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.questions')}</SelectItem>
+                            <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
+                            <SelectItem value="test" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.test')}</SelectItem>
+                            <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.project')}</SelectItem>
+                            <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
+                            <SelectItem value="langchain" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.langchain')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]">
+                        <Label
+                          htmlFor="due_at"
+                          className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                        >
+                          {t('createAssignment.dueDate')}
+                        </Label>
+                        <DateTimePicker
+                          value={dueDate}
+                          onChange={setDueDate}
+                          placeholder={t('datetimePicker.placeholder')}
+                          className={cn('h-9 w-full rounded-lg text-sm', isRTL ? 'text-right' : 'text-left')}
+                          dir={isRTL ? 'rtl' : 'ltr'}
+                        />
+                      </div>
+                    </div>
+                    <p
+                      className={cn(
+                        'max-w-[24rem] text-muted-foreground text-xs leading-snug',
+                        isRTL ? 'text-right' : 'text-left',
+                      )}
+                    >
+                      {t('createAssignment.metadata.dueDateHelper')}
+                    </p>
                   </div>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="status" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('assignments.status.label')}
-                  </Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger id="status" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>
-                        {status ? t(`assignments.status.${status}`) : t('assignments.status.label')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.draft')}</SelectItem>
-                      <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.published')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-1 pt-0.5">
+                    <AssignmentCourseOutlineLinkCard
+                      variant="inline"
+                      className="max-w-[min(100%,25rem)]"
+                      isRTL={isRTL}
+                      syllabus={syllabus ?? undefined}
+                      syllabusLoading={isSyllabusLoading}
+                      syllabusSectionId={syllabusSectionId}
+                      onSyllabusSectionIdChange={setSyllabusSectionId}
+                      gradingCategoryId={gradingCategoryId}
+                      onGradingCategoryIdChange={setGradingCategoryId}
+                    />
+                    {(syllabus?.sections?.length ?? 0) > 0 ? (
+                      <p
+                        className={cn(
+                          'text-muted-foreground text-xs leading-relaxed',
+                          isRTL ? 'text-right' : 'text-left',
+                        )}
+                      >
+                        {t('createAssignment.metadata.linkedModuleHelper')}
+                      </p>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="edit_auto_publish_ai_feedback" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createAssignment.aiFeedback')}
-                  </Label>
-                  <Select
-                    value={autoPublishAiFeedback ? 'yes' : 'no'}
-                    onValueChange={(value) => setAutoPublishAiFeedback(value === 'yes')}
-                  >
-                    <SelectTrigger id="edit_auto_publish_ai_feedback" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>
-                        {autoPublishAiFeedback ? t('common.yes') : t('common.no')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>{t('common.yes')}</SelectItem>
-                      <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>{t('common.no')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <Card className="flex h-full min-h-0 min-w-0 flex-col shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+                <CardHeader
+                  className={cn(
+                    'space-y-1 px-6 pb-0 pt-4',
+                    isRTL && 'text-right',
+                  )}
+                >
+                  <CardTitle className="text-heading text-base font-semibold">
+                    {t('createAssignment.metadata.releaseSettingsTitle')}
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs leading-relaxed">
+                    {t('createAssignment.metadata.releaseSettingsDescription')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex min-h-0 flex-1 flex-col space-y-3 px-6 pb-4 pt-4">
+                  <div className="space-y-1.5">
+                    <div
+                      className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <Label
+                        htmlFor="edit_publication_status"
+                        className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                      >
+                        {t('createAssignment.metadata.publicationStatus')}
+                      </Label>
+                      <Select
+                        value={status}
+                        onValueChange={(value) => {
+                          if (value === 'draft' || value === 'published') {
+                            setStatus(value);
+                          }
+                        }}
+                      >
+                        <SelectTrigger
+                          id="edit_publication_status"
+                          className={cn(
+                            'h-9 w-full min-w-0 rounded-lg text-sm',
+                            isRTL ? 'text-right' : 'text-left',
+                          )}
+                          dir={isRTL ? 'rtl' : 'ltr'}
+                        >
+                          <SelectValue>
+                            {status === 'draft'
+                              ? t('assignments.status.draft')
+                              : t('assignments.status.published')}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                          <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>
+                            {t('assignments.status.draft')}
+                          </SelectItem>
+                          <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>
+                            {t('assignments.status.published')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p
+                      className={cn(
+                        'max-w-[24rem] text-muted-foreground text-xs leading-snug',
+                        isRTL ? 'text-right' : 'text-left',
+                      )}
+                    >
+                      {t('createAssignment.metadata.publicationStatusHelper')}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 pt-0.5">
+                    <div
+                      className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <Label
+                        htmlFor="edit_ai_feedback_select"
+                        className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                      >
+                        {t('createAssignment.metadata.aiFeedback')}
+                      </Label>
+                      <Select
+                        value={autoPublishAiFeedback ? 'yes' : 'no'}
+                        onValueChange={(value) => setAutoPublishAiFeedback(value === 'yes')}
+                      >
+                        <SelectTrigger
+                          id="edit_ai_feedback_select"
+                          className={cn(
+                            'h-9 w-full min-w-0 rounded-lg text-sm',
+                            isRTL ? 'text-right' : 'text-left',
+                          )}
+                          dir={isRTL ? 'rtl' : 'ltr'}
+                        >
+                          <SelectValue>
+                            {autoPublishAiFeedback ? t('common.yes') : t('common.no')}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                          <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>
+                            {t('common.yes')}
+                          </SelectItem>
+                          <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>
+                            {t('common.no')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p
+                      className={cn(
+                        'text-muted-foreground text-xs leading-relaxed',
+                        isRTL ? 'text-right' : 'text-left',
+                      )}
+                    >
+                      {t('createAssignment.metadata.aiFeedbackHelper')}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Skills & Domain */}

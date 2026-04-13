@@ -8,3 +8,4 @@ export * from './api.types';
 export * from './hard-skills';
 export * from './notifications';
 export * from './submission';
+export * from './syllabus';
