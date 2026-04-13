@@ -10,19 +10,21 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Calendar, Target, FileText, Loader2, Eye } from 'lucide-react';
+import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye, Sparkles } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';
+import { DatePicker } from '@/components/ui/date-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface Classroom {
   id: string;
   name: string;
   subject: string;
   course_title: string;
-  course_duration: string;
   start_date: string;
   end_date: string;
   resources: string;
@@ -53,12 +55,13 @@ export const EditClassroomDialog = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
+  const [originalCourseDescription, setOriginalCourseDescription] = useState<string | null>(null);
+  const [rephrasingCourseDescription, setRephrasingCourseDescription] = useState(false);
   const [formData, setFormData] = useState({
     courseTitle: '',
-    courseDuration: '',
     startDate: '',
     endDate: '',
-    resources: '',
+    courseDescription: '',
     learningOutcomes: ['', '', ''],
     keyChallenges: ['', ''],
     domains: [] as Domain[],
@@ -67,12 +70,12 @@ export const EditClassroomDialog = ({
 
   useEffect(() => {
     if (open && classroom) {
+      setOriginalCourseDescription(null);
       setFormData({
         courseTitle: classroom.course_title || classroom.name || '',
-        courseDuration: classroom.course_duration || '',
         startDate: classroom.start_date || '',
         endDate: classroom.end_date || '',
-        resources: classroom.resources || '',
+        courseDescription: classroom.resources || '',
         learningOutcomes: (classroom.learning_outcomes && classroom.learning_outcomes.length > 0)
           ? classroom.learning_outcomes
           : ['', '', ''],
@@ -84,6 +87,33 @@ export const EditClassroomDialog = ({
       });
     }
   }, [open, classroom?.id]); // Only re-run when open state changes or classroom ID changes
+
+  const handleRephraseCourseDescription = async () => {
+    if (!formData.courseDescription.trim()) {
+      toast.error(t('createClassroom.rephraseError'));
+      return;
+    }
+    setRephrasingCourseDescription(true);
+    setOriginalCourseDescription(formData.courseDescription);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('rephrase-text', {
+        body: {
+          text: formData.courseDescription,
+          language: isRTL ? 'he' : 'en',
+        },
+      });
+      if (error) throw error;
+      if (result?.rephrasedText) {
+        setFormData((prev) => ({ ...prev, courseDescription: result.rephrasedText }));
+        toast.success(t('createClassroom.rephraseSuccess'));
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error(t('createClassroom.rephraseError'));
+    } finally {
+      setRephrasingCourseDescription(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,10 +137,9 @@ export const EditClassroomDialog = ({
           name: formData.courseTitle || 'New Classroom',
           subject: formData.courseTitle || 'General',
           course_title: formData.courseTitle,
-          course_duration: formData.courseDuration,
           start_date: formData.startDate || null,
           end_date: formData.endDate || null,
-          resources: formData.resources,
+          resources: formData.courseDescription || '',
           learning_outcomes: formData.learningOutcomes.filter((o) => o.trim()),
           key_challenges: formData.keyChallenges.filter((c) => c.trim()),
           domains: filteredDomains,
@@ -330,46 +359,78 @@ export const EditClassroomDialog = ({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="courseDuration" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createClassroom.courseDuration')}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="courseDuration"
-                      placeholder={t('createClassroom.courseDurationPlaceholder')}
-                      value={formData.courseDuration}
-                      onChange={(e) => setFormData({ ...formData, courseDuration: e.target.value })}
-                      className="rounded-xl h-11 ps-10"
-                      autoDirection
-                    />
-                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-muted-foreground" />
-                  </div>
+                  <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.startDate')}</Label>
+                  <DatePicker value={formData.startDate} onChange={(v) => setFormData({ ...formData, startDate: v })} placeholder={t('createClassroom.startDate')} />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.endDate')}</Label>
+                  <DatePicker value={formData.endDate} onChange={(v) => setFormData({ ...formData, endDate: v })} placeholder={t('createClassroom.endDate')} />
+                </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.startDate')}</Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="rounded-xl h-11"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.endDate')}</Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      className="rounded-xl h-11"
-                    />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3 mb-2 flex-wrap w-full">
+                  <Label
+                    htmlFor="courseDescription"
+                    className={cn('text-body font-medium mb-0', isRTL ? 'text-right' : 'text-left')}
+                  >
+                    {t('createClassroom.courseDescription')}
+                  </Label>
+                  <div className={cn('flex gap-2 shrink-0', isRTL && 'flex-row-reverse')}>
+                    {originalCourseDescription !== null &&
+                      originalCourseDescription !== formData.courseDescription && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, courseDescription: originalCourseDescription }));
+                            setOriginalCourseDescription(null);
+                          }}
+                          className="rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground"
+                        >
+                          {t('common.undo')}
+                        </Button>
+                      )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRephraseCourseDescription}
+                      disabled={!formData.courseDescription.trim() || rephrasingCourseDescription}
+                      className={cn('rounded-full text-xs font-semibold', isRTL && 'flex-row-reverse')}
+                    >
+                      {rephrasingCourseDescription ? (
+                        <>
+                          <Loader2 className={cn('h-3 w-3 animate-spin', isRTL ? 'ms-1' : 'me-1')} />
+                          {t('createClassroom.rephrasing')}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className={cn('h-3 w-3', isRTL ? 'ms-1' : 'me-1')} />
+                          {t('createClassroom.rephraseButton')}
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
+                <Textarea
+                  id="courseDescription"
+                  placeholder={t('createClassroom.courseDescriptionPlaceholder')}
+                  value={formData.courseDescription}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFormData((prev) => ({ ...prev, courseDescription: v }));
+                    if (originalCourseDescription !== null && v === originalCourseDescription) {
+                      setOriginalCourseDescription(null);
+                    }
+                  }}
+                  className="min-h-[120px] rounded-xl resize-y focus-visible:ring-primary bg-muted/30"
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                  autoDirection
+                />
               </div>
 
             </div>

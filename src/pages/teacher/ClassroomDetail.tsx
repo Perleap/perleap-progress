@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatCourseDuration } from '@/lib/dateUtils';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -70,7 +71,6 @@ interface Classroom {
   subject: string;
   invite_code: string;
   course_title: string;
-  course_duration: string;
   start_date: string;
   end_date: string;
   resources: string;
@@ -241,9 +241,9 @@ const ClassroomDetail = () => {
               {t('classroomDetail.overview.title')}
             </h2>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-6">
               {/* Invite Code Card */}
-              <Card className="md:col-span-2 lg:col-span-3 rounded-xl border-none shadow-sm bg-muted/30 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+              <Card className="w-full rounded-xl border-none shadow-sm bg-muted/30 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
                 <CardHeader className="pb-2">
                   <CardTitle className={`text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
                     {t('classroomDetail.inviteCode')}
@@ -274,81 +274,100 @@ const ClassroomDetail = () => {
                 </CardContent>
               </Card>
 
-              {/* Course Info */}
-              {classroom.course_title && (
-                <Card className="rounded-xl border-none shadow-sm bg-card ring-1 ring-border" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <div className="p-2 bg-muted/50 rounded-xl">
-                        <BookOpen className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      {t('classroomDetail.overview.courseInfo')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div>
-                      <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        {t('classroomDetail.overview.courseTitle')}
-                      </h3>
-                      <p className={`font-medium text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>{classroom.course_title}</p>
-                    </div>
-
-                    {classroom.course_duration && (
-                      <div>
-                        <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {t('classroomDetail.overview.duration')}
-                        </h3>
-                        <p className={`font-medium text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>{classroom.course_duration}</p>
-                      </div>
-                    )}
-
-                    {(classroom.start_date || classroom.end_date) && (
-                      <div>
-                        <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {t('classroomDetail.overview.courseDates')}
-                        </h3>
-                        <div className={`text-foreground/80 space-y-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {classroom.start_date && (
-                            <div className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                              <span className="text-sm">{t('common.start')}: {new Date(classroom.start_date).toLocaleDateString()}</span>
-                            </div>
-                          )}
-                          {classroom.end_date && (
-                            <div className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                              <span className="text-sm">{t('common.end')}: {new Date(classroom.end_date).toLocaleDateString()}</span>
-                            </div>
-                          )}
+              {/* Course info + About (course description): side-by-side on large screens, stacked on small; rows grow with content */}
+              {(classroom.course_title || classroom.resources) && (
+                <div
+                  className={`flex flex-col gap-6 min-w-0 ${
+                    classroom.course_title && classroom.resources ? 'lg:flex-row lg:items-start' : ''
+                  }`}
+                >
+                  {classroom.course_title && (
+                    <Card
+                      className={`min-w-0 h-fit rounded-xl border-none shadow-sm bg-card ring-1 ring-border ${
+                        classroom.resources ? 'lg:flex-1' : 'w-full'
+                      }`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <div className="p-2 bg-muted/50 rounded-xl">
+                            <BookOpen className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          {t('classroomDetail.overview.courseInfo')}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-5">
+                        <div>
+                          <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {t('classroomDetail.overview.courseTitle')}
+                          </h3>
+                          <p className={`font-medium text-foreground break-words ${isRTL ? 'text-right' : 'text-left'}`}>{classroom.course_title}</p>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
 
-              {/* Resources */}
-              {classroom.resources && (
-                <Card className="md:col-span-2 lg:col-span-2 rounded-xl border-none shadow-sm bg-card ring-1 ring-border" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <div className="p-2 bg-muted/50 rounded-xl">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      {t('classroomDetail.overview.resources')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className={`text-foreground/80 whitespace-pre-wrap leading-relaxed bg-muted/30 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
-                      {classroom.resources}
-                    </p>
-                  </CardContent>
-                </Card>
+                        {formatCourseDuration(classroom.start_date, classroom.end_date) && (
+                          <div>
+                            <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                              {t('classroomDetail.overview.duration')}
+                            </h3>
+                            <p className={`font-medium text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>{formatCourseDuration(classroom.start_date, classroom.end_date)}</p>
+                          </div>
+                        )}
+
+                        {(classroom.start_date || classroom.end_date) && (
+                          <div>
+                            <h3 className={`text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                              {t('classroomDetail.overview.courseDates')}
+                            </h3>
+                            <div className={`text-foreground/80 space-y-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                              {classroom.start_date && (
+                                <div className="flex items-center gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                                  <span className="text-sm">{t('common.start')}: {new Date(classroom.start_date).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                              {classroom.end_date && (
+                                <div className="flex items-center gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                                  <span className="text-sm">{t('common.end')}: {new Date(classroom.end_date).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {classroom.resources && (
+                    <Card
+                      className={`min-w-0 h-fit rounded-xl border-none shadow-sm bg-card ring-1 ring-border ${
+                        classroom.course_title ? 'lg:flex-1' : 'w-full'
+                      }`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <div className="p-2 bg-muted/50 rounded-xl">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          {t('classroomDetail.overview.about')}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="min-w-0">
+                        <p
+                          className={`text-foreground/80 whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+                        >
+                          {classroom.resources}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               )}
 
               {/* Learning Outcomes & Challenges */}
               {(classroom.learning_outcomes?.length || classroom.key_challenges?.length) ? (
-                <Card className="md:col-span-2 lg:col-span-3 rounded-xl border-none shadow-sm bg-card ring-1 ring-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                <Card className="w-full rounded-xl border-none shadow-sm bg-card ring-1 ring-border" dir={isRTL ? 'rtl' : 'ltr'}>
                   <CardContent className="p-6 grid md:grid-cols-2 gap-8">
                     {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
                       <div>

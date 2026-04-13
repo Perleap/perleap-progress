@@ -9,6 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Mail, Globe, BookOpen, HelpCircle, Users, MessageSquare, Lightbulb, Target, StickyNote, Heart } from 'lucide-react';
 import { useStudentProfileById } from '@/hooks/queries';
 import { useTranslation } from 'react-i18next';
+import {
+  displayPreferredLanguage,
+  displayLearningMethod,
+  displayHelpPreference,
+  displayTeacherPreference,
+  displayMentorTone,
+  displaySoloVsGroup,
+  displayMotivationFactor,
+} from '@/lib/studentPreferenceLabels';
 
 interface StudentProfileModalProps {
   studentId: string | null;
@@ -41,6 +50,7 @@ export function StudentProfileModal({ studentId, studentName, open, onClose }: S
   const { data: profile, isLoading } = useStudentProfileById(open ? studentId : null);
 
   const displayName = profile?.full_name || studentName || t('common.student', 'Student');
+  const languageBadge = displayPreferredLanguage(t, profile?.preferred_language);
   const initials = displayName
     .split(' ')
     .map((n: string) => n[0])
@@ -52,7 +62,7 @@ export function StudentProfileModal({ studentId, studentName, open, onClose }: S
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('studentProfile.title', 'Student Profile')}</DialogTitle>
+          <DialogTitle>{t('studentProfile.title')}</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
@@ -80,9 +90,9 @@ export function StudentProfileModal({ studentId, studentName, open, onClose }: S
                   </p>
                 )}
               </div>
-              {profile?.preferred_language && (
+              {languageBadge && (
                 <Badge variant="secondary" className="text-xs">
-                  {profile.preferred_language}
+                  {languageBadge}
                 </Badge>
               )}
             </div>
@@ -91,59 +101,59 @@ export function StudentProfileModal({ studentId, studentName, open, onClose }: S
             <div className="space-y-0">
               <ProfileRow
                 icon={<Target className="h-4 w-4" />}
-                label={t('studentProfile.learningGoal', 'Learning Goal')}
+                label={t('studentProfile.learningGoal')}
                 value={profile?.learning_goal}
               />
               <ProfileRow
                 icon={<Globe className="h-4 w-4" />}
-                label={t('studentProfile.preferredLanguage', 'Preferred Language')}
-                value={profile?.preferred_language}
+                label={t('studentProfile.preferredLanguage')}
+                value={displayPreferredLanguage(t, profile?.preferred_language) ?? undefined}
               />
               <ProfileRow
                 icon={<BookOpen className="h-4 w-4" />}
-                label={t('studentProfile.learningMethods', 'Learning Methods')}
-                value={profile?.learning_methods}
+                label={t('studentProfile.learningMethods')}
+                value={displayLearningMethod(t, profile?.learning_methods) ?? undefined}
               />
               <ProfileRow
                 icon={<HelpCircle className="h-4 w-4" />}
-                label={t('studentProfile.helpPreferences', 'Help Preferences')}
-                value={profile?.help_preferences}
+                label={t('studentProfile.helpPreferences')}
+                value={displayHelpPreference(t, profile?.help_preferences) ?? undefined}
               />
               <ProfileRow
                 icon={<MessageSquare className="h-4 w-4" />}
-                label={t('studentProfile.teacherPreferences', 'Teacher Preferences')}
-                value={profile?.teacher_preferences}
+                label={t('studentProfile.teacherPreferences')}
+                value={displayTeacherPreference(t, profile?.teacher_preferences) ?? undefined}
               />
               <ProfileRow
                 icon={<Lightbulb className="h-4 w-4" />}
-                label={t('studentProfile.mentorTone', 'Mentor Tone')}
-                value={profile?.mentor_tone_ref}
+                label={t('studentProfile.mentorToneSection')}
+                value={displayMentorTone(t, profile?.mentor_tone_ref) ?? undefined}
               />
               <ProfileRow
                 icon={<Users className="h-4 w-4" />}
-                label={t('studentProfile.soloVsGroup', 'Solo vs Group')}
-                value={profile?.solo_vs_group}
+                label={t('studentProfile.soloVsGroup')}
+                value={displaySoloVsGroup(t, profile?.solo_vs_group) ?? undefined}
               />
               <ProfileRow
                 icon={<Heart className="h-4 w-4" />}
-                label={t('studentProfile.motivationFactors', 'Motivation Factors')}
-                value={profile?.motivation_factors}
+                label={t('studentProfile.motivationFactors')}
+                value={displayMotivationFactor(t, profile?.motivation_factors) ?? undefined}
               />
               <ProfileRow
                 icon={<StickyNote className="h-4 w-4" />}
-                label={t('studentProfile.specialNeeds', 'Special Needs')}
+                label={t('studentProfile.specialNeeds')}
                 value={profile?.special_needs}
               />
               <ProfileRow
                 icon={<StickyNote className="h-4 w-4" />}
-                label={t('studentProfile.additionalNotes', 'Additional Notes')}
+                label={t('studentProfile.additionalNotes')}
                 value={profile?.additional_notes}
               />
             </div>
 
             {!isLoading && !profile && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                {t('studentProfile.noData', 'No profile information available yet.')}
+                {t('studentProfile.noData')}
               </p>
             )}
           </div>

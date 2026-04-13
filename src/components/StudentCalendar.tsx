@@ -11,7 +11,7 @@ import {
   getActiveClassroomsForDate,
   getAssignmentsForDate,
   isDateInClassRange,
-  CALENDAR_MODIFIERS_STYLES,
+  CALENDAR_MODIFIERS_CLASSNAMES,
 } from '@/lib/calendarUtils';
 import { useStudentCalendarData } from '@/hooks/queries';
 
@@ -108,24 +108,25 @@ export function StudentCalendar({
             month={month}
             onMonthChange={setMonth}
             modifiers={modifiers}
-            modifiersStyles={CALENDAR_MODIFIERS_STYLES}
+            modifiersClassNames={{
+              ...CALENDAR_MODIFIERS_CLASSNAMES,
+              selected: "[&_button]:!bg-primary [&_button]:!text-primary-foreground [&_button]:shadow-sm [&_button]:scale-[1.3]",
+              today: "[&_button]:text-primary [&_button]:font-bold",
+            }}
             className="w-full"
             classNames={{
               month: "flex flex-col items-center w-full",
-              caption: "hidden",
+              month_caption: "hidden",
               caption_label: "hidden",
               nav: "hidden",
-              nav_button: "hidden",
-              nav_button_previous: "hidden",
-              nav_button_next: "hidden",
-              table: "border-collapse mx-auto",
-              head_row: "flex justify-center gap-1 mb-1",
-              head_cell: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
-              row: "flex mt-1 justify-center gap-1",
-              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-transparent flex items-center justify-center w-8",
-              day: "h-8 w-8 p-0 font-normal text-sm hover:bg-muted rounded-full transition-all flex items-center justify-center text-foreground",
-              day_selected: "!bg-primary !text-primary-foreground hover:!bg-primary/90 hover:!text-primary-foreground focus:!bg-primary focus:!text-primary-foreground rounded-full shadow-sm scale-90",
-              day_today: "text-primary font-bold ring-2 ring-primary/30 ring-offset-2 ring-offset-background",
+              button_previous: "hidden",
+              button_next: "hidden",
+              month_grid: "border-collapse mx-auto",
+              weekdays: "flex justify-center gap-1 mb-1",
+              weekday: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
+              week: "flex mt-1 justify-center gap-1",
+              day: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex items-center justify-center w-8 h-8",
+              day_button: "h-6 w-6 p-0 rounded-full flex items-center justify-center mx-auto",
             }}
           />
         </div>

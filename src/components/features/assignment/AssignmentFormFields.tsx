@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 
 interface AssignmentFormFieldsProps {
   formData: {
@@ -59,12 +60,11 @@ export const AssignmentFormFields = ({ formData, onChange }: AssignmentFormField
 
       <div className="space-y-2">
         <Label htmlFor="due_at">{t('createAssignment.form.dueDate')}</Label>
-        <Input
-          id="due_at"
-          type="datetime-local"
+        <DateTimePicker
           value={formData.due_at}
-          onChange={(e) => onChange('due_at', e.target.value)}
-          required
+          onChange={(v) => onChange('due_at', v)}
+          placeholder={t('datetimePicker.placeholder')}
+          className="w-full"
         />
       </div>
     </>

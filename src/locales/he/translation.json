@@ -39,7 +39,7 @@
     },
     "mission": "בפרליפ, אנו מעצימים מורים ליצור סוכני בינה מלאכותית חכמים ומותאמים אישית, שנבנו כדי לשקף את קולם בכל כיתה.",
     "features": {
-      "title": "למה PerLeap?",
+      "title": "למה Perleap?",
       "subtitle": "אנחנו משלבים בינה מלאכותית חדישה עם שיטות פדגוגיות מוכחות כדי ליצור חוויות למידה מהפכניות.",
       "heading1": "משנים את החינוך",
       "heading2": "בעזרת AI",
@@ -75,7 +75,7 @@
     },
     "cta": {
       "title": "מוכנים לשנות את הכיתה שלכם?",
-      "subtitle": "הצטרפו לאלפי מחנכים שכבר משתמשים ב-PerLeap כדי לפתוח את הפוטנציאל של התלמידים שלהם.",
+      "subtitle": "הצטרפו לאלפי מחנכים שכבר משתמשים ב-Perleap כדי לפתוח את הפוטנציאל של התלמידים שלהם.",
       "button": "התחל ניסיון חינם"
     },
     "footer": {
@@ -86,11 +86,11 @@
       "legal": "משפטי",
       "privacy": "פרטיות",
       "terms": "תנאים",
-      "copyright": "© 2024 PerLeap. כל הזכויות שמורות."
+      "copyright": "© 2024 Perleap. כל הזכויות שמורות."
     }
   },
   "auth": {
-    "welcome": "ברוכים הבאים ל-PerLeap",
+    "welcome": "ברוכים הבאים ל-Perleap",
     "tagline": "שנה את החינוך עם הוראה מבוססת AI וחוויות למידה מותאמות אישית",
     "backToHome": "חזרה לדף הבית",
     "subtitle": "היכנס לחשבון שלך או צור חשבון חדש",
@@ -133,6 +133,26 @@
     },
     "warnings": {
       "roleNotSaved": "ההרשמה הושלמה אך התפקיד דורש אימות. ייתכן שתתבקש לבחור את התפקיד שלך בכניסה הבאה."
+    }
+  },
+  "studentProfile": {
+    "title": "פרופיל תלמיד",
+    "learningGoal": "מטרת למידה",
+    "preferredLanguage": "שפה מועדפת",
+    "learningMethods": "שיטות למידה",
+    "helpPreferences": "העדפות עזרה",
+    "teacherPreferences": "העדפות מורה",
+    "mentorToneSection": "טון מנטור",
+    "soloVsGroup": "לבד מול קבוצה",
+    "motivationFactors": "גורמי מוטיבציה",
+    "specialNeeds": "צרכים מיוחדים",
+    "additionalNotes": "הערות נוספות",
+    "noData": "אין עדיין פרטי פרופיל.",
+    "mentorToneValues": {
+      "supportive": "תומך",
+      "professional": "מקצועי",
+      "friendly": "ידידותי",
+      "neutral": "נייטרלי"
     }
   },
   "studentDashboard": {
@@ -255,6 +275,8 @@
     "courseBasics": "יסודות הקורס",
     "courseTitle": "נושא ראשי או כותרת קורס",
     "courseTitlePlaceholder": "לדוגמה, מתמטיקה מתקדמת",
+    "courseDescription": "על הקורס",
+    "courseDescriptionPlaceholder": "תאר מה התלמידים ילמדו, איך הקורס מתנהל ומה לצפות…",
     "courseDuration": "משך הקורס",
     "courseDurationPlaceholder": "לדוגמה, 12 שבועות, סמסטר אחד",
     "startDate": "תאריך התחלה",
@@ -277,7 +299,7 @@
     "noFileChosen": "לא נבחר קובץ",
     "addLink": "הוסף קישור",
     "linkPlaceholder": "https://example.com/resource",
-    "learningOutcomes": "תוצאות למידה (אופציונלי)",
+    "learningOutcomes": "תוצאות למידה",
     "outcomePlaceholder": "תוצאה {{number}}",
     "keyChallenges": "אתגרים מרכזיים",
     "challengePlaceholder": "אתגר {{number}}",
@@ -391,6 +413,26 @@
     "rephraseSuccess": "הטקסט נוסח מחדש בהצלחה!",
     "rephraseError": "שגיאה בניסוח מחדש. אנא נסה שוב.",
     "aiFeedback": "משוב AI לתלמידים",
+    "courseOutlineLinkTitle": "מתווה הקורס",
+    "courseOutlineLoading": "טוען מתווה קורס…",
+    "courseOutlineNoSyllabus": "לכיתה זו אין עדיין סילבוס. פתחו את לשונית מתווה הקורס כדי ליצור סילבוס ופרקים, ואז תוכלו לקשר את המשימה לפרק.",
+    "courseOutlineNoSections": "בסילבוס אין עדיין פרקים או קטגוריות ציון. הוסיפו אותם במתווה הקורס כדי לקשר את המשימה.",
+    "syllabusModelLabel": "מודל בסילבוס",
+    "linkToSyllabusModel": "קישור למודל (אופציונלי)",
+    "metadata": {
+      "assignmentDetailsTitle": "פרטי המשימה",
+      "assignmentDetailsDescription": "הגדרת סוג המשימה, תאריך יעד וקישור אופציונלי למתווה הקורס.",
+      "releaseSettingsTitle": "הגדרות פרסום",
+      "releaseSettingsDescription": "בחרו מתי התלמידים רואים את המשימה ואיך פועל משוב ה-AI.",
+      "assignmentType": "סוג משימה",
+      "linkedModule": "מודול מקושר",
+      "linkedModuleHelper": "אופציונלי. קשרו את המשימה לפרק בסילבוס כדי שיופיע במקום הנכון בקורס.",
+      "dueDateHelper": "אופציונלי. מתי צפויה הגשה מהתלמידים.",
+      "publicationStatus": "סטטוס פרסום",
+      "publicationStatusHelper": "טיוטה מוסתרת מהתלמידים עד שתפרסמו. משימה מפורסמת נראית לכיתה.",
+      "aiFeedback": "משוב AI",
+      "aiFeedbackHelper": "כשהאפשרות פעילה, תלמידים יראו משוב שנוצר ב-AI על עבודות רלוונטיות."
+    },
     "testBuilder": {
       "title": "שאלות מבחן",
       "description": "בנה את שאלות המבחן למשימה זו",
@@ -452,6 +494,7 @@
       "duration": "משך",
       "courseDates": "תאריכי הקורס",
       "courseOutline": "מתווה הקורס",
+      "about": "אודות",
       "resources": "משאבים",
       "learningOutcomes": "תוצאות למידה",
       "keyChallenges": "אתגרים מרכזיים"
@@ -1037,7 +1080,7 @@
     "acknowledgeAll": "אשר הכל"
   },
   "onboarding": {
-    "welcome": "ברוכים הבאים ל-PerLeap",
+    "welcome": "ברוכים הבאים ל-Perleap",
     "letsGetStarted": "בואו נתחיל",
     "next": "הבא",
     "previous": "הקודם",
@@ -1324,10 +1367,10 @@
     "visionText": "A world where every learner has a dedicated AI companion that guides their growth, not just academically, but holistically—fostering critical thinking, empathy, and resilience.",
     "storyTitle": "Our Story",
     "story": {
-      "paragraph1": "PerLeap was born from a simple observation: while technology has transformed nearly every aspect of our lives, the fundamental model of the classroom has remained largely unchanged for a century.",
+      "paragraph1": "Perleap was born from a simple observation: while technology has transformed nearly every aspect of our lives, the fundamental model of the classroom has remained largely unchanged for a century.",
       "paragraph2": "Our founders, a mix of former teachers and AI researchers, saw that educators were overwhelmed with administrative tasks and struggling to provide individual attention to every student in a crowded classroom.",
       "paragraph3": "We asked ourselves: 'What if we could give every student a personal tutor and every teacher a superpower assistant?'",
-      "paragraph4": "Today, PerLeap is used by forward-thinking schools around the world to create engaging, effective, and human-centric learning environments."
+      "paragraph4": "Today, Perleap is used by forward-thinking schools around the world to create engaging, effective, and human-centric learning environments."
     },
     "valuesTitle": "Our Core Values",
     "values": {
@@ -1355,7 +1398,7 @@
     },
     "cta": {
       "title": "הצטרפו למסע שלנו",
-      "subtitle": "בין אם אתם מנהלי בתי ספר, מורים או הורים, נשמח להראות לכם כיצד PerLeap יכולה לעשות את ההבדל.",
+      "subtitle": "בין אם אתם מנהלי בתי ספר, מורים או הורים, נשמח להראות לכם כיצד Perleap יכולה לעשות את ההבדל.",
       "getStarted": "התחל עכשיו",
       "contactTeam": "צור קשר עם הצוות"
     }
@@ -1433,6 +1476,14 @@
     "titleRequired": "נא להזין כותרת",
     "syllabusCreated": "הסילבוס נוצר בהצלחה",
     "createFailed": "יצירת הסילבוס נכשלה",
+    "initialPublish": {
+      "label": "נראות בעת יצירה",
+      "draft": "שמור כטיוטה",
+      "publish": "פרסם את הסילבוס עכשיו",
+      "helper": "פרסום עלול לשלוח התראה לתלמידים הרשומים לכיתה זו.",
+      "statusDraft": "טיוטה",
+      "statusPublished": "פורסם"
+    },
     "publish": "פרסם",
     "published": "הסילבוס פורסם",
     "publishFailed": "הפרסום נכשל",
@@ -1445,11 +1496,31 @@
     "loadFailed": "טעינת הסילבוס נכשלה",
     "loadFailedDesc": "אירעה שגיאה בטעינת נתוני הסילבוס. נא לנסות שוב.",
     "retry": "נסה שוב",
+    "archive": "ארכיון",
+    "archiveConfirm": "האם אתה בטוח שברצונך לארכב את הסילבוס?",
+    "archived": "הסילבוס אורכב",
+    "archiveFailed": "הארכוב נכשל",
+    "publishedAt": "פורסם בתאריך",
+    "courseOutline": "מתווה קורס",
+    "noSyllabusYet": "אין סילבוס עדיין",
+    "noSyllabusDesc": "צור סילבוס כדי לארגן את הקורס שלך לפרקים עם תאריכים, מטרות ומשאבים.",
+    "assignmentLinked": "המטלה קושרה לפרק",
+    "linkFailed": "קישור המטלה נכשל",
+    "assignmentUnlinked": "המטלה נותקה",
+    "unlinkFailed": "הניתוק נכשל",
+    "unlinkedAssignments": "מטלות לא מקושרות",
+    "allLinked": "כל המטלות מקושרות לפרקים.",
+    "linkToSectionShort": "קשר לפרק",
+    "noSectionsToLink": "אין פרקים לקשר אליהם",
+    "linkedAssignments": "מטלות מקושרות",
+    "unlink": "נתק",
+    "noLinkedYet": "אין מטלות מקושרות לפרקים עדיין.",
     "tabs": {
       "roadmap": "מפת דרכים",
       "sections": "פרקים",
       "grading": "ציונים",
       "assignments": "מטלות",
+      "customize": "התאמה אישית",
       "settings": "הגדרות"
     },
     "settings": {
@@ -1472,8 +1543,31 @@
       "upcoming": "קרוב",
       "inProgress": "בתהליך",
       "completed": "הושלם",
+      "skipped": "דולג",
       "assignment": "מטלה",
-      "assignments": "מטלות"
+      "assignments": "מטלות",
+      "then": "הבא",
+      "progressLine": "פרק {{current}} מתוך {{total}}",
+      "progressLabel": "התקדמות בקורס",
+      "filter": {
+        "all": "הכל",
+        "assignments": "עם מטלות",
+        "resources": "עם משאבים",
+        "locked": "נעול"
+      },
+      "filterEmpty": "אין פרקים התואמים למסנן זה.",
+      "filterReset": "הצג את כל הפרקים",
+      "jumpListTitle": "קפיצה לפרק",
+      "teacherTipsTitle": "השלמת הסילבוס",
+      "teacherTipDates": "הוסיפו תאריכי התחלה וסיום בפרקים כדי שהמפת דרכים תשקף את לוח הזמנים.",
+      "teacherTipAssignments": "קשרו מטלות לפרקים כדי שהתלמידים יראו את העבודה בהקשר.",
+      "teacherTipPublish": "פרסמו את הסילבוס כשאתם מוכנים כדי להודיע לתלמידים הרשומים.",
+      "goToSections": "פתיחת לשונית פרקים",
+      "sectionN": "מס' {{n}}",
+      "today": "היום",
+      "viewDetails": "הצג פרטים",
+      "assignmentsCount": "{{count}} מטלות",
+      "resourcesCount": "{{count}} משאבים"
     },
     "sections": {
       "title": "פרקים",
@@ -1501,7 +1595,37 @@
       "addFailed": "הוספת פרק נכשלה",
       "reorderFailed": "סידור מחדש נכשל",
       "deleteConfirmTitle": "מחק פרק",
-      "deleteConfirmDesc": "האם אתה בטוח שברצונך למחוק את \"{{name}}\"? מטלות מקושרות לפרק זה ינותקו. לא ניתן לבטל פעולה זו."
+      "deleteConfirmDesc": "האם אתה בטוח שברצונך למחוק את \"{{name}}\"? מטלות מקושרות לפרק זה ינותקו. לא ניתן לבטל פעולה זו.",
+      "linkTitle": "כותרת קישור",
+      "addLink": "הוסף קישור",
+      "uploadFiles": "העלה קבצים",
+      "rewriteSuccess": "הטקסט נכתב מחדש",
+      "rewriteFailed": "כתיבה מחדש נכשלה",
+      "completionStatus": "סטטוס השלמה",
+      "statusAuto": "אוטומטי (לפי תאריכים)",
+      "statusCompleted": "הושלם",
+      "statusSkipped": "דולג",
+      "autoSchedule": "תזמון אוטומטי",
+      "daysPerSection": "ימים לכל פרק",
+      "apply": "החל",
+      "bulkScheduled": "התזמון הוחל",
+      "bulkScheduleFailed": "החלת התזמון נכשלה",
+      "content": "תוכן",
+      "contentPlaceholder": "הוסף תוכן שיעור, הנחיות, חומרים...",
+      "prerequisites": "דרישות קדם",
+      "locked": "נעול",
+      "unlockRequirements": "השלם את הפרקים הנדרשים כדי לפתוח תוכן זה.",
+      "lockSection": "נעל",
+      "unlockSection": "פתח",
+      "manualLock": "נעילת פרק",
+      "linkedAssignments": "מטלות",
+      "linkAssignment": "קשר",
+      "unlinkAssignment": "נתק",
+      "linkFailed": "קישור המטלה נכשל",
+      "unlinkFailed": "הניתוק נכשל",
+      "noUnlinkedAssignments": "אין מטלות לא מקושרות",
+      "previous": "הקודם",
+      "next": "הבא"
     },
     "grading": {
       "title": "קטגוריות ציון",
@@ -1517,7 +1641,9 @@
       "addFailed": "הוספת קטגוריה נכשלה",
       "deleteConfirmTitle": "מחק קטגוריית ציון",
       "deleteConfirmDesc": "האם אתה בטוח שברצונך למחוק קטגוריית ציון זו? מטלות המשתמשות בקטגוריה זו ינוקו.",
-      "namePlaceholder": "לדוגמה: שיעורי בית, מבחנים, פרויקטים"
+      "namePlaceholder": "לדוגמה: שיעורי בית, מבחנים, פרויקטים",
+      "breakdown": "פירוט ציונים",
+      "totalNote": "סה\"כ המשקלות צריך להיות 100%"
     },
     "linking": {
       "unlinkedAssignments": "מטלות לא מקושרות",
@@ -1531,6 +1657,24 @@
       "assignmentUnlinked": "המטלה נותקה",
       "unlinkFailed": "הניתוק נכשל",
       "unlink": "נתק"
+    },
+    "resources": {
+      "title": "משאבים",
+      "addLink": "הוסף קישור",
+      "addFile": "הוסף קובץ",
+      "uploaded": "{{count}} קבצים הועלו",
+      "uploading": "מעלה...",
+      "dropzone": "גרור קבצים לכאן או לחץ להעלאה",
+      "linkTitlePlaceholder": "כותרת הקישור",
+      "linkFieldsRequired": "כותרת וכתובת URL נדרשים",
+      "linkAdded": "הקישור נוסף",
+      "linkFailed": "הוספת הקישור נכשלה",
+      "deleted": "המשאב נמחק",
+      "deleteFailed": "מחיקת המשאב נכשלה",
+      "add": "הוסף",
+      "externalLink": "קישור חיצוני",
+      "open": "פתח",
+      "download": "הורד"
     },
     "syllabusSection": "פרק בסילבוס",
     "linkToSection": "קשר לפרק (אופציונלי)",
@@ -1575,14 +1719,17 @@
       "skipped": "דולג",
       "canAddLater": "ניתן להוסיף סילבוס מאוחר יותר מלשונית מתווה הקורס.",
       "noSectionsAdded": "לא נוספו פרקים. ניתן להוסיף מאוחר יותר.",
-      "noCategoriesDefined": "לא הוגדרו קטגוריות ציון. ניתן להוסיף מאוחר יותר."
+      "noCategoriesDefined": "לא הוגדרו קטגוריות ציון. ניתן להוסיף מאוחר יותר.",
+      "prereqHint": "תלמידים חייבים להשלים את הפרקים המסומנים לפני שפרק זה ייפתח.",
+      "reviewAssignmentHint": "לאחר יצירת הכיתה, קשרו מטלות לפרקים מלשונית מתווה הקורס."
     },
     "detail": {
       "description": "תיאור",
       "objectives": "מטרות",
       "resources": "משאבים",
       "notes": "הערות",
-      "closeDetails": "סגור פרטים"
+      "closeDetails": "סגור פרטים",
+      "linkedAssignments": "מטלות מקושרות"
     },
     "structureDesc": {
       "weeks": "ארגון לפי שבועות",
@@ -1597,6 +1744,94 @@
       "defined": "{{count}} הוגדרו",
       "categories": "{{count}} קטגוריות"
     },
+    "customization": {
+      "title": "התאמה אישית",
+      "accentColor": "צבע מדגיש",
+      "sectionLabel": "תווית פרק",
+      "sectionLabelDesc": "שנה את התווית ברירת המחדל (לדוגמה: שבוע, יחידה, מודול) לתווית משלך.",
+      "sectionLabelPreview": "תצוגה מקדימה",
+      "bannerImage": "תמונת באנר",
+      "bannerDesc": "הוסף כתובת URL של תמונת באנר להצגה בראש הסילבוס.",
+      "preview": "תצוגה מקדימה",
+      "save": "שמור",
+      "saved": "ההתאמה נשמרה",
+      "saveFailed": "שמירת ההתאמה נכשלה",
+      "reset": "איפוס"
+    },
+    "policies": {
+      "title": "מדיניות",
+      "grading": "מדיניות ציונים",
+      "attendance": "מדיניות נוכחות",
+      "lateWork": "מדיניות הגשה מאוחרת",
+      "communication": "מדיניות תקשורת",
+      "academicIntegrity": "יושרה אקדמית",
+      "participation": "השתתפות",
+      "extraCredit": "ציון נוסף",
+      "customPolicy": "מדיניות מותאמת",
+      "addPolicy": "הוסף מדיניות",
+      "addPolicyDesc": "בחר סוג מדיניות להוספה או צור מדיניות מותאמת.",
+      "noPolicies": "לא נוספו מדיניות עדיין.",
+      "filled": "מלא",
+      "policyName": "שם המדיניות",
+      "contentPlaceholder": "תאר מדיניות זו...",
+      "remove": "הסר",
+      "gradingCategoriesOrphan": "קטגוריות ציון מוגדרות אך אין מדיניות ציונים. הוסף מדיניות ציונים כדי לקבץ אותן."
+    },
+    "notifications": {
+      "publishedTitle": "סילבוס פורסם",
+      "publishedMessage": "הסילבוס פורסם וכעת גלוי לתלמידים.",
+      "updatedTitle": "סילבוס עודכן",
+      "updatedMessage": "הסילבוס עודכן עם שינויים חדשים."
+    },
+    "pdfExport": {
+      "button": "ייצוא PDF",
+      "generatedOn": "נוצר בתאריך"
+    },
+    "changelog": {
+      "title": "יומן שינויים",
+      "noEntries": "אין שינויים שנרשמו עדיין.",
+      "publishedSyllabus": "סילבוס פורסם",
+      "republishedSyllabus": "סילבוס פורסם מחדש"
+    },
+    "comments": {
+      "show": "הצג תגובות",
+      "hide": "הסתר תגובות",
+      "noComments": "אין תגובות עדיין.",
+      "placeholder": "כתוב תגובה...",
+      "reply": "הגב",
+      "replyingTo": "מגיב ל"
+    },
+    "progress": {
+      "myProgress": "ההתקדמות שלי",
+      "notStarted": "לא התחיל",
+      "not_started": "לא התחיל",
+      "inProgress": "בתהליך",
+      "in_progress": "בתהליך",
+      "reviewed": "נסקר",
+      "completed": "הושלם",
+      "autoProgress": "התקדמות אוטומטית",
+      "assignmentProgress": "התקדמות מטלות"
+    },
+    "releaseMode": {
+      "label": "מצב שחרור",
+      "all_at_once": "הכל בבת אחת",
+      "all_at_onceDesc": "כל הפרקים נראים מיד",
+      "sequential": "רציף",
+      "sequentialDesc": "פרקים נפתחים בזה אחר זה לאחר השלמה",
+      "date_based": "לפי תאריך",
+      "date_basedDesc": "פרקים נפתחים כשתאריך ההתחלה מגיע",
+      "manual": "ידני",
+      "manualDesc": "המורה נועל/פותח כל פרק",
+      "prerequisites": "דרישות קדם",
+      "prerequisitesDesc": "המורה מגדיר אילו פרקים צריך להשלים קודם"
+    },
     "newCategory": "קטגוריה חדשה"
+  },
+  "datetimePicker": {
+    "placeholder": "בחרו תאריך ושעה",
+    "clear": "נקה",
+    "today": "היום",
+    "time": "שעה",
+    "apply": "החלה"
   }
 }

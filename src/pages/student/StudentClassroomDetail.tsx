@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,18 +15,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BookOpen, Calendar, FileText, Clock, CheckCircle2, AlertCircle, Sparkles, Info, Users, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCourseDuration } from '@/lib/dateUtils';
 import { ClassroomLayout } from '@/components/layouts';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
-import { useClassroom, useClassroomAssignments, useTeacherProfile, useSyllabus } from '@/hooks/queries';
+import { useClassroom, useClassroomAssignments, useTeacherProfile, useSyllabus, useStudentProgress } from '@/hooks/queries';
 import { SyllabusRoadmap } from '@/components/features/syllabus/SyllabusRoadmap';
+import { StudentPoliciesView } from '@/components/features/syllabus/StudentPoliciesView';
+import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
+import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
 import { Loader2 } from 'lucide-react';
+import type { StudentProgressStatus } from '@/types/syllabus';
 
 interface Classroom {
   id: string;
   name: string;
   subject: string;
   course_title: string;
-  course_duration: string;
   start_date: string;
   end_date: string;
   resources: string;
@@ -56,10 +60,62 @@ const StudentClassroomDetail = () => {
   const teacherId = rawClassroom?.teacher_id;
   const { data: teacher } = useTeacherProfile(teacherId);
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(id);
+  const { data: studentProgressData } = useStudentProgress(
+    syllabus?.id,
+    user?.id
+  );
+
+  const studentProgressMap = useMemo(() => {
+    const map: Record<string, StudentProgressStatus> = {};
+    if (studentProgressData) {
+      studentProgressData.forEach((p) => {
+        map[p.section_id] = p.status;
+      });
+    }
+    return map;
+  }, [studentProgressData]);
+
+  const linkedAssignmentsMap = useMemo(() => {
+    const map: Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>> = {};
+    (rawAssignments as any[]).forEach((a: any) => {
+      if (a.syllabus_section_id) {
+        if (!map[a.syllabus_section_id]) map[a.syllabus_section_id] = [];
+        map[a.syllabus_section_id].push({ id: a.id, title: a.title, type: a.type, due_at: a.due_at });
+      }
+    });
+    return map;
+  }, [rawAssignments]);
 
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
   const [assignmentsSubTab, setAssignmentsSubTab] = useState<'active' | 'finished'>('active');
   const [activeSection, setActiveSection] = useState('overview');
+  const [openSectionId, setOpenSectionId] = useState<string | null>(null);
+  const [sectionVisitStack, setSectionVisitStack] = useState<string[]>([]);
+  const openSectionIdRef = useRef<string | null>(null);
+
+  const goToSection = useCallback((id: string) => {
+    const from = openSectionIdRef.current;
+    if (from !== null && from !== id) {
+      setSectionVisitStack((stack) => [...stack, from]);
+    }
+    openSectionIdRef.current = id;
+    setOpenSectionId(id);
+  }, []);
+
+  const handleSectionBack = useCallback(() => {
+    setSectionVisitStack((stack) => {
+      if (stack.length === 0) {
+        openSectionIdRef.current = null;
+        setOpenSectionId(null);
+        return stack;
+      }
+      const next = [...stack];
+      const prevId = next.pop()!;
+      openSectionIdRef.current = prevId;
+      setOpenSectionId(prevId);
+      return next;
+    });
+  }, []);
   
   // GSAP stagger animation for assignments
   // Only animate on section/tab changes, not data length changes to prevent forced reflows
@@ -145,9 +201,13 @@ const StudentClassroomDetail = () => {
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
                   {classroom.resources && (
-                    <div>
-                      <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t('studentClassroom.resources')}</h3>
-                      <div className={`bg-muted/30 p-4 rounded-xl text-foreground/80 whitespace-pre-wrap leading-relaxed border border-border/50 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className="min-w-0">
+                      <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        {t('classroomDetail.overview.about')}
+                      </h3>
+                      <div
+                        className={`text-foreground/80 whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+                      >
                         {classroom.resources}
                       </div>
                     </div>
@@ -197,12 +257,12 @@ const StudentClassroomDetail = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-4">
-                    {classroom.course_duration && (
+                    {formatCourseDuration(classroom.start_date, classroom.end_date) && (
                       <div className="flex items-start gap-3">
                         <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div>
                           <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">{t('studentClassroom.duration')}</p>
-                          <p className="text-sm font-medium text-foreground">{classroom.course_duration}</p>
+                          <p className="text-sm font-medium text-foreground">{formatCourseDuration(classroom.start_date, classroom.end_date)}</p>
                         </div>
                       </div>
                     )}
@@ -282,30 +342,64 @@ const StudentClassroomDetail = () => {
 
         {/* Course Outline Section (Student — read-only) */}
         {activeSection === 'outline' && hasPublishedSyllabus && (
-          <div className="space-y-6">
-            <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-              {t('syllabus.courseOutline')}
-            </h2>
-            {syllabus.summary && (
-              <Card className="rounded-xl border-border shadow-sm">
-                <CardContent className="p-4">
-                  <p className={`text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>{syllabus.summary}</p>
-                </CardContent>
-              </Card>
-            )}
-            {syllabusLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <SyllabusRoadmap
-                sections={syllabus.sections}
-                assignmentCounts={assignmentCounts}
-                classroomId={id!}
-                mode="student"
+          openSectionId ? (
+            <SectionContentPage
+              sectionId={openSectionId}
+              sections={syllabus.sections}
+              sectionResources={syllabus.section_resources || {}}
+              linkedAssignmentsMap={linkedAssignmentsMap}
+              syllabusId={syllabus.id}
+              releaseMode={syllabus.release_mode || 'all_at_once'}
+              studentProgressMap={studentProgressMap}
+              isRTL={isRTL}
+              onBack={handleSectionBack}
+              onNavigateSection={goToSection}
+            />
+          ) : (
+            <div className="space-y-6">
+              <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('syllabus.courseOutline')}
+              </h2>
+              {syllabus.summary && (
+                <Card className="rounded-xl border-border shadow-sm">
+                  <CardContent className="p-4">
+                    <p className={`text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>{syllabus.summary}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <StudentPoliciesView
+                policies={syllabus.policies ?? []}
+                isRTL={isRTL}
               />
-            )}
-          </div>
+
+              <GradingBreakdownView
+                categories={syllabus.grading_categories}
+                isRTL={isRTL}
+              />
+
+              {syllabusLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <SyllabusRoadmap
+                  sections={syllabus.sections}
+                  assignmentCounts={assignmentCounts}
+                  sectionResources={syllabus.section_resources}
+                  classroomId={id!}
+                  mode="student"
+                  isRTL={isRTL}
+                  syllabusId={syllabus.id}
+                  structureType={syllabus.structure_type}
+                  releaseMode={syllabus.release_mode || 'all_at_once'}
+                  studentProgressMap={studentProgressMap}
+                  linkedAssignmentsMap={linkedAssignmentsMap}
+                  onSectionSelect={(section) => goToSection(section.id)}
+                />
+              )}
+            </div>
+          )
         )}
 
         {/* Assignments Section */}

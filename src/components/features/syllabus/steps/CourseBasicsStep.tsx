@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,11 +14,13 @@ import {
   Plus,
   Trash2,
   BookOpen,
-  Calendar,
   Target,
   FileText,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
+import { cn } from '@/lib/utils';
 import type { WizardData } from '../CreateClassroomWizard';
 import type { Domain, CourseMaterial } from '@/types/models';
 
@@ -34,6 +37,8 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
   const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
+  const [originalCourseDescription, setOriginalCourseDescription] = useState<string | null>(null);
+  const [rephrasingCourseDescription, setRephrasingCourseDescription] = useState(false);
 
   // Domain helpers
   const addDomain = () => onChange({ domains: [...data.domains, { name: '', components: [''] }] });
@@ -120,6 +125,33 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
 
   const removeMaterial = (index: number) => onChange({ materials: data.materials.filter((_, i) => i !== index) });
 
+  const handleRephraseCourseDescription = async () => {
+    if (!data.courseDescription.trim()) {
+      toast.error(t('createClassroom.rephraseError'));
+      return;
+    }
+    setRephrasingCourseDescription(true);
+    setOriginalCourseDescription(data.courseDescription);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('rephrase-text', {
+        body: {
+          text: data.courseDescription,
+          language: isRTL ? 'he' : 'en',
+        },
+      });
+      if (error) throw error;
+      if (result?.rephrasedText) {
+        onChange({ courseDescription: result.rephrasedText });
+        toast.success(t('createClassroom.rephraseSuccess'));
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(t('createClassroom.rephraseError'));
+    } finally {
+      setRephrasingCourseDescription(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Basic Info */}
@@ -146,37 +178,87 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="courseDuration" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-              {t('createClassroom.courseDuration', 'Duration')}
+            <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('createClassroom.startDate', 'Start Date')}
             </Label>
-            <div className="relative">
-              <Input
-                id="courseDuration"
-                placeholder={t('createClassroom.courseDurationPlaceholder', 'e.g. 16 weeks')}
-                value={data.courseDuration}
-                onChange={(e) => onChange({ courseDuration: e.target.value })}
-                className="rounded-xl h-11 ps-10"
-                autoDirection
-              />
-              <Calendar className="absolute start-3 top-3 h-5 w-5 text-muted-foreground" />
+            <DatePicker value={data.startDate} onChange={(v) => onChange({ startDate: v })} placeholder={t('createClassroom.startDate', 'Start Date')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('createClassroom.endDate', 'End Date')}
+            </Label>
+            <DatePicker value={data.endDate} onChange={(v) => onChange({ endDate: v })} placeholder={t('createClassroom.endDate', 'End Date')} />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap w-full">
+            <Label
+              htmlFor="courseDescription"
+              className={cn('text-body font-medium mb-0', isRTL ? 'text-right' : 'text-left')}
+            >
+              {t('createClassroom.courseDescription', 'About the course')}
+            </Label>
+            <div className={cn('flex gap-2 shrink-0', isRTL && 'flex-row-reverse')}>
+              {originalCourseDescription !== null &&
+                originalCourseDescription !== data.courseDescription && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onChange({ courseDescription: originalCourseDescription });
+                      setOriginalCourseDescription(null);
+                    }}
+                    className="rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    {t('common.undo')}
+                  </Button>
+                )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRephraseCourseDescription}
+                disabled={!data.courseDescription.trim() || rephrasingCourseDescription}
+                className={cn('rounded-full text-xs font-semibold', isRTL && 'flex-row-reverse')}
+              >
+                {rephrasingCourseDescription ? (
+                  <>
+                    <Loader2 className={cn('h-3 w-3 animate-spin', isRTL ? 'ms-1' : 'me-1')} />
+                    {t('createClassroom.rephrasing')}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className={cn('h-3 w-3', isRTL ? 'ms-1' : 'me-1')} />
+                    {t('createClassroom.rephraseButton')}
+                  </>
+                )}
+              </Button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t('createClassroom.startDate', 'Start Date')}
-              </Label>
-              <Input id="startDate" type="date" value={data.startDate} onChange={(e) => onChange({ startDate: e.target.value })} className="rounded-xl h-11" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t('createClassroom.endDate', 'End Date')}
-              </Label>
-              <Input id="endDate" type="date" value={data.endDate} onChange={(e) => onChange({ endDate: e.target.value })} className="rounded-xl h-11" />
-            </div>
-          </div>
+          <Textarea
+            id="courseDescription"
+            placeholder={t(
+              'createClassroom.courseDescriptionPlaceholder',
+              'Describe what students will learn, how the course runs, and what to expect…',
+            )}
+            value={data.courseDescription}
+            onChange={(e) => {
+              onChange({ courseDescription: e.target.value });
+              if (
+                originalCourseDescription !== null &&
+                e.target.value === originalCourseDescription
+              ) {
+                setOriginalCourseDescription(null);
+              }
+            }}
+            className="min-h-[120px] rounded-xl resize-y focus-visible:ring-primary bg-muted/30"
+            dir={isRTL ? 'rtl' : 'ltr'}
+            autoDirection
+          />
         </div>
 
       </div>

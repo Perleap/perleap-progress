@@ -14,6 +14,8 @@ export type NotificationType =
   | 'student_alert_critical'
   | 'student_alert_moderate'
   | 'student_alert_low'
+  | 'syllabus_published'
+  | 'syllabus_updated'
   | 'system';
 
 export interface Notification {

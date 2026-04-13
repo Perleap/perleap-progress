@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,12 +23,16 @@ import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Calendar, Target, FileText, Plus, Trash2, Eye } from 'lucide-react';
+import { Loader2, Sparkles, X, Upload, Link as LinkIcon, BookOpen, Target, FileText, Plus, Trash2, Eye } from 'lucide-react';
 import { createBulkNotifications } from '@/lib/notificationService';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TestQuestionBuilder, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
-import { useSyllabus } from '@/hooks/queries';
+import { AssignmentCourseOutlineLinkCard } from '@/components/AssignmentCourseOutlineLinkCard';
+import { useSyllabus, syllabusKeys, assignmentKeys } from '@/hooks/queries';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface CreateAssignmentDialogProps {
   open: boolean;
@@ -49,6 +54,8 @@ interface CreateAssignmentDialogProps {
       connection: boolean;
       action: boolean;
     };
+    syllabus_section_id?: string;
+    grading_category_id?: string;
   };
   assignedStudentId?: string;
   studentName?: string;
@@ -66,6 +73,7 @@ export function CreateAssignmentDialog({
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -80,7 +88,7 @@ export function CreateAssignmentDialog({
   const [testQuestions, setTestQuestions] = useState<TestQuestionDraft[]>([]);
   const [syllabusSectionId, setSyllabusSectionId] = useState<string>('');
   const [gradingCategoryId, setGradingCategoryId] = useState<string>('');
-  const { data: syllabus } = useSyllabus(classroomId);
+  const { data: syllabus, isLoading: isSyllabusLoading } = useSyllabus(classroomId);
 
   // AI-generated assignment metadata
   const [aiMetadata, setAiMetadata] = useState<{
@@ -195,6 +203,12 @@ export function CreateAssignmentDialog({
 
     fetchData();
   }, [classroomId, open]); // Only re-fetch classroom data when ID changes or dialog opens, NOT on initialData changes
+
+  useEffect(() => {
+    if (!open) return;
+    setSyllabusSectionId(initialData?.syllabus_section_id ?? '');
+    setGradingCategoryId(initialData?.grading_category_id ?? '');
+  }, [open, classroomId, initialData?.syllabus_section_id, initialData?.grading_category_id]);
 
   // Update form data when initial data changes - only when dialog opens
   useEffect(() => {
@@ -496,6 +510,8 @@ export function CreateAssignmentDialog({
       }
 
       toast.success(t('createAssignment.success.created'));
+      await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      await queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -599,140 +615,247 @@ export function CreateAssignmentDialog({
                   autoDirection
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="type" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createAssignment.type')}
-                  </Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>
-                        {formData.type ? t(`createAssignment.typeOptions.${formData.type}`) : t('createAssignment.type')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="chatbot" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.chatbot')}</SelectItem>
-                      <SelectItem value="questions" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.questions')}</SelectItem>
-                      <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
-                      <SelectItem value="test" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.test')}</SelectItem>
-                      <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.project')}</SelectItem>
-                      <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
-                      <SelectItem value="langchain" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.langchain')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="due_at" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createAssignment.dueDate')}
-                  </Label>
-                  <div className={`relative w-fit ${isRTL ? 'ml-auto' : ''}`}>
-                    <Input
-                      id="due_at"
-                      type="datetime-local"
-                      value={formData.due_at}
-                      onChange={(e) => setFormData({ ...formData, due_at: e.target.value })}
-                      className={`rounded-xl h-11 ps-10 w-fit ${isRTL ? 'text-right' : 'text-left'}`}
-                      dir={isRTL ? 'rtl' : 'ltr'}
-                      autoDirection
-                    />
-                    <Calendar className="absolute start-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="status" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('assignments.status.label')}
-                  </Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, status: value as typeof formData.status })
-                    }
-                  >
-                    <SelectTrigger id="status" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>
-                        {formData.status ? t(`assignments.status.${formData.status}`) : t('assignments.status.label')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.draft')}</SelectItem>
-                      <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>{t('assignments.status.published')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="auto_publish_ai_feedback" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createAssignment.aiFeedback')}
-                  </Label>
-                  <Select
-                    value={formData.auto_publish_ai_feedback ? 'yes' : 'no'}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, auto_publish_ai_feedback: value === 'yes' })
-                    }
-                  >
-                    <SelectTrigger id="auto_publish_ai_feedback" className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectValue>
-                        {formData.auto_publish_ai_feedback ? t('common.yes') : t('common.no')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                      <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>{t('common.yes')}</SelectItem>
-                      <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>{t('common.no')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             </div>
 
-            {/* Syllabus Section & Grading Category Linking */}
-            {syllabus && (syllabus.sections.length > 0 || syllabus.grading_categories.length > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {syllabus.sections.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                      {t('syllabus.syllabusSection', 'Syllabus Section')}
-                    </Label>
-                    <Select value={syllabusSectionId || '_none'} onValueChange={(v) => setSyllabusSectionId(v === '_none' ? '' : v)}>
-                      <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <SelectValue placeholder={t('syllabus.linkToSection', 'Link to a section (optional)')} />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
-                        {syllabus.sections.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {syllabus.grading_categories.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                      {t('syllabus.gradingCategory', 'Grading Category')}
-                    </Label>
-                    <Select value={gradingCategoryId || '_none'} onValueChange={(v) => setGradingCategoryId(v === '_none' ? '' : v)}>
-                      <SelectTrigger className={`rounded-xl h-11 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <SelectValue placeholder={t('syllabus.selectCategory', 'Select category (optional)')} />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
-                        {syllabus.grading_categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name} ({c.weight}%)</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            )}
+            <div
+              className={cn(
+                'grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-x-6',
+                isRTL && 'lg:[direction:ltr]',
+              )}
+            >
+                <Card className="flex h-full min-h-0 min-w-0 flex-col shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <CardHeader
+                    className={cn(
+                      'space-y-1 px-6 pb-0 pt-4',
+                      isRTL && 'text-right',
+                    )}
+                  >
+                    <CardTitle className="text-heading text-base font-semibold">
+                      {t('createAssignment.metadata.assignmentDetailsTitle')}
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground text-xs leading-relaxed">
+                      {t('createAssignment.metadata.assignmentDetailsDescription')}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex min-h-0 flex-1 flex-col space-y-3 px-6 pb-4 pt-4">
+                    <div className="space-y-1.5">
+                      <div
+                        className="flex w-fit max-w-full flex-col gap-2 sm:flex-row sm:items-start sm:gap-x-2"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
+                        <div className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]">
+                          <Label
+                            htmlFor="type"
+                            className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                          >
+                            {t('createAssignment.metadata.assignmentType')}
+                          </Label>
+                          <Select
+                            value={formData.type}
+                            onValueChange={(value) => setFormData({ ...formData, type: value })}
+                          >
+                            <SelectTrigger
+                              id="type"
+                              className={cn(
+                                'h-9 w-full min-w-0 rounded-lg text-sm',
+                                isRTL ? 'text-right' : 'text-left',
+                              )}
+                              dir={isRTL ? 'rtl' : 'ltr'}
+                            >
+                              <SelectValue>
+                                {formData.type
+                                  ? t(`createAssignment.typeOptions.${formData.type}`)
+                                  : t('createAssignment.metadata.assignmentType')}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                              <SelectItem value="chatbot" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.chatbot')}</SelectItem>
+                              <SelectItem value="questions" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.questions')}</SelectItem>
+                              <SelectItem value="text_essay" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.text_essay')}</SelectItem>
+                              <SelectItem value="test" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.test')}</SelectItem>
+                              <SelectItem value="project" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.project')}</SelectItem>
+                              <SelectItem value="presentation" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.presentation')}</SelectItem>
+                              <SelectItem value="langchain" className={isRTL ? 'text-right' : 'text-left'}>{t('createAssignment.typeOptions.langchain')}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]">
+                          <Label
+                            htmlFor="due_at"
+                            className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                          >
+                            {t('createAssignment.dueDate')}
+                          </Label>
+                          <DateTimePicker
+                            value={formData.due_at}
+                            onChange={(v) => setFormData({ ...formData, due_at: v })}
+                            placeholder={t('datetimePicker.placeholder')}
+                            className={cn('h-9 w-full rounded-lg text-sm', isRTL ? 'text-right' : 'text-left')}
+                            dir={isRTL ? 'rtl' : 'ltr'}
+                          />
+                        </div>
+                      </div>
+                      <p
+                        className={cn(
+                          'max-w-[24rem] text-muted-foreground text-xs leading-snug',
+                          isRTL ? 'text-right' : 'text-left',
+                        )}
+                      >
+                        {t('createAssignment.metadata.dueDateHelper')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-0.5">
+                      <AssignmentCourseOutlineLinkCard
+                        variant="inline"
+                        className="max-w-[min(100%,25rem)]"
+                        isRTL={isRTL}
+                        syllabus={syllabus ?? undefined}
+                        syllabusLoading={isSyllabusLoading}
+                        syllabusSectionId={syllabusSectionId}
+                        onSyllabusSectionIdChange={setSyllabusSectionId}
+                        gradingCategoryId={gradingCategoryId}
+                        onGradingCategoryIdChange={setGradingCategoryId}
+                      />
+                      {(syllabus?.sections?.length ?? 0) > 0 ? (
+                        <p
+                          className={cn(
+                            'text-muted-foreground text-xs leading-relaxed',
+                            isRTL ? 'text-right' : 'text-left',
+                          )}
+                        >
+                          {t('createAssignment.metadata.linkedModuleHelper')}
+                        </p>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="flex h-full min-h-0 min-w-0 flex-col shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <CardHeader
+                    className={cn(
+                      'space-y-1 px-6 pb-0 pt-4',
+                      isRTL && 'text-right',
+                    )}
+                  >
+                    <CardTitle className="text-heading text-base font-semibold">
+                      {t('createAssignment.metadata.releaseSettingsTitle')}
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground text-xs leading-relaxed">
+                      {t('createAssignment.metadata.releaseSettingsDescription')}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex min-h-0 flex-1 flex-col space-y-3 px-6 pb-4 pt-4">
+                    <div className="space-y-1.5">
+                      <div
+                        className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
+                        <Label
+                          htmlFor="create_publication_status"
+                          className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                        >
+                          {t('createAssignment.metadata.publicationStatus')}
+                        </Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value) => {
+                            if (value === 'draft' || value === 'published') {
+                              setFormData((prev) => ({ ...prev, status: value }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger
+                            id="create_publication_status"
+                            className={cn(
+                              'h-9 w-full min-w-0 rounded-lg text-sm',
+                              isRTL ? 'text-right' : 'text-left',
+                            )}
+                            dir={isRTL ? 'rtl' : 'ltr'}
+                          >
+                            <SelectValue>
+                              {formData.status === 'draft'
+                                ? t('assignments.status.draft')
+                                : t('assignments.status.published')}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                            <SelectItem value="draft" className={isRTL ? 'text-right' : 'text-left'}>
+                              {t('assignments.status.draft')}
+                            </SelectItem>
+                            <SelectItem value="published" className={isRTL ? 'text-right' : 'text-left'}>
+                              {t('assignments.status.published')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p
+                        className={cn(
+                          'max-w-[24rem] text-muted-foreground text-xs leading-snug',
+                          isRTL ? 'text-right' : 'text-left',
+                        )}
+                      >
+                        {t('createAssignment.metadata.publicationStatusHelper')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-0.5">
+                      <div
+                        className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
+                        <Label
+                          htmlFor="create_ai_feedback_select"
+                          className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                        >
+                          {t('createAssignment.metadata.aiFeedback')}
+                        </Label>
+                        <Select
+                          value={formData.auto_publish_ai_feedback ? 'yes' : 'no'}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              auto_publish_ai_feedback: value === 'yes',
+                            }))
+                          }
+                        >
+                          <SelectTrigger
+                            id="create_ai_feedback_select"
+                            className={cn(
+                              'h-9 w-full min-w-0 rounded-lg text-sm',
+                              isRTL ? 'text-right' : 'text-left',
+                            )}
+                            dir={isRTL ? 'rtl' : 'ltr'}
+                          >
+                            <SelectValue>
+                              {formData.auto_publish_ai_feedback
+                                ? t('common.yes')
+                                : t('common.no')}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                            <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>
+                              {t('common.yes')}
+                            </SelectItem>
+                            <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>
+                              {t('common.no')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p
+                        className={cn(
+                          'text-muted-foreground text-xs leading-relaxed',
+                          isRTL ? 'text-right' : 'text-left',
+                        )}
+                      >
+                        {t('createAssignment.metadata.aiFeedbackHelper')}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+            </div>
 
             {/* Test Question Builder - shown only for test type */}
             {formData.type === 'test' && (

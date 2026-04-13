@@ -18,21 +18,44 @@ import { SyllabusSetupStep } from './steps/SyllabusSetupStep';
 import { OutlineBuilderStep } from './steps/OutlineBuilderStep';
 import { ReviewStep } from './steps/ReviewStep';
 import type { Domain, CourseMaterial } from '@/types/models';
-import type { SyllabusStructureType } from '@/types/syllabus';
+import type {
+  SyllabusStructureType,
+  SyllabusPolicy,
+  ReleaseMode,
+  CompletionStatus,
+  ProvisionBundleResourceItem,
+  SyllabusStatus,
+} from '@/types/syllabus';
+import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
+import { useProvisionSyllabusBundle } from '@/hooks/queries';
 
 // ---------------------------------------------------------------------------
 // Wizard Data Shape
 // ---------------------------------------------------------------------------
 
+export interface WizardResourceItem {
+  id: string;
+  type: 'link' | 'file';
+  title: string;
+  url: string;        // URL for links, object-URL preview for local files
+  file?: File;        // present only for local file uploads
+}
+
 export interface WizardSectionData {
   tempId: string;
   title: string;
   description: string;
+  /** Rich HTML; same field as SyllabusEditor */
+  content: string;
   objectives: string[];
   startDate: string;
   endDate: string;
-  resources: string;
+  resources: WizardResourceItem[];
   notes: string;
+  completion_status: CompletionStatus;
+  /** Other sections' tempIds when release mode is prerequisites */
+  prerequisites: string[];
+  is_locked: boolean;
 }
 
 export interface WizardGradingCategory {
@@ -44,10 +67,10 @@ export interface WizardGradingCategory {
 export interface WizardData {
   // Step 1 – Course Basics
   courseTitle: string;
-  courseDuration: string;
   startDate: string;
   endDate: string;
-  resources: string;
+  /** Free-form course overview; persisted to classrooms.resources */
+  courseDescription: string;
   learningOutcomes: string[];
   keyChallenges: string[];
   domains: Domain[];
@@ -58,11 +81,11 @@ export interface WizardData {
   syllabusTitle: string;
   syllabusSummary: string;
   structureType: SyllabusStructureType;
-  gradingPolicyText: string;
-  attendancePolicyText: string;
-  lateWorkPolicyText: string;
-  communicationPolicyText: string;
+  policies: SyllabusPolicy[];
   gradingCategories: WizardGradingCategory[];
+  release_mode: ReleaseMode;
+  /** When including a syllabus, whether to insert as draft or published (with notifications if published). */
+  syllabusInitialPublish: 'draft' | 'published';
 
   // Step 3 – Outline Builder (sections)
   sections: WizardSectionData[];
@@ -70,10 +93,9 @@ export interface WizardData {
 
 const DEFAULT_WIZARD_DATA: WizardData = {
   courseTitle: '',
-  courseDuration: '',
   startDate: '',
   endDate: '',
-  resources: '',
+  courseDescription: '',
   learningOutcomes: ['', '', ''],
   keyChallenges: ['', ''],
   domains: [],
@@ -83,11 +105,10 @@ const DEFAULT_WIZARD_DATA: WizardData = {
   syllabusTitle: '',
   syllabusSummary: '',
   structureType: 'weeks',
-  gradingPolicyText: '',
-  attendancePolicyText: '',
-  lateWorkPolicyText: '',
-  communicationPolicyText: '',
+  policies: [],
   gradingCategories: [],
+  release_mode: 'all_at_once',
+  syllabusInitialPublish: 'draft',
 
   sections: [],
 };
@@ -110,6 +131,7 @@ export const CreateClassroomWizard = ({
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { user } = useAuth();
+  const provisionBundle = useProvisionSyllabusBundle();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [wizardData, setWizardData] = useState<WizardData>({ ...DEFAULT_WIZARD_DATA });
@@ -122,9 +144,7 @@ export const CreateClassroomWizard = ({
     { id: 'review', title: t('syllabus.wizard.reviewCreate') },
   ];
 
-  const effectiveSteps = wizardData.includeSyllabus
-    ? WIZARD_STEPS
-    : [WIZARD_STEPS[0], WIZARD_STEPS[1], WIZARD_STEPS[3]];
+  const effectiveSteps = WIZARD_STEPS;
 
   const updateWizardData = useCallback((partial: Partial<WizardData>) => {
     setWizardData((prev) => ({ ...prev, ...partial }));
@@ -137,19 +157,11 @@ export const CreateClassroomWizard = ({
 
   const handleNext = () => {
     if (!canProceed()) return;
-    if (!wizardData.includeSyllabus && currentStep === 1) {
-      setCurrentStep(3);
-    } else {
-      setCurrentStep((s) => Math.min(s + 1, 3));
-    }
+    setCurrentStep((s) => Math.min(s + 1, 3));
   };
 
   const handleBack = () => {
-    if (!wizardData.includeSyllabus && currentStep === 3) {
-      setCurrentStep(1);
-    } else {
-      setCurrentStep((s) => Math.max(s - 1, 0));
-    }
+    setCurrentStep((s) => Math.max(s - 1, 0));
   };
 
   const resetWizard = () => {
@@ -178,10 +190,9 @@ export const CreateClassroomWizard = ({
           name: wizardData.courseTitle || 'New Classroom',
           subject: wizardData.courseTitle || 'General',
           course_title: wizardData.courseTitle,
-          course_duration: wizardData.courseDuration,
           start_date: wizardData.startDate || null,
           end_date: wizardData.endDate || null,
-          resources: wizardData.resources,
+          resources: wizardData.courseDescription || '',
           learning_outcomes: wizardData.learningOutcomes.filter((o) => o.trim()),
           key_challenges: wizardData.keyChallenges.filter((c) => c.trim()),
           domains: filteredDomains,
@@ -192,66 +203,68 @@ export const CreateClassroomWizard = ({
 
       if (classroomError) throw classroomError;
 
-      // 2. Create syllabus if opted in
+      // 2. Create syllabus if opted in (single service path — matches Course Outline)
       let syllabusCreated = true;
       if (wizardData.includeSyllabus) {
+        const bundleStatus: SyllabusStatus =
+          wizardData.syllabusInitialPublish === 'published' ? 'published' : 'draft';
         try {
-          const { data: syllabus, error: syllabusError } = await supabase
-            .from('syllabi' as any)
-            .insert([{
-              classroom_id: classroom.id,
-              title: wizardData.syllabusTitle || wizardData.courseTitle,
-              summary: wizardData.syllabusSummary || null,
-              structure_type: wizardData.structureType,
-              grading_policy_text: wizardData.gradingPolicyText || null,
-              attendance_policy_text: wizardData.attendancePolicyText || null,
-              late_work_policy_text: wizardData.lateWorkPolicyText || null,
-              communication_policy_text: wizardData.communicationPolicyText || null,
-              status: 'draft',
-            }] as any)
-            .select()
-            .single();
+          const linkSummaries = (items: WizardResourceItem[]) =>
+            items.filter((r) => r.type === 'link').map((r) => r.url).join('\n') || null;
 
-          if (syllabusError) throw syllabusError;
+          const sectionResourceItems: ProvisionBundleResourceItem[][] = wizardData.sections.map(
+            (s) => {
+              const row: ProvisionBundleResourceItem[] = [];
+              for (const r of s.resources) {
+                if (r.type === 'link') {
+                  row.push({ type: 'link', title: r.title || r.url, url: r.url });
+                } else if (r.type === 'file' && r.file) {
+                  row.push({ type: 'file', file: r.file, title: r.title });
+                }
+              }
+              return row;
+            },
+          );
 
-          // 3. Create sections
-          if (wizardData.sections.length > 0) {
-            const sectionRows = wizardData.sections.map((s, index) => ({
-              syllabus_id: (syllabus as any).id,
+          const provisioned = await provisionBundle.mutateAsync({
+            classroom_id: classroom.id,
+            title: wizardData.syllabusTitle || wizardData.courseTitle,
+            summary: wizardData.syllabusSummary || null,
+            structure_type: wizardData.structureType,
+            policies: wizardData.policies,
+            status: bundleStatus,
+            release_mode: wizardData.release_mode,
+            sections: wizardData.sections.map((s, index) => ({
+              tempId: s.tempId,
               title: s.title,
-              description: s.description || null,
+              description: s.description.trim() || null,
               order_index: index,
               start_date: s.startDate || null,
               end_date: s.endDate || null,
               objectives: s.objectives.filter((o) => o.trim()),
-              resources: s.resources || null,
-              notes: s.notes || null,
-            }));
-
-            const { error: sectionsError } = await supabase
-              .from('syllabus_sections' as any)
-              .insert(sectionRows as any);
-
-            if (sectionsError) throw sectionsError;
-          }
-
-          // 4. Create grading categories
-          if (wizardData.gradingCategories.length > 0) {
-            const catRows = wizardData.gradingCategories
+              resources: linkSummaries(s.resources),
+              notes: s.notes.trim() || null,
+              content: s.content.trim() ? s.content : null,
+              completion_status: s.completion_status,
+              prerequisitesTempIds:
+                wizardData.release_mode === 'prerequisites' ? s.prerequisites : [],
+              is_locked: wizardData.release_mode === 'manual' ? s.is_locked : false,
+            })),
+            gradingCategories: wizardData.gradingCategories
               .filter((c) => c.name.trim())
-              .map((c) => ({
-                syllabus_id: (syllabus as any).id,
-                name: c.name,
-                weight: c.weight,
-              }));
+              .map((c) => ({ name: c.name, weight: c.weight })),
+            sectionResourceItems,
+          });
 
-            if (catRows.length > 0) {
-              const { error: catError } = await supabase
-                .from('grading_categories' as any)
-                .insert(catRows as any);
-
-              if (catError) throw catError;
-            }
+          if (bundleStatus === 'published' && provisioned) {
+            await runSyllabusPublishedSideEffects(t, {
+              classroomId: classroom.id,
+              syllabusId: provisioned.id,
+              syllabusTitle: provisioned.title,
+              sectionsCount: wizardData.sections.length,
+              userId: user.id,
+              wasAlreadyPublished: false,
+            });
           }
         } catch (syllabusErr) {
           console.error('Syllabus creation failed:', syllabusErr);
@@ -302,11 +315,7 @@ export const CreateClassroomWizard = ({
           </h2>
           <WizardStepIndicator
             steps={effectiveSteps}
-            currentStep={
-              !wizardData.includeSyllabus && currentStep === 3
-                ? 2
-                : currentStep
-            }
+            currentStep={currentStep}
             isRTL={isRTL}
           />
         </div>
@@ -339,6 +348,7 @@ export const CreateClassroomWizard = ({
               <ReviewStep
                 data={wizardData}
                 isRTL={isRTL}
+                onChange={updateWizardData}
               />
             )}
           </div>
@@ -373,47 +383,32 @@ export const CreateClassroomWizard = ({
                 {t('syllabus.cancel')}
               </Button>
 
-              {currentStep < 3 && !(currentStep === 1 && !wizardData.includeSyllabus) ? (
+              {currentStep < 3 ? (
                 <Button
                   type="button"
                   onClick={handleNext}
                   disabled={!canProceed() || loading}
                   className="rounded-full px-8 font-bold shadow-lg shadow-primary/20 gap-2"
                 >
-                  {currentStep === 1 && !wizardData.includeSyllabus ? t('syllabus.wizard.skipToReview') : t('syllabus.wizard.next')}
+                  {t('syllabus.wizard.next')}
                   {isRTL ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                 </Button>
               ) : (
-                <>
-                  {currentStep === 1 && !wizardData.includeSyllabus && (
-                    <Button
-                      type="button"
-                      onClick={() => setCurrentStep(3)}
-                      disabled={loading}
-                      className="rounded-full px-8 font-bold shadow-lg shadow-primary/20 gap-2"
-                    >
-                      {t('syllabus.wizard.skipToReview')}
-                      {isRTL ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
-                    </Button>
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading || !wizardData.courseTitle.trim()}
+                  className="rounded-full px-10 font-bold shadow-lg shadow-primary/20"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin me-2" />
+                      {t('syllabus.creating')}
+                    </>
+                  ) : (
+                    t('syllabus.wizard.createClassroom')
                   )}
-                  {currentStep === 3 && (
-                    <Button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={loading || !wizardData.courseTitle.trim()}
-                      className="rounded-full px-10 font-bold shadow-lg shadow-primary/20"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin me-2" />
-                          {t('syllabus.creating')}
-                        </>
-                      ) : (
-                        t('syllabus.wizard.createClassroom')
-                      )}
-                    </Button>
-                  )}
-                </>
+                </Button>
               )}
             </div>
           </div>

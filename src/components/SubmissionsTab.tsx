@@ -42,6 +42,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { useEnrichedClassroomSubmissions } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -411,20 +412,10 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.dateRange')}</label>
                     <div className="flex gap-4 sm:gap-5">
                       <div className="relative flex-1 min-w-0">
-                        <Input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="rounded-xl h-10 border-border bg-muted/30 text-xs px-2 text-foreground"
-                        />
+                        <DatePicker value={startDate} onChange={setStartDate} placeholder={t('submissionsTab.from', 'From')} className="rounded-xl h-10 border-border bg-muted/30 text-xs" />
                       </div>
                       <div className="relative flex-1 min-w-0">
-                        <Input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="rounded-xl h-10 border-border bg-muted/30 text-xs px-2 text-foreground"
-                        />
+                        <DatePicker value={endDate} onChange={setEndDate} placeholder={t('submissionsTab.to', 'To')} className="rounded-xl h-10 border-border bg-muted/30 text-xs" />
                       </div>
                     </div>
                   </div>
