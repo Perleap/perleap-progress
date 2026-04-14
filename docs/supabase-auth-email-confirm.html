@@ -5,90 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Confirm your Perleap account</title>
   </head>
-  <body
-    style="
-      margin: 0;
-      padding: 0;
-      background-color: #f4f4f5;
-      font-family:
-        system-ui,
-        -apple-system,
-        Segoe UI,
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif;
-    "
-  >
-    <!--
-      Copy the inner content (or full HTML) into Supabase Dashboard:
-      Authentication → Email templates → Confirm signup.
-
-      Replace nothing in {{ .ConfirmationURL }} — Supabase substitutes the real link.
-
-      Logo: use YOUR_APP_URL + /perleap-email.png (PNG in public/). Many email clients do not show SVG in <img>.
-      Replace YOUR_APP_URL with a publicly reachable HTTPS origin (not localhost), e.g. https://app.example.com.
-    -->
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f5; padding: 32px 16px">
+  <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:32px 16px;">
       <tr>
         <td align="center">
-          <table
-            role="presentation"
-            width="100%"
-            cellspacing="0"
-            cellpadding="0"
-            style="max-width: 480px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08)"
-          >
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
             <tr>
-              <td style="padding: 28px 28px 8px; text-align: center">
+              <td style="padding:28px 28px 8px;text-align:center;">
                 <img
-                  src="https://YOUR_APP_URL/perleap-email.png"
+                  src="https://perleap.ai/perleap-email.png"
                   alt="Perleap"
                   width="56"
                   height="56"
-                  style="display: block; margin: 0 auto 12px; border-radius: 9999px"
+                  style="display:block;margin:0 auto 12px;border-radius:9999px;"
                 />
-                <p style="margin: 0; font-size: 20px; font-weight: 700; color: #111827">Perleap</p>
-                <p style="margin: 8px 0 0; font-size: 14px; color: #6b7280">Confirm your email to get started</p>
+                <p style="margin:0;font-size:20px;font-weight:700;color:#111827;">Perleap</p>
+                <p style="margin:8px 0 0;font-size:14px;color:#6b7280;">Confirm your email to get started</p>
               </td>
             </tr>
             <tr>
-              <td style="padding: 8px 28px 28px">
-                <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #374151">
+              <td style="padding:8px 28px 28px;">
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#374151;">
                   Thanks for signing up. Tap the button below to confirm your email address and activate your account.
                 </p>
-                <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px auto">
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:24px auto;">
                   <tr>
-                    <td style="border-radius: 8px; background: #111827">
+                    <td style="border-radius:8px;background:#111827;">
                       <a
                         href="{{ .ConfirmationURL }}"
-                        style="
-                          display: inline-block;
-                          padding: 12px 24px;
-                          font-size: 15px;
-                          font-weight: 600;
-                          color: #ffffff;
-                          text-decoration: none;
-                          border-radius: 8px;
-                        "
-                        >Confirm email</a
+                        style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;"
                       >
+                        Confirm email
+                      </a>
                     </td>
                   </tr>
                 </table>
-                <p style="margin: 24px 0 0; font-size: 13px; line-height: 1.5; color: #9ca3af">
+                <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#9ca3af;">
                   If the button does not work,
-                  <a
-                    href="{{ .ConfirmationURL }}"
-                    style="color: #193a96; font-weight: 600; text-decoration: underline"
-                    >open this confirmation link</a
-                  >.
+                  <a href="{{ .ConfirmationURL }}" style="color:#193a96;font-weight:600;text-decoration:underline;">
+                    open this confirmation link
+                  </a>.
                 </p>
               </td>
             </tr>
             <tr>
-              <td style="padding: 16px 28px 24px; border-top: 1px solid #e5e7eb; text-align: center">
-                <p style="margin: 0; font-size: 12px; color: #9ca3af">You received this because someone signed up for Perleap with this address.</p>
+              <td style="padding:16px 28px 24px;border-top:1px solid #e5e7eb;text-align:center;">
+                <p style="margin:0;font-size:12px;color:#9ca3af;">
+                  You received this because someone signed up for Perleap with this address.
+                </p>
               </td>
             </tr>
           </table>
