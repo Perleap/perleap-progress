@@ -9,8 +9,11 @@ import { FlowChart } from "@/components/landing/FlowChart";
 import { Customers } from "@/components/landing/Customers";
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import {
+  isAccountJustDeletedSessionFlagSet,
+  clearAccountJustDeletedSessionFlag,
+} from '@/utils/accountDeletionRedirect';
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -39,10 +42,14 @@ const Landing = () => {
       // Don't redirect if we're already handling a callback
       if (isOAuthCallback) return;
 
-      // Don't redirect if we just deleted the account
-      if (searchParams.get('deleted') === 'true') {
-        console.log('ℹ️ Landing: Account deletion detected, staying on landing page');
-        return;
+      // Don't redirect while auth settles after account deletion (clean URL; flag cleared when safe)
+      if (isAccountJustDeletedSessionFlagSet()) {
+        if (!authLoading && !user) {
+          clearAccountJustDeletedSessionFlag();
+        } else {
+          console.log('ℹ️ Landing: Account deletion in progress, staying on landing page');
+          return;
+        }
       }
 
       // Wait for auth loading and profile loading

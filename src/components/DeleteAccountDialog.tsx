@@ -17,6 +17,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { setAccountJustDeletedSessionFlag } from '@/utils/accountDeletionRedirect';
 
 function mapDeleteAccountErrorMessage(raw: string, t: TFunction): string {
   const lower = raw.toLowerCase();
@@ -97,9 +98,9 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
       // Close the dialog immediately to provide instant feedback
       onOpenChange(false);
 
-      // Sign out and redirect to home page with a 'deleted' flag
-      // The signOut function already handles clearing storage and preserving language preference
-      await signOut('/?deleted=true');
+      // Session flag survives signOut's sessionStorage cleanup; Landing uses it to avoid a redirect race
+      setAccountJustDeletedSessionFlag();
+      await signOut('/');
     } catch (error: unknown) {
       console.error('Error deleting account:', error);
       const raw = error instanceof Error ? error.message : '';

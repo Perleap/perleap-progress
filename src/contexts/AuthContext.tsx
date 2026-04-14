@@ -13,6 +13,7 @@ import {
   incrementRecoveryAttempt,
 } from '@/utils/roleRecovery';
 import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
+import { ACCOUNT_JUST_DELETED_SESSION_KEY } from '@/utils/accountDeletionRedirect';
 
 interface UserProfile {
   full_name: string;
@@ -401,7 +402,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTimeout(() => {
         clearAllPersistedForms();
         clearAllSignupState();
-        sessionStorage.clear();
+        const sessionKeysToKeep = [ACCOUNT_JUST_DELETED_SESSION_KEY];
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key && !sessionKeysToKeep.includes(key)) {
+            sessionStorage.removeItem(key);
+          }
+        }
         queryClient.clear();
 
         const keysToKeep = ['language_preference'];
