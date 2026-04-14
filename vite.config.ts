@@ -8,13 +8,18 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    fs: {
-      // Allow serving files from node_modules (fallback for development)
-      // Note: KaTeX fonts are now copied to public/fonts/katex/ for production compatibility
-      allow: [
-        '..',
-        'C:/Users/dor24',
+    watch: {
+      // OneDrive / tooling can touch many paths; ignoring churn reduces HMR storms and console spam.
+      ignored: [
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/debug-*.log",
+        "**/~$*",
       ],
+    },
+    fs: {
+      // Allow importing from repo parent only — never the whole user profile (causes massive watch noise).
+      allow: [path.resolve(__dirname, "..")],
     },
   },
   plugins: [react(), mode === "development" && ghostmark()],

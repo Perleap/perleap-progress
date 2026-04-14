@@ -200,6 +200,15 @@ const Auth = () => {
 
       if (error) throw error;
 
+      // With email confirmation enabled, Supabase may return no error and a user whose
+      // identities array is empty when the email is already registered (anti-enumeration).
+      const identities = data.user?.identities ?? [];
+      if (data.user && identities.length === 0) {
+        clearAllSignupState();
+        toast.error(t('auth.errors.emailAlreadyExists'));
+        return;
+      }
+
       // Handle signup response
       if (data.user) {
         console.log('✅ Signup successful, role metadata should be set:', role);

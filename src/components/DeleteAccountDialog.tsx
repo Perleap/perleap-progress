@@ -100,7 +100,8 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
 
       // Session flag survives signOut's sessionStorage cleanup; Landing uses it to avoid a redirect race
       setAccountJustDeletedSessionFlag();
-      await signOut('/');
+      // Server-side delete already removed the user; skip GoTrue /logout POST (403 in DevTools).
+      await signOut('/', { skipSupabaseRemoteSignOut: true });
     } catch (error: unknown) {
       console.error('Error deleting account:', error);
       const raw = error instanceof Error ? error.message : '';

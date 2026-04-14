@@ -5,7 +5,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { ReactNode } from 'react';
 import { profileKeys } from '@/hooks/queries';
 import { clearAllPersistedForms } from '@/hooks/usePersistedState';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, PERLEAP_AUTH_STORAGE_KEY } from '@/integrations/supabase/client';
 import { getTeacherProfile, getStudentProfile } from '@/services/profileService';
 import {
   shouldAttemptRecovery,
@@ -25,7 +25,10 @@ interface AuthContextType {
   session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
-  signOut: (redirectPath?: string) => Promise<void>;
+  signOut: (
+    redirectPath?: string,
+    options?: { scope?: 'global' | 'local'; skipSupabaseRemoteSignOut?: boolean }
+  ) => Promise<void>;
   refreshProfile: (force?: boolean) => Promise<void>;
   hasProfile: boolean | null;
   isProfileLoading: boolean;
@@ -318,84 +321,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signOut = async (redirectPath: string = '/') => {
-    // #region agent log
-    {
-      const { data: preData, error: preErr } = await supabase.auth.getSession();
-      const s = preData?.session;
-      const exp = s?.expires_at;
-      const nowSec = Math.floor(Date.now() / 1000);
-      let storageEntryLen = 0;
-      try {
-        storageEntryLen = localStorage.getItem('perleap-auth')?.length ?? 0;
-      } catch {
-        storageEntryLen = -1;
-      }
-      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '40bcef' },
-        body: JSON.stringify({
-          sessionId: '40bcef',
-          runId: 'pre-fix',
-          hypothesisId: 'H1-H2-H5',
-          location: 'AuthContext.tsx:signOut:pre',
-          message: 'state before signOut',
-          data: {
-            getSessionErr: preErr?.message ?? null,
-            hasSession: !!s,
-            hasRefreshToken: !!s?.refresh_token,
-            accessTokenLen: s?.access_token?.length ?? 0,
-            refreshTokenLen: s?.refresh_token?.length ?? 0,
-            expiresInSec: exp != null ? exp - nowSec : null,
-            storageEntryLen,
-            reactStateHasUser: !!user,
-            reactStateHasSession: !!session,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
+  const signOut = async (
+    redirectPath: string = '/',
+    options?: { scope?: 'global' | 'local'; skipSupabaseRemoteSignOut?: boolean }
+  ) => {
+    const signOutScope = options?.scope ?? 'global';
+    const skipRemote = options?.skipSupabaseRemoteSignOut === true;
+
     try {
-      await supabase.auth.signOut();
-      // #region agent log
-      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '40bcef' },
-        body: JSON.stringify({
-          sessionId: '40bcef',
-          runId: 'pre-fix',
-          hypothesisId: 'H3',
-          location: 'AuthContext.tsx:signOut:ok',
-          message: 'signOut() resolved without throw',
-          data: {},
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-    } catch (error) {
-      // #region agent log
-      {
-        const err = error as { name?: string; message?: string; status?: number };
-        fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '40bcef' },
-          body: JSON.stringify({
-            sessionId: '40bcef',
-            runId: 'pre-fix',
-            hypothesisId: 'H3',
-            location: 'AuthContext.tsx:signOut:catch',
-            message: 'signOut() threw',
-            data: {
-              name: err?.name ?? null,
-              message: err?.message ?? String(error),
-              status: err?.status ?? null,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
+      if (skipRemote) {
+        // Server already removed the user; GoTrue still POSTs /logout for any scope → browser 403 noise.
+        try {
+          await supabase.auth.stopAutoRefresh();
+        } catch {
+          /* ignore */
+        }
+        try {
+          localStorage.removeItem(PERLEAP_AUTH_STORAGE_KEY);
+          localStorage.removeItem(`${PERLEAP_AUTH_STORAGE_KEY}-code-verifier`);
+          localStorage.removeItem(`${PERLEAP_AUTH_STORAGE_KEY}-user`);
+        } catch {
+          /* ignore */
+        }
+        setUser(null);
+        setSession(null);
+      } else {
+        await supabase.auth.signOut(signOutScope === 'local' ? { scope: 'local' } : undefined);
       }
-      // #endregion
+    } catch (error) {
       console.error('Sign out failed, cleaning up locally:', error);
     } finally {
       // Perform heavy cleanup in the next tick to prevent blocking the UI
@@ -418,7 +371,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.removeItem(key);
           }
         });
-        navigate(redirectPath);
+        if (skipRemote && typeof window !== 'undefined') {
+          if (redirectPath.startsWith('http://') || redirectPath.startsWith('https://')) {
+            window.location.assign(redirectPath);
+          } else {
+            const path = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+            window.location.assign(`${window.location.origin}${path}`);
+          }
+        } else {
+          navigate(redirectPath);
+        }
       }, 0);
     }
   };
