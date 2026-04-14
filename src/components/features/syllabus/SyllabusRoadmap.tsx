@@ -15,6 +15,7 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { useTranslation } from 'react-i18next';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -98,6 +99,7 @@ export const SyllabusRoadmap = ({
   onSwitchToSections,
 }: SyllabusRoadmapProps) => {
   const { t } = useTranslation();
+  const { resolvedTheme } = useTheme();
   const [selectedSection, setSelectedSection] = useState<SyllabusSection | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [filter, setFilter] = useState<RoadmapSectionFilter>('all');
@@ -424,6 +426,7 @@ export const SyllabusRoadmap = ({
             className="w-full min-h-[560px] h-[min(70vh,820px)] rounded-xl border border-border bg-muted/10 overflow-hidden"
           >
             <ReactFlow
+              colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
