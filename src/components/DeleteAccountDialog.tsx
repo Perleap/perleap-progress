@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,7 +15,26 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+function mapDeleteAccountErrorMessage(raw: string, t: TFunction): string {
+  const lower = raw.toLowerCase();
+  if (!raw.trim()) return t('settings.deleteAccount.errors.deleteFailed');
+  if (lower.includes('failed to delete auth user')) {
+    return t('settings.deleteAccount.errors.authRecordFailed');
+  }
+  if (
+    lower.includes('failed to delete teacher profile') ||
+    lower.includes('failed to delete student profile')
+  ) {
+    return t('settings.deleteAccount.errors.profileDeleteFailed');
+  }
+  if (lower.includes('edge function returned') || lower.includes('non-2xx')) {
+    return t('settings.deleteAccount.errors.edgeUnreachable');
+  }
+  return raw;
+}
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -28,7 +46,6 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -54,25 +71,24 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
         body: { userId: user.id, userRole },
       });
 
-      if (invokeError) {
-        console.error('Delete account invoke error:', invokeError);
-        // Try to parse the error message if it's a JSON response
-        let errorMessage = 'Failed to delete account';
-        try {
-          if (invokeError instanceof Error) {
-            errorMessage = invokeError.message;
-          } else if (typeof invokeError === 'object' && (invokeError as any).message) {
-            errorMessage = (invokeError as any).message;
-          }
-        } catch (e) {
-          console.error('Error parsing invoke error:', e);
-        }
-        throw new Error(errorMessage);
+      const backendMessage =
+        data &&
+        typeof data === 'object' &&
+        typeof (data as { error?: unknown }).error === 'string'
+          ? (data as { error: string }).error
+          : '';
+
+      if (invokeError || backendMessage) {
+        const raw =
+          backendMessage ||
+          (invokeError instanceof Error ? invokeError.message : invokeError ? String(invokeError) : '');
+        console.error('Delete account invoke error:', invokeError, 'response body:', data);
+        throw new Error(raw || t('settings.deleteAccount.errors.deleteFailed'));
       }
 
-      if (data?.error) {
-        console.error('Delete account data error:', data.error);
-        throw new Error(data.error);
+      if (!data || (data as { success?: boolean }).success !== true) {
+        console.error('Unexpected delete response:', data);
+        throw new Error(t('settings.deleteAccount.errors.unexpectedResponse'));
       }
 
       // Success - sign out and redirect
@@ -84,10 +100,12 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
       // Sign out and redirect to home page with a 'deleted' flag
       // The signOut function already handles clearing storage and preserving language preference
       await signOut('/?deleted=true');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting account:', error);
-      // Extract a more helpful error message if possible
-      const errorMessage = error.message || t('settings.deleteAccount.errors.deleteFailed');
+      const raw = error instanceof Error ? error.message : '';
+      const errorMessage = raw
+        ? mapDeleteAccountErrorMessage(raw, t)
+        : t('settings.deleteAccount.errors.deleteFailed');
       toast.error(errorMessage, {
         duration: 5000, // Show for longer to ensure user sees it
       });

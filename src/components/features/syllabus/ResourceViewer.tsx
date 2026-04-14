@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -10,6 +12,7 @@ import {
   ExternalLink,
   File,
   Play,
+  X,
 } from 'lucide-react';
 import type { SectionResource } from '@/types/syllabus';
 
@@ -34,6 +37,51 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Matches `ResourcePreview` so mis-typed `resource_type` still shows inline player. */
+function resourceHasInlinePreview(resource: SectionResource): boolean {
+  if (resource.resource_type === 'link') return false;
+  const mime = resource.mime_type || '';
+  if (resource.resource_type === 'image' || mime.startsWith('image/')) return true;
+  if (resource.resource_type === 'video' || mime.startsWith('video/')) return true;
+  if (mime === 'application/pdf') return true;
+  return false;
+}
+
+function isVideoResource(resource: SectionResource): boolean {
+  const mime = resource.mime_type || '';
+  return resource.resource_type === 'video' || mime.startsWith('video/');
+}
+
+/** Video waits for user Open; images/PDF show immediately. */
+function shouldShowInlinePreview(resource: SectionResource, videoRevealed: boolean): boolean {
+  if (resource.resource_type === 'link') return false;
+  if (isVideoResource(resource)) return videoRevealed;
+  return resourceHasInlinePreview(resource);
+}
+
+/** Fetch then save via blob URL so browsers save instead of navigating (e.g. JSON). */
+async function triggerBrowserDownload(url: string, filename: string): Promise<boolean> {
+  const safeName = filename.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'download';
+  try {
+    const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error(String(res.status));
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = safeName;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function ResourcePreview({ resource }: { resource: SectionResource }) {
   const url = resource.url || '';
   const mime = resource.mime_type || '';
@@ -53,11 +101,11 @@ function ResourcePreview({ resource }: { resource: SectionResource }) {
 
   if (resource.resource_type === 'video' || mime.startsWith('video/')) {
     return (
-      <div className="rounded-lg overflow-hidden border border-border bg-black mb-2">
+      <div className="flex justify-center items-center rounded-lg overflow-hidden border border-border bg-muted/20 mb-2 py-2 px-2">
         <video
           src={url}
           controls
-          className="w-full max-h-72"
+          className="max-h-72 max-w-full h-auto w-auto"
           preload="metadata"
         >
           <track kind="captions" />
@@ -87,14 +135,26 @@ function ResourceCard({ resource, isRTL, compact }: {
   compact: boolean;
 }) {
   const { t } = useTranslation();
+  const [videoRevealed, setVideoRevealed] = useState(false);
   const config = resourceTypeConfig[resource.resource_type] || resourceTypeConfig.file;
   const Icon = config.icon;
   const url = resource.url || '';
   const isLink = resource.resource_type === 'link';
-  const hasPreview = ['image', 'video'].includes(resource.resource_type) ||
-    resource.mime_type === 'application/pdf';
+  const isVideo = isVideoResource(resource);
+  const hasPreview = resourceHasInlinePreview(resource);
+  const showPreview = shouldShowInlinePreview(resource, videoRevealed);
+  const useOpenAction = hasPreview || isLink;
 
-  const handleOpen = () => {
+  const handleOpen = async () => {
+    if (isVideo && !videoRevealed) {
+      setVideoRevealed(true);
+      return;
+    }
+    if (!useOpenAction && url) {
+      const ok = await triggerBrowserDownload(url, resource.title);
+      if (ok) return;
+      toast.message(t('syllabus.resources.downloadOpenedInTab'));
+    }
     if (url) window.open(url, '_blank', 'noopener');
   };
 
@@ -129,11 +189,32 @@ function ResourceCard({ resource, isRTL, compact }: {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
-      {hasPreview && <ResourcePreview resource={resource} />}
+    <div
+      className={cn(
+        'rounded-xl border border-border bg-card/50 overflow-hidden',
+        isVideo && videoRevealed && 'w-max max-w-full mx-auto',
+      )}
+    >
+      {showPreview && (
+        <div className={cn(isVideo && 'relative')}>
+          {isVideo && videoRevealed && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute top-2 end-2 z-10 h-8 w-8 rounded-full border border-border bg-background/95 shadow-sm hover:bg-muted"
+              onClick={() => setVideoRevealed(false)}
+              aria-label={t('common.close')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+          <ResourcePreview resource={resource} />
+        </div>
+      )}
       <div className={cn('flex items-center gap-3 px-4 py-3', isRTL && 'flex-row-reverse')}>
         <div className={cn('p-2 rounded-lg bg-muted/50', config.color)}>
-          {resource.resource_type === 'video' && !hasPreview ? (
+          {isVideo && !videoRevealed ? (
             <Play className="h-4 w-4" />
           ) : (
             <Icon className="h-4 w-4" />
@@ -149,11 +230,15 @@ function ResourceCard({ resource, isRTL, compact }: {
           variant="outline"
           size="sm"
           onClick={handleOpen}
+          aria-expanded={isVideo ? videoRevealed : undefined}
           className="rounded-full gap-1.5 h-8 text-xs flex-shrink-0"
         >
-          {isLink ? (
+          {useOpenAction ? (
             <>
-              <ExternalLink className="h-3 w-3" /> {t('syllabus.resources.open')}
+              <ExternalLink className="h-3 w-3" />{' '}
+              {isVideo && videoRevealed
+                ? t('syllabus.resources.openInNewTab')
+                : t('syllabus.resources.open')}
             </>
           ) : (
             <>

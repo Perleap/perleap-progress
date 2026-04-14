@@ -17,6 +17,7 @@ When invoked, this function:
 - All enrollments in those classrooms
 - All notifications for the teacher
 - Teacher profile (including 5D snapshots via CASCADE)
+- Clears `student_alerts.acknowledged_by` where it references this user (see schema note below)
 - Auth user record
 
 ### For Students:
@@ -27,15 +28,26 @@ When invoked, this function:
 - All student alerts
 - All notifications
 - Student profile
+- Clears `student_alerts.acknowledged_by` where it references this user (shared step before auth delete)
 - Auth user record
 
 ## Deployment
 
-Deploy this function using the Supabase CLI:
+Deploy this function using the Supabase CLI (must match the project your app uses):
 
 ```bash
 supabase functions deploy delete-user-account
 ```
+
+## Verification (after deploy)
+
+1. In the app, open **Network** (DevTools), delete account from settings, and confirm the `delete-user-account` response is **HTTP 200** with body `{"success":true,...}` (not `{"error":"..."}`).
+2. In **Supabase Dashboard → Edge Functions → delete-user-account → Logs**, confirm you see `Successfully deleted account` and no error before `Deleting auth user...`.
+3. In **Authentication → Users**, confirm the user row is **gone**. If the invoke succeeded but the user remains, check logs for `Failed to delete auth user` (FK or auth API issue).
+
+## Schema note: `student_alerts.acknowledged_by`
+
+`acknowledged_by` references `auth.users` without `ON DELETE CASCADE`, which can block `auth.admin.deleteUser`. The function clears `acknowledged_by` for all rows pointing at this user **before** deleting the auth record (for both teacher and student accounts).
 
 ## Environment Variables
 

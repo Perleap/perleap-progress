@@ -1,7 +1,6 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
 import Youtube from '@tiptap/extension-youtube';
 import Placeholder from '@tiptap/extension-placeholder';
 import { cn } from '@/lib/utils';
@@ -231,9 +230,10 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: { openOnClick: false, autolink: true },
+      }),
       Image.configure({ inline: false, allowBase64: true }),
-      Link.configure({ openOnClick: false, autolink: true }),
       Youtube.configure({ inline: false }),
       Placeholder.configure({ placeholder }),
     ],
@@ -286,9 +286,10 @@ export function RichTextViewer({
 }) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: { openOnClick: true },
+      }),
       Image.configure({ inline: false }),
-      Link.configure({ openOnClick: true }),
       Youtube.configure({ inline: false }),
     ],
     content,

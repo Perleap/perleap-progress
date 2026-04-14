@@ -10,6 +10,7 @@ Welcome! This is the central documentation hub for the Perleap educational platf
 
 **Quick access:**
 - [Quick Start Guide](./1-QUICK-START.md) - Get up to speed fast
+- [Supabase auth email & SMTP](./supabase-auth-email.md) - Branded confirmation email and `perleap.ai` sender
 - [Edge Functions Guide](./EDGE_FUNCTIONS_GUIDE.md) - Deploy AI features (REQUIRED)
 - [Frontend Architecture](./2-FRONTEND-ARCHITECTURE.md) - How the code is organized
 - [Development Guide](./5-DEVELOPMENT-GUIDE.md) - How to add features

@@ -174,6 +174,7 @@ export const ResourceUploader = ({
         ref={fileInputRef}
         type="file"
         multiple
+        accept="video/*,image/*,application/pdf,*/*"
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />

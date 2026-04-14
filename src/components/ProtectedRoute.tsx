@@ -1,8 +1,8 @@
-import { ReactNode, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import type { Session } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,25 +17,25 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
   const hasNavigated = useRef(false);
 
   // Validate session freshness
-  const isSessionValid = (session: any) => {
+  const isSessionValid = (session: Session | null) => {
     if (!session) return false;
-    
+
     // Check if session has expiration time
     if (session.expires_at) {
       const expiresAt = session.expires_at * 1000; // Convert to milliseconds
       const now = Date.now();
       const isValid = expiresAt > now;
-      
+
       if (!isValid) {
         console.warn('⚠️ Session has expired', {
           expiresAt: new Date(expiresAt).toISOString(),
-          now: new Date(now).toISOString()
+          now: new Date(now).toISOString(),
         });
       }
-      
+
       return isValid;
     }
-    
+
     return true; // If no expiration time, assume valid
   };
 
@@ -48,11 +48,11 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     const checkAccessAndNavigate = async () => {
       // Don't navigate while core auth is loading
       if (loading) return;
-      
+
       // If we have a user but are still checking for their profile, wait
       // unless we already have a profile in cache (handled by AuthContext)
       if (user && hasProfile === null && isProfileLoading) return;
-      
+
       if (hasNavigated.current) return; // Prevent multiple navigations
 
       const currentPath = location.pathname;
@@ -65,12 +65,12 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
         }
 
         console.log('🔒 Protected route: No valid session, redirecting to auth');
-        
+
         // Save current path for post-login redirect (except auth pages)
         if (!currentPath.startsWith('/auth') && currentPath !== '/') {
           sessionStorage.setItem('redirectAfterLogin', currentPath);
         }
-        
+
         hasNavigated.current = true;
         navigate(redirectTo, { replace: true });
         return;
@@ -81,9 +81,9 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
         const userRole = user.user_metadata?.role;
 
         if (userRole !== requiredRole) {
-          console.log('🔒 Protected route: Role mismatch', { 
-            required: requiredRole, 
-            actual: userRole 
+          console.log('🔒 Protected route: Role mismatch', {
+            required: requiredRole,
+            actual: userRole,
           });
 
           const dashboardRoute =
@@ -91,7 +91,7 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
               ? '/teacher/dashboard'
               : userRole === 'student'
                 ? '/student/dashboard'
-                : '/auth';
+                : '/role-selection';
 
           // Prevent navigation loop
           if (currentPath !== dashboardRoute) {
@@ -106,9 +106,11 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
           // Use cached profile check from AuthContext
           // Only redirect if we ARE NOT currently loading the profile and we know it's missing
           if (hasProfile === false && !isProfileLoading) {
-            console.log(`🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`);
+            console.log(
+              `🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`
+            );
             const onboardingPath = `/onboarding/${userRole}`;
-            
+
             if (currentPath !== onboardingPath) {
               hasNavigated.current = true;
               navigate(onboardingPath, { replace: true });
@@ -120,7 +122,17 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     };
 
     checkAccessAndNavigate();
-  }, [user, session, loading, requiredRole, navigate, redirectTo, location.pathname, hasProfile, isProfileLoading]);
+  }, [
+    user,
+    session,
+    loading,
+    requiredRole,
+    navigate,
+    redirectTo,
+    location.pathname,
+    hasProfile,
+    isProfileLoading,
+  ]);
 
   // STABILIZED LOADING CHECK:
   // Only show the full-page loader if:
@@ -139,7 +151,15 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     );
   }
 
-  if (!user || !session || (requiredRole && user.user_metadata?.role !== requiredRole)) {
+  if (!user || !session) {
+    return null;
+  }
+
+  if (requiredRole && user.user_metadata?.role !== requiredRole) {
+    const actualRole = user.user_metadata?.role;
+    if (actualRole !== 'teacher' && actualRole !== 'student') {
+      return <Navigate to="/role-selection" replace />;
+    }
     return null;
   }
 

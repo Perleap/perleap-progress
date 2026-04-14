@@ -1,9 +1,14 @@
+import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { attemptRoleRecovery, getPendingRole, updateUserRole, clearPendingRole } from '@/utils/roleRecovery';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  attemptRoleRecovery,
+  getPendingRole,
+  updateUserRole,
+  clearPendingRole,
+} from '@/utils/roleRecovery';
 import { isSignupInProgress } from '@/utils/sessionState';
 
 const AuthCallback = () => {
@@ -19,27 +24,32 @@ const AuthCallback = () => {
     const handleCallback = async () => {
       try {
         console.log('🔄 AuthCallback: Starting authentication callback');
-        
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
 
-        if (!user) {
-          console.log('❌ AuthCallback: No user found, redirecting to /auth');
+        // Do NOT call exchangeCodeForSession here: createClient already has detectSessionInUrl + PKCE,
+        // so the code verifier is consumed on first URL handling. A second exchange causes:
+        // "both auth code and code verifier should be non-empty".
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          console.log('❌ AuthCallback: No session, redirecting to /auth');
           clearTimeout(timeout);
           navigate('/auth', { replace: true });
           return;
         }
 
-        console.log('👤 AuthCallback: User data:', { 
-          userId: user.id, 
+        const user = session.user;
+
+        console.log('👤 AuthCallback: User data:', {
+          userId: user.id,
           email: user.email,
-          role: user.user_metadata?.role 
+          role: user.user_metadata?.role,
         });
 
         // ALWAYS check for existing profiles first to prevent duplicate registrations
         console.log('🔍 AuthCallback: Checking for existing profiles...');
-        
+
         // Check by user_id - THIS IS THE SOURCE OF TRUTH
         const { data: teacherProfile, error: tError } = await supabase
           .from('teacher_profiles')
@@ -60,7 +70,7 @@ const AuthCallback = () => {
         const userEmail = user.email?.toLowerCase().trim();
         let teacherProfileByEmail = null;
         let studentProfileByEmail = null;
-        
+
         if (userEmail) {
           const { data: tpEmail } = await supabase
             .from('teacher_profiles')
@@ -82,38 +92,49 @@ const AuthCallback = () => {
         const hasTeacherProfile = !!teacherProfile;
         const hasStudentProfile = !!studentProfile;
 
-        console.log('👨‍🏫 AuthCallback: Profile check results:', { 
+        console.log('👨‍🏫 AuthCallback: Profile check results:', {
           hasTeacherProfile,
           hasStudentProfile,
           teacherProfileUserId: teacherProfile?.user_id,
           studentProfileUserId: studentProfile?.user_id,
           currentUserId: user.id,
           userEmail,
-          orphanedTeacherProfile: teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id,
-          orphanedStudentProfile: studentProfileByEmail && studentProfileByEmail.user_id !== user.id,
+          orphanedTeacherProfile:
+            teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id,
+          orphanedStudentProfile:
+            studentProfileByEmail && studentProfileByEmail.user_id !== user.id,
         });
 
         // Detect and CLEAN UP orphaned profiles immediately
         // Note: Wrapped in try-catch to prevent blocking the main flow if RLS or other errors occur
         try {
           if (teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id) {
-            console.warn('⚠️ AuthCallback: Found orphaned teacher_profile with email', userEmail, 
-              'but different user_id. Attempting cleanup...');
+            console.warn(
+              '⚠️ AuthCallback: Found orphaned teacher_profile with email',
+              userEmail,
+              'but different user_id. Attempting cleanup...'
+            );
             await supabase
               .from('teacher_profiles')
               .delete()
               .eq('user_id', teacherProfileByEmail.user_id);
           }
           if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
-            console.warn('⚠️ AuthCallback: Found orphaned student_profile with email', userEmail, 
-              'but different user_id. Attempting cleanup...');
+            console.warn(
+              '⚠️ AuthCallback: Found orphaned student_profile with email',
+              userEmail,
+              'but different user_id. Attempting cleanup...'
+            );
             await supabase
               .from('student_profiles')
               .delete()
               .eq('user_id', studentProfileByEmail.user_id);
           }
         } catch (cleanupError) {
-          console.error('⚠️ AuthCallback: Non-blocking error during orphaned data cleanup:', cleanupError);
+          console.error(
+            '⚠️ AuthCallback: Non-blocking error during orphaned data cleanup:',
+            cleanupError
+          );
         }
 
         let userRole = user.user_metadata?.role;
@@ -122,10 +143,12 @@ const AuthCallback = () => {
         if (hasTeacherProfile || hasStudentProfile) {
           const existingRole = hasTeacherProfile ? 'teacher' : 'student';
           console.log(`✅ AuthCallback: User has existing ${existingRole} profile`);
-          
+
           // Update user metadata if it doesn't match
           if (userRole !== existingRole) {
-            console.log(`🔄 AuthCallback: Updating user metadata to match existing profile: ${existingRole}`);
+            console.log(
+              `🔄 AuthCallback: Updating user metadata to match existing profile: ${existingRole}`
+            );
             await supabase.auth.updateUser({
               data: { role: existingRole },
             });
@@ -134,7 +157,7 @@ const AuthCallback = () => {
 
           // Clear any pending role since we're using the existing profile
           localStorage.removeItem('pending_role');
-          
+
           // Redirect to the existing role's dashboard
           console.log(`🚀 AuthCallback: Redirecting to existing ${existingRole} dashboard`);
           clearTimeout(timeout);
@@ -144,22 +167,22 @@ const AuthCallback = () => {
 
         // No existing profiles found - process new registration
         console.log('🆕 AuthCallback: No existing profiles, processing new registration');
-        
+
         // Check if this is an active signup or a recovery situation
         const activelySigningUp = isSignupInProgress();
-        
+
         if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
           // CRITICAL: Different behavior for active signup vs recovery
           if (activelySigningUp) {
             console.log('🔄 AuthCallback: Active signup - attempting quick recovery');
-            
+
             // Try to recover from localStorage (backup from Auth.tsx)
             const pendingRole = getPendingRole();
-            
+
             if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {
               console.log(`🔄 AuthCallback: Found pending role: ${pendingRole}`);
               const updated = await updateUserRole(pendingRole as 'teacher' | 'student');
-              
+
               if (updated) {
                 console.log('✅ AuthCallback: Role set from pending');
                 clearPendingRole();
@@ -169,9 +192,9 @@ const AuthCallback = () => {
           } else {
             // NOT actively signing up - this is a recovery situation
             console.warn('⚠️ AuthCallback: User has no valid role (not during active signup)');
-            
+
             const { recovered, role, source } = await attemptRoleRecovery();
-            
+
             if (recovered && role) {
               console.log(`✅ AuthCallback: Role recovered from ${source}: ${role}`);
               userRole = role;
@@ -180,7 +203,7 @@ const AuthCallback = () => {
         }
 
         console.log('🎭 AuthCallback: Final role for new user:', userRole);
-        
+
         // If still no role, redirect to role selection page
         if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
           console.warn('⚠️ AuthCallback: Cannot determine role, redirecting to role selection');
@@ -201,11 +224,11 @@ const AuthCallback = () => {
         // Redirect based on role and profile completion
         if (userRole === 'teacher' || userRole === 'student') {
           console.log(`✅ AuthCallback: Role determined as ${userRole}, checking profile...`);
-          
+
           // Check for profile existence using explicit table names for TypeScript
           let profile = null;
           let profileError = null;
-          
+
           if (userRole === 'teacher') {
             const result = await supabase
               .from('teacher_profiles')
@@ -229,8 +252,10 @@ const AuthCallback = () => {
           }
 
           const destination = profile ? `/${userRole}/dashboard` : `/onboarding/${userRole}`;
-          
-          console.log(`🚀 AuthCallback: ${profile ? 'Profile exists' : 'No profile found'}, redirecting to ${destination}`);
+
+          console.log(
+            `🚀 AuthCallback: ${profile ? 'Profile exists' : 'No profile found'}, redirecting to ${destination}`
+          );
           clearTimeout(timeout);
           navigate(destination, { replace: true });
         } else {
@@ -249,7 +274,7 @@ const AuthCallback = () => {
     };
 
     handleCallback();
-    
+
     return () => clearTimeout(timeout);
   }, [navigate]);
 

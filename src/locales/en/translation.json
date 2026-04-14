@@ -101,6 +101,9 @@
     "password": "Password",
     "signInButton": "Sign In",
     "signInWithGoogle": "Sign in with Google",
+    "signInWithEmail": "Sign in with email",
+    "signUpWithEmail": "Create account with email",
+    "continueWithGoogle": "Continue with Google",
     "createAccount": "Create Account",
     "signUpWithGoogle": "Sign up with Google",
     "orContinueWith": "Or continue with",
@@ -119,7 +122,12 @@
       "alreadyRegistered": "You already have an account as a {{role}}. Please sign in to access your existing account.",
       "cannotRegisterMultipleRoles": "Cannot register with multiple roles. You already have an existing account.",
       "emailAlreadyExists": "This email is already registered. Please sign in or use a different email address.",
-      "emailAlreadyRegisteredAs": "This email is already registered as a {{role}}. Please sign in to continue or use a different email address."
+      "emailAlreadyRegisteredAs": "This email is already registered as a {{role}}. Please sign in to continue or use a different email address.",
+      "invalidCredentials": "Incorrect email or password. Please try again.",
+      "emailNotConfirmed": "Please confirm your email address before signing in. Check your inbox for the verification link.",
+      "tooManyRequests": "Too many attempts from this network. Wait a few minutes and try again.",
+      "emailSignupRateLimited": "Supabase is temporarily limiting signup emails from this network (anti-abuse). Wait a few minutes and try again, use another network for testing, or ask a project owner to check Auth rate limits and SMTP settings in the Supabase dashboard.",
+      "weakPassword": "This password is too easy to guess. Choose a longer, more unique password (avoid common words and patterns)."
     },
     "errors2": {
       "creatingAccount": "Error creating account",
@@ -920,7 +928,11 @@
       "errors": {
         "incorrectConfirmation": "Please type 'confirm' to proceed",
         "notAuthenticated": "You must be logged in to delete your account",
-        "deleteFailed": "Failed to delete account. Please try again or contact support."
+        "deleteFailed": "Failed to delete account. Please try again or contact support.",
+        "authRecordFailed": "We could not remove your login record. Try again, or contact support if the problem continues.",
+        "profileDeleteFailed": "Some profile data could not be removed. Try again or contact support.",
+        "edgeUnreachable": "The account deletion service did not respond correctly. Confirm the delete-user-account Edge Function is deployed, then try again.",
+        "unexpectedResponse": "Account deletion did not complete. Please try again or contact support."
       }
     },
     "profileDesc": "Manage your personal information and account settings",
@@ -1683,7 +1695,9 @@
       "add": "Add",
       "externalLink": "External Link",
       "open": "Open",
-      "download": "Download"
+      "openInNewTab": "Open in new tab",
+      "download": "Download",
+      "downloadOpenedInTab": "Could not download the file. Opened in a new tab instead."
     },
     "syllabusSection": "Syllabus Section",
     "linkToSection": "Link to a section (optional)",

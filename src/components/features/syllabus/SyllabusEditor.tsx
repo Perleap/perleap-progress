@@ -60,6 +60,7 @@ import {
 import type { SyllabusSection, SectionResource, ReleaseMode } from '@/types/syllabus';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ResourceUploader } from './ResourceUploader';
+import { ResourceViewer } from './ResourceViewer';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { supabase } from '@/integrations/supabase/client';
@@ -483,6 +484,18 @@ export const SyllabusEditor = ({
                 resources={sectionResources[selected.id] || []}
                 isRTL={isRTL}
               />
+
+              {(sectionResources[selected.id] || []).length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    {t('syllabus.customization.preview')}
+                  </Label>
+                  <ResourceViewer
+                    resources={sectionResources[selected.id] || []}
+                    isRTL={isRTL}
+                  />
+                </div>
+              )}
 
               {/* Inline Assignment Linking */}
               <div className="space-y-2">

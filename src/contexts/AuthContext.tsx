@@ -1,13 +1,18 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { clearAllPersistedForms } from '@/hooks/usePersistedState';
-import { shouldAttemptRecovery, attemptRoleRecovery, incrementRecoveryAttempt } from '@/utils/roleRecovery';
-import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getTeacherProfile, getStudentProfile } from '@/services/profileService';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { User, Session } from '@supabase/supabase-js';
+import type { ReactNode } from 'react';
 import { profileKeys } from '@/hooks/queries';
+import { clearAllPersistedForms } from '@/hooks/usePersistedState';
+import { supabase } from '@/integrations/supabase/client';
+import { getTeacherProfile, getStudentProfile } from '@/services/profileService';
+import {
+  shouldAttemptRecovery,
+  attemptRoleRecovery,
+  incrementRecoveryAttempt,
+} from '@/utils/roleRecovery';
+import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
 
 interface UserProfile {
   full_name: string;
@@ -31,37 +36,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const queryClient = useQueryClient();
-  
+
   // Initial loading state for the core auth session
   const [loading, setLoading] = useState(true);
-  
+
   const navigate = useNavigate();
 
   // Profile query using TanStack Query
-  const { 
-    data: profileData, 
+  const {
+    data: profileData,
     isLoading: isProfileQueryLoading,
     isFetched: isProfileFetched,
-    refetch
+    refetch,
   } = useQuery({
-    queryKey: user?.user_metadata?.role === 'teacher' 
-      ? profileKeys.teacher(user?.id || '') 
-      : profileKeys.student(user?.id || ''),
+    queryKey:
+      user?.user_metadata?.role === 'teacher'
+        ? profileKeys.teacher(user?.id || '')
+        : profileKeys.student(user?.id || ''),
     queryFn: async () => {
       if (!user?.id) return null;
       const role = user.user_metadata?.role;
       if (!role) return null;
 
       console.log(`🔄 AuthContext: Fetching fresh profile for ${role}...`);
-      const { data, error } = role === 'teacher' 
-        ? await getTeacherProfile(user.id) 
-        : await getStudentProfile(user.id);
+      const { data, error } =
+        role === 'teacher' ? await getTeacherProfile(user.id) : await getStudentProfile(user.id);
 
       if (error) {
         console.error('Error fetching profile:', error);
         throw error;
       }
-      
+
       console.log('✅ AuthContext: Profile found');
       return data;
     },
@@ -73,10 +78,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Map query states to context values
   // profile: the actual data
   const profile = profileData || null;
-  
+
   // isProfileLoading: only true on the initial fetch to avoid full-page unmounts on background refreshes
   const isProfileLoading = user ? isProfileQueryLoading && !isProfileFetched : false;
-  
+
   // hasProfile: null if not yet determined, true if data exists, false if no profile found
   const hasProfile = isProfileFetched ? !!profileData : null;
 
@@ -103,6 +108,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Only logout if recovery fails
     console.log('🚪 Logging out due to unrecoverable session');
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (signOutErr) {
+      console.error('Sign out after refresh failure:', signOutErr);
+    }
     clearAllPersistedForms();
     sessionStorage.clear();
     navigate('/auth');
@@ -114,7 +124,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check for existing session first (important for browser back/forward)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (mounted) {
-        console.log('🔐 Initial session check:', { hasSession: !!session, userId: session?.user?.id });
+        console.log('🔐 Initial session check:', {
+          hasSession: !!session,
+          userId: session?.user?.id,
+        });
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -136,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log(`🔐 Auth Event: ${event}`, {
         hasSession: !!session,
         userId: session?.user?.id,
-        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null
+        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
       });
 
       // Handle specific auth events
@@ -151,9 +164,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearAllPersistedForms();
           clearAllSignupState();
           // Reset profile data in cache
-          const signoutKey = user?.user_metadata?.role === 'teacher' 
-            ? profileKeys.teacher(user?.id || '') 
-            : profileKeys.student(user?.id || '');
+          const signoutKey =
+            user?.user_metadata?.role === 'teacher'
+              ? profileKeys.teacher(user?.id || '')
+              : profileKeys.student(user?.id || '');
           queryClient.setQueryData(signoutKey, null);
           break;
 
@@ -170,18 +184,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log('✅ User signed in');
           if (session?.user) {
             const userRole = session.user.user_metadata?.role;
-            
+
             // Check if user has role metadata
             if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
               // Check if signup is in progress
               const signupInProgress = isSignupInProgress();
-              
+
               // Check if this is a VERY new account (created < 5 minutes ago)
-              const userCreatedAt = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
+              const userCreatedAt = session.user.created_at
+                ? new Date(session.user.created_at).getTime()
+                : 0;
               const now = Date.now();
               const fiveMinutes = 5 * 60 * 1000;
-              const isVeryNewAccount = (now - userCreatedAt) < fiveMinutes;
-              
+              const isVeryNewAccount = now - userCreatedAt < fiveMinutes;
+
               // CRITICAL: Don't interfere if on callback page or signup is in progress OR account is brand new
               const isCallbackPage = window.location.pathname.includes('/auth/callback');
               if (signupInProgress || isVeryNewAccount || isCallbackPage) {
@@ -194,15 +210,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
                 break;
               }
-              
+
               console.warn('⚠️ User signed in without valid role metadata');
-              
+
               if (shouldAttemptRecovery()) {
                 console.log('🔄 Attempting automatic role recovery...');
                 incrementRecoveryAttempt();
-                
+
                 const { recovered, role } = await attemptRoleRecovery();
-                
+
                 if (recovered && role) {
                   console.log(`✅ Role recovered successfully: ${role}`);
                 } else {
@@ -225,20 +241,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Update state only if changed to prevent unnecessary re-renders
-      setSession(prev => {
-        if (prev?.access_token === session?.access_token && prev?.expires_at === session?.expires_at) {
+      setSession((prev) => {
+        if (
+          prev?.access_token === session?.access_token &&
+          prev?.expires_at === session?.expires_at
+        ) {
           return prev;
         }
         return session;
       });
-      
-      setUser(prev => {
-        if (prev?.id === session?.user?.id && JSON.stringify(prev?.user_metadata) === JSON.stringify(session?.user?.user_metadata)) {
+
+      setUser((prev) => {
+        if (
+          prev?.id === session?.user?.id &&
+          JSON.stringify(prev?.user_metadata) === JSON.stringify(session?.user?.user_metadata)
+        ) {
           return prev;
         }
         return session?.user ?? null;
       });
-      
+
       setLoading(false);
     });
 
@@ -252,7 +274,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const checkSessionHealth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
 
         if (error) {
           console.error('⚠️ Session health check error:', error);
@@ -269,7 +294,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             valid: !!session,
             expiresAt: new Date(expiresAt).toISOString(),
             minutesToExpiry,
-            userId: session.user?.id
+            userId: session.user?.id,
           });
 
           if (minutesToExpiry < 10 && minutesToExpiry > 0) {
@@ -293,9 +318,83 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async (redirectPath: string = '/') => {
+    // #region agent log
+    {
+      const { data: preData, error: preErr } = await supabase.auth.getSession();
+      const s = preData?.session;
+      const exp = s?.expires_at;
+      const nowSec = Math.floor(Date.now() / 1000);
+      let storageEntryLen = 0;
+      try {
+        storageEntryLen = localStorage.getItem('perleap-auth')?.length ?? 0;
+      } catch {
+        storageEntryLen = -1;
+      }
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '40bcef' },
+        body: JSON.stringify({
+          sessionId: '40bcef',
+          runId: 'pre-fix',
+          hypothesisId: 'H1-H2-H5',
+          location: 'AuthContext.tsx:signOut:pre',
+          message: 'state before signOut',
+          data: {
+            getSessionErr: preErr?.message ?? null,
+            hasSession: !!s,
+            hasRefreshToken: !!s?.refresh_token,
+            accessTokenLen: s?.access_token?.length ?? 0,
+            refreshTokenLen: s?.refresh_token?.length ?? 0,
+            expiresInSec: exp != null ? exp - nowSec : null,
+            storageEntryLen,
+            reactStateHasUser: !!user,
+            reactStateHasSession: !!session,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
     try {
       await supabase.auth.signOut();
+      // #region agent log
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '40bcef' },
+        body: JSON.stringify({
+          sessionId: '40bcef',
+          runId: 'pre-fix',
+          hypothesisId: 'H3',
+          location: 'AuthContext.tsx:signOut:ok',
+          message: 'signOut() resolved without throw',
+          data: {},
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
     } catch (error) {
+      // #region agent log
+      {
+        const err = error as { name?: string; message?: string; status?: number };
+        fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '40bcef' },
+          body: JSON.stringify({
+            sessionId: '40bcef',
+            runId: 'pre-fix',
+            hypothesisId: 'H3',
+            location: 'AuthContext.tsx:signOut:catch',
+            message: 'signOut() threw',
+            data: {
+              name: err?.name ?? null,
+              message: err?.message ?? String(error),
+              status: err?.status ?? null,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+      }
+      // #endregion
       console.error('Sign out failed, cleaning up locally:', error);
     } finally {
       // Perform heavy cleanup in the next tick to prevent blocking the UI
@@ -304,7 +403,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearAllSignupState();
         sessionStorage.clear();
         queryClient.clear();
-        
+
         const keysToKeep = ['language_preference'];
         const allKeys = Object.keys(localStorage);
         allKeys.forEach((key) => {
@@ -318,10 +417,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshProfile = async (force: boolean = false) => {
-    const key = user?.user_metadata?.role === 'teacher' 
-      ? profileKeys.teacher(user?.id || '') 
-      : profileKeys.student(user?.id || '');
-      
+    const key =
+      user?.user_metadata?.role === 'teacher'
+        ? profileKeys.teacher(user?.id || '')
+        : profileKeys.student(user?.id || '');
+
     if (force) {
       await queryClient.invalidateQueries({ queryKey: key });
     } else {
@@ -330,16 +430,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      profile, 
-      loading, 
-      signOut, 
-      refreshProfile,
-      hasProfile,
-      isProfileLoading 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        profile,
+        loading,
+        signOut,
+        refreshProfile,
+        hasProfile,
+        isProfileLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

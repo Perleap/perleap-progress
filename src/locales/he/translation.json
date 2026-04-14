@@ -101,6 +101,9 @@
     "password": "סיסמה",
     "signInButton": "התחבר",
     "signInWithGoogle": "התחבר עם Google",
+    "signInWithEmail": "התחברות עם אימייל",
+    "signUpWithEmail": "יצירת חשבון עם אימייל",
+    "continueWithGoogle": "המשך עם Google",
     "createAccount": "צור חשבון",
     "signUpWithGoogle": "הירשם עם Google",
     "orContinueWith": "או המשך עם",
@@ -119,7 +122,12 @@
       "alreadyRegistered": "יש לך כבר חשבון בתור {{role}}. אנא התחבר כדי לגשת לחשבון הקיים שלך.",
       "cannotRegisterMultipleRoles": "לא ניתן להירשם עם תפקידים מרובים. יש לך כבר חשבון קיים.",
       "emailAlreadyExists": "האימייל הזה כבר רשום. אנא התחבר או השתמש בכתובת אימייל אחרת.",
-      "emailAlreadyRegisteredAs": "האימייל הזה כבר רשום בתור {{role}}. אנא התחבר כדי להמשיך או השתמש בכתובת אימייל אחרת."
+      "emailAlreadyRegisteredAs": "האימייל הזה כבר רשום בתור {{role}}. אנא התחבר כדי להמשיך או השתמש בכתובת אימייל אחרת.",
+      "invalidCredentials": "אימייל או סיסמה שגויים. נסה שוב.",
+      "emailNotConfirmed": "יש לאשר את כתובת האימייל לפני ההתחברות. בדוק את תיבת הדואר הנכנס לקישור האימות.",
+      "tooManyRequests": "יותר מדי ניסיונות מרשת זו. המתן כמה דקות ונסה שוב.",
+      "emailSignupRateLimited": "Supabase מגביל זמנית מיילי הרשמה מרשת זו (הגנה מפני שימוש לרעה). המתן כמה דקות ונסה שוב, נסה מרשת אחרת לבדיקות, או בקש מבעל הפרויקט לבדוק מגבלות Auth והגדרות SMTP בלוח הבקרה של Supabase.",
+      "weakPassword": "הסיסמה קלה מדי לניחוש. בחר סיסמה ארוכה וייחודית יותר (הימנע ממילים נפוצות ודפוסים צפויים)."
     },
     "errors2": {
       "creatingAccount": "שגיאה ביצירת חשבון",
@@ -907,7 +915,11 @@
       "errors": {
         "incorrectConfirmation": "אנא הקלד 'confirm' כדי להמשיך",
         "notAuthenticated": "עליך להיות מחובר כדי למחוק את החשבון שלך",
-        "deleteFailed": "נכשל במחיקת החשבון. אנא נסה שוב או פנה לתמיכה."
+        "deleteFailed": "נכשל במחיקת החשבון. אנא נסה שוב או פנה לתמיכה.",
+        "authRecordFailed": "לא הצלחנו להסיר את רשומת ההתחברות. נסה שוב, או פנה לתמיכה אם הבעיה נמשכת.",
+        "profileDeleteFailed": "לא ניתן היה להסיר חלק מנתוני הפרופיל. נסה שוב או פנה לתמיכה.",
+        "edgeUnreachable": "שירות מחיקת החשבון לא הגיב כראוי. ודא שפונקציית delete-user-account פרוסה, ונסה שוב.",
+        "unexpectedResponse": "מחיקת החשבון לא הושלמה. נסה שוב או פנה לתמיכה."
       }
     },
     "profileDesc": "נהל את המידע האישי שלך והגדרות החשבון",
@@ -1674,7 +1686,9 @@
       "add": "הוסף",
       "externalLink": "קישור חיצוני",
       "open": "פתח",
-      "download": "הורד"
+      "openInNewTab": "פתח בלשונית חדשה",
+      "download": "הורד",
+      "downloadOpenedInTab": "לא ניתן להוריד את הקובץ. נפתח בלשונית חדשה במקום."
     },
     "syllabusSection": "פרק בסילבוס",
     "linkToSection": "קשר לפרק (אופציונלי)",

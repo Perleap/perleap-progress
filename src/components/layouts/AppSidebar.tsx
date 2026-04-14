@@ -174,13 +174,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" side={isRTL ? 'right' : 'left'} {...props}>
-      <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center px-5 group-data-[collapsible=icon]:px-2">
+      <SidebarHeader className="flex min-h-24 items-center border-b border-sidebar-border px-4 py-2.5 sm:px-5 group-data-[collapsible=icon]:min-h-16 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
         <SidebarMenu>
           <SidebarMenuItem className="list-none">
-            <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center min-w-0">
-              <PerleapLogo className="size-10 group-data-[collapsible=icon]:size-8" />
+            <div className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center sm:gap-3.5">
+              <PerleapLogo className="size-14 shrink-0 sm:size-16 group-data-[collapsible=icon]:size-10" />
               <span
-                className={`truncate font-bold text-lg leading-none text-foreground group-data-[collapsible=icon]:hidden ${isRTL ? 'text-right' : 'text-left'}`}
+                className={`truncate text-xl font-bold leading-none tracking-tight text-foreground sm:text-2xl group-data-[collapsible=icon]:hidden ${isRTL ? 'text-right' : 'text-left'}`}
               >
                 Perleap
               </span>

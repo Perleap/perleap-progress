@@ -103,13 +103,6 @@ serve(async (req) => {
         .delete()
         .eq('teacher_id', userId);
 
-      // Handle acknowledged alerts (set to NULL to avoid blocking deletion)
-      console.log('Cleaning up acknowledged alerts...');
-      await supabaseClient
-        .from('student_alerts')
-        .update({ acknowledged_by: null })
-        .eq('acknowledged_by', userId);
-
       // Delete teacher notifications
       await supabaseClient
         .from('notifications')
@@ -201,6 +194,14 @@ serve(async (req) => {
       }
     }
 
+    // student_alerts.acknowledged_by -> auth.users has no ON DELETE rule (defaults to NO ACTION).
+    // Clear references for BOTH roles so auth.admin.deleteUser is never blocked.
+    console.log('Clearing student_alerts.acknowledged_by references...');
+    await supabaseClient
+      .from('student_alerts')
+      .update({ acknowledged_by: null })
+      .eq('acknowledged_by', userId);
+
     // Finally, delete the auth user
     console.log('Deleting auth user...');
     const { error: authError } = await supabaseClient.auth.admin.deleteUser(userId);
@@ -224,9 +225,10 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in delete-user-account function:', error);
+    const errMsg = error instanceof Error ? error.message : 'An error occurred while deleting the account';
     return new Response(
       JSON.stringify({
-        error: error.message || 'An error occurred while deleting the account',
+        error: errMsg,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

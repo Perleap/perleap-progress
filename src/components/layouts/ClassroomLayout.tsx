@@ -73,10 +73,10 @@ export function ClassroomLayout({
         sections={sections}
       />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 px-4 md:px-5 shadow-sm sticky top-0 z-30">
-          <div className="flex items-center gap-4 flex-1">
-            <SidebarTrigger className="hover:bg-accent hover:scale-110 rounded-lg p-2.5 transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-accent-foreground/10" />
-            <Separator orientation="vertical" className="h-6 bg-border/60" />
+        <header className="flex min-h-24 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 md:px-5 sticky top-0 z-30">
+          <div className="flex flex-1 items-center gap-4">
+            <SidebarTrigger className="rounded-lg border border-transparent p-2.5 shadow-sm transition-all duration-200 hover:scale-110 hover:border-accent-foreground/10 hover:bg-accent hover:shadow-md" />
+            <Separator orientation="vertical" className="h-8 bg-border/60" />
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">

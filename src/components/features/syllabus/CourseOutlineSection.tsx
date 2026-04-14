@@ -24,7 +24,6 @@ import {
   Save,
   Settings,
   Archive,
-  Palette,
 } from 'lucide-react';
 import {
   Select,
@@ -45,7 +44,6 @@ import { SyllabusRoadmap } from './SyllabusRoadmap';
 import { SyllabusEditor } from './SyllabusEditor';
 import { GradingCategoriesManager } from './GradingCategoriesManager';
 import { AssignmentLinker } from './AssignmentLinker';
-import { SyllabusCustomization } from './SyllabusCustomization';
 import { SyllabusPDFExport } from './SyllabusPDFExport';
 import type { SyllabusStructureType, SyllabusPolicy, ReleaseMode } from '@/types/syllabus';
 import { useAuth } from '@/contexts/AuthContext';
@@ -452,9 +450,6 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
           <TabsTrigger value="assignments" className="rounded-lg gap-1.5 px-4 py-2 text-sm">
             <Edit className="h-4 w-4" /> {t('syllabus.tabs.assignments')}
           </TabsTrigger>
-          <TabsTrigger value="customize" className="rounded-lg gap-1.5 px-4 py-2 text-sm">
-            <Palette className="h-4 w-4" /> {t('syllabus.tabs.customize')}
-          </TabsTrigger>
           <TabsTrigger value="settings" className="rounded-lg gap-1.5 px-4 py-2 text-sm">
             <Settings className="h-4 w-4" /> {t('syllabus.tabs.settings')}
           </TabsTrigger>
@@ -503,14 +498,6 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
             sections={syllabus.sections}
             gradingCategories={syllabus.grading_categories}
             assignments={assignments as any[]}
-            isRTL={isRTL}
-          />
-        </TabsContent>
-
-        <TabsContent value="customize">
-          <SyllabusCustomization
-            syllabus={syllabus}
-            classroomId={classroomId}
             isRTL={isRTL}
           />
         </TabsContent>

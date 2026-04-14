@@ -1,23 +1,24 @@
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { PerleapLogo } from '@/components/PerleapLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
+import { getAuthErrorMessage } from '@/utils/authErrors';
 import { savePendingRole } from '@/utils/roleRecovery';
-import { markSignupInProgress } from '@/utils/sessionState';
+import { markSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
 
 const Auth = () => {
   const { t } = useTranslation();
@@ -38,10 +39,11 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
 
   // Check if we're in the middle of an OAuth callback or email confirmation
-  const isOAuthCallback = searchParams.has('code') || 
-                           searchParams.has('access_token') || 
-                           searchParams.has('error') || 
-                           searchParams.has('type');
+  const isOAuthCallback =
+    searchParams.has('code') ||
+    searchParams.has('access_token') ||
+    searchParams.has('error') ||
+    searchParams.has('type');
 
   // If we detect OAuth or email callback parameters on the auth page,
   // redirect to the dedicated callback handler
@@ -78,7 +80,9 @@ const Auth = () => {
         if (userRole === 'teacher' || userRole === 'student') {
           // Use cached profile check from AuthContext
           if (hasProfile === false) {
-            console.log(`⚠️ Auth: User has ${userRole} role but no profile, redirecting to onboarding`);
+            console.log(
+              `⚠️ Auth: User has ${userRole} role but no profile, redirecting to onboarding`
+            );
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
           }
@@ -151,7 +155,9 @@ const Auth = () => {
       // This prevents issues with orphaned data blocking legitimate registrations
 
       // Also check if current user is already authenticated with a profile
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
 
       if (currentUser) {
         // Check if user already has a profile
@@ -179,7 +185,7 @@ const Auth = () => {
 
       // Mark signup as in progress (prevents role recovery interference)
       markSignupInProgress();
-      
+
       // Save role to localStorage as backup
       savePendingRole(role);
 
@@ -203,52 +209,35 @@ const Auth = () => {
           toast.success(t('auth.success.accountCreatedSuccess'));
           navigate(`/onboarding/${role}`);
         } else {
-          // No session - email confirmation might be required
-          // For local development, try to sign in immediately
-          // This works if email confirmation is disabled
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
+          // No session: Supabase is waiting on email confirmation (or rare edge cases).
+          // Do not call signInWithPassword here — it returns 400 "Email not confirmed" and
+          // pollutes the console; with confirmations off, signUp normally returns a session.
+          clearAllSignupState();
+          toast.success(t('auth.success.accountCreated'), {
+            duration: 8000,
           });
-
-          if (signInData?.session) {
-            // Successfully signed in - user was auto-confirmed
-            toast.success(t('auth.success.accountCreatedSuccess'));
-            navigate(`/onboarding/${role}`);
-          } else {
-            // Email confirmation required
-            toast.success(t('auth.success.accountCreated'), {
-              duration: 8000,
-            });
-            // Note: User needs to confirm email before they can proceed
-          }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Signup error:', error);
+      clearAllSignupState();
 
-      // Check for duplicate email error
-      // Supabase Auth returns various messages/codes for duplicate emails:
-      // - "User already registered"
-      // - "Email address is invalid" (when email exists)
-      // - Status 400 or 422
-      const errorMsg = error.message?.toLowerCase() || '';
-      const errorCode = error.code?.toLowerCase() || '';
+      // Check for duplicate email error (explicit message/code only — not bare HTTP status)
+      const err = error as { message?: string; code?: string; status?: number };
+      const errorMsg = (err.message ?? '').toLowerCase();
+      const errorCode = (err.code ?? '').toLowerCase();
 
       const isDuplicateEmail =
         errorMsg.includes('already registered') ||
         errorMsg.includes('already exists') ||
         errorMsg.includes('user already registered') ||
         errorCode.includes('email_exists') ||
-        errorCode.includes('user_already_exists') ||
-        error.status === 422 || // Unprocessable entity (duplicate)
-        // If it's a 400 error with "invalid" message during signup, it's likely duplicate
-        (error.status === 400 && errorMsg.includes('invalid'));
+        errorCode.includes('user_already_exists');
 
       if (isDuplicateEmail) {
         toast.error(t('auth.errors.emailAlreadyExists'));
       } else {
-        toast.error(error.message || t('auth.errors2.creatingAccount'));
+        toast.error(getAuthErrorMessage(error, t, 'auth.errors2.creatingAccount'));
       }
     } finally {
       setLoading(false);
@@ -265,7 +254,9 @@ const Auth = () => {
       }
 
       // Check if user is already authenticated with an existing profile
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
 
       if (currentUser) {
         // Check if user already has a profile
@@ -303,9 +294,9 @@ const Auth = () => {
       });
 
       if (error) throw error;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google Sign In Error:', error);
-      toast.error(error.message || t('auth.errors2.signingInGoogle'));
+      toast.error(getAuthErrorMessage(error, t, 'auth.errors2.signingInGoogle'));
       setLoading(false);
     }
   };
@@ -344,7 +335,7 @@ const Auth = () => {
 
       // Redirect based on role and profile status
       const userRole = data.user.user_metadata?.role;
-      
+
       if (userRole === 'teacher' || userRole === 'student') {
         const profileTable = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
         const dashboardPath = `/${userRole}/dashboard`;
@@ -362,9 +353,9 @@ const Auth = () => {
         console.warn('⚠️ Sign in successful but no role metadata found');
         navigate('/role-selection');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign In Error:', error);
-      toast.error(error.message || t('auth.errors2.signingIn'));
+      toast.error(getAuthErrorMessage(error, t, 'auth.errors2.signingIn'));
     } finally {
       setLoading(false);
     }
@@ -374,8 +365,13 @@ const Auth = () => {
   // This prevents the Auth page from rendering and causing a flicker
   // CRITICAL: Added safety check for missing role to prevent infinite spinner
   const hasUserButNoRole = user && !user.user_metadata?.role;
-  
-  if (isOAuthCallback || (!authLoading && user && !hasUserButNoRole) || isProfileLoading || (user && hasProfile === null && !hasUserButNoRole)) {
+
+  if (
+    isOAuthCallback ||
+    (!authLoading && user && !hasUserButNoRole) ||
+    isProfileLoading ||
+    (user && hasProfile === null && !hasUserButNoRole)
+  ) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -393,25 +389,35 @@ const Auth = () => {
   }
 
   return (
-    <BreathingBackground className="flex items-center justify-center min-h-screen p-4">
-      <div className="absolute top-8 start-8 z-20">
-        <Link to="/">
-          <Button variant="ghost" className="gap-2 hover:bg-muted/50 text-foreground/80 hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
-            {t('auth.backToHome')}
-          </Button>
-        </Link>
-      </div>
+    <BreathingBackground className="flex flex-col items-center min-h-screen p-4 pt-6 md:pt-8">
+      {/* Equal-width side columns so the logo is geometrically centered on the screen */}
+      <header className="relative z-20 grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3 pb-8 md:pb-10">
+        <div className="flex min-w-0 justify-start">
+          <Link to="/">
+            <Button
+              variant="ghost"
+              className="gap-2 hover:bg-muted/50 text-foreground/80 hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0 rtl:rotate-180" />
+              <span className="truncate">{t('auth.backToHome')}</span>
+            </Button>
+          </Link>
+        </div>
+        <PerleapLogo
+          className="h-24 w-24 md:h-28 md:w-28 lg:h-32 lg:w-32"
+          title="Perleap"
+        />
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          <LanguageSwitcher />
+          <ThemeToggle />
+        </div>
+      </header>
 
-      <div className="absolute top-8 end-8 z-20 flex items-center gap-2">
-        <LanguageSwitcher />
-        <ThemeToggle />
-      </div>
-
-      <div className="w-full max-w-4xl animate-fade-in relative z-10">
-        <div className="flex flex-col items-center mb-12">
-          <PerleapLogo className="h-16 w-16 mb-6" title="Perleap" />
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3 text-center text-heading">{t('auth.welcome')}</h1>
+      <div className="relative z-10 flex w-full max-w-4xl flex-1 flex-col justify-center pb-8 animate-fade-in md:pb-12">
+        <div className="mb-10 flex flex-col items-center md:mb-12">
+          <h1 className="mb-3 text-center text-4xl font-bold tracking-tight text-heading md:text-5xl">
+            {t('auth.welcome')}
+          </h1>
           <p className="text-muted-foreground text-lg text-center max-w-lg text-body">
             {t('auth.tagline')}
           </p>
@@ -437,8 +443,15 @@ const Auth = () => {
 
               <TabsContent value="signin" className="mt-0 space-y-6 space-form">
                 <form onSubmit={handleSignIn} className="space-y-5 space-form">
+                  <h2
+                    className={`text-lg font-semibold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('auth.signInWithEmail')}
+                  </h2>
                   <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label htmlFor="signin-email" className="text-sm font-semibold">{t('auth.email')}</Label>
+                    <Label htmlFor="signin-email" className="text-sm font-semibold">
+                      {t('auth.email')}
+                    </Label>
                     <Input
                       id="signin-email"
                       type="email"
@@ -454,7 +467,9 @@ const Auth = () => {
                     />
                   </div>
                   <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label htmlFor="signin-password" className="text-sm font-semibold">{t('auth.password')}</Label>
+                    <Label htmlFor="signin-password" className="text-sm font-semibold">
+                      {t('auth.password')}
+                    </Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -463,7 +478,7 @@ const Auth = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       onFocus={(e) => e.target.removeAttribute('readonly')}
                       required
-                      autoComplete="new-password"
+                      autoComplete="current-password"
                       readOnly
                       autoDirection
                       className="h-11"
@@ -485,7 +500,7 @@ const Auth = () => {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-card px-4 text-muted-foreground text-xs font-medium tracking-wide">
-                        {t('auth.orContinueWith')}
+                        {t('auth.continueWithGoogle')}
                       </span>
                     </div>
                   </div>
@@ -515,7 +530,9 @@ const Auth = () => {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span className="text-lg font-medium text-foreground">{t('auth.signInWithGoogle')}</span>
+                    <span className="text-lg font-medium text-foreground">
+                      {t('auth.signInWithGoogle')}
+                    </span>
                   </Button>
                 </form>
               </TabsContent>
@@ -523,16 +540,19 @@ const Auth = () => {
               <TabsContent value="signup" className="mt-0 space-y-8">
                 <form onSubmit={handleSignUp} className="space-y-6">
                   <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label className="text-lg font-medium text-foreground block">{t('auth.iAmA')}</Label>
+                    <Label className="text-lg font-medium text-foreground block">
+                      {t('auth.iAmA')}
+                    </Label>
                     <div className="grid grid-cols-2 gap-6">
                       <Button
                         type="button"
                         variant={role === 'teacher' ? 'default' : 'outline'}
                         onClick={() => setRole('teacher')}
-                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${role === 'teacher'
-                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
-                          : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
-                          }`}
+                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${
+                          role === 'teacher'
+                            ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
+                            : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
+                        }`}
                       >
                         <span className="text-2xl">👨‍🏫</span>
                         <span className="font-semibold text-lg">{t('auth.teacher')}</span>
@@ -541,10 +561,11 @@ const Auth = () => {
                         type="button"
                         variant={role === 'student' ? 'default' : 'outline'}
                         onClick={() => setRole('student')}
-                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${role === 'student'
-                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
-                          : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
-                          }`}
+                        className={`h-20 flex flex-col items-center justify-center gap-2 rounded-xl transition-all ${
+                          role === 'student'
+                            ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
+                            : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
+                        }`}
                       >
                         <span className="text-2xl">👨‍🎓</span>
                         <span className="font-semibold text-lg">{t('auth.student')}</span>
@@ -553,16 +574,19 @@ const Auth = () => {
                   </div>
 
                   <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label className="text-lg font-medium text-foreground block">{t('auth.selectLanguage')}</Label>
+                    <Label className="text-lg font-medium text-foreground block">
+                      {t('auth.selectLanguage')}
+                    </Label>
                     <div className="grid grid-cols-2 gap-6">
                       <Button
                         type="button"
                         variant={selectedLanguage === 'en' ? 'default' : 'outline'}
                         onClick={() => handleLanguageSelect('en')}
-                        className={`h-16 flex items-center justify-center gap-3 rounded-xl transition-all ${selectedLanguage === 'en'
-                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
-                          : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
-                          }`}
+                        className={`h-16 flex items-center justify-center gap-3 rounded-xl transition-all ${
+                          selectedLanguage === 'en'
+                            ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
+                            : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
+                        }`}
                       >
                         <span className="text-2xl">🇺🇸</span>
                         <span className="font-semibold text-lg">{t('auth.english')}</span>
@@ -571,10 +595,11 @@ const Auth = () => {
                         type="button"
                         variant={selectedLanguage === 'he' ? 'default' : 'outline'}
                         onClick={() => handleLanguageSelect('he')}
-                        className={`h-16 flex items-center justify-center gap-3 rounded-xl transition-all ${selectedLanguage === 'he'
-                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
-                          : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
-                          }`}
+                        className={`h-16 flex items-center justify-center gap-3 rounded-xl transition-all ${
+                          selectedLanguage === 'he'
+                            ? 'bg-primary text-primary-foreground ring-4 ring-primary/10 shadow-xl scale-[1.02]'
+                            : 'bg-card hover:bg-muted/50 border-input hover:border-border text-muted-foreground shadow-sm'
+                        }`}
                       >
                         <span className="text-2xl">🇮🇱</span>
                         <span className="font-semibold text-lg">{t('auth.hebrew')}</span>
@@ -582,8 +607,19 @@ const Auth = () => {
                     </div>
                   </div>
 
+                  <h2
+                    className={`text-lg font-semibold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('auth.signUpWithEmail')}
+                  </h2>
+
                   <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label htmlFor="signup-email" className="text-lg font-medium text-foreground block">{t('auth.email')}</Label>
+                    <Label
+                      htmlFor="signup-email"
+                      className="text-lg font-medium text-foreground block"
+                    >
+                      {t('auth.email')}
+                    </Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -599,7 +635,12 @@ const Auth = () => {
                     />
                   </div>
                   <div className={`space-y-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <Label htmlFor="signup-password" className="text-lg font-medium text-foreground block">{t('auth.password')}</Label>
+                    <Label
+                      htmlFor="signup-password"
+                      className="text-lg font-medium text-foreground block"
+                    >
+                      {t('auth.password')}
+                    </Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -630,7 +671,7 @@ const Auth = () => {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-card px-6 text-muted-foreground text-sm font-medium tracking-wider">
-                        {t('auth.orSignUpWith')}
+                        {t('auth.continueWithGoogle')}
                       </span>
                     </div>
                   </div>
@@ -667,7 +708,9 @@ const Auth = () => {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span className="text-lg font-medium text-foreground">{t('auth.signUpWithGoogle')}</span>
+                    <span className="text-lg font-medium text-foreground">
+                      {t('auth.signUpWithGoogle')}
+                    </span>
                   </Button>
                 </form>
               </TabsContent>

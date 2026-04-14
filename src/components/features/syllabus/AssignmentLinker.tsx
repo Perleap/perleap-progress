@@ -1,6 +1,14 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Link2, Unlink, FileText } from 'lucide-react';
 import { useLinkAssignment, useUnlinkAssignment } from '@/hooks/queries';
@@ -33,6 +41,7 @@ export const AssignmentLinker = ({
   const { t } = useTranslation();
   const linkMutation = useLinkAssignment();
   const unlinkMutation = useUnlinkAssignment();
+  const [linkSelectReset, setLinkSelectReset] = useState<Record<string, number>>({});
 
   const linkedAssignments = assignments.filter((a) => a.syllabus_section_id);
   const unlinkedAssignments = assignments.filter((a) => !a.syllabus_section_id);
@@ -48,6 +57,7 @@ export const AssignmentLinker = ({
       toast.success(t('syllabus.assignmentLinked', 'Assignment linked to section'));
     } catch {
       toast.error(t('syllabus.linkFailed', 'Failed to link assignment'));
+      setLinkSelectReset((prev) => ({ ...prev, [assignmentId]: (prev[assignmentId] ?? 0) + 1 }));
     }
   };
 
@@ -92,18 +102,27 @@ export const AssignmentLinker = ({
 
                 {sections.length > 0 ? (
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <select
-                      className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (e.target.value) handleLink(assignment.id, e.target.value);
+                    <Select
+                      key={`link-to-section-${assignment.id}-${linkSelectReset[assignment.id] ?? 0}`}
+                      onValueChange={(sectionId) => {
+                        if (sectionId) void handleLink(assignment.id, sectionId);
                       }}
                     >
-                      <option value="" disabled>{t('syllabus.linkToSectionShort', 'Link to section...')}</option>
-                      {sections.map((s) => (
-                        <option key={s.id} value={s.id}>{s.title}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        size="sm"
+                        className="h-8 min-w-[10.5rem] max-w-[14rem] text-xs rounded-full px-2.5 gap-1 border-dashed"
+                      >
+                        <Link2 className="h-3 w-3 shrink-0" />
+                        <SelectValue placeholder={t('syllabus.linkToSectionShort', 'Link to section...')} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                        {sections.map((s) => (
+                          <SelectItem key={s.id} value={s.id} className="text-sm">
+                            {s.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ) : (
                   <span className="text-xs text-muted-foreground">{t('syllabus.noSectionsToLink', 'No sections to link to')}</span>
