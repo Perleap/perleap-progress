@@ -7,6 +7,7 @@ import { LoadingSpinner } from './common/LoadingSpinner';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import type { FiveDScores, FiveDSnapshot } from '@/types/models';
+import { selectBestSubmissionIdForAggregate } from '@/lib/bestSubmission';
 
 interface StudentAnalyticsProps {
   studentId: string;
@@ -65,7 +66,7 @@ export function StudentAnalytics({
 
       const submissionsData = await supabase
         .from('submissions')
-        .select('id, submitted_at, assignments(title)')
+        .select('id, submitted_at, assignment_id, status, attempt_number, assignments(title)')
         .eq('student_id', studentId)
         .in(
           'assignment_id',
@@ -74,7 +75,8 @@ export function StudentAnalytics({
         .order('submitted_at', { ascending: false });
 
       if (submissionsData.data) {
-        const submissionsList = submissionsData.data.map((sub) => ({
+        const rows = submissionsData.data;
+        const submissionsList = rows.map((sub) => ({
           id: sub.id,
           title: (sub.assignments as any)?.title || 'Unknown Assignment',
           submitted_at: sub.submitted_at || new Date().toISOString(),
@@ -85,15 +87,46 @@ export function StudentAnalytics({
           setSelectedSubmissionId(currentSubmissionId || submissionsList[0].id);
         }
 
-        // Fetch snapshots ONLY for these submissions
-        const submissionIds = submissionsList.map((s) => s.id);
+        const submissionIds = rows.map((s) => s.id);
         const { data: snapshotsData } = await supabase
           .from('five_d_snapshots')
-          .select('scores, score_explanations')
+          .select('submission_id, scores, score_explanations')
           .eq('user_id', studentId)
           .in('submission_id', submissionIds);
 
-        if (snapshotsData?.length) {
+        const snapBySub = new Map(
+          (snapshotsData ?? []).map((s) => [s.submission_id, s]),
+        );
+
+        const byAssignment = new Map<string, typeof rows>();
+        for (const s of rows) {
+          const list = byAssignment.get(s.assignment_id) || [];
+          list.push(s);
+          byAssignment.set(s.assignment_id, list);
+        }
+
+        const bestForAverage: NonNullable<typeof snapshotsData> = [];
+        for (const [, attempts] of byAssignment) {
+          const map = new Map<string, { scores: unknown }>();
+          for (const a of attempts) {
+            const sn = snapBySub.get(a.id);
+            if (sn) map.set(a.id, { scores: sn.scores });
+          }
+          const bestId = selectBestSubmissionIdForAggregate(
+            attempts.map((a) => ({
+              id: a.id,
+              attempt_number: a.attempt_number ?? 1,
+              status: a.status as 'in_progress' | 'completed',
+              submitted_at: a.submitted_at || null,
+            })),
+            map,
+          );
+          if (bestId && snapBySub.has(bestId)) {
+            bestForAverage.push(snapBySub.get(bestId)!);
+          }
+        }
+
+        if (bestForAverage.length) {
           const totals: FiveDScores = {
             vision: 0,
             values: 0,
@@ -102,7 +135,7 @@ export function StudentAnalytics({
             action: 0,
           };
 
-          snapshotsData.forEach((snapshot) => {
+          bestForAverage.forEach((snapshot) => {
             const scores = snapshot.scores as FiveDScores;
             (Object.keys(totals) as Array<keyof FiveDScores>).forEach((key) => {
               totals[key] += scores[key] || 0;
@@ -112,7 +145,7 @@ export function StudentAnalytics({
           const avgScores = (Object.keys(totals) as Array<keyof FiveDScores>).reduce(
             (acc, key) => ({
               ...acc,
-              [key]: totals[key] / snapshotsData.length,
+              [key]: totals[key] / bestForAverage.length,
             }),
             {} as FiveDScores
           );

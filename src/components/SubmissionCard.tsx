@@ -29,23 +29,41 @@ function lastChatSnippet(messages: ConversationMessage[] | undefined, max: numbe
 
 export type SubmissionCardVariant = 'stack' | 'compact' | 'detailed' | 'list';
 
+/** Shown only when a student has more than one submission row for the same assignment. */
+export function formatSubmissionAssignmentTitle(
+  assignmentTitle: string,
+  attemptNumber: number | undefined,
+  submissionAttemptCount: number,
+): string {
+  if (typeof attemptNumber !== 'number') return assignmentTitle;
+  if (submissionAttemptCount <= 1) return assignmentTitle;
+  return `${assignmentTitle} #${attemptNumber}`;
+}
+
 interface SubmissionCardProps {
   submission: {
     id: string;
     submitted_at: string;
     student_name: string;
     assignment_title: string;
+    attempt_number?: number;
     status: 'in_progress' | 'completed';
     has_feedback: boolean;
     teacher_feedback?: string;
     conversation_context?: ConversationMessage[];
     student_avatar_url?: string;
   };
+  /** Total submission rows for this student + assignment in the classroom (from the same query). */
+  submissionAttemptCount?: number;
   /** Default stack: tall card with title top, student bottom-left, date bottom-right */
   variant?: SubmissionCardVariant;
 }
 
-export function SubmissionCard({ submission, variant = 'stack' }: SubmissionCardProps) {
+export function SubmissionCard({
+  submission,
+  submissionAttemptCount = 1,
+  variant = 'stack',
+}: SubmissionCardProps) {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -75,6 +93,12 @@ export function SubmissionCard({ submission, variant = 'stack' }: SubmissionCard
     .slice(0, 2);
 
   const pending = submission.id.startsWith('pending-');
+
+  const displayAssignmentTitle = formatSubmissionAssignmentTitle(
+    submission.assignment_title,
+    submission.attempt_number,
+    submissionAttemptCount,
+  );
 
   const avatarClass =
     variant === 'list' || variant === 'compact'
@@ -155,7 +179,7 @@ export function SubmissionCard({ submission, variant = 'stack' }: SubmissionCard
 
   const topRow = (
     <div className="flex items-start justify-between gap-3">
-      <h3 className={titleClass}>{submission.assignment_title}</h3>
+      <h3 className={titleClass}>{displayAssignmentTitle}</h3>
       {statusBadge}
     </div>
   );
@@ -239,7 +263,7 @@ export function SubmissionCard({ submission, variant = 'stack' }: SubmissionCard
       <div className="min-w-0 flex-1 flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2 sm:gap-3">
           <h3 className="min-w-0 flex-1 text-start font-semibold leading-snug text-foreground line-clamp-2 text-base sm:text-[1.0625rem]">
-            {submission.assignment_title}
+            {displayAssignmentTitle}
           </h3>
           <div className="shrink-0 pt-0.5">{statusBadge}</div>
         </div>

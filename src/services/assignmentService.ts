@@ -4,7 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
-import { getOrCreateSubmission } from './submissionService';
+import { getStudentSubmissionContext } from './submissionService';
 import type {
   Assignment,
   AssignmentWithClassroom,
@@ -141,9 +141,11 @@ export const getStudentAssignmentDetails = async (
     if (assignError) throw assignError;
     if (!assignment) return { data: null, error: null };
 
-    // 2. Get or create submission
-    const { data: submission, error: subError } = await getOrCreateSubmission(assignmentId, studentId);
+    // 2. Active submission + attempt policy
+    const { data: ctx, error: subError } = await getStudentSubmissionContext(assignmentId, studentId);
     if (subError) throw subError;
+
+    const submission = ctx.submission;
 
     // 3. Fetch feedback if submission exists
     let feedback = null;
@@ -160,7 +162,11 @@ export const getStudentAssignmentDetails = async (
       data: {
         ...assignment,
         submission,
-        feedback
+        feedback,
+        submissionContext: {
+          allAttempts: ctx.allAttempts,
+          canRetry: ctx.canRetry,
+        },
       },
       error: null
     };

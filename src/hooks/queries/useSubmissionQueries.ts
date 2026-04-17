@@ -6,7 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  getOrCreateSubmission,
+  getStudentSubmissionContext,
   getSubmissionById,
   getFullSubmissionDetails,
   getAssignmentConversationMessages,
@@ -43,7 +43,7 @@ export const useSubmission = (assignmentId: string | undefined) => {
     queryKey: submissionKeys.forAssignment(assignmentId || '', user?.id || ''),
     queryFn: async () => {
       if (!user || !assignmentId) throw new Error('Missing user or assignment ID');
-      const { data, error } = await getOrCreateSubmission(assignmentId, user.id);
+      const { data, error } = await getStudentSubmissionContext(assignmentId, user.id);
       if (error) throw error;
       return data;
     },

@@ -34,7 +34,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { SubmissionCard, type SubmissionCardVariant } from './SubmissionCard';
+import {
+  SubmissionCard,
+  formatSubmissionAssignmentTitle,
+  type SubmissionCardVariant,
+} from './SubmissionCard';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -105,6 +109,16 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
         submissions.map((s) => [s.assignment_id, { id: s.assignment_id, title: s.assignment_title }])
       ).values()
     );
+  }, [submissions]);
+
+  /** Rows per (student, assignment) — used to hide #1 when only one attempt exists. */
+  const attemptCountByStudentAssignment = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of submissions) {
+      const key = `${s.student_id}:${s.assignment_id}`;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
+    return m;
   }, [submissions]);
 
   // Memoize filtered submissions to avoid recalculating on every render
@@ -502,7 +516,11 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                     }}
                   >
                     <TableCell className="max-w-[min(100%,280px)] whitespace-normal align-middle text-start font-medium">
-                      {submission.assignment_title}
+                      {formatSubmissionAssignmentTitle(
+                        submission.assignment_title,
+                        submission.attempt_number,
+                        attemptCountByStudentAssignment.get(`${submission.student_id}:${submission.assignment_id}`) ?? 1,
+                      )}
                     </TableCell>
                     <TableCell className="text-start align-middle">{submission.student_name}</TableCell>
                     <TableCell className="align-middle">
@@ -551,7 +569,13 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
                 className="-start-[22px] sm:-start-[26px] absolute top-2 size-3 rounded-full bg-primary ring-4 ring-background"
                 aria-hidden
               />
-              <SubmissionCard submission={submission} variant="detailed" />
+              <SubmissionCard
+                submission={submission}
+                variant="detailed"
+                submissionAttemptCount={
+                  attemptCountByStudentAssignment.get(`${submission.student_id}:${submission.assignment_id}`) ?? 1
+                }
+              />
             </div>
           ))}
         </div>
@@ -570,6 +594,9 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
               key={submission.id}
               submission={submission}
               variant={cardVariantForView}
+              submissionAttemptCount={
+                attemptCountByStudentAssignment.get(`${submission.student_id}:${submission.assignment_id}`) ?? 1
+              }
             />
           ))}
         </div>

@@ -9,6 +9,7 @@ export interface Submission {
   id: string;
   assignment_id: string;
   student_id: string;
+  attempt_number?: number;
   text_body: string | null;
   file_url: string | null;
   status: SubmissionStatus;

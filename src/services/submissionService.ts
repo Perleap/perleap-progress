@@ -18,50 +18,199 @@ import type {
 import { SUBMISSION_STATUS } from '@/config/constants';
 import { createNotification } from '@/lib/notificationService';
 import { rehydrateMessages } from '@/lib/conversationMessages';
+import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+
+export type StudentSubmissionContext = {
+  submission: Submission | null;
+  allAttempts: Submission[];
+  canRetry: boolean;
+};
+
+async function insertSubmissionRow(
+  assignmentId: string,
+  studentId: string,
+  attemptNumber: number,
+): Promise<{ data: Submission | null; error: ApiError | null }> {
+  const { data: newSubmission, error: createError } = await supabase
+    .from('submissions')
+    .insert([
+      {
+        assignment_id: assignmentId,
+        student_id: studentId,
+        attempt_number: attemptNumber,
+        status: SUBMISSION_STATUS.IN_PROGRESS as any,
+      },
+    ])
+    .select()
+    .single();
+
+  if (createError) {
+    return { data: null, error: handleSupabaseError(createError) };
+  }
+
+  return { data: newSubmission as any as Submission, error: null };
+}
 
 /**
- * Get or create submission for a student and assignment
+ * Resolves which submission row the student should see and whether they may start a retry after completing.
+ * Creates the first in-progress row when none exist (if policy allows).
  */
-export const getOrCreateSubmission = async (
+export const getStudentSubmissionContext = async (
   assignmentId: string,
-  studentId: string
-): Promise<{ data: Submission | null; error: ApiError | null }> => {
+  studentId: string,
+): Promise<{ data: StudentSubmissionContext; error: ApiError | null }> => {
   try {
-    const { data: existing, error: fetchError } = await supabase
+    const { data: assignment, error: assignErr } = await supabase
+      .from('assignments')
+      .select('id, attempt_mode, due_at, status')
+      .eq('id', assignmentId)
+      .maybeSingle();
+
+    if (assignErr) {
+      return {
+        data: { submission: null, allAttempts: [], canRetry: false },
+        error: handleSupabaseError(assignErr),
+      };
+    }
+    if (!assignment) {
+      return { data: { submission: null, allAttempts: [], canRetry: false }, error: null };
+    }
+
+    const { data: rows, error: rowsErr } = await supabase
       .from('submissions')
       .select('*')
       .eq('assignment_id', assignmentId)
       .eq('student_id', studentId)
+      .order('attempt_number', { ascending: true });
+
+    if (rowsErr) {
+      return {
+        data: { submission: null, allAttempts: [], canRetry: false },
+        error: handleSupabaseError(rowsErr),
+      };
+    }
+
+    const list = (rows ?? []) as Submission[];
+    const now = new Date();
+
+    const inProgress = list.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
+    if (inProgress) {
+      return {
+        data: {
+          submission: inProgress,
+          allAttempts: list,
+          canRetry: false,
+        },
+        error: null,
+      };
+    }
+
+    if (list.length === 0) {
+      if (!canStartFirstAttempt(assignment as any, now)) {
+        return {
+          data: { submission: null, allAttempts: [], canRetry: false },
+          error: null,
+        };
+      }
+      const { data: created, error: insErr } = await insertSubmissionRow(assignmentId, studentId, 1);
+      if (insErr || !created) {
+        return { data: { submission: null, allAttempts: [], canRetry: false }, error: insErr };
+      }
+      return {
+        data: { submission: created, allAttempts: [created], canRetry: false },
+        error: null,
+      };
+    }
+
+    const completed = list.filter((s) => s.status === SUBMISSION_STATUS.COMPLETED);
+    const latestCompleted = [...completed].sort((a, b) => {
+      const ta = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
+      const tb = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
+      return tb - ta;
+    })[0];
+
+    const retry = canRetryAfterCompleting(assignment as any, now);
+    return {
+      data: {
+        submission: latestCompleted ?? null,
+        allAttempts: list,
+        canRetry: retry,
+      },
+      error: null,
+    };
+  } catch (error) {
+    return {
+      data: { submission: null, allAttempts: [], canRetry: false },
+      error: handleSupabaseError(error),
+    };
+  }
+};
+
+export const startNewSubmissionAttempt = async (
+  assignmentId: string,
+  studentId: string,
+): Promise<{ data: Submission | null; error: ApiError | null }> => {
+  try {
+    const { data: assignment, error: assignErr } = await supabase
+      .from('assignments')
+      .select('id, attempt_mode, due_at')
+      .eq('id', assignmentId)
       .maybeSingle();
 
-    if (fetchError) {
-      return { data: null, error: handleSupabaseError(fetchError) };
+    if (assignErr) return { data: null, error: handleSupabaseError(assignErr) };
+    if (!assignment) {
+      return { data: null, error: { message: 'Assignment not found', code: 'NOT_FOUND' } };
     }
 
-    if (existing) {
-      return { data: existing as any as Submission, error: null };
-    }
-
-    const { data: newSubmission, error: createError } = await supabase
-      .from('submissions')
-      .insert([
-        {
-          assignment_id: assignmentId,
-          student_id: studentId,
-          status: SUBMISSION_STATUS.IN_PROGRESS as any,
+    const now = new Date();
+    if (!canRetryAfterCompleting(assignment as any, now)) {
+      return {
+        data: null,
+        error: {
+          message: 'Another attempt is not allowed for this assignment.',
+          code: 'ATTEMPT_NOT_ALLOWED',
         },
-      ])
-      .select()
-      .single();
-
-    if (createError) {
-      return { data: null, error: handleSupabaseError(createError) };
+      };
     }
 
-    return { data: newSubmission as any as Submission, error: null };
+    const { data: rows, error: rowsErr } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('assignment_id', assignmentId)
+      .eq('student_id', studentId)
+      .order('attempt_number', { ascending: true });
+
+    if (rowsErr) return { data: null, error: handleSupabaseError(rowsErr) };
+    const list = rows ?? [];
+    if (list.some((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS)) {
+      return {
+        data: null,
+        error: { message: 'You already have a draft in progress.', code: 'DUPLICATE_DRAFT' },
+      };
+    }
+    if (!list.some((s) => s.status === SUBMISSION_STATUS.COMPLETED)) {
+      return {
+        data: null,
+        error: { message: 'Complete your current attempt first.', code: 'INVALID_STATE' },
+      };
+    }
+
+    const nextNum =
+      Math.max(...list.map((s) => (s as Submission & { attempt_number?: number }).attempt_number ?? 1)) + 1;
+    return insertSubmissionRow(assignmentId, studentId, nextNum);
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
+};
+
+/** @deprecated Prefer getStudentSubmissionContext */
+export const getOrCreateSubmission = async (
+  assignmentId: string,
+  studentId: string,
+): Promise<{ data: Submission | null; error: ApiError | null }> => {
+  const { data, error } = await getStudentSubmissionContext(assignmentId, studentId);
+  if (error) return { data: null, error };
+  return { data: data.submission, error: null };
 };
 
 /**
@@ -178,6 +327,7 @@ export const getEnrichedClassroomSubmissions = async (
         student_id, 
         assignment_id, 
         status,
+        attempt_number,
         student_profiles(user_id, full_name, avatar_url)
       `)
       .in('assignment_id', assignmentIds)

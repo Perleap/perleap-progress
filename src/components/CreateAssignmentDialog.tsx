@@ -33,6 +33,7 @@ import { AssignmentCourseOutlineLinkCard } from '@/components/AssignmentCourseOu
 import { useSyllabus, syllabusKeys, assignmentKeys } from '@/hooks/queries';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface CreateAssignmentDialogProps {
   open: boolean;
@@ -115,6 +116,7 @@ export function CreateAssignmentDialog({
     personalization_flag: false,
     auto_publish_ai_feedback: true,
     materials: [] as Array<{ type: 'pdf' | 'link'; url: string; name: string }>,
+    attempt_mode: 'single' as Database['public']['Enums']['assignment_attempt_mode'],
   });
 
   // Fetch classroom data for domains and materials, and last assignment data
@@ -398,6 +400,12 @@ export function CreateAssignmentDialog({
     setLoading(true);
 
     try {
+      if (formData.attempt_mode === 'multiple_until_due' && !formData.due_at?.trim()) {
+        toast.error(t('createAssignment.attemptMode.dueRequiredForRetries'));
+        setLoading(false);
+        return;
+      }
+
       const { data: assignment, error } = await supabase
         .from('assignments')
         .insert([
@@ -407,6 +415,7 @@ export function CreateAssignmentDialog({
             instructions: formData.instructions,
             type: formData.type as Database["public"]["Enums"]["assignment_type"],
             due_at: formData.due_at || null,
+            attempt_mode: formData.attempt_mode,
             status: formData.status as Database["public"]["Enums"]["assignment_status"],
             hard_skills: JSON.stringify(formData.hard_skills),
             hard_skill_domain: formData.hard_skill_domain || null,
@@ -702,8 +711,62 @@ export function CreateAssignmentDialog({
                           isRTL ? 'text-right' : 'text-left',
                         )}
                       >
-                        {t('createAssignment.metadata.dueDateHelper')}
+                        {formData.attempt_mode === 'multiple_until_due'
+                          ? t('createAssignment.attemptMode.dueDateHelperRetries')
+                          : t('createAssignment.metadata.dueDateHelper')}
                       </p>
+                    </div>
+
+                    <div className={cn('space-y-2 max-w-[min(100%,28rem)]', isRTL ? 'text-right' : 'text-left')}>
+                      <Label className="text-body font-medium mb-0 block">{t('createAssignment.attemptMode.label')}</Label>
+                      <RadioGroup
+                        value={formData.attempt_mode}
+                        onValueChange={(v) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            attempt_mode: v as Database['public']['Enums']['assignment_attempt_mode'],
+                          }))
+                        }
+                        className="space-y-2"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
+                        <div className={cn('flex items-start gap-2.5', isRTL && 'flex-row-reverse')}>
+                          <RadioGroupItem value="single" id="am-single" className="shrink-0" />
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <label
+                              htmlFor="am-single"
+                              className="block cursor-pointer text-sm leading-snug font-semibold text-foreground"
+                            >
+                              {t('createAssignment.attemptMode.single')}
+                            </label>
+                            <p className="text-muted-foreground text-xs leading-snug">{t('createAssignment.attemptMode.singleHelper')}</p>
+                          </div>
+                        </div>
+                        <div className={cn('flex items-start gap-2.5', isRTL && 'flex-row-reverse')}>
+                          <RadioGroupItem value="multiple_until_due" id="am-until" className="shrink-0" />
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <label
+                              htmlFor="am-until"
+                              className="block cursor-pointer text-sm leading-snug font-semibold text-foreground"
+                            >
+                              {t('createAssignment.attemptMode.multipleUntilDue')}
+                            </label>
+                            <p className="text-muted-foreground text-xs leading-snug">{t('createAssignment.attemptMode.multipleUntilDueHelper')}</p>
+                          </div>
+                        </div>
+                        <div className={cn('flex items-start gap-2.5', isRTL && 'flex-row-reverse')}>
+                          <RadioGroupItem value="multiple_unlimited" id="am-unlim" className="shrink-0" />
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <label
+                              htmlFor="am-unlim"
+                              className="block cursor-pointer text-sm leading-snug font-semibold text-foreground"
+                            >
+                              {t('createAssignment.attemptMode.unlimited')}
+                            </label>
+                            <p className="text-muted-foreground text-xs leading-snug">{t('createAssignment.attemptMode.unlimitedHelper')}</p>
+                          </div>
+                        </div>
+                      </RadioGroup>
                     </div>
 
                     <div className="space-y-1 pt-0.5">

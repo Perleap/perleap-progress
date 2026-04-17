@@ -17,6 +17,34 @@
     "logoutConfirmTitle": "Log out?",
     "logoutConfirmDescription": "You will need to sign in again to access your account."
   },
+  "planner": {
+    "subtitle": "Manage your schedule and assignments",
+    "classroomsTitle": "Classrooms",
+    "searchPlaceholder": "Search classrooms…",
+    "selectAll": "Select all",
+    "clearAll": "Clear",
+    "newAssignment": "New Assignment",
+    "selectClassroomTitle": "Select classroom",
+    "classroomLabel": "Classroom",
+    "assignmentDetails": "Assignment details",
+    "instructions": "Instructions",
+    "editAssignment": "Edit assignment",
+    "viewInClassroom": "View in classroom",
+    "deleteAssignment": "Delete assignment",
+    "dueLabel": "Due",
+    "deleteConfirmTitle": "Delete this assignment?",
+    "deleteConfirmDescription": "Students will no longer see it. This cannot be undone.",
+    "noClassroomsMatch": "No classrooms match your search.",
+    "continue": "Continue",
+    "toolbar": {
+      "today": "Today",
+      "previous": "Back",
+      "next": "Next",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    }
+  },
   "landing": {
     "nav": {
       "product": "Product",
@@ -427,6 +455,17 @@
     "courseOutlineNoSections": "Your syllabus has no sections or grading categories yet. Add them in Course Outline to link this assignment.",
     "syllabusModelLabel": "Syllabus Model",
     "linkToSyllabusModel": "Link to a Model (optional)",
+    "attemptMode": {
+      "label": "Submission attempts",
+      "single": "Single attempt",
+      "multipleUntilDue": "Multiple attempts until due date",
+      "unlimited": "Unlimited attempts",
+      "singleHelper": "Each student submits once.",
+      "multipleUntilDueHelper": "Students may retry until the due date below (same date ends new attempts).",
+      "unlimitedHelper": "No cap on tries. Due date is optional (for planning only).",
+      "dueDateHelperRetries": "Required: all attempts must be submitted by this date.",
+      "dueRequiredForRetries": "Set a due date when using multiple attempts until that date."
+    },
     "metadata": {
       "assignmentDetailsTitle": "Assignment details",
       "assignmentDetailsDescription": "Define the task and optional links to your course outline.",
@@ -461,6 +500,7 @@
   "editAssignment": {
     "title": "Edit Assignment",
     "description": "Update assignment details",
+    "attemptPolicyFrozen": "Due date and attempt settings are locked because students have already submitted.",
     "saving": "Saving...",
     "save": "Save Changes",
     "errors": {
@@ -567,6 +607,7 @@
     }
   },
   "submissionsTab": {
+    "attemptLabel": "Attempt {{n}}",
     "filterTitle": "Filter & Search Submissions",
     "exportAll": "Export All",
     "search": "Search",
@@ -731,6 +772,11 @@
   "assignmentDetail": {
     "title": "Assignment Details",
     "instructions": "Instructions",
+    "attemptBannerSingle": "You can submit this assignment once.",
+    "attemptBannerUntil": "You may submit multiple times until {{date}}.",
+    "attemptBannerUnlimited": "You may submit multiple times (no limit).",
+    "startNewAttempt": "Start another attempt",
+    "newAttemptStarted": "New attempt started.",
     "dueDate": "Due Date",
     "type": "Type",
     "startAssignment": "Start Assignment",

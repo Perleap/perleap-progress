@@ -24,6 +24,13 @@ export const ASSIGNMENT_STATUS = {
   PUBLISHED: 'published',
 } as const;
 
+/** How many times a student may submit the same assignment */
+export const ASSIGNMENT_ATTEMPT_MODE = {
+  SINGLE: 'single',
+  MULTIPLE_UNTIL_DUE: 'multiple_until_due',
+  MULTIPLE_UNLIMITED: 'multiple_unlimited',
+} as const;
+
 // Submission Status
 export const SUBMISSION_STATUS = {
   IN_PROGRESS: 'in_progress',

@@ -1,16 +1,17 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { generateFeedback, completeSubmission } from '@/services/submissionService';
+import { generateFeedback, completeSubmission, startNewSubmissionAttempt } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { assignmentKeys, useStudentAssignmentDetails } from '@/hooks/queries';
-import { Calendar, FileText, Link as LinkIcon, Download, Loader2, Clock } from 'lucide-react';
+import { Calendar, FileText, Link as LinkIcon, Download, Loader2, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -28,12 +29,18 @@ const AssignmentDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [retryLoading, setRetryLoading] = useState(false);
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(id);
 
   const assignment = assignmentData;
   const submission = assignmentData?.submission;
   const feedback = assignmentData?.feedback;
+  const submissionContext = assignmentData?.submissionContext as
+    | { allAttempts: unknown[]; canRetry: boolean }
+    | undefined;
+  const canRetry = submissionContext?.canRetry ?? false;
+  const attemptMode = (assignment as { attempt_mode?: string } | undefined)?.attempt_mode ?? 'single';
 
   const nuanceTracking = useNuanceTracking({
     studentId: user?.id,
@@ -47,6 +54,23 @@ const AssignmentDetail = () => {
         assignment.type as (typeof NON_CHAT_ASSIGNMENT_TYPES)[number],
       ),
   });
+
+  const handleStartNewAttempt = async () => {
+    if (!user?.id || !assignment?.id) return;
+    setRetryLoading(true);
+    try {
+      const { error } = await startNewSubmissionAttempt(assignment.id, user.id);
+      if (error) {
+        toast.error(error.message || t('common.error'));
+        return;
+      }
+      toast.success(t('assignmentDetail.newAttemptStarted'));
+      queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+      await refetch();
+    } finally {
+      setRetryLoading(false);
+    }
+  };
 
   const handleActivityComplete = async () => {
     try {
@@ -128,10 +152,27 @@ const AssignmentDetail = () => {
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <CardTitle>{t('assignmentDetail.title')}</CardTitle>
-                  <CardDescription className="flex items-center gap-2 mt-2">
-                    <Calendar className="h-4 w-4" />
-                    {assignment.due_at &&
-                      `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
+                  <CardDescription className="flex flex-col gap-1 mt-2">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 shrink-0" />
+                      {assignment.due_at &&
+                        `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
+                    </span>
+                    {attemptMode === 'single' && (
+                      <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerSingle')}</span>
+                    )}
+                    {attemptMode === 'multiple_until_due' && (
+                      <span className="text-xs text-muted-foreground">
+                        {assignment.due_at
+                          ? t('assignmentDetail.attemptBannerUntil', {
+                              date: new Date(assignment.due_at).toLocaleString(),
+                            })
+                          : t('assignmentDetail.attemptBannerSingle')}
+                      </span>
+                    )}
+                    {attemptMode === 'multiple_unlimited' && (
+                      <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerUnlimited')}</span>
+                    )}
                   </CardDescription>
                 </div>
                 <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
@@ -315,6 +356,25 @@ const AssignmentDetail = () => {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {canRetry && submission?.status === 'completed' && (
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleStartNewAttempt()}
+                disabled={retryLoading}
+                className="gap-2"
+              >
+                {retryLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                {t('assignmentDetail.startNewAttempt')}
+              </Button>
+            </div>
           )}
         </div>
       </div>

@@ -1,10 +1,24 @@
 import { cn } from '@/lib/utils';
 
-/** Brand mark (multi-color); served from `public/perleap.svg` (same file as the favicon). */
-export function PerleapLogo({ className, title }: { className?: string; title?: string }) {
+const LOGO_SRC = {
+  svg: '/perleap.svg',
+  png: '/perleap_logo.png',
+} as const;
+
+export type PerleapLogoVariant = keyof typeof LOGO_SRC;
+
+type PerleapLogoProps = {
+  className?: string;
+  title?: string;
+  /** `svg` matches the favicon (crisp at any size). `png` uses the raster brand asset. */
+  variant?: PerleapLogoVariant;
+};
+
+/** Brand mark; SVG is default (same file as the favicon). */
+export function PerleapLogo({ className, title, variant = 'svg' }: PerleapLogoProps) {
   return (
     <img
-      src="/perleap.svg"
+      src={LOGO_SRC[variant]}
       alt={title ?? ''}
       className={cn(
         'shrink-0 aspect-square rounded-full object-cover object-center',

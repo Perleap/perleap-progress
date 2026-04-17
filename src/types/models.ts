@@ -62,6 +62,8 @@ export interface Classroom {
   };
 }
 
+export type AssignmentAttemptMode = 'single' | 'multiple_until_due' | 'multiple_unlimited';
+
 export interface Assignment {
   id: string;
   classroom_id: string;
@@ -70,6 +72,8 @@ export interface Assignment {
   type: 'text_essay' | 'chatbot' | 'questions' | 'test' | 'project' | 'presentation' | 'langchain';
   status: 'draft' | 'published';
   due_at: string | null;
+  /** Defaults to single for legacy rows. */
+  attempt_mode?: AssignmentAttemptMode;
   target_dimensions: TargetDimensions;
   personalization_flag: boolean;
   materials?: CourseMaterial[] | null;
@@ -95,6 +99,8 @@ export interface Submission {
   id: string;
   assignment_id: string;
   student_id: string;
+  /** 1-based index per student per assignment */
+  attempt_number?: number;
   text_body: string | null;
   file_urls: string[] | null;
   status: 'in_progress' | 'completed';

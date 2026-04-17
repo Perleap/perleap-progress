@@ -17,6 +17,34 @@
     "logoutConfirmTitle": "להתנתק?",
     "logoutConfirmDescription": "תצטרך להתחבר שוב כדי לגשת לחשבון."
   },
+  "planner": {
+    "subtitle": "נהל את לוח הזמנים והמטלות",
+    "classroomsTitle": "כיתות",
+    "searchPlaceholder": "חיפוש כיתות…",
+    "selectAll": "בחר הכל",
+    "clearAll": "נקה",
+    "newAssignment": "מטלה חדשה",
+    "selectClassroomTitle": "בחר כיתה",
+    "classroomLabel": "כיתה",
+    "assignmentDetails": "פרטי מטלה",
+    "instructions": "הנחיות",
+    "editAssignment": "עריכת מטלה",
+    "viewInClassroom": "צפייה בכיתה",
+    "deleteAssignment": "מחיקת מטלה",
+    "dueLabel": "תאריך יעד",
+    "deleteConfirmTitle": "למחוק את המטלה?",
+    "deleteConfirmDescription": "תלמידים לא יראו אותה יותר. לא ניתן לבטל.",
+    "noClassroomsMatch": "אין כיתות שתואמות לחיפוש.",
+    "continue": "המשך",
+    "toolbar": {
+      "today": "היום",
+      "previous": "הקודם",
+      "next": "הבא",
+      "month": "חודש",
+      "week": "שבוע",
+      "day": "יום"
+    }
+  },
   "landing": {
     "nav": {
       "product": "מוצר",
@@ -427,6 +455,17 @@
     "courseOutlineNoSections": "בסילבוס אין עדיין פרקים או קטגוריות ציון. הוסיפו אותם במתווה הקורס כדי לקשר את המשימה.",
     "syllabusModelLabel": "מודל בסילבוס",
     "linkToSyllabusModel": "קישור למודל (אופציונלי)",
+    "attemptMode": {
+      "label": "הגשות",
+      "single": "הגשה בודדת",
+      "multipleUntilDue": "מספר הגשות עד תאריך יעד",
+      "unlimited": "הגשות ללא הגבלה",
+      "singleHelper": "כל תלמיד מגיש פעם אחת.",
+      "multipleUntilDueHelper": "ניתן לנסות שוב עד תאריך היעד למטה (אותו תאריך מסיים ניסיונות נוספים).",
+      "unlimitedHelper": "אין הגבלה על מספר הניסיונות. תאריך היעד אופציונלי.",
+      "dueDateHelperRetries": "חובה: כל ההגשות עד התאריך הזה.",
+      "dueRequiredForRetries": "יש לקבוע תאריך יעד כשמשתמשים במצב ניסיונות עד תאריך."
+    },
     "metadata": {
       "assignmentDetailsTitle": "פרטי המשימה",
       "assignmentDetailsDescription": "הגדרת סוג המשימה, תאריך יעד וקישור אופציונלי למתווה הקורס.",
@@ -461,6 +500,7 @@
   "editAssignment": {
     "title": "ערוך משימה",
     "description": "עדכן פרטי משימה",
+    "attemptPolicyFrozen": "תאריך יעד והגדרות ניסיונות נעולות כי כבר יש הגשות מתלמידים.",
     "saving": "שומר...",
     "save": "שמור שינויים",
     "errors": {
@@ -554,6 +594,7 @@
     }
   },
   "submissionsTab": {
+    "attemptLabel": "ניסיון {{n}}",
     "filterTitle": "סינון וחיפוש הגשות",
     "exportAll": "ייצא הכל",
     "search": "חיפוש",
@@ -718,6 +759,11 @@
   "assignmentDetail": {
     "title": "פרטי משימה",
     "instructions": "הוראות",
+    "attemptBannerSingle": "ניתן להגיש משימה זו פעם אחת.",
+    "attemptBannerUntil": "ניתן להגיש מספר פעמים עד {{date}}.",
+    "attemptBannerUnlimited": "ניתן להגיש מספר פעמים ללא הגבלה.",
+    "startNewAttempt": "התחל ניסיון נוסף",
+    "newAttemptStarted": "נפתח ניסיון חדש.",
     "dueDate": "תאריך יעד",
     "type": "סוג",
     "startAssignment": "התחל משימה",

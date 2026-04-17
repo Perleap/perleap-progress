@@ -32,6 +32,7 @@ import { AssignmentCourseOutlineLinkCard } from '@/components/AssignmentCourseOu
 import { useSyllabus, syllabusKeys, assignmentKeys } from '@/hooks/queries';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface Assignment {
   id: string;
@@ -41,6 +42,7 @@ interface Assignment {
   status: string;
   due_at: string | null;
   classroom_id?: string;
+  attempt_mode?: Database['public']['Enums']['assignment_attempt_mode'];
 }
 
 interface EditAssignmentDialogProps {
@@ -90,8 +92,59 @@ export function EditAssignmentDialog({
   const [autoPublishAiFeedback, setAutoPublishAiFeedback] = useState(true);
   const [syllabusSectionId, setSyllabusSectionId] = useState<string>('');
   const [gradingCategoryId, setGradingCategoryId] = useState<string>('');
+  const [attemptMode, setAttemptMode] = useState<Database['public']['Enums']['assignment_attempt_mode']>(
+    () => assignment.attempt_mode ?? 'single',
+  );
+  const [hasSubmissions, setHasSubmissions] = useState(false);
   const classroomIdForSyllabus = assignment.classroom_id;
   const { data: syllabus, isLoading: isSyllabusLoading } = useSyllabus(classroomIdForSyllabus);
+
+  useEffect(() => {
+    setAttemptMode(assignment.attempt_mode ?? 'single');
+  }, [assignment.id, assignment.attempt_mode]);
+
+  useEffect(() => {
+    if (!open || !assignment.id) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await supabase
+        .from('submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('assignment_id', assignment.id);
+      if (!cancelled) setHasSubmissions((count ?? 0) > 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, assignment.id]);
+
+  const hasDueDateInDb = Boolean(assignment.due_at?.trim());
+  const policyFrozen = hasSubmissions && hasDueDateInDb;
+
+  useEffect(() => {
+    if (!open) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7672/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '63a407' },
+      body: JSON.stringify({
+        sessionId: '63a407',
+        location: 'EditAssignmentDialog.tsx:policyFrozenSnapshot',
+        message: 'edit policy gate',
+        data: {
+          hasSubmissions,
+          hasDueDateInDb,
+          policyFrozen,
+          assignmentDueAtPresent: Boolean(assignment.due_at),
+          dueDateFormEmpty: !dueDate.trim(),
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'H1',
+        runId: 'post-fix',
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [open, hasSubmissions, hasDueDateInDb, policyFrozen, assignment.due_at, assignment.id, dueDate]);
 
   // Fetch classroom domains and materials
   useEffect(() => {
@@ -328,25 +381,37 @@ export function EditAssignmentDialog({
     setLoading(true);
 
     try {
+      if (attemptMode === 'multiple_until_due' && !dueDate?.trim()) {
+        toast.error(t('createAssignment.attemptMode.dueRequiredForRetries'));
+        setLoading(false);
+        return;
+      }
+
       // Check if status is changing from draft to published
       const wasPublished = assignment.status === 'draft' && status === 'published';
 
-      const { error } = await supabase
-        .from('assignments')
-        .update({
-          title,
-          instructions,
-          type: type as Database["public"]["Enums"]["assignment_type"],
-          status: status as Database["public"]["Enums"]["assignment_status"],
-          due_at: dueDate || null,
-          hard_skills: JSON.stringify(hardSkills),
-          hard_skill_domain: hardSkillDomain || null,
-          materials: materials, // JSONB column - pass as object, not stringified
-          auto_publish_ai_feedback: autoPublishAiFeedback,
-          syllabus_section_id: syllabusSectionId || null,
-          grading_category_id: gradingCategoryId || null,
-        })
-        .eq('id', assignment.id);
+      const baseUpdate: Record<string, unknown> = {
+        title,
+        instructions,
+        type: type as Database["public"]["Enums"]["assignment_type"],
+        status: status as Database["public"]["Enums"]["assignment_status"],
+        hard_skills: JSON.stringify(hardSkills),
+        hard_skill_domain: hardSkillDomain || null,
+        materials: materials, // JSONB column - pass as object, not stringified
+        auto_publish_ai_feedback: autoPublishAiFeedback,
+        syllabus_section_id: syllabusSectionId || null,
+        grading_category_id: gradingCategoryId || null,
+      };
+
+      if (!hasSubmissions) {
+        baseUpdate.due_at = dueDate || null;
+        baseUpdate.attempt_mode = attemptMode;
+      } else if (hasSubmissions && !hasDueDateInDb) {
+        baseUpdate.due_at = dueDate || null;
+        baseUpdate.attempt_mode = attemptMode;
+      }
+
+      const { error } = await supabase.from('assignments').update(baseUpdate).eq('id', assignment.id);
 
       if (error) throw error;
 
@@ -579,6 +644,7 @@ export function EditAssignmentDialog({
                           placeholder={t('datetimePicker.placeholder')}
                           className={cn('h-9 w-full rounded-lg text-sm', isRTL ? 'text-right' : 'text-left')}
                           dir={isRTL ? 'rtl' : 'ltr'}
+                          disabled={policyFrozen}
                         />
                       </div>
                     </div>
@@ -588,8 +654,74 @@ export function EditAssignmentDialog({
                         isRTL ? 'text-right' : 'text-left',
                       )}
                     >
-                      {t('createAssignment.metadata.dueDateHelper')}
+                      {policyFrozen
+                        ? t('editAssignment.attemptPolicyFrozen')
+                        : attemptMode === 'multiple_until_due'
+                          ? t('createAssignment.attemptMode.dueDateHelperRetries')
+                          : t('createAssignment.metadata.dueDateHelper')}
                     </p>
+                  </div>
+
+                  <div
+                    className={cn(
+                      'space-y-2 max-w-[min(100%,28rem)]',
+                      isRTL ? 'text-right' : 'text-left',
+                    )}
+                  >
+                    <Label className="text-body font-medium mb-0 block">{t('createAssignment.attemptMode.label')}</Label>
+                    <RadioGroup
+                      value={attemptMode}
+                      onValueChange={(v) => setAttemptMode(v as Database['public']['Enums']['assignment_attempt_mode'])}
+                      className={cn('space-y-2', policyFrozen && 'opacity-60')}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                      disabled={policyFrozen}
+                    >
+                      <div className={cn('flex items-start gap-2.5', isRTL && 'flex-row-reverse')}>
+                        <RadioGroupItem value="single" id="edit-am-single" className="shrink-0" />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <label
+                            htmlFor="edit-am-single"
+                            className={cn(
+                              'block text-sm leading-snug font-semibold text-foreground',
+                              policyFrozen ? 'cursor-not-allowed' : 'cursor-pointer',
+                            )}
+                          >
+                            {t('createAssignment.attemptMode.single')}
+                          </label>
+                          <p className="text-muted-foreground text-xs leading-snug">{t('createAssignment.attemptMode.singleHelper')}</p>
+                        </div>
+                      </div>
+                      <div className={cn('flex items-start gap-2.5', isRTL && 'flex-row-reverse')}>
+                        <RadioGroupItem value="multiple_until_due" id="edit-am-until" className="shrink-0" />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <label
+                            htmlFor="edit-am-until"
+                            className={cn(
+                              'block text-sm leading-snug font-semibold text-foreground',
+                              policyFrozen ? 'cursor-not-allowed' : 'cursor-pointer',
+                            )}
+                          >
+                            {t('createAssignment.attemptMode.multipleUntilDue')}
+                          </label>
+                          <p className="text-muted-foreground text-xs leading-snug">{t('createAssignment.attemptMode.multipleUntilDueHelper')}</p>
+                        </div>
+                      </div>
+                      <div className={cn('flex items-start gap-2.5', isRTL && 'flex-row-reverse')}>
+                        <RadioGroupItem value="multiple_unlimited" id="edit-am-unlim" className="shrink-0" />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <label
+                            htmlFor="edit-am-unlim"
+                            className={cn(
+                              'block text-sm leading-snug font-semibold text-foreground',
+                              policyFrozen ? 'cursor-not-allowed' : 'cursor-pointer',
+                            )}
+                          >
+                            {t('createAssignment.attemptMode.unlimited')}
+                          </label>
+                          <p className="text-muted-foreground text-xs leading-snug">{t('createAssignment.attemptMode.unlimitedHelper')}</p>
+                        </div>
+                      </div>
+                    </RadioGroup>
                   </div>
 
                   <div className="space-y-1 pt-0.5">

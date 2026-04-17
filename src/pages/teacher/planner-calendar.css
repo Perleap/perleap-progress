@@ -1,0 +1,136 @@
+/* Theme bridge: react-big-calendar → app CSS variables (see src/index.css) */
+.planner-rbc .rbc-calendar {
+  font-family: inherit;
+  color: hsl(var(--foreground));
+}
+
+.planner-rbc .rbc-toolbar {
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.planner-rbc .rbc-toolbar button {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.planner-rbc .rbc-toolbar button:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.planner-rbc .rbc-toolbar button.rbc-active {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.planner-rbc .rbc-header {
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.5rem 0.25rem;
+}
+
+.planner-rbc .rbc-today {
+  background-color: hsl(var(--accent) / 0.45);
+}
+
+.planner-rbc .rbc-off-range-bg {
+  background: hsl(var(--muted) / 0.35);
+}
+
+.planner-rbc .rbc-off-range .rbc-button-link {
+  color: hsl(var(--muted-foreground));
+}
+
+.planner-rbc .rbc-month-view,
+.planner-rbc .rbc-time-view {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.planner-rbc .rbc-month-row + .rbc-month-row {
+  border-top-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-day-bg + .rbc-day-bg {
+  border-left-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-day-slot .rbc-time-slot {
+  border-top-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-time-content {
+  border-top-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-time-header-content {
+  border-left-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-day-slot {
+  border-top-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-time-header-gutter {
+  border-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-time-gutter {
+  border-color: hsl(var(--border));
+}
+
+.planner-rbc .rbc-event {
+  border: none !important;
+}
+
+.planner-rbc .rbc-show-more {
+  color: hsl(var(--primary));
+  font-weight: 600;
+  font-size: 0.75rem;
+  background: transparent;
+}
+
+.planner-rbc .rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+.planner-rbc .rbc-overlay {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -2px rgb(0 0 0 / 0.06);
+  padding: 0.5rem;
+  z-index: 20;
+}
+
+.planner-rbc .rbc-overlay-header {
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.dark .planner-rbc .rbc-toolbar button {
+  background: hsl(var(--background));
+}
+
+.dark .planner-rbc .rbc-overlay {
+  box-shadow:
+    0 8px 24px rgb(0 0 0 / 0.35),
+    0 0 0 1px hsl(var(--border));
+}
