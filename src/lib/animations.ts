@@ -268,7 +268,17 @@ export const pageEnter = (container: Element | null) => {
   return gsap.fromTo(
     container,
     { opacity: 0, y: 20 },
-    { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }
+    {
+      opacity: 1,
+      y: 0,
+      duration: 0.5,
+      ease: 'power2.out',
+      // GSAP leaves an inline transform after y animation; any non-`none` transform on this
+      // ancestor breaks @dnd-kit DragOverlay / pointer math (overlay jumps to the wrong place).
+      onComplete: () => {
+        gsap.set(container, { clearProps: 'transform' });
+      },
+    },
   );
 };
 

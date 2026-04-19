@@ -6,11 +6,12 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  /** Fallback route when there is no browser history to pop (e.g. direct load). */
   backTo?: string;
   actions?: ReactNode;
 }
@@ -19,13 +20,13 @@ interface PageHeaderProps {
  * Display page header with optional back button and actions
  */
 export const PageHeader = ({ title, subtitle, backTo, actions }: PageHeaderProps) => {
-  const navigate = useNavigate();
+  const navigateBack = useNavigateBack(backTo ?? '/');
 
   return (
     <header className="border-b">
       <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4">
         {backTo && (
-          <Button variant="ghost" size="sm" onClick={() => navigate(backTo)}>
+          <Button variant="ghost" size="sm" onClick={navigateBack}>
             <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
           </Button>
         )}

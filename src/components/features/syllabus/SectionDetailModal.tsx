@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
@@ -9,23 +8,19 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
   Calendar,
   Target,
   FileText,
-  StickyNote,
   BookOpen,
   CheckCircle2,
   Clock,
   SkipForward,
   Eye,
   CircleDot,
-  MessageSquare,
 } from 'lucide-react';
 import { ResourceViewer } from './ResourceViewer';
-import { SectionCommentThread } from './SectionCommentThread';
 import type {
   SyllabusSection,
   SectionResource,
@@ -80,7 +75,6 @@ export const SectionDetailModal = ({
   const { t } = useTranslation();
   const { user } = useAuth();
   const updateProgress = useUpdateStudentProgress();
-  const [showComments, setShowComments] = useState(false);
 
   if (!section) return null;
 
@@ -258,41 +252,6 @@ export const SectionDetailModal = ({
                 </div>
               </div>
             )}
-
-            {/* Notes (teacher only) */}
-            {mode === 'teacher' && section.notes && (
-              <div>
-                <h4 className={cn(
-                  'text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1',
-                  isRTL && 'flex-row-reverse'
-                )}>
-                  <StickyNote className="h-3 w-3" /> {t('syllabus.detail.notes')}
-                </h4>
-                <p className={cn(
-                  'text-sm text-foreground/80 whitespace-pre-wrap bg-amber-50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800/30',
-                  isRTL && 'text-right'
-                )}>
-                  {section.notes}
-                </p>
-              </div>
-            )}
-
-            {/* Comments section */}
-            <Separator />
-            <div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowComments(!showComments)}
-                className="rounded-full gap-1.5 text-xs mb-2"
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                {showComments ? t('syllabus.comments.hide') : t('syllabus.comments.show')}
-              </Button>
-              {showComments && (
-                <SectionCommentThread sectionId={section.id} isRTL={isRTL} />
-              )}
-            </div>
           </div>
         </ScrollArea>
       </DialogContent>

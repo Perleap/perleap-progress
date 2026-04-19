@@ -14,6 +14,14 @@ import {
   Play,
   X,
 } from 'lucide-react';
+import { parseLessonContent } from '@/lib/lessonContent';
+import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
+import {
+  ContentImageBlock,
+  ContentPlainTextBlock,
+  ContentRichTextBlock,
+  ContentVideoBlock,
+} from '@/components/features/syllabus/content-blocks';
 import type { SectionResource } from '@/types/syllabus';
 
 interface ResourceViewerProps {
@@ -28,6 +36,8 @@ const resourceTypeConfig: Record<string, { icon: React.ElementType; color: strin
   link: { icon: LinkIcon, color: 'text-green-500' },
   document: { icon: FileText, color: 'text-orange-500' },
   image: { icon: ImageIcon, color: 'text-purple-500' },
+  text: { icon: FileText, color: 'text-sky-600' },
+  lesson: { icon: FileText, color: 'text-violet-600' },
 };
 
 function formatFileSize(bytes: number | null): string {
@@ -82,34 +92,119 @@ async function triggerBrowserDownload(url: string, filename: string): Promise<bo
   }
 }
 
+export type LessonResourceBodyVariant = 'embedded' | 'reading';
+
+/** Ordered text + video blocks for `resource_type === 'lesson'` (v1 JSON or legacy body_text + url). */
+export function LessonResourceBody({
+  resource,
+  className,
+  variant = 'embedded',
+}: {
+  resource: SectionResource;
+  className?: string;
+  /** `reading`: single shell, plain prose, framed video (activity page). `embedded`: compact cards (syllabus preview). */
+  variant?: LessonResourceBodyVariant;
+}) {
+  const { t } = useTranslation();
+  const reading = variant === 'reading';
+  const textPresentation = reading ? 'reading' : 'embedded';
+  const videoPresentation = reading ? 'reading' : 'embedded';
+
+  const v1 = parseLessonContent(resource.lesson_content as unknown);
+  if (v1?.blocks?.length) {
+    const nodes = v1.blocks.map((block) => {
+      if (block.type === 'text' && block.body.trim()) {
+        return (
+          <div key={block.id}>
+            <ContentRichTextBlock html={lessonTextBodyToHtml(block.body)} presentation={textPresentation} />
+          </div>
+        );
+      }
+      if (block.type === 'video') {
+        const videoUrl = block.url || '';
+        const show =
+          videoUrl &&
+          (block.mime_type?.startsWith('video/') ||
+            /\.(mp4|webm|ogg|mov)(\?|$)/i.test(videoUrl));
+        if (!show) return null;
+        return (
+          <div key={block.id}>
+            <ContentVideoBlock videoUrl={videoUrl} presentation={videoPresentation} />
+          </div>
+        );
+      }
+      return null;
+    });
+    const hasVisible = nodes.some((n) => n != null);
+    if (!hasVisible) {
+      return (
+        <p className={cn('text-sm text-muted-foreground', className)}>{t('activityPage.lessonEmpty')}</p>
+      );
+    }
+    return (
+      <div className={cn(reading ? 'flex flex-col gap-5 sm:gap-6' : 'space-y-3', className)}>{nodes}</div>
+    );
+  }
+
+  const videoUrl = resource.url || '';
+  const showLessonVideo =
+    videoUrl &&
+    (isVideoResource(resource) ||
+      resource.mime_type?.startsWith('video/') ||
+      /\.(mp4|webm|ogg|mov)(\?|$)/i.test(videoUrl));
+  const hasLegacyText = !!resource.body_text?.trim();
+  if (!hasLegacyText && !showLessonVideo) {
+    return (
+      <p className={cn('text-sm text-muted-foreground', className)}>{t('activityPage.lessonEmpty')}</p>
+    );
+  }
+  const legacyInner = (
+    <>
+      {hasLegacyText ? (
+        <ContentRichTextBlock
+          html={lessonTextBodyToHtml(resource.body_text ?? '')}
+          presentation={textPresentation}
+        />
+      ) : null}
+      {showLessonVideo ? <ContentVideoBlock videoUrl={videoUrl} presentation={videoPresentation} /> : null}
+    </>
+  );
+  if (reading) {
+    return <div className={cn('flex flex-col gap-5 sm:gap-6', className)}>{legacyInner}</div>;
+  }
+  return <div className={cn('space-y-3', className)}>{legacyInner}</div>;
+}
+
 function ResourcePreview({ resource }: { resource: SectionResource }) {
   const url = resource.url || '';
   const mime = resource.mime_type || '';
 
+  if (resource.resource_type === 'text' && resource.body_text?.trim()) {
+    return (
+      <ContentPlainTextBlock text={resource.body_text} presentation="compact" className="mb-2" />
+    );
+  }
+
+  if (resource.resource_type === 'lesson') {
+    return <LessonResourceBody resource={resource} />;
+  }
+
   if (resource.resource_type === 'image' || mime.startsWith('image/')) {
     return (
-      <div className="rounded-lg overflow-hidden border border-border bg-muted/20 mb-2">
-        <img
-          src={url}
-          alt={resource.title}
-          className="w-full max-h-64 object-contain"
-          loading="lazy"
-        />
-      </div>
+      <ContentImageBlock
+        src={url}
+        alt={resource.title}
+        caption={resource.summary}
+        presentation="compact"
+        className="mb-2"
+      />
     );
   }
 
   if (resource.resource_type === 'video' || mime.startsWith('video/')) {
     return (
-      <div className="flex justify-center items-center rounded-lg overflow-hidden border border-border bg-muted/20 mb-2 py-2 px-2">
-        <video
-          src={url}
-          controls
-          className="max-h-72 max-w-full h-auto w-auto"
-          preload="metadata"
-        >
-          <track kind="captions" />
-        </video>
+      <div className="mb-2">
+        <ContentVideoBlock videoUrl={url} presentation="compact" />
       </div>
     );
   }

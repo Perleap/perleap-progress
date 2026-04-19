@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
@@ -77,6 +78,8 @@ export function ClassroomSidebar({
   const isTeacher = user?.user_metadata?.role === 'teacher';
   const basePath = isTeacher ? '/teacher' : '/student';
 
+  const navigateBackOrDashboard = useNavigateBack(`${basePath}/dashboard`);
+
   const isDashboardActive = location.pathname === `${basePath}/dashboard`;
   const isPlannerActive = location.pathname === '/teacher/planner';
   const isSettingsActive = location.pathname.startsWith(`${basePath}/settings`);
@@ -120,7 +123,7 @@ export function ClassroomSidebar({
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              onClick={() => navigate(`${basePath}/dashboard`)}
+              onClick={navigateBackOrDashboard}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-muted">
                 <ArrowLeft className="size-4 rtl:rotate-180" />

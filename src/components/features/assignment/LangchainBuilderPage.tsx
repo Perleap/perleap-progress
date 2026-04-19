@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { completeSubmission } from '@/services/submissionService';
 import { useQueryClient } from '@tanstack/react-query';
 import { assignmentKeys } from '@/hooks/queries';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import { LangchainEditor } from '@/components/features/langchain/LangchainEditor';
 import type { Node, Edge } from '@xyflow/react';
 
@@ -32,7 +33,7 @@ interface LangchainBuilderPageProps {
   submissionId: string;
   /** Saved pipeline JSON from `submissions.text_body` (same shape as Save writes). */
   initialPipelineText?: string | null;
-  onComplete: () => void;
+  onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
 export function LangchainBuilderPage({
@@ -103,9 +104,7 @@ export function LangchainBuilderPage({
       const { error } = await completeSubmission(submissionId);
       if (error) throw error;
 
-      toast.success(t('assignmentDetail.langchain.awaitingReview'));
-      queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      onComplete();
+      await onComplete('awaitingReview');
     } catch (error) {
       console.error('Submit error:', error);
       toast.error(t('common.error'));

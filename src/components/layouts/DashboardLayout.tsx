@@ -17,6 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { useAuth } from '@/contexts/AuthContext';
+import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 
 interface BreadcrumbItem {
   label: string;
@@ -33,6 +34,7 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
   const contentRef = usePageTransition();
   const { isRTL } = useLanguage();
   const { user } = useAuth();
+  const isTeacher = user?.user_metadata?.role === 'teacher';
 
   return (
     <SidebarProvider defaultOpen={true} className={isRTL ? 'rtl-sidebar' : ''}>
@@ -67,6 +69,7 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
           </div>
           {user && (
             <div className="flex items-center gap-2">
+              {isTeacher && <TeacherAssistantTrigger />}
               <NotificationDropdown userId={user.id} />
             </div>
           )}

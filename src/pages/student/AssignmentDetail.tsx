@@ -1,17 +1,26 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useCallback, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { generateFeedback, completeSubmission, startNewSubmissionAttempt } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { assignmentKeys, useStudentAssignmentDetails } from '@/hooks/queries';
-import { Calendar, FileText, Link as LinkIcon, Download, Loader2, Clock, RefreshCw } from 'lucide-react';
+import { Calendar, FileText, Link as LinkIcon, Download, Loader2, Clock, RefreshCw, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -20,18 +29,54 @@ import { PresentationSubmissionPage } from '@/components/features/assignment/Pre
 import { LangchainBuilderPage } from '@/components/features/assignment/LangchainBuilderPage';
 import { EssaySubmissionPage } from '@/components/features/assignment/EssaySubmissionPage';
 import { useNuanceTracking } from '@/hooks/useNuanceTracking';
+import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
+import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
+import type { AssignmentCompletionTone } from '@/types/submission';
 
 const NON_CHAT_ASSIGNMENT_TYPES = ['test', 'project', 'presentation', 'langchain', 'text_essay'] as const;
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
-  const { language: uiLanguage = 'en' } = useLanguage();
+  const { language: uiLanguage = 'en', isRTL } = useLanguage();
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
+  const [completionModal, setCompletionModal] = useState<{
+    open: boolean;
+    tone: AssignmentCompletionTone;
+  }>({ open: false, tone: 'activityCompleted' });
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(id);
+
+  const sectionFlow = useStudentSectionModuleFlow(
+    assignmentData?.classroom_id,
+    assignmentData?.syllabus_section_id ?? undefined,
+    user?.id,
+  );
+
+  const flowGuardLoading = !!assignmentData?.syllabus_section_id && sectionFlow.loading;
+
+  const assignmentSequentialBlocked = useMemo(() => {
+    if (!assignmentData?.syllabus_section_id) return false;
+    const aid = assignmentData.id;
+    if (sectionFlow.usePersistedFlow) {
+      const idx = sectionFlow.orderedPersisted.findIndex(
+        (s) => s.step_kind === 'assignment' && s.assignment_id === aid,
+      );
+      if (idx < 0) return false;
+      return !canAccessPersistedStep(sectionFlow.orderedPersisted, idx, sectionFlow.ctx);
+    }
+    if (sectionFlow.computed.length > 0) {
+      const idx = sectionFlow.computed.findIndex(
+        (c) => c.kind === 'assignment' && c.assignment_id === aid,
+      );
+      if (idx < 0) return false;
+      return !canAccessComputedStep(sectionFlow.computed, idx, sectionFlow.ctx);
+    }
+    return false;
+  }, [assignmentData, sectionFlow]);
 
   const assignment = assignmentData;
   const submission = assignmentData?.submission;
@@ -54,6 +99,31 @@ const AssignmentDetail = () => {
         assignment.type as (typeof NON_CHAT_ASSIGNMENT_TYPES)[number],
       ),
   });
+
+  const handleAssignmentCompleted = useCallback(
+    async (tone: AssignmentCompletionTone = 'activityCompleted') => {
+      queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+      await refetch();
+      setCompletionModal({ open: true, tone });
+    },
+    [queryClient, refetch],
+  );
+
+  const completionModalDescription = (tone: AssignmentCompletionTone): string => {
+    switch (tone) {
+      case 'activityCompleted':
+        return t('assignmentDetail.success.completed');
+      case 'awaitingTeacher':
+        return t('assignmentDetail.success.submittedAwaitingTeacher');
+      case 'awaitingReview':
+        if (!assignment) return '';
+        return t(`assignmentDetail.${assignment.type}.awaitingReview`);
+      case 'testSubmitted':
+        return t('assignmentDetail.testTaking.submitSuccess');
+      default:
+        return t('assignmentDetail.success.completed');
+    }
+  };
 
   const handleStartNewAttempt = async () => {
     if (!user?.id || !assignment?.id) return;
@@ -85,9 +155,7 @@ const AssignmentDetail = () => {
             console.error('Error completing submission:', completeError);
             toast.error(t('common.error'));
           } else {
-            toast.success(t('assignmentDetail.success.submittedAwaitingTeacher'));
-            queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-            refetch();
+            await handleAssignmentCompleted('awaitingTeacher');
           }
           return;
         }
@@ -110,9 +178,7 @@ const AssignmentDetail = () => {
             console.error('Error completing submission:', completeError);
             toast.error(t('common.error'));
           } else {
-            toast.success(t('assignmentDetail.success.completed'));
-            queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-            refetch();
+            await handleAssignmentCompleted('activityCompleted');
           }
         }
       }
@@ -121,7 +187,7 @@ const AssignmentDetail = () => {
     }
   };
 
-  if (loading && !assignmentData) {
+  if ((loading && !assignmentData) || (assignmentData && flowGuardLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -134,6 +200,31 @@ const AssignmentDetail = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">Assignment not found or failed to load.</div>
       </div>
+    );
+  }
+
+  if (assignmentSequentialBlocked) {
+    return (
+      <DashboardLayout>
+        <div
+          className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          <Lock className="mx-auto h-12 w-12 text-muted-foreground" aria-hidden />
+          <h1 className="text-xl font-semibold">{t('activityPage.sequentialBlockedTitle')}</h1>
+          <p className="text-muted-foreground">{t('activityPage.sequentialBlockedBody')}</p>
+          <Button
+            type="button"
+            onClick={() =>
+              navigate(`/student/classroom/${assignment.classroom_id}`, {
+                state: { activeSection: 'curriculum' },
+              })
+            }
+          >
+            {t('activityPage.backToActivities')}
+          </Button>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -287,7 +378,7 @@ const AssignmentDetail = () => {
                     assignmentInstructions={assignment.instructions}
                     submissionId={submission.id}
                     autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
-                    onComplete={() => refetch()}
+                    onComplete={handleAssignmentCompleted}
                   />
                 );
               case 'text_essay':
@@ -298,7 +389,7 @@ const AssignmentDetail = () => {
                     assignmentInstructions={assignment.instructions}
                     autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
                     initialText={submission.text_body}
-                    onComplete={() => refetch()}
+                    onComplete={handleAssignmentCompleted}
                   />
                 );
               case 'project':
@@ -306,7 +397,7 @@ const AssignmentDetail = () => {
                   <ProjectSubmissionPage
                     assignmentId={assignment.id}
                     submissionId={submission.id}
-                    onComplete={() => refetch()}
+                    onComplete={handleAssignmentCompleted}
                   />
                 );
               case 'presentation':
@@ -314,7 +405,7 @@ const AssignmentDetail = () => {
                   <PresentationSubmissionPage
                     assignmentId={assignment.id}
                     submissionId={submission.id}
-                    onComplete={() => refetch()}
+                    onComplete={handleAssignmentCompleted}
                   />
                 );
               case 'langchain':
@@ -323,7 +414,7 @@ const AssignmentDetail = () => {
                     assignmentId={assignment.id}
                     submissionId={submission.id}
                     initialPipelineText={submission.text_body}
-                    onComplete={() => refetch()}
+                    onComplete={handleAssignmentCompleted}
                   />
                 );
               default:
@@ -378,6 +469,25 @@ const AssignmentDetail = () => {
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={completionModal.open}
+        onOpenChange={(open) => setCompletionModal((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('assignmentDetail.completionModal.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {completionModalDescription(completionModal.tone)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:flex-row-reverse' : ''}>
+            <AlertDialogAction onClick={() => setCompletionModal((prev) => ({ ...prev, open: false }))}>
+              {t('assignmentDetail.completionModal.dismiss')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

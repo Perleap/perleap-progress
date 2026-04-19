@@ -2,6 +2,13 @@
  * Submission and Feedback Type Definitions
  */
 
+/** Passed to parent after successful submit so the student sees the right completion modal copy. */
+export type AssignmentCompletionTone =
+  | 'activityCompleted'
+  | 'awaitingTeacher'
+  | 'awaitingReview'
+  | 'testSubmitted';
+
 /**
  * Assignment submission
  */

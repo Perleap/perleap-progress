@@ -7,8 +7,7 @@ import { Loader2, Upload, Video, Square, Circle, RotateCcw, Send } from 'lucide-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { completeSubmission } from '@/services/submissionService';
-import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import { cn } from '@/lib/utils';
 import { DeviceSelector, NO_AUDIO, type DeviceSelection } from './DeviceSelector';
 import { VideoEditor } from './VideoEditor';
@@ -21,7 +20,7 @@ function scheduleRevokeObjectURL(url: string, delayMs = 750) {
 interface PresentationSubmissionPageProps {
   assignmentId: string;
   submissionId: string;
-  onComplete: () => void;
+  onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
 type RecordPhase = 'idle' | 'recording' | 'editing' | 'ready';
@@ -32,7 +31,6 @@ export function PresentationSubmissionPage({
   onComplete,
 }: PresentationSubmissionPageProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -350,9 +348,7 @@ export function PresentationSubmissionPage({
       const { error } = await completeSubmission(submissionId);
       if (error) throw error;
 
-      toast.success(t('assignmentDetail.presentation.awaitingReview'));
-      queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      onComplete();
+      await onComplete('awaitingReview');
     } catch (error) {
       console.error('Submit error:', error);
       toast.error(t('common.error'));

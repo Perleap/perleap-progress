@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import {
@@ -14,10 +13,6 @@ import {
   Target,
   BookOpen,
   FileText,
-  CheckCircle2,
-  Clock,
-  CircleDot,
-  Eye,
   Lock,
   ChevronLeft,
   ChevronRight,
@@ -25,7 +20,6 @@ import {
 } from 'lucide-react';
 import { RichTextViewer } from '@/components/ui/rich-text-editor';
 import { ResourceViewer } from './ResourceViewer';
-import { SectionCommentThread } from './SectionCommentThread';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUpdateStudentProgress, useSectionAssignmentProgress } from '@/hooks/queries';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
@@ -55,13 +49,6 @@ const EMPTY_LINKED_ASSIGNMENTS: Array<{
   type: string;
   due_at: string | null;
 }> = [];
-
-const progressOptions: { value: StudentProgressStatus; labelKey: string; icon: React.ElementType }[] = [
-  { value: 'not_started', labelKey: 'syllabus.progress.notStarted', icon: Clock },
-  { value: 'in_progress', labelKey: 'syllabus.progress.inProgress', icon: CircleDot },
-  { value: 'reviewed', labelKey: 'syllabus.progress.reviewed', icon: Eye },
-  { value: 'completed', labelKey: 'syllabus.progress.completed', icon: CheckCircle2 },
-];
 
 export const SectionContentPage = ({
   sectionId,
@@ -212,16 +199,6 @@ export const SectionContentPage = ({
     );
   }
 
-  const handleProgressChange = (newStatus: StudentProgressStatus) => {
-    if (!user?.id) return;
-    updateProgress.mutate({
-      sectionId: section.id,
-      studentId: user.id,
-      status: newStatus,
-      syllabusId,
-    });
-  };
-
   const dateRange = [section.start_date, section.end_date].filter(Boolean).join(' → ');
 
   return (
@@ -251,34 +228,6 @@ export const SectionContentPage = ({
           )}
         </div>
       </div>
-
-      {/* Progress tracker */}
-      <Card className="rounded-xl border-border shadow-sm">
-        <CardContent className="p-4">
-          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> {t('syllabus.progress.myProgress', 'My Progress')}
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {progressOptions.map((opt) => {
-              const OptIcon = opt.icon;
-              const isActive = studentProgress === opt.value;
-              return (
-                <Button
-                  key={opt.value}
-                  variant={isActive ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleProgressChange(opt.value)}
-                  disabled={updateProgress.isPending}
-                  className={cn('rounded-full gap-1.5 text-xs h-8', isActive && 'shadow-sm')}
-                >
-                  <OptIcon className="h-3 w-3" />
-                  {t(opt.labelKey)}
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Description */}
       {section.description && (
@@ -378,11 +327,6 @@ export const SectionContentPage = ({
           </div>
         </div>
       )}
-
-      <Separator />
-
-      {/* Comments */}
-      <SectionCommentThread sectionId={section.id} isRTL={isRTL} />
 
       {bottomNavRow}
     </div>

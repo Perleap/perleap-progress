@@ -1,7 +1,7 @@
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getAuthErrorMessage } from '@/utils/authErrors';
 import { savePendingRole } from '@/utils/roleRecovery';
 import { markSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 
 const Auth = () => {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ const Auth = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'he'>(language);
   const [activeTab, setActiveTab] = useState<string>('signin');
   const navigate = useNavigate();
+  const navigateBackHome = useNavigateBack('/');
   const [searchParams] = useSearchParams();
 
   // Check if we're in the middle of an OAuth callback or email confirmation
@@ -402,15 +404,15 @@ const Auth = () => {
       {/* Equal-width side columns so the logo is geometrically centered on the screen */}
       <header className="relative z-20 grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3 pb-8 md:pb-10">
         <div className="flex min-w-0 justify-start">
-          <Link to="/">
-            <Button
-              variant="ghost"
-              className="gap-2 hover:bg-muted/50 text-foreground/80 hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 shrink-0 rtl:rotate-180" />
-              <span className="truncate">{t('auth.backToHome')}</span>
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            className="gap-2 hover:bg-muted/50 text-foreground/80 hover:text-foreground transition-colors"
+            onClick={navigateBackHome}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0 rtl:rotate-180" />
+            <span className="truncate">{t('auth.backToHome')}</span>
+          </Button>
         </div>
         <PerleapLogo
           className="h-24 w-24 md:h-28 md:w-28 lg:h-32 lg:w-32"

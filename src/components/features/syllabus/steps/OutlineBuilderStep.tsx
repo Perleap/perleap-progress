@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,18 +20,10 @@ import {
   Calendar,
   Target,
   FileText,
-  StickyNote,
-  Link as LinkIcon,
-  Upload,
-  X,
   Maximize2,
   Minimize2,
   Sparkles,
   Loader2,
-  File,
-  CheckCircle2,
-  SkipForward,
-  Clock,
   Pencil,
   GitBranch,
   Lock,
@@ -46,8 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import type { CompletionStatus } from '@/types/syllabus';
-import type { WizardData, WizardSectionData, WizardResourceItem } from '../CreateClassroomWizard';
+import type { WizardData, WizardSectionData } from '../CreateClassroomWizard';
 
 interface OutlineBuilderStepProps {
   data: WizardData;
@@ -63,148 +54,10 @@ const createEmptySection = (): WizardSectionData => ({
   objectives: [''],
   startDate: '',
   endDate: '',
-  resources: [],
-  notes: '',
   completion_status: 'auto',
   prerequisites: [],
   is_locked: false,
 });
-
-// -- Resource List Manager ----------------------------------------------------
-
-function ResourceListManager({
-  items,
-  onChange,
-  isRTL,
-}: {
-  items: WizardResourceItem[];
-  onChange: (items: WizardResourceItem[]) => void;
-  isRTL: boolean;
-}) {
-  const { t } = useTranslation();
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkTitle, setLinkTitle] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const addLink = () => {
-    const url = linkUrl.trim();
-    if (!url) return;
-    const newItem: WizardResourceItem = {
-      id: crypto.randomUUID(),
-      type: 'link',
-      title: linkTitle.trim() || url,
-      url,
-    };
-    onChange([...items, newItem]);
-    setLinkUrl('');
-    setLinkTitle('');
-  };
-
-  const addFiles = (files: FileList | null) => {
-    if (!files) return;
-    const newItems: WizardResourceItem[] = Array.from(files).map((file) => ({
-      id: crypto.randomUUID(),
-      type: 'file' as const,
-      title: file.name,
-      url: URL.createObjectURL(file),
-      file,
-    }));
-    onChange([...items, ...newItems]);
-  };
-
-  const removeItem = (id: string) => {
-    const item = items.find((i) => i.id === id);
-    if (item?.type === 'file' && item.url.startsWith('blob:')) URL.revokeObjectURL(item.url);
-    onChange(items.filter((i) => i.id !== id));
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* Existing items */}
-      {items.length > 0 && (
-        <div className="space-y-1.5">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border/50 text-sm group"
-            >
-              {item.type === 'link' ? (
-                <LinkIcon className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-              ) : (
-                <File className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
-              )}
-              <span className="truncate flex-1 min-w-0">{item.title}</span>
-              {item.type === 'link' && (
-                <span className="text-xs text-muted-foreground truncate max-w-40 hidden sm:inline">{item.url}</span>
-              )}
-              <button
-                type="button"
-                onClick={() => removeItem(item.id)}
-                className="p-0.5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add link */}
-      <div className="flex items-end gap-2">
-        <div className="flex-1 space-y-1">
-          <div className="flex gap-2">
-            <Input
-              value={linkTitle}
-              onChange={(e) => setLinkTitle(e.target.value)}
-              placeholder={t('syllabus.sections.linkTitle', 'Link title')}
-              className="rounded-lg h-8 text-xs flex-1"
-              autoDirection
-            />
-            <Input
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-              placeholder="https://..."
-              className="rounded-lg h-8 text-xs flex-1"
-              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addLink())}
-            />
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addLink}
-          disabled={!linkUrl.trim()}
-          className="h-8 text-xs rounded-lg gap-1 flex-shrink-0"
-        >
-          <LinkIcon className="h-3 w-3" />
-          {t('syllabus.sections.addLink', 'Add Link')}
-        </Button>
-      </div>
-
-      {/* Upload files */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }}
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => fileInputRef.current?.click()}
-        className="h-8 text-xs rounded-lg gap-1.5 w-full border-dashed"
-      >
-        <Upload className="h-3.5 w-3.5" />
-        {t('syllabus.sections.uploadFiles', 'Upload Files')}
-      </Button>
-    </div>
-  );
-}
-
-// -- Main Component -----------------------------------------------------------
 
 export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStepProps) => {
   const { t } = useTranslation();
@@ -232,7 +85,6 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
       ...src,
       tempId: crypto.randomUUID(),
       title: `${src.title} (copy)`,
-      resources: src.resources.map((r) => ({ ...r, id: crypto.randomUUID() })),
       prerequisites: [],
     };
     const updated = [...sections.slice(0, index + 1), dup, ...sections.slice(index + 1)];
@@ -279,7 +131,7 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
   };
 
   const handleRewrite = useCallback(
-    async (fieldKey: 'description' | 'notes', currentValue: string) => {
+    async (fieldKey: 'description', currentValue: string) => {
       if (!currentValue.trim()) return;
       const fieldId = `${selected?.tempId}-${fieldKey}`;
       setRewritingField(fieldId);
@@ -307,9 +159,11 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
       <div className={cn('w-72 flex-shrink-0 flex flex-col', isRTL && 'order-2')}>
         <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <h3 className="font-bold text-foreground">{t('syllabus.sections.title')}</h3>
-          <Button type="button" variant="outline" size="sm" onClick={addSection} className="rounded-full gap-1">
-            <Plus className="h-3.5 w-3.5" /> {t('syllabus.sections.add')}
-          </Button>
+          {sections.length > 0 && (
+            <Button type="button" variant="outline" size="sm" onClick={addSection} className="rounded-full gap-1">
+              <Plus className="h-3.5 w-3.5" /> {t('syllabus.sections.add')}
+            </Button>
+          )}
         </div>
 
         <ScrollArea className="flex-1">
@@ -317,9 +171,6 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
             <div className="p-6 border-2 border-dashed border-border rounded-xl bg-muted/10 text-center">
               <BookOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">{t('syllabus.sections.noSections')}</p>
-              <Button type="button" variant="ghost" size="sm" onClick={addSection} className="mt-2 text-primary">
-                <Plus className="h-3.5 w-3.5 me-1" /> {t('syllabus.wizard.addFirst')} {structureLabel.toLowerCase()}
-              </Button>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -419,31 +270,6 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.completionStatus')}
-                </Label>
-                <Select
-                  value={selected.completion_status}
-                  onValueChange={(v) => updateSection(selectedIndex, { completion_status: v as CompletionStatus })}
-                >
-                  <SelectTrigger className="rounded-xl h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="auto">
-                      <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> {t('syllabus.sections.statusAuto')}</span>
-                    </SelectItem>
-                    <SelectItem value="completed">
-                      <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-green-500" /> {t('syllabus.sections.statusCompleted')}</span>
-                    </SelectItem>
-                    <SelectItem value="skipped">
-                      <span className="flex items-center gap-1.5"><SkipForward className="h-3 w-3 text-orange-500" /> {t('syllabus.sections.statusSkipped')}</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -489,34 +315,6 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Resources */}
-              <div className="space-y-2">
-                <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.resources')}
-                </Label>
-                <ResourceListManager
-                  items={selected.resources}
-                  onChange={(items) => updateSection(selectedIndex, { resources: items })}
-                  isRTL={isRTL}
-                />
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                  <StickyNote className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.notes')}
-                </Label>
-                <ExpandableTextarea
-                  value={selected.notes}
-                  onChange={(v) => updateSection(selectedIndex, { notes: v })}
-                  placeholder={t('syllabus.sections.notesPlaceholder')}
-                  rows={2}
-                  autoDirection
-                  onRewrite={() => handleRewrite('notes', selected.notes)}
-                  isRewriting={rewritingField === `${selected.tempId}-notes`}
-                />
               </div>
 
               {data.release_mode === 'manual' && (

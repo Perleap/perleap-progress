@@ -8,6 +8,7 @@ import type { ApiError } from '@/types';
 import type {
   SectionResource,
   CreateSectionResourceInput,
+  UpdateSectionResourceInput,
   StudentSectionProgress,
   StudentProgressStatus,
   SyllabusChangelog,
@@ -19,6 +20,23 @@ const STORAGE_BUCKET = 'syllabus-resources';
 // ---------------------------------------------------------------------------
 // Section Resources
 // ---------------------------------------------------------------------------
+
+export const getSectionResourceById = async (
+  resourceId: string,
+): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('section_resources' as any)
+      .select('*')
+      .eq('id', resourceId)
+      .maybeSingle();
+
+    if (error) return { data: null, error: handleSupabaseError(error) };
+    return { data: (data as any) as SectionResource | null, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
 
 export const getSectionResources = async (
   sectionId: string
@@ -41,14 +59,41 @@ export const createSectionResource = async (
   input: CreateSectionResourceInput
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
+    const row = {
+      ...input,
+      status: input.status ?? 'published',
+      summary: input.summary ?? null,
+      body_text: input.body_text ?? null,
+      lesson_content: input.lesson_content ?? null,
+      estimated_duration_minutes: input.estimated_duration_minutes ?? null,
+    };
     const { data, error } = await supabase
       .from('section_resources' as any)
-      .insert([input] as any)
+      .insert([row] as any)
       .select()
       .single();
 
     if (error) return { data: null, error: handleSupabaseError(error) };
     return { data: data as any as SectionResource, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+export const updateSectionResource = async (
+  resourceId: string,
+  updates: UpdateSectionResourceInput,
+): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('section_resources' as any)
+      .update(updates as any)
+      .eq('id', resourceId)
+      .select()
+      .single();
+
+    if (error) return { data: null, error: handleSupabaseError(error) };
+    return { data: data as SectionResource, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

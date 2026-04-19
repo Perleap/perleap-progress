@@ -4,6 +4,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { syncModuleFlowToResolvedDisplayForSection } from '@/hooks/queries/moduleFlowSync';
 import {
   getSyllabusByClassroom,
   createSyllabus,
@@ -25,8 +27,11 @@ import {
 } from '@/services/syllabusService';
 import {
   getSectionResources,
+  getSectionResourceById,
   uploadAndCreateResource,
   createLinkResource,
+  createSectionResource,
+  updateSectionResource,
   deleteSectionResource,
   upsertStudentProgress,
   getStudentProgress,
@@ -46,6 +51,9 @@ import type {
   StudentProgressStatus,
   SyllabusWithSections,
   ProvisionSyllabusBundleInput,
+  UpdateSectionResourceInput,
+  ActivityResourceStatus,
+  LessonContentV1,
 } from '@/types/syllabus';
 import { assignmentKeys } from './useAssignmentQueries';
 
@@ -434,6 +442,24 @@ export const useSectionResources = (sectionId: string | undefined) => {
   });
 };
 
+export const resourceByIdKeys = {
+  byId: (resourceId: string) => ['section-resources', 'by-id', resourceId] as const,
+};
+
+export const useSectionResourceById = (resourceId: string | undefined) => {
+  return useQuery({
+    queryKey: resourceByIdKeys.byId(resourceId || ''),
+    queryFn: async () => {
+      if (!resourceId) throw new Error('Missing resource ID');
+      const { data, error } = await getSectionResourceById(resourceId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!resourceId,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useUploadResource = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -486,6 +512,169 @@ export const useDeleteResource = () => {
     }) => {
       const { error } = await deleteSectionResource(resourceId, filePath);
       if (error) throw error;
+    },
+    onSuccess: (_, { sectionId, classroomId }) => {
+      queryClient.invalidateQueries({ queryKey: resourceKeys.bySection(sectionId) });
+      queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
+    },
+  });
+};
+
+export const useCreateTextActivity = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sectionId,
+      classroomId,
+      title,
+      summary,
+      body_text,
+      status,
+      orderIndex,
+    }: {
+      sectionId: string;
+      classroomId: string;
+      title: string;
+      summary?: string | null;
+      body_text?: string | null;
+      status?: ActivityResourceStatus;
+      orderIndex: number;
+    }) => {
+      const { data, error } = await createSectionResource({
+        section_id: sectionId,
+        title,
+        resource_type: 'text',
+        body_text: body_text ?? null,
+        summary: summary ?? null,
+        status: status ?? 'published',
+        file_path: null,
+        url: null,
+        mime_type: null,
+        file_size: null,
+        order_index: orderIndex,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { sectionId, classroomId }) => {
+      queryClient.invalidateQueries({ queryKey: resourceKeys.bySection(sectionId) });
+      queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+    },
+  });
+};
+
+/** Combined lesson row: text and/or video (file or URL), or v1 lesson_content blocks. */
+export const useCreateLessonActivity = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sectionId,
+      classroomId,
+      title,
+      summary,
+      body_text,
+      lesson_content,
+      status,
+      orderIndex,
+      url,
+      file_path,
+      mime_type,
+      file_size,
+    }: {
+      sectionId: string;
+      classroomId: string;
+      title: string;
+      summary?: string | null;
+      body_text?: string | null;
+      lesson_content?: LessonContentV1 | null;
+      status?: ActivityResourceStatus;
+      orderIndex: number;
+      url?: string | null;
+      file_path?: string | null;
+      mime_type?: string | null;
+      file_size?: number | null;
+    }) => {
+      const { data, error } = await createSectionResource({
+        section_id: sectionId,
+        title,
+        resource_type: 'lesson',
+        body_text: body_text ?? null,
+        lesson_content: lesson_content ?? null,
+        summary: summary ?? null,
+        status: status ?? 'published',
+        file_path: file_path ?? null,
+        url: url ?? null,
+        mime_type: mime_type ?? null,
+        file_size: file_size ?? null,
+        order_index: orderIndex,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async (_, { sectionId, classroomId }) => {
+      await queryClient.invalidateQueries({ queryKey: resourceKeys.bySection(sectionId) });
+      await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      await syncModuleFlowToResolvedDisplayForSection(queryClient, classroomId, sectionId);
+    },
+  });
+};
+
+export const useUpdateSectionResource = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      resourceId,
+      sectionId,
+      classroomId,
+      updates,
+    }: {
+      resourceId: string;
+      sectionId: string;
+      classroomId: string;
+      updates: UpdateSectionResourceInput;
+    }) => {
+      const { data, error } = await updateSectionResource(resourceId, updates);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { sectionId, classroomId, resourceId }) => {
+      queryClient.invalidateQueries({ queryKey: resourceKeys.bySection(sectionId) });
+      queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: resourceByIdKeys.byId(resourceId) });
+    },
+  });
+};
+
+/** Video resource from an external URL (not file upload). */
+export const useCreateVideoUrlResource = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sectionId,
+      classroomId,
+      title,
+      url,
+      orderIndex,
+    }: {
+      sectionId: string;
+      classroomId: string;
+      title: string;
+      url: string;
+      orderIndex: number;
+    }) => {
+      const { data, error } = await createSectionResource({
+        section_id: sectionId,
+        title,
+        resource_type: 'video',
+        url,
+        file_path: null,
+        mime_type: null,
+        file_size: null,
+        order_index: orderIndex,
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: (_, { sectionId, classroomId }) => {
       queryClient.invalidateQueries({ queryKey: resourceKeys.bySection(sectionId) });

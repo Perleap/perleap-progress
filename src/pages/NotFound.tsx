@@ -1,11 +1,11 @@
-import { useLocation, Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 
 const NotFound = () => {
-  const location = useLocation();
+  const navigateBack = useNavigateBack('/');
 
   return (
     <BreathingBackground className="flex items-center justify-center">
@@ -19,12 +19,14 @@ const NotFound = () => {
         <p className="mb-8 text-muted-foreground">
           Oops! The page you are looking for doesn't exist or has been moved.
         </p>
-        <Link to="/">
-          <Button className="bg-black text-white hover:bg-black/90 rounded-full px-8 gap-2">
-            <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
-            Return to Home
-          </Button>
-        </Link>
+        <Button
+          type="button"
+          className="bg-black text-white hover:bg-black/90 rounded-full px-8 gap-2"
+          onClick={navigateBack}
+        >
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          Return to Home
+        </Button>
       </div>
     </BreathingBackground>
   );

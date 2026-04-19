@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,46 +29,29 @@ import {
   Calendar,
   Target,
   FileText,
-  StickyNote,
   Loader2,
   CalendarRange,
-  CheckCircle2,
-  SkipForward,
-  Clock,
   Pencil,
   Lock,
   Unlock,
   GitBranch,
-  Link2,
-  Unlink,
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   useCreateSyllabusSection,
   useUpdateSyllabusSection,
   useDeleteSyllabusSection,
   useReorderSyllabusSections,
-  useLinkAssignment,
-  useUnlinkAssignment,
   useClassroomAssignments,
 } from '@/hooks/queries';
 import type { SyllabusSection, SectionResource, ReleaseMode } from '@/types/syllabus';
 import { DatePicker } from '@/components/ui/date-picker';
-import { ResourceUploader } from './ResourceUploader';
-import { ResourceViewer } from './ResourceViewer';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { supabase } from '@/integrations/supabase/client';
+import { ModuleFlowEditor, type ModuleFlowEditorHandle } from './ModuleFlowEditor';
+import { ModuleLessonActivityDialog } from './ModuleLessonActivityDialog';
 
-/** Supabase assignment ids are UUIDs; reject null/undefined/string "null" from bad Select state. */
-const ASSIGNMENT_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMPTY_SECTION_RESOURCES: SectionResource[] = [];
 
 interface SyllabusEditorProps {
   syllabusId: string;
@@ -76,7 +60,9 @@ interface SyllabusEditorProps {
   structureType: string;
   releaseMode?: ReleaseMode;
   isRTL: boolean;
-  sectionResources?: Record<string, SectionResource[]>;
+  sectionResources: Record<string, SectionResource[]>;
+  /** Opens teacher assignment edit for a flow step (module flow assignment row). */
+  onEditAssignment?: (assignmentId: string) => void;
 }
 
 export const SyllabusEditor = ({
@@ -86,7 +72,8 @@ export const SyllabusEditor = ({
   structureType,
   releaseMode = 'all_at_once',
   isRTL,
-  sectionResources = {},
+  sectionResources,
+  onEditAssignment,
 }: SyllabusEditorProps) => {
   const { t, i18n } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -98,23 +85,31 @@ export const SyllabusEditor = ({
   const [bulkStartDate, setBulkStartDate] = useState('');
   const [bulkDuration, setBulkDuration] = useState(7);
   const [rewritingField, setRewritingField] = useState<string | null>(null);
-  const [linkPickerKey, setLinkPickerKey] = useState(0);
+  const [lessonSectionId, setLessonSectionId] = useState<string | null>(null);
+  const [editingLesson, setEditingLesson] = useState<SectionResource | null>(null);
+  const flowEditorRef = useRef<ModuleFlowEditorHandle>(null);
+  const lessonCreatedFromSectionFlowRef = useRef(false);
 
   const createMutation = useCreateSyllabusSection();
   const updateMutation = useUpdateSyllabusSection();
   const deleteMutation = useDeleteSyllabusSection();
   const reorderMutation = useReorderSyllabusSections();
-  const linkMutation = useLinkAssignment();
-  const unlinkMutation = useUnlinkAssignment();
   const { data: allAssignments = [] } = useClassroomAssignments(classroomId);
-
-  const unlinkedAssignmentsForPicker = (allAssignments as { id?: string | null; syllabus_section_id?: string | null }[]).filter(
-    (a) => !a.syllabus_section_id && typeof a.id === 'string' && ASSIGNMENT_UUID_RE.test(a.id)
-  );
 
   const clampedIndex = Math.min(selectedIndex, Math.max(sections.length - 1, 0));
   const selected = sections[clampedIndex] ?? null;
+  const moduleFlowResources = useMemo(
+    () => (selected ? sectionResources[selected.id] : undefined) ?? EMPTY_SECTION_RESOURCES,
+    [sectionResources, selected?.id],
+  );
   const structureLabel = structureType === 'weeks' ? 'Week' : structureType === 'units' ? 'Unit' : 'Module';
+
+  const sectionDisplayName = (section: SyllabusSection, pending: Partial<SyllabusSection>, listIndex: number) => {
+    const raw = typeof pending.title === 'string' ? pending.title : section.title;
+    const trimmed = (raw ?? '').trim();
+    if (trimmed) return trimmed;
+    return `${structureLabel} ${listIndex + 1}`;
+  };
 
   const getValue = <K extends keyof SyllabusSection>(key: K): SyllabusSection[K] => {
     if (key in editValues) return editValues[key as string] as SyllabusSection[K];
@@ -125,7 +120,7 @@ export const SyllabusEditor = ({
     setEditValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleRewrite = async (fieldKey: 'description' | 'notes', currentValue: string) => {
+  const handleRewrite = async (fieldKey: 'description', currentValue: string) => {
     if (!currentValue.trim() || !selected) return;
     const fieldId = `${selected.id}-${fieldKey}`;
     setRewritingField(fieldId);
@@ -175,16 +170,19 @@ export const SyllabusEditor = ({
   const handleSave = () => {
     if (!selected || Object.keys(editValues).length === 0) return;
     setSaving(true);
+    const updates = { ...editValues, notes: null as null, resources: null as null };
     updateMutation.mutate(
       {
         sectionId: selected.id,
-        updates: editValues,
+        updates,
         classroomId,
       },
       {
         onSuccess: () => {
           setEditValues({});
-          toast.success(t('syllabus.sections.saved'));
+          toast.success(
+            t('syllabus.sections.saved', { name: sectionDisplayName(selected, editValues, clampedIndex) }),
+          );
         },
         onError: () => toast.error(t('syllabus.sections.saveFailed')),
         onSettled: () => setSaving(false),
@@ -194,14 +192,18 @@ export const SyllabusEditor = ({
 
   const handleSectionClick = (index: number) => {
     if (Object.keys(editValues).length > 0 && selected) {
+      const updates = { ...editValues, notes: null as null, resources: null as null };
       updateMutation.mutate(
         {
           sectionId: selected.id,
-          updates: editValues,
+          updates,
           classroomId,
         },
         {
-          onSuccess: () => toast.success(t('syllabus.sections.saved')),
+          onSuccess: () =>
+            toast.success(
+              t('syllabus.sections.saved', { name: sectionDisplayName(selected, editValues, selectedIndex) }),
+            ),
           onError: () => toast.error(t('syllabus.sections.saveFailed')),
         }
       );
@@ -437,31 +439,6 @@ export const SyllabusEditor = ({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.completionStatus')}
-                </Label>
-                <Select
-                  value={(getValue('completion_status') as string) || 'auto'}
-                  onValueChange={(v) => setField('completion_status', v)}
-                >
-                  <SelectTrigger className="rounded-lg h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="auto">
-                      <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> {t('syllabus.sections.statusAuto')}</span>
-                    </SelectItem>
-                    <SelectItem value="completed">
-                      <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-green-500" /> {t('syllabus.sections.statusCompleted')}</span>
-                    </SelectItem>
-                    <SelectItem value="skipped">
-                      <span className="flex items-center gap-1.5"><SkipForward className="h-3 w-3 text-orange-500" /> {t('syllabus.sections.statusSkipped')}</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-medium flex items-center gap-1"><Target className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.objectives')}</Label>
@@ -476,95 +453,6 @@ export const SyllabusEditor = ({
                     <button type="button" onClick={() => setField('objectives', objectives.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive p-0.5"><Trash2 className="h-3 w-3" /></button>
                   </div>
                 ))}
-              </div>
-
-              <ResourceUploader
-                sectionId={selected.id}
-                classroomId={classroomId}
-                resources={sectionResources[selected.id] || []}
-                isRTL={isRTL}
-              />
-
-              {(sectionResources[selected.id] || []).length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    {t('syllabus.customization.preview')}
-                  </Label>
-                  <ResourceViewer
-                    resources={sectionResources[selected.id] || []}
-                    isRTL={isRTL}
-                  />
-                </div>
-              )}
-
-              {/* Inline Assignment Linking */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium flex items-center gap-1">
-                    <BookOpen className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.linkedAssignments', 'Assignments')}
-                  </Label>
-                  <Select
-                    key={`link-assignment-${selected.id}-${linkPickerKey}`}
-                    onValueChange={(assignmentId) => {
-                      if (!assignmentId || !ASSIGNMENT_UUID_RE.test(assignmentId)) return;
-                      linkMutation.mutate(
-                        { assignmentId, sectionId: selected.id, classroomId },
-                        {
-                          onSuccess: () => setLinkPickerKey((k) => k + 1),
-                          onError: () => toast.error(t('syllabus.sections.linkFailed', 'Failed to link assignment')),
-                        }
-                      );
-                    }}
-                  >
-                    <SelectTrigger className="h-7 w-auto text-xs rounded-full px-2.5 gap-1 border-dashed">
-                      <Link2 className="h-3 w-3 shrink-0" />
-                      <SelectValue placeholder={t('syllabus.sections.linkAssignment', 'Link')} />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {unlinkedAssignmentsForPicker.map((a) => (
-                        <SelectItem key={a.id} value={a.id as string}>
-                          {a.title}
-                        </SelectItem>
-                      ))}
-                      {unlinkedAssignmentsForPicker.length === 0 && (
-                        <div className="px-3 py-2 text-xs text-muted-foreground">
-                          {t('syllabus.sections.noUnlinkedAssignments', 'No unlinked assignments')}
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(allAssignments as any[])
-                  .filter((a: any) => a.syllabus_section_id === selected.id)
-                  .map((a: any) => (
-                    <div key={a.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/20 text-sm">
-                      <BookOpen className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      <span className="flex-1 truncate">{a.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => unlinkMutation.mutate(
-                          { assignmentId: a.id, classroomId },
-                          { onError: () => toast.error(t('syllabus.sections.unlinkFailed', 'Failed to unlink')) }
-                        )}
-                        className="text-muted-foreground hover:text-destructive p-0.5"
-                      >
-                        <Unlink className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium flex items-center gap-1"><StickyNote className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.notes')}</Label>
-                <ExpandableTextarea
-                  value={(getValue('notes') as string) || ''}
-                  onChange={(v) => setField('notes', v || null)}
-                  rows={2}
-                  className="bg-card"
-                  autoDirection
-                  onRewrite={() => handleRewrite('notes', (getValue('notes') as string) || '')}
-                  isRewriting={rewritingField === `${selected.id}-notes`}
-                />
               </div>
 
               {/* Prerequisites (only when release_mode is 'prerequisites') */}
@@ -600,6 +488,41 @@ export const SyllabusEditor = ({
                 </div>
               )}
             </div>
+
+            <Separator className="my-2" />
+            <div className="space-y-3">
+              <ModuleFlowEditor
+                ref={flowEditorRef}
+                flowHeading={t('syllabus.sections.moduleFlow')}
+                sectionId={selected.id}
+                classroomId={classroomId}
+                resources={moduleFlowResources}
+                assignments={
+                  allAssignments as {
+                    id: string;
+                    title: string;
+                    syllabus_section_id?: string | null;
+                    due_at?: string | null;
+                  }[]
+                }
+                isRTL={isRTL}
+                onRequestNewActivity={() => {
+                  if (!selected) return;
+                  lessonCreatedFromSectionFlowRef.current = true;
+                  setLessonSectionId(selected.id);
+                  setEditingLesson(null);
+                }}
+                onEditAssignment={onEditAssignment}
+                onEditResource={(resourceId) => {
+                  if (!selected) return;
+                  const r = moduleFlowResources.find((x) => x.id === resourceId);
+                  if (r) {
+                    setLessonSectionId(selected.id);
+                    setEditingLesson(r);
+                  }
+                }}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
@@ -608,6 +531,31 @@ export const SyllabusEditor = ({
           </div>
         )}
       </div>
+
+      <ModuleLessonActivityDialog
+        classroomId={classroomId}
+        isRTL={isRTL}
+        open={lessonSectionId !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setLessonSectionId(null);
+            setEditingLesson(null);
+          }
+        }}
+        sectionId={lessonSectionId}
+        editingLesson={editingLesson}
+        sectionResourcesBySection={sectionResources}
+        onLessonCreated={async (resourceId) => {
+          if (
+            lessonCreatedFromSectionFlowRef.current &&
+            selected &&
+            lessonSectionId === selected.id
+          ) {
+            await flowEditorRef.current?.appendStep('resource', resourceId);
+            lessonCreatedFromSectionFlowRef.current = false;
+          }
+        }}
+      />
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => { setDeleteConfirmOpen(open); if (!open) setSectionToDelete(null); }}>
         <AlertDialogContent className="rounded-xl">

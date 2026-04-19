@@ -53,25 +53,41 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
 
-  const enumerate = useCallback(async () => {
+  const applyDeviceList = useCallback((list: MediaDeviceInfo[]) => {
+    const vids = list.filter((d) => d.kind === 'videoinput');
+    const auds = list.filter((d) => d.kind === 'audioinput');
+    setVideoDevices(vids);
+    setAudioDevices(auds);
+  }, []);
+
+  /** No getUserMedia — avoids camera/mic prompts on mount (labels may be generic until permission). */
+  const enumerateSilent = useCallback(async () => {
     try {
-      await primeDeviceLabels();
       const list = await navigator.mediaDevices.enumerateDevices();
-      const vids = list.filter((d) => d.kind === 'videoinput');
-      const auds = list.filter((d) => d.kind === 'audioinput');
-      setVideoDevices(vids);
-      setAudioDevices(auds);
+      applyDeviceList(list);
     } catch {
       setVideoDevices([]);
       setAudioDevices([]);
     }
-  }, []);
+  }, [applyDeviceList]);
+
+  /** User-triggered refresh: prime labels (may prompt) then enumerate. */
+  const enumerateWithLabels = useCallback(async () => {
+    try {
+      await primeDeviceLabels();
+      const list = await navigator.mediaDevices.enumerateDevices();
+      applyDeviceList(list);
+    } catch {
+      setVideoDevices([]);
+      setAudioDevices([]);
+    }
+  }, [applyDeviceList]);
 
   const initRef = useRef(false);
 
   useEffect(() => {
-    enumerate();
-  }, [enumerate]);
+    enumerateSilent();
+  }, [enumerateSilent]);
 
   useEffect(() => {
     if (initRef.current || videoDevices.length === 0) return;
@@ -156,7 +172,13 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
           </Select>
         </div>
 
-        <Button type="button" variant="outline" size="sm" onClick={enumerate} className="gap-1.5 shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void enumerateWithLabels()}
+          className="gap-1.5 shrink-0"
+        >
           <RefreshCw className="h-3.5 w-3.5" />
           {t('assignmentDetail.presentation.refreshDevices')}
         </Button>

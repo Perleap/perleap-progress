@@ -1,12 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -23,7 +21,6 @@ import {
   RefreshCw,
   Save,
   Settings,
-  Archive,
 } from 'lucide-react';
 import {
   Select,
@@ -37,14 +34,11 @@ import {
   useCreateSyllabus,
   useUpdateSyllabus,
   usePublishSyllabus,
-  useArchiveSyllabus,
   useClassroomAssignments,
 } from '@/hooks/queries';
-import { SyllabusRoadmap } from './SyllabusRoadmap';
 import { SyllabusEditor } from './SyllabusEditor';
 import { GradingCategoriesManager } from './GradingCategoriesManager';
 import { AssignmentLinker } from './AssignmentLinker';
-import { SyllabusPDFExport } from './SyllabusPDFExport';
 import type { SyllabusStructureType, SyllabusPolicy, ReleaseMode } from '@/types/syllabus';
 import { useAuth } from '@/contexts/AuthContext';
 import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
@@ -52,9 +46,15 @@ import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffect
 interface CourseOutlineSectionProps {
   classroomId: string;
   isRTL: boolean;
+  /** Open teacher edit dialog for an assignment (parent supplies full assignment row). */
+  onTeacherSelectAssignment?: (assignmentId: string) => void;
 }
 
-export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectionProps) => {
+export const CourseOutlineSection = ({
+  classroomId,
+  isRTL,
+  onTeacherSelectAssignment,
+}: CourseOutlineSectionProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: syllabus, isLoading, isError, refetch } = useSyllabus(classroomId);
@@ -62,42 +62,17 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
   const createMutation = useCreateSyllabus();
   const updateMutation = useUpdateSyllabus();
   const publishMutation = usePublishSyllabus();
-  const archiveMutation = useArchiveSyllabus();
 
   const [showCreate, setShowCreate] = useState(false);
   const [createTitle, setCreateTitle] = useState('');
-  const [createSummary, setCreateSummary] = useState('');
   const [createType, setCreateType] = useState<SyllabusStructureType>('weeks');
-  const [createInitialPublish, setCreateInitialPublish] = useState<'draft' | 'published'>('draft');
 
-  const [activeTab, setActiveTab] = useState('roadmap');
+  const [activeTab, setActiveTab] = useState('sections');
   const [editingMeta, setEditingMeta] = useState(false);
   const [metaTitle, setMetaTitle] = useState('');
-  const [metaSummary, setMetaSummary] = useState('');
   const [metaStructureType, setMetaStructureType] = useState<SyllabusStructureType>('weeks');
   const [metaPolicies, setMetaPolicies] = useState<SyllabusPolicy[]>([]);
   const [metaReleaseMode, setMetaReleaseMode] = useState<ReleaseMode>('all_at_once');
-
-  const assignmentCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    (assignments as any[]).forEach((a: any) => {
-      if (a.syllabus_section_id) {
-        counts[a.syllabus_section_id] = (counts[a.syllabus_section_id] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [assignments]);
-
-  const linkedAssignmentsMap = useMemo(() => {
-    const map: Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>> = {};
-    (assignments as any[]).forEach((a: any) => {
-      if (a.syllabus_section_id) {
-        if (!map[a.syllabus_section_id]) map[a.syllabus_section_id] = [];
-        map[a.syllabus_section_id].push({ id: a.id, title: a.title, type: a.type, due_at: a.due_at });
-      }
-    });
-    return map;
-  }, [assignments]);
 
   const handleCreate = async () => {
     if (!createTitle.trim()) {
@@ -105,11 +80,11 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
       return;
     }
     try {
-      const status = createInitialPublish === 'published' ? 'published' : 'draft';
+      const status = 'published';
       const created = await createMutation.mutateAsync({
         classroom_id: classroomId,
         title: createTitle,
-        summary: createSummary || null,
+        summary: null,
         structure_type: createType,
         policies: [],
         status,
@@ -128,8 +103,6 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
       toast.success(t('syllabus.syllabusCreated'));
       setShowCreate(false);
       setCreateTitle('');
-      setCreateSummary('');
-      setCreateInitialPublish('draft');
     } catch {
       toast.error(t('syllabus.createFailed'));
     }
@@ -155,35 +128,9 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
     }
   };
 
-  const handleRevertToDraft = async () => {
-    if (!syllabus) return;
-    try {
-      await updateMutation.mutateAsync({
-        syllabusId: syllabus.id,
-        updates: { status: 'draft', published_at: null },
-        classroomId,
-      });
-      toast.success(t('syllabus.revertedToDraft'));
-    } catch {
-      toast.error(t('syllabus.revertFailed'));
-    }
-  };
-
-  const handleArchive = async () => {
-    if (!syllabus) return;
-    if (!confirm(t('syllabus.archiveConfirm'))) return;
-    try {
-      await archiveMutation.mutateAsync({ syllabusId: syllabus.id, classroomId });
-      toast.success(t('syllabus.archived'));
-    } catch {
-      toast.error(t('syllabus.archiveFailed'));
-    }
-  };
-
   const startEditMeta = () => {
     if (!syllabus) return;
     setMetaTitle(syllabus.title);
-    setMetaSummary(syllabus.summary || '');
     setMetaStructureType(syllabus.structure_type);
     setMetaPolicies(syllabus.policies ?? []);
     setMetaReleaseMode(syllabus.release_mode || 'all_at_once');
@@ -197,7 +144,7 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
         syllabusId: syllabus.id,
         updates: {
           title: metaTitle,
-          summary: metaSummary || null,
+          summary: null,
           structure_type: metaStructureType,
           policies: metaPolicies.map((p, i) => ({ ...p, order_index: i })),
           release_mode: metaReleaseMode,
@@ -276,7 +223,6 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
             variant="ghost"
             onClick={() => {
               setShowCreate(false);
-              setCreateInitialPublish('draft');
             }}
             className="rounded-full"
           >
@@ -290,10 +236,6 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
               <Input value={createTitle} onChange={(e) => setCreateTitle(e.target.value)} placeholder={t('syllabus.titlePlaceholder')} className="rounded-xl" autoDirection />
             </div>
             <div className="space-y-2">
-              <Label className="font-medium">{t('syllabus.summary')}</Label>
-              <Textarea value={createSummary} onChange={(e) => setCreateSummary(e.target.value)} placeholder={t('syllabus.summaryPlaceholder')} rows={3} className="rounded-xl resize-none" autoDirection />
-            </div>
-            <div className="space-y-2">
               <Label className="font-medium">{t('syllabus.structureType')}</Label>
               <div className="grid grid-cols-3 gap-3">
                 {(['weeks', 'units', 'modules'] as const).map((sType) => (
@@ -303,59 +245,11 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
                 ))}
               </div>
             </div>
-            <div className="space-y-3 pt-1">
-              <Label className={`font-medium ${isRTL ? 'text-right block' : ''}`}>
-                {t('syllabus.initialPublish.label')}
-              </Label>
-              <RadioGroup
-                value={createInitialPublish}
-                onValueChange={(v) => setCreateInitialPublish(v as 'draft' | 'published')}
-              >
-                <div
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-accent/50 transition-colors',
-                    isRTL && 'flex-row-reverse'
-                  )}
-                >
-                  <RadioGroupItem value="draft" id="outline-create-draft" className="shrink-0" />
-                  <Label
-                    htmlFor="outline-create-draft"
-                    className={cn(
-                      'mb-0 cursor-pointer font-normal flex-1',
-                      isRTL ? 'text-right' : 'text-left'
-                    )}
-                  >
-                    <span className="font-medium">{t('syllabus.initialPublish.draft')}</span>
-                  </Label>
-                </div>
-                <div
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-accent/50 transition-colors',
-                    isRTL && 'flex-row-reverse'
-                  )}
-                >
-                  <RadioGroupItem value="published" id="outline-create-published" className="shrink-0" />
-                  <Label
-                    htmlFor="outline-create-published"
-                    className={cn(
-                      'mb-0 cursor-pointer font-normal flex-1',
-                      isRTL ? 'text-right' : 'text-left'
-                    )}
-                  >
-                    <span className="font-medium">{t('syllabus.initialPublish.publish')}</span>
-                  </Label>
-                </div>
-              </RadioGroup>
-              <p className={cn('text-xs text-muted-foreground', isRTL ? 'text-right' : 'text-left')}>
-                {t('syllabus.initialPublish.helper')}
-              </p>
-            </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="ghost"
                 onClick={() => {
                   setShowCreate(false);
-                  setCreateInitialPublish('draft');
                 }}
                 className="rounded-full"
               >
@@ -379,68 +273,26 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
       {/* Header */}
       <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
         <div className={isRTL ? 'text-right' : 'text-left'}>
-          <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground">{t('syllabus.courseOutline')}</h2>
-            <Badge
-              variant={syllabus.status === 'published' ? 'default' : 'secondary'}
-              className={cn(
-                'rounded-full',
-                syllabus.status === 'published'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : ''
-              )}
-            >
-              {syllabus.status}
-            </Badge>
-          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-1">{t('syllabus.courseOutline')}</h2>
           <p className="text-muted-foreground text-sm">{syllabus.title}</p>
         </div>
 
-        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          {syllabus.status === 'draft' && (
-            <div className="flex items-center gap-2">
-              {syllabus.sections.length === 0 && (
-                <span className="text-xs text-muted-foreground">{t('syllabus.addSectionsFirst')}</span>
-              )}
-              <Button variant="default" size="sm" onClick={handlePublish} disabled={publishMutation.isPending || syllabus.sections.length === 0} className="rounded-full gap-1.5">
-                {publishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                {t('syllabus.publish')}
-              </Button>
-            </div>
-          )}
-          {syllabus.status === 'published' && (
-            <>
-              <Button variant="outline" size="sm" onClick={handleRevertToDraft} disabled={updateMutation.isPending} className="rounded-full gap-1.5">
-                {updateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Edit className="h-3.5 w-3.5" />}
-                {t('syllabus.revertToDraft')}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleArchive} disabled={archiveMutation.isPending} className="rounded-full gap-1.5 text-muted-foreground hover:text-destructive">
-                {archiveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
-                {t('syllabus.archive')}
-              </Button>
-            </>
-          )}
-        </div>
+        {syllabus.status === 'draft' && (
+          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {syllabus.sections.length === 0 && (
+              <span className="text-xs text-muted-foreground">{t('syllabus.addSectionsFirst')}</span>
+            )}
+            <Button variant="default" size="sm" onClick={handlePublish} disabled={publishMutation.isPending || syllabus.sections.length === 0} className="rounded-full gap-1.5">
+              {publishMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              {t('syllabus.publish')}
+            </Button>
+          </div>
+        )}
       </div>
-
-      {/* PDF Export */}
-      <SyllabusPDFExport syllabus={syllabus} isRTL={isRTL} />
-
-      {/* Summary Card */}
-      {syllabus.summary && (
-        <Card className="rounded-xl border-border shadow-sm">
-          <CardContent className="p-4">
-            <p className={`text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>{syllabus.summary}</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Tabs (using shadcn Tabs for proper a11y) */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-muted/50 rounded-xl p-1 h-auto w-fit">
-          <TabsTrigger value="roadmap" className="rounded-lg gap-1.5 px-4 py-2 text-sm">
-            <Map className="h-4 w-4" /> {t('syllabus.tabs.roadmap')}
-          </TabsTrigger>
           <TabsTrigger value="sections" className="rounded-lg gap-1.5 px-4 py-2 text-sm">
             <BookOpen className="h-4 w-4" /> {t('syllabus.tabs.sections')}
           </TabsTrigger>
@@ -455,22 +307,6 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="roadmap">
-          <SyllabusRoadmap
-            sections={syllabus.sections}
-            assignmentCounts={assignmentCounts}
-            sectionResources={syllabus.section_resources}
-            classroomId={classroomId}
-            mode="teacher"
-            isRTL={isRTL}
-            syllabusId={syllabus.id}
-            structureType={syllabus.structure_type}
-            releaseMode={syllabus.release_mode || 'all_at_once'}
-            linkedAssignmentsMap={linkedAssignmentsMap}
-            onSwitchToSections={() => setActiveTab('sections')}
-          />
-        </TabsContent>
-
         <TabsContent value="sections">
           <SyllabusEditor
             syllabusId={syllabus.id}
@@ -479,7 +315,8 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
             structureType={syllabus.structure_type}
             releaseMode={syllabus.release_mode || 'all_at_once'}
             isRTL={isRTL}
-            sectionResources={syllabus.section_resources}
+            sectionResources={syllabus.section_resources ?? {}}
+            onEditAssignment={onTeacherSelectAssignment}
           />
         </TabsContent>
 
@@ -511,12 +348,10 @@ export const CourseOutlineSection = ({ classroomId, isRTL }: CourseOutlineSectio
             onCancel={() => setEditingMeta(false)}
             saving={updateMutation.isPending}
             metaTitle={metaTitle}
-            metaSummary={metaSummary}
             metaStructureType={metaStructureType}
             metaPolicies={metaPolicies}
             metaReleaseMode={metaReleaseMode}
             onChangeTitle={setMetaTitle}
-            onChangeSummary={setMetaSummary}
             onChangeStructureType={setMetaStructureType}
             onChangePolicies={setMetaPolicies}
             onChangeReleaseMode={setMetaReleaseMode}
@@ -568,10 +403,10 @@ function SyllabusSettings({
   onSave,
   onCancel,
   saving,
-  metaTitle, metaSummary, metaStructureType,
+  metaTitle, metaStructureType,
   metaPolicies,
   metaReleaseMode,
-  onChangeTitle, onChangeSummary, onChangeStructureType,
+  onChangeTitle, onChangeStructureType,
   onChangePolicies,
   onChangeReleaseMode,
   isRTL,
@@ -582,10 +417,10 @@ function SyllabusSettings({
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
-  metaTitle: string; metaSummary: string; metaStructureType: SyllabusStructureType;
+  metaTitle: string; metaStructureType: SyllabusStructureType;
   metaPolicies: SyllabusPolicy[];
   metaReleaseMode: ReleaseModeType;
-  onChangeTitle: (v: string) => void; onChangeSummary: (v: string) => void; onChangeStructureType: (v: SyllabusStructureType) => void;
+  onChangeTitle: (v: string) => void; onChangeStructureType: (v: SyllabusStructureType) => void;
   onChangePolicies: (v: SyllabusPolicy[]) => void;
   onChangeReleaseMode: (v: ReleaseModeType) => void;
   isRTL: boolean;
@@ -609,7 +444,6 @@ function SyllabusSettings({
           <Card className="rounded-xl border-border shadow-sm">
             <CardContent className="p-5 space-y-4">
               <SettingsField label={t('syllabus.title')} value={syllabus.title} isRTL={isRTL} />
-              <SettingsField label={t('syllabus.summary')} value={syllabus.summary || '—'} isRTL={isRTL} />
               <SettingsField label={t('syllabus.settings.structure')} value={syllabus.structure_type} isRTL={isRTL} />
               <SettingsField label={t('syllabus.releaseMode.label', 'Release Mode')} value={t(`syllabus.releaseMode.${syllabus.release_mode || 'all_at_once'}`, syllabus.release_mode || 'all_at_once')} isRTL={isRTL} />
               <SettingsField label={t('syllabus.settings.status')} value={syllabus.status} isRTL={isRTL} />
@@ -671,10 +505,6 @@ function SyllabusSettings({
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('syllabus.title')}</Label>
               <Input value={metaTitle} onChange={(e) => onChangeTitle(e.target.value)} className="rounded-lg" autoDirection />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">{t('syllabus.summary')}</Label>
-              <Textarea value={metaSummary} onChange={(e) => onChangeSummary(e.target.value)} rows={3} className="rounded-lg resize-none" autoDirection />
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('syllabus.structureType')}</Label>

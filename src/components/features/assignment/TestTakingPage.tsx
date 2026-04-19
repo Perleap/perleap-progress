@@ -13,15 +13,14 @@ import { useTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
 import { generateFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries';
+import type { AssignmentCompletionTone } from '@/types/submission';
 
 interface TestTakingPageProps {
   assignmentId: string;
   assignmentInstructions: string;
   submissionId: string;
   autoPublishAiFeedback?: boolean;
-  onComplete: () => void;
+  onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
 export function TestTakingPage({
@@ -34,7 +33,6 @@ export function TestTakingPage({
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   const { data: questions, isLoading } = useTestQuestions(assignmentId);
   const submitResponses = useSubmitTestResponses();
@@ -82,9 +80,7 @@ export function TestTakingPage({
           console.error('Error completing submission:', completeError);
           toast.error(t('assignmentDetail.testTaking.submitError'));
         } else {
-          toast.success(t('assignmentDetail.success.submittedAwaitingTeacher'));
-          queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-          onComplete();
+          await onComplete('awaitingTeacher');
         }
       } else {
         const language = getAssignmentLanguage(assignmentInstructions, uiLanguage);
@@ -100,9 +96,7 @@ export function TestTakingPage({
           toast.error(t('assignmentDetail.testTaking.submitError'));
         } else {
           await completeSubmission(submissionId);
-          toast.success(t('assignmentDetail.testTaking.submitSuccess'));
-          queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-          onComplete();
+          await onComplete('testSubmitted');
         }
       }
     } catch (error) {

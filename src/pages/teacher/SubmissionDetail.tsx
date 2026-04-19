@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layouts';
@@ -53,7 +54,7 @@ const SubmissionDetail = () => {
       if (teacherId && teacherId !== user.id) {
         console.error('Unauthorized access to submission');
         toast.error(t('submissionDetail.errors.loading'));
-        navigate(-1);
+        navigateBackOrTo(navigate, '/teacher/dashboard');
       }
     }
   }, [submissionData, user?.id, navigate, t]);

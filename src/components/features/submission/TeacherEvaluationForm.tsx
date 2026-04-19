@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, CheckCircle, Sparkles } from 'lucide-react';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
+import { Loader2, Send, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -26,7 +26,6 @@ export function TeacherEvaluationForm({
   const [feedback, setFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [rephrasing, setRephrasing] = useState(false);
-  const [originalFeedback, setOriginalFeedback] = useState<string | null>(null);
 
   const handleRephraseFeedback = async () => {
     if (!feedback.trim()) {
@@ -35,7 +34,6 @@ export function TeacherEvaluationForm({
     }
 
     setRephrasing(true);
-    setOriginalFeedback(feedback);
     try {
       const { data, error } = await supabase.functions.invoke('rephrase-text', {
         body: {
@@ -94,48 +92,17 @@ export function TeacherEvaluationForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className={`flex flex-wrap items-center gap-2 justify-end ${isRTL ? 'flex-row-reverse' : ''}`}>
-          {originalFeedback !== null && originalFeedback !== feedback && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setFeedback(originalFeedback);
-                setOriginalFeedback(null);
-              }}
-              className="rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground"
-            >
-              {t('common.undo')}
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRephraseFeedback}
-            disabled={!feedback.trim() || rephrasing || submitting}
-            className={`rounded-full text-xs font-semibold gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}
-          >
-            {rephrasing ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {t('createAssignment.rephrasing')}
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3 w-3" />
-                {t('createAssignment.rephraseButton')}
-              </>
-            )}
-          </Button>
-        </div>
-        <Textarea
+        <ExpandableTextarea
+          key={submissionId}
           value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
+          onChange={setFeedback}
           placeholder={t('submissionDetail.teacherEvaluation.placeholder')}
-          className="min-h-[140px] resize-y"
+          className="min-h-[140px]"
+          dir={isRTL ? 'rtl' : 'ltr'}
+          autoDirection
           disabled={submitting || rephrasing}
+          onRewrite={() => void handleRephraseFeedback()}
+          isRewriting={rephrasing}
         />
         <div className="flex justify-end">
           <Button

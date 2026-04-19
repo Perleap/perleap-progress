@@ -8,6 +8,7 @@ import {
   getTeacherProfile,
   getStudentProfile,
   getAssignmentDetails,
+  getAssignmentModuleActivityContextText,
   getClassroomResources,
   getTeacherIdFromAssignment
 } from '../shared/supabase.ts';
@@ -46,11 +47,13 @@ serve(async (req) => {
       conversation,
       teacherId,
       assignmentDetails,
+      moduleActivityContextText,
     ] = await Promise.all([
       getTeacherNameByAssignment(assignmentId),
       getOrCreateConversation(submissionId),
       getTeacherIdFromAssignment(assignmentId),
       getAssignmentDetails(assignmentId),
+      getAssignmentModuleActivityContextText(assignmentId),
     ]);
 
     // Fetch teacher profile, student profile, and classroom resources in parallel
@@ -85,6 +88,7 @@ serve(async (req) => {
       classroomResources,
       isInitialGreeting,
       language,
+      moduleActivityContextText || undefined,
     );
 
     // Explicitly append completion rules to ensure the AI always uses the marker

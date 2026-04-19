@@ -8,6 +8,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import {
   createSupabaseClient,
+  getAssignmentModuleActivityContextText,
   getStudentName,
   getTeacherNameByAssignment,
 } from '../shared/supabase.ts';
@@ -147,6 +148,8 @@ serve(async (req) => {
     logInfo('Starting parallel AI calls...');
     const aiStartTime = Date.now();
 
+    const moduleActivityContextText = await getAssignmentModuleActivityContextText(assignmentId);
+
     let hardSkillsList: string[] = [];
     try {
       if (assignmentData?.hard_skills) {
@@ -168,6 +171,7 @@ serve(async (req) => {
     Assignment: ${assignmentData?.title}
     Assignment Type: ${assignmentType || 'questions'}
     Instructions: ${assignmentData?.instructions}
+    ${moduleActivityContextText ? `\n\nModule learning context:\n${moduleActivityContextText}` : ''}
     
     Provide your response in the following JSON format:
     {

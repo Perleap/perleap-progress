@@ -1,30 +1,37 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BookOpen, Calendar, FileText, Clock, CheckCircle2, AlertCircle, Sparkles, Info, Users, Map } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  Users,
+  Map,
+  LayoutList,
+  ArrowRight,
+  Loader2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCourseDuration } from '@/lib/dateUtils';
 import { ClassroomLayout } from '@/components/layouts';
-import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { useClassroom, useClassroomAssignments, useTeacherProfile, useSyllabus, useStudentProgress } from '@/hooks/queries';
-import { SyllabusRoadmap } from '@/components/features/syllabus/SyllabusRoadmap';
+import { ModuleSyllabusAccordion } from '@/components/features/syllabus/ModuleSyllabusAccordion';
+import { StudentActivitiesSection } from '@/components/features/syllabus/StudentActivitiesSection';
 import { StudentPoliciesView } from '@/components/features/syllabus/StudentPoliciesView';
 import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
 import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
-import { Loader2 } from 'lucide-react';
+import { getStudyCtaTarget } from '@/lib/studyCtaTarget';
 import type { StudentProgressStatus } from '@/types/syllabus';
+import type { ClassroomLocationState } from '@/types/navigation';
+
+const STUDENT_SECTION_IDS = new Set(['overview', 'outline', 'curriculum']);
 
 interface Classroom {
   id: string;
@@ -38,24 +45,14 @@ interface Classroom {
   key_challenges: string[];
 }
 
-interface Assignment {
-  id: string;
-  title: string;
-  instructions: string;
-  due_at: string;
-  status: string;
-  type: string;
-}
-
 const StudentClassroomDetail = () => {
   const { t } = useTranslation();
   const { id } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
-  const navigate = useNavigate();
-
-  const { data: rawClassroom, isLoading: classroomLoading } = useClassroom(id);
-  const { data: rawAssignments = [], isLoading: assignmentsLoading } = useClassroomAssignments(id);
+  const { data: rawClassroom } = useClassroom(id);
+  const { data: rawAssignments = [] } = useClassroomAssignments(id);
   
   const teacherId = rawClassroom?.teacher_id;
   const { data: teacher } = useTeacherProfile(teacherId);
@@ -86,12 +83,17 @@ const StudentClassroomDetail = () => {
     return map;
   }, [rawAssignments]);
 
-  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
-  const [assignmentsSubTab, setAssignmentsSubTab] = useState<'active' | 'finished'>('active');
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState(() => {
+    const raw = (location.state as ClassroomLocationState | null)?.activeSection;
+    const normalized =
+      raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    return normalized && STUDENT_SECTION_IDS.has(normalized) ? normalized : 'overview';
+  });
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
   const [sectionVisitStack, setSectionVisitStack] = useState<string[]>([]);
   const openSectionIdRef = useRef<string | null>(null);
+  /** When true, closing the module view (empty visit stack) returns to About instead of the outline list. */
+  const sectionBackReturnsToOverviewRef = useRef(false);
 
   const goToSection = useCallback((id: string) => {
     const from = openSectionIdRef.current;
@@ -107,6 +109,10 @@ const StudentClassroomDetail = () => {
       if (stack.length === 0) {
         openSectionIdRef.current = null;
         setOpenSectionId(null);
+        if (sectionBackReturnsToOverviewRef.current) {
+          sectionBackReturnsToOverviewRef.current = false;
+          setActiveSection('overview');
+        }
         return stack;
       }
       const next = [...stack];
@@ -116,63 +122,49 @@ const StudentClassroomDetail = () => {
       return next;
     });
   }, []);
-  
-  // GSAP stagger animation for assignments
-  // Only animate on section/tab changes, not data length changes to prevent forced reflows
-  const assignmentsListRef = useStaggerAnimation(':scope > div', 0.05, [activeSection, assignmentsSubTab]);
-  
-  // Transform data
-  const classroom = rawClassroom as unknown as Classroom | null;
-  const allAssignments = (rawAssignments as any[]).map(a => ({
-    ...a,
-    is_completed: a.submissions?.some((s: any) => 
-      s.status === 'completed' || 
-      (s.assignment_feedback && s.assignment_feedback.length > 0)
-    ) || false
-  })) as unknown as Assignment[];
-  const assignments = allAssignments.filter((a: any) => !a.is_completed);
-  const finishedAssignments = allAssignments.filter((a: any) => a.is_completed);
 
-  const getSortedAssignments = (assignmentsList: Assignment[] = assignments) => {
-    const sorted = [...assignmentsList];
-    switch (sortBy) {
-      case 'recent':
-        return sorted.reverse();
-      case 'oldest':
-        return sorted;
-      case 'due-date':
-        return sorted.sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
-      default:
-        return sorted;
+  const studyCta = useMemo(() => {
+    if (!syllabus || syllabus.status !== 'published') return null;
+    return getStudyCtaTarget(
+      syllabus.sections,
+      syllabus.release_mode || 'all_at_once',
+      studentProgressMap,
+    );
+  }, [syllabus, studentProgressMap]);
+
+  const handleStudyCtaClick = useCallback(() => {
+    if (!syllabus || syllabus.status !== 'published') {
+      sectionBackReturnsToOverviewRef.current = false;
+      setActiveSection('overview');
+      return;
     }
-  };
+    const { targetSectionId } = getStudyCtaTarget(
+      syllabus.sections,
+      syllabus.release_mode || 'all_at_once',
+      studentProgressMap,
+    );
+    sectionBackReturnsToOverviewRef.current = activeSection === 'overview';
+    setActiveSection('outline');
+    if (targetSectionId) goToSection(targetSectionId);
+  }, [syllabus, studentProgressMap, goToSection, activeSection]);
 
-  const sortByLabel =
-    sortBy === 'recent'
-      ? t('studentDashboard.sortOptions.recent')
-      : sortBy === 'oldest'
-        ? t('studentDashboard.sortOptions.oldest')
-        : t('studentDashboard.sortOptions.dueDate');
-
-  const assignmentCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    (rawAssignments as any[]).forEach((a: any) => {
-      if (a.syllabus_section_id) {
-        counts[a.syllabus_section_id] = (counts[a.syllabus_section_id] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [rawAssignments]);
+  const classroom = rawClassroom as unknown as Classroom | null;
 
   if (!classroom) return null;
 
   const hasPublishedSyllabus = syllabus && syllabus.status === 'published';
 
+  const studyCtaLabel = studyCta
+    ? t(`studentClassroom.studyCta.${studyCta.variant}`)
+    : t('studentClassroom.studyCta.viewAssignments');
+
   // Define classroom sections with translated titles
   const classroomSections = [
     { id: 'overview', title: t('studentClassroom.about'), icon: Info },
     ...(hasPublishedSyllabus ? [{ id: 'outline', title: t('syllabus.courseOutline'), icon: Map }] : []),
-    { id: 'assignments', title: t('studentClassroom.assignments'), icon: BookOpen },
+    ...(hasPublishedSyllabus
+      ? [{ id: 'curriculum', title: t('classroomDetail.curriculum.tabTitle'), icon: LayoutList }]
+      : []),
   ];
 
   return (
@@ -191,17 +183,20 @@ const StudentClassroomDetail = () => {
               {t('studentClassroom.about')}
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-6 md:items-stretch">
               {/* Main Info Card */}
-              <Card className="md:col-span-2 border border-border shadow-sm rounded-xl bg-card overflow-hidden pt-2 pb-6" dir={isRTL ? 'rtl' : 'ltr'}>
-                <CardHeader className="border-b border-border bg-transparent pt-0">
+              <Card
+                className="md:col-span-2 flex min-h-0 flex-col border border-border shadow-sm rounded-xl bg-card overflow-hidden pt-2 pb-6 h-full"
+                dir={isRTL ? 'rtl' : 'ltr'}
+              >
+                <CardHeader className="shrink-0 border-b border-border bg-transparent pt-0">
                   <CardTitle className={`text-xl ${isRTL ? 'text-right' : 'text-left'}`}>
                     {classroom.name}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="flex flex-1 flex-col pt-6">
                   {classroom.resources && (
-                    <div className="min-w-0">
+                    <div className="min-w-0 shrink-0">
                       <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('classroomDetail.overview.about')}
                       </h3>
@@ -212,6 +207,22 @@ const StudentClassroomDetail = () => {
                       </div>
                     </div>
                   )}
+                  <div
+                    className={cn(
+                      'mt-auto flex w-full justify-center',
+                      classroom.resources && 'border-t border-border/60 pt-6',
+                    )}
+                  >
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="min-h-[4.5rem] gap-3 px-10 py-6 text-xl [&_svg]:!size-7"
+                      onClick={handleStudyCtaClick}
+                    >
+                      <span>{studyCtaLabel}</span>
+                      <ArrowRight className={cn('shrink-0', isRTL && 'rotate-180')} />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -357,22 +368,6 @@ const StudentClassroomDetail = () => {
             />
           ) : (
             <div className="space-y-6">
-              <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t('syllabus.courseOutline')}
-              </h2>
-              {syllabus.summary && (
-                <Card className="rounded-xl border-border shadow-sm">
-                  <CardContent className="p-4">
-                    <p className={`text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>{syllabus.summary}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              <StudentPoliciesView
-                policies={syllabus.policies ?? []}
-                isRTL={isRTL}
-              />
-
               <GradingBreakdownView
                 categories={syllabus.grading_categories}
                 isRTL={isRTL}
@@ -383,165 +378,34 @@ const StudentClassroomDetail = () => {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <SyllabusRoadmap
+                <ModuleSyllabusAccordion
                   sections={syllabus.sections}
-                  assignmentCounts={assignmentCounts}
                   sectionResources={syllabus.section_resources}
+                  linkedAssignmentsMap={linkedAssignmentsMap}
                   classroomId={id!}
-                  mode="student"
-                  isRTL={isRTL}
                   syllabusId={syllabus.id}
                   structureType={syllabus.structure_type}
                   releaseMode={syllabus.release_mode || 'all_at_once'}
+                  mode="student"
+                  isRTL={isRTL}
                   studentProgressMap={studentProgressMap}
-                  linkedAssignmentsMap={linkedAssignmentsMap}
-                  onSectionSelect={(section) => goToSection(section.id)}
+                  onOpenModule={(sectionId) => {
+                    sectionBackReturnsToOverviewRef.current = false;
+                    goToSection(sectionId);
+                  }}
                 />
               )}
+
+              <StudentPoliciesView
+                policies={syllabus.policies ?? []}
+                isRTL={isRTL}
+              />
             </div>
           )
         )}
 
-        {/* Assignments Section */}
-        {activeSection === 'assignments' && (
-          <div className="space-y-6">
-            <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-              {t('studentClassroom.assignments')}
-            </h2>
-
-            <div className="flex flex-col sm:flex-row justify-start items-start gap-4 flex-wrap mb-6 bg-card p-4 rounded-xl shadow-sm">
-              <div className="flex items-center bg-muted/50 p-1 rounded-full">
-                <Tabs value={assignmentsSubTab} onValueChange={(v) => setAssignmentsSubTab(v as 'active' | 'finished')} className="w-full sm:w-auto">
-                  <TabsList className="h-9 bg-transparent p-0 flex gap-1 border-none">
-                    <TabsTrigger
-                      value="active"
-                      className="rounded-full px-6 py-1.5 text-sm text-muted-foreground data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm hover:text-foreground transition-all border-none"
-                    >
-                      {t('common.active')}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="finished"
-                      className="rounded-full px-6 py-1.5 text-sm text-muted-foreground data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm hover:text-foreground transition-all border-none"
-                    >
-                      {t('common.finished')}
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {(assignmentsSubTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
-                <Select
-                  value={sortBy}
-                  onValueChange={(value) => setSortBy(value as typeof sortBy)}
-                >
-                  <SelectTrigger className="w-[180px] rounded-lg border-border bg-card">
-                    <SelectValue>{sortByLabel}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
-                    <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
-                    <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            {assignmentsSubTab === 'active' ? (
-              assignments.length === 0 ? (
-                <Card className="border-dashed border-2 border-border bg-muted/20 rounded-xl">
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                      <Sparkles className="h-8 w-8 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">
-                      {t('studentClassroom.noAssignments')}
-                    </h3>
-                    <p className="text-muted-foreground max-w-md">
-                      {t('studentClassroom.noAssignmentsDesc')}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div ref={assignmentsListRef} className="grid gap-6">
-                  {getSortedAssignments().map((assignment) => (
-                    <Card
-                      key={assignment.id}
-                      className="group py-0 hover:shadow-lg transition-all duration-300 cursor-pointer border-none shadow-md rounded-xl bg-card overflow-hidden hover:-translate-y-1"
-                      onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                    >
-                      <div className={`px-4 py-3 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <h3 className={`text-xl font-bold mb-2 group-hover:text-primary transition-colors text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {assignment.title}
-                        </h3>
-                        <Badge
-                          className={cn(
-                            'rounded-full px-3 py-1 mb-2 inline-flex',
-                            'bg-primary/10 text-primary hover:bg-primary/20'
-                          )}
-                        >
-                          {t(`assignmentTypes.${assignment.type}`)}
-                        </Badge>
-                        {assignment.due_at && (
-                          <div className="text-sm font-medium text-orange-600 dark:text-orange-400 flex items-center gap-1.5 mb-2">
-                            <Clock className="h-3.5 w-3.5 shrink-0" />
-                            {t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}
-                          </div>
-                        )}
-                        <p className={`text-muted-foreground line-clamp-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {assignment.instructions}
-                        </p>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )
-            ) : (
-              finishedAssignments.length === 0 ? (
-                <Card className="border-dashed border-2 border-border bg-muted/20 rounded-xl">
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                      <FileText className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2 text-foreground">
-                      {t('studentClassroom.noFinishedAssignments')}
-                    </h3>
-                    <p className="text-muted-foreground max-w-md">
-                      {t('studentClassroom.noFinishedAssignmentsDesc')}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-6">
-                  {getSortedAssignments(finishedAssignments).map((assignment) => (
-                    <Card
-                      key={assignment.id}
-                      className="group py-0 hover:shadow-lg transition-all duration-300 cursor-pointer border-none shadow-md rounded-xl bg-muted/20 overflow-hidden opacity-80 hover:opacity-100"
-                      onClick={() => navigate(`/student/assignment/${assignment.id}`)}
-                    >
-                      <div className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <h3 className={`text-lg font-bold mb-2 text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          {assignment.title}
-                        </h3>
-                        <div className={`flex flex-wrap items-center gap-2 mb-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
-                          <Badge className="rounded-full px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 border-none">
-                            {t(`assignmentTypes.${assignment.type}`)}
-                          </Badge>
-                          <Badge className="rounded-full bg-success/10 text-success hover:bg-success/20 border-none flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            {t('common.completed')}
-                          </Badge>
-                        </div>
-                        <div className={`flex items-center gap-2 text-sm text-muted-foreground ${isRTL ? 'justify-end' : 'justify-start'}`}>
-                          <Calendar className="h-3.5 w-3.5 shrink-0" />
-                          <span>{t('common.due')}: {new Date(assignment.due_at).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )
-            )}
-          </div>
+        {activeSection === 'curriculum' && hasPublishedSyllabus && (
+          <StudentActivitiesSection classroomId={id!} isRTL={isRTL} />
         )}
       </div>
     </ClassroomLayout>

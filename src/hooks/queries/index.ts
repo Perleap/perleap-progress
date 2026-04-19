@@ -128,10 +128,16 @@ export {
   useLinkAssignment,
   useUnlinkAssignment,
   resourceKeys,
+  resourceByIdKeys,
   useSectionResources,
+  useSectionResourceById,
   useUploadResource,
   useCreateLinkResource,
   useDeleteResource,
+  useCreateTextActivity,
+  useCreateLessonActivity,
+  useUpdateSectionResource,
+  useCreateVideoUrlResource,
   progressKeys,
   useStudentProgress,
   useUpdateStudentProgress,
@@ -147,6 +153,19 @@ export {
   sectionProgressKeys,
   useSectionAssignmentProgress,
 } from './useSyllabusQueries';
+
+export {
+  moduleFlowKeys,
+  studentFlowProgressKeys,
+  useModuleFlowSteps,
+  useModuleFlowStepsBulk,
+  useReplaceModuleFlow,
+  useStudentModuleFlowProgressMap,
+  useMarkFlowStepComplete,
+  useAssignmentFlowCompletion,
+} from './useModuleFlowQueries';
+
+export { syncModuleFlowToResolvedDisplayForSection } from './moduleFlowSync';
 
 
 

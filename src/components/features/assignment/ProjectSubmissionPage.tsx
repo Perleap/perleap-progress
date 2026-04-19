@@ -7,13 +7,12 @@ import { Loader2, Upload, FileIcon, X, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { completeSubmission } from '@/services/submissionService';
-import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries';
+import type { AssignmentCompletionTone } from '@/types/submission';
 
 interface ProjectSubmissionPageProps {
   assignmentId: string;
   submissionId: string;
-  onComplete: () => void;
+  onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
 export function ProjectSubmissionPage({
@@ -22,7 +21,6 @@ export function ProjectSubmissionPage({
   onComplete,
 }: ProjectSubmissionPageProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -102,9 +100,7 @@ export function ProjectSubmissionPage({
       const { error } = await completeSubmission(submissionId);
       if (error) throw error;
 
-      toast.success(t('assignmentDetail.project.awaitingReview'));
-      queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      onComplete();
+      await onComplete('awaitingReview');
     } catch (error) {
       console.error('Submit error:', error);
       toast.error(t('common.error'));

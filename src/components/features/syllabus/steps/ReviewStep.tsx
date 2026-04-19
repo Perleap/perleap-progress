@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { BookOpen, GraduationCap, Scale, Layers, Lock, FileText, GitBranch } from 'lucide-react';
 import type { WizardData } from '../CreateClassroomWizard';
@@ -10,10 +8,9 @@ import type { WizardData } from '../CreateClassroomWizard';
 interface ReviewStepProps {
   data: WizardData;
   isRTL: boolean;
-  onChange?: (partial: Partial<WizardData>) => void;
 }
 
-export const ReviewStep = ({ data, isRTL, onChange }: ReviewStepProps) => {
+export const ReviewStep = ({ data, isRTL }: ReviewStepProps) => {
   const { t } = useTranslation();
   const filteredOutcomes = data.learningOutcomes.filter((o) => o.trim());
   const filteredChallenges = data.keyChallenges.filter((c) => c.trim());
@@ -86,7 +83,6 @@ export const ReviewStep = ({ data, isRTL, onChange }: ReviewStepProps) => {
           </CardHeader>
           <CardContent className="space-y-3">
             <ReviewField label={t('syllabus.title')} value={data.syllabusTitle || data.courseTitle || '—'} isRTL={isRTL} />
-            {data.syllabusSummary && <ReviewField label={t('syllabus.summary')} value={data.syllabusSummary} isRTL={isRTL} truncate />}
             <ReviewField
               label={t('syllabus.settings.structure')}
               value={data.structureType.charAt(0).toUpperCase() + data.structureType.slice(1)}
@@ -97,74 +93,9 @@ export const ReviewStep = ({ data, isRTL, onChange }: ReviewStepProps) => {
               value={t(`syllabus.releaseMode.${data.release_mode}`, data.release_mode)}
               isRTL={isRTL}
             />
-            <ReviewField
-              label={t('syllabus.settings.status')}
-              value={
-                data.syllabusInitialPublish === 'published'
-                  ? t('syllabus.initialPublish.statusPublished')
-                  : t('syllabus.initialPublish.statusDraft')
-              }
-              isRTL={isRTL}
-            />
           </CardContent>
         </Card>
       </div>
-
-      {data.includeSyllabus && onChange && (
-        <Card className="rounded-xl border-border shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className={`text-base ${isRTL ? 'text-right' : 'text-left'}`}>
-              {t('syllabus.initialPublish.label')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <RadioGroup
-              value={data.syllabusInitialPublish}
-              onValueChange={(v) =>
-                onChange({ syllabusInitialPublish: v as 'draft' | 'published' })
-              }
-            >
-              <div
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-accent/50 transition-colors',
-                  isRTL && 'flex-row-reverse'
-                )}
-              >
-                <RadioGroupItem value="draft" id="review-pub-draft" className="shrink-0" />
-                <Label
-                  htmlFor="review-pub-draft"
-                  className={cn(
-                    'mb-0 cursor-pointer font-normal flex-1',
-                    isRTL ? 'text-right' : 'text-left'
-                  )}
-                >
-                  <span className="font-medium">{t('syllabus.initialPublish.draft')}</span>
-                </Label>
-              </div>
-              <div
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg border hover:bg-accent/50 transition-colors',
-                  isRTL && 'flex-row-reverse'
-                )}
-              >
-                <RadioGroupItem value="published" id="review-pub-now" className="shrink-0" />
-                <Label
-                  htmlFor="review-pub-now"
-                  className={cn(
-                    'mb-0 cursor-pointer font-normal flex-1',
-                    isRTL ? 'text-right' : 'text-left'
-                  )}
-                >
-                  <span className="font-medium">{t('syllabus.initialPublish.publish')}</span>
-                </Label>
-              </div>
-            </RadioGroup>
-            <p className={cn('text-xs text-muted-foreground', isRTL ? 'text-right' : 'text-left')}>
-              {t('syllabus.initialPublish.helper')}
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {data.includeSyllabus && (
         <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>

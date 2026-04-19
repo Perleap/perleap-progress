@@ -15,6 +15,8 @@ export interface AssignmentCourseOutlineLinkCardProps {
   isRTL: boolean;
   syllabus: SyllabusWithSections | null | undefined;
   syllabusLoading?: boolean;
+  /** When true, module is fixed to `syllabusSectionId` (read-only label, no section Select). */
+  lockSyllabusSection?: boolean;
   syllabusSectionId: string;
   onSyllabusSectionIdChange: (id: string) => void;
   gradingCategoryId: string;
@@ -29,6 +31,7 @@ export function AssignmentCourseOutlineLinkCard({
   isRTL,
   syllabus,
   syllabusLoading,
+  lockSyllabusSection = false,
   syllabusSectionId,
   onSyllabusSectionIdChange,
   gradingCategoryId,
@@ -102,24 +105,35 @@ export function AssignmentCourseOutlineLinkCard({
               <Label className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}>
                 {sectionLabel}
               </Label>
-              <Select
-                value={syllabusSectionId || '_none'}
-                onValueChange={(v) => onSyllabusSectionIdChange(v === '_none' ? '' : v)}
-              >
-                <SelectTrigger className={triggerClass} dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectValue placeholder={t('createAssignment.linkToSyllabusModel')}>
-                    {sectionDisplayLabel}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
-                  {syllabus!.sections.map((s) => (
-                    <SelectItem key={s.id} value={s.id} className={isRTL ? 'text-right' : 'text-left'}>
-                      {s.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {lockSyllabusSection && syllabusSectionId ? (
+                <p
+                  className={cn(
+                    'rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground',
+                    triggerClass,
+                  )}
+                >
+                  {sectionDisplayLabel}
+                </p>
+              ) : (
+                <Select
+                  value={syllabusSectionId || '_none'}
+                  onValueChange={(v) => onSyllabusSectionIdChange(v === '_none' ? '' : v)}
+                >
+                  <SelectTrigger className={triggerClass} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectValue placeholder={t('createAssignment.linkToSyllabusModel')}>
+                      {sectionDisplayLabel}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
+                    {syllabus!.sections.map((s) => (
+                      <SelectItem key={s.id} value={s.id} className={isRTL ? 'text-right' : 'text-left'}>
+                        {s.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
           {hasCategories && (

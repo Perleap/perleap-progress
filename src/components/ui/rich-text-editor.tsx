@@ -24,7 +24,10 @@ import {
   Heading3,
   Code2,
   Pilcrow,
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
 
@@ -34,6 +37,11 @@ interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   editable?: boolean;
+  /** When false, editor is read-only (e.g. parent saving). */
+  disabled?: boolean;
+  dir?: 'ltr' | 'rtl';
+  onRewrite?: () => void;
+  isRewriting?: boolean;
 }
 
 function ToolbarButton({
@@ -63,7 +71,17 @@ function ToolbarButton({
   );
 }
 
-function EditorToolbar({ editor }: { editor: Editor }) {
+function EditorToolbar({
+  editor,
+  onRewrite,
+  isRewriting,
+  rewriteDisabled,
+}: {
+  editor: Editor;
+  onRewrite?: () => void;
+  isRewriting?: boolean;
+  rewriteDisabled?: boolean;
+}) {
   const addImage = useCallback(() => {
     const url = window.prompt('Image URL');
     if (url) editor.chain().focus().setImage({ src: url }).run();
@@ -86,7 +104,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
   }, [editor]);
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5 bg-muted/30">
+    <div className="flex w-full flex-wrap items-center gap-0.5 border-b bg-muted/30 px-2 py-1.5">
       <ToolbarButton
         editor={editor}
         action={() => editor.chain().focus().setParagraph().run()}
@@ -217,6 +235,29 @@ function EditorToolbar({ editor }: { editor: Editor }) {
         icon={Redo}
         title="Redo"
       />
+      {onRewrite ? (
+        <>
+          <Separator orientation="vertical" className="mx-1 h-6" />
+          <div className="ms-auto flex shrink-0 items-center ps-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={rewriteDisabled || isRewriting}
+              aria-label="Rewrite with AI"
+              title="Rewrite with AI"
+              onClick={() => onRewrite()}
+            >
+              {isRewriting ? (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : (
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -227,7 +268,12 @@ export function RichTextEditor({
   placeholder = 'Start writing...',
   className,
   editable = true,
+  disabled = false,
+  dir,
+  onRewrite,
+  isRewriting,
 }: RichTextEditorProps) {
+  const canEdit = editable && !disabled;
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -238,7 +284,7 @@ export function RichTextEditor({
       Placeholder.configure({ placeholder }),
     ],
     content,
-    editable,
+    editable: canEdit,
     onUpdate: ({ editor: e }) => {
       onChange(e.getHTML());
     },
@@ -250,11 +296,81 @@ export function RichTextEditor({
           '[&_p.is-editor-empty:first-child]:before:text-muted-foreground/50',
           '[&_p.is-editor-empty:first-child]:before:float-left',
           '[&_p.is-editor-empty:first-child]:before:pointer-events-none',
-          '[&_p.is-editor-empty:first-child]:before:h-0',
+          '[&_p.is-editor-empty:first-child]:before:h-0'
         ),
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '');
+    }
+  }, [content, editor]);
+
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(canEdit);
+    }
+  }, [editor, canEdit]);
+
+  if (!editor) return null;
+
+  const showToolbar = canEdit;
+
+  return (
+    <div
+      dir={dir}
+      className={cn(
+        'rounded-xl border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+        className
+      )}
+    >
+      {showToolbar ? (
+        <EditorToolbar
+          editor={editor}
+          onRewrite={onRewrite}
+          isRewriting={isRewriting}
+          rewriteDisabled={disabled || !editor.getText().trim()}
+        />
+      ) : null}
+      <EditorContent editor={editor} />
+    </div>
+  );
+}
+
+export function RichTextViewer({
+  content,
+  className,
+  variant = 'default',
+}: {
+  content: string;
+  className?: string;
+  /** `plain`: borderless reading layout with larger prose (e.g. lesson activity page). */
+  variant?: 'default' | 'plain';
+}) {
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          link: { openOnClick: true },
+        }),
+        Image.configure({ inline: false }),
+        Youtube.configure({ inline: false }),
+      ],
+      content,
+      editable: false,
+      editorProps: {
+        attributes: {
+          class: cn(
+            'prose dark:prose-invert max-w-none',
+            variant === 'plain' ? 'prose-base px-0 py-1' : 'prose-sm px-4 py-3',
+          ),
+        },
+      },
+    },
+    [variant],
+  );
 
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
@@ -267,52 +383,11 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        'rounded-xl border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+        variant === 'default' && 'rounded-xl border bg-background overflow-hidden',
+        variant === 'plain' && 'overflow-visible border-0 bg-transparent shadow-none',
         className,
       )}
     >
-      {editable && <EditorToolbar editor={editor} />}
-      <EditorContent editor={editor} />
-    </div>
-  );
-}
-
-export function RichTextViewer({
-  content,
-  className,
-}: {
-  content: string;
-  className?: string;
-}) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        link: { openOnClick: true },
-      }),
-      Image.configure({ inline: false }),
-      Youtube.configure({ inline: false }),
-    ],
-    content,
-    editable: false,
-    editorProps: {
-      attributes: {
-        class: cn(
-          'prose prose-sm dark:prose-invert max-w-none px-4 py-3',
-        ),
-      },
-    },
-  });
-
-  useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content || '');
-    }
-  }, [content, editor]);
-
-  if (!editor) return null;
-
-  return (
-    <div className={cn('rounded-xl border bg-background overflow-hidden', className)}>
       <EditorContent editor={editor} />
     </div>
   );

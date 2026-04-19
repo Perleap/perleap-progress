@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
+import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 
 
 interface ClassroomLayoutProps {
@@ -97,6 +98,7 @@ export function ClassroomLayout({
           </div>
           {user && (
             <div className="flex items-center gap-2">
+              {isTeacher && <TeacherAssistantTrigger />}
               <NotificationDropdown userId={user.id} />
             </div>
           )}

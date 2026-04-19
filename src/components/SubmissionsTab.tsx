@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -50,6 +50,8 @@ import { DatePicker } from '@/components/ui/date-picker';
 
 interface SubmissionsTabProps {
   classroomId: string;
+  /** Pre-select this assignment in filters (e.g. deep link from curriculum). */
+  initialAssignmentFilterId?: string;
 }
 
 export type SubmissionViewMode =
@@ -77,7 +79,7 @@ function capitalizeLatinFirstLetter(s: string) {
   return s;
 }
 
-export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
+export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: SubmissionsTabProps) {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -93,6 +95,12 @@ export function SubmissionsTab({ classroomId }: SubmissionsTabProps) {
   const [viewMode, setViewMode] = useState<SubmissionViewMode>('list');
 
   const { data: submissions = [], isLoading: loading } = useEnrichedClassroomSubmissions(classroomId);
+
+  useEffect(() => {
+    if (initialAssignmentFilterId) {
+      setSelectedAssignment(initialAssignmentFilterId);
+    }
+  }, [initialAssignmentFilterId, classroomId]);
 
   // Get unique students and assignments from submissions for filters
   const students = useMemo(() => {

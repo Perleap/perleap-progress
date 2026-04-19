@@ -22,13 +22,14 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import StudentClassroomDetail from './pages/student/StudentClassroomDetail';
 import AssignmentDetail from './pages/student/AssignmentDetail';
 import StudentSettings from './pages/student/StudentSettings';
+import ClassroomActivityPage from './pages/ClassroomActivityPage';
 import Pricing from './pages/Pricing';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
 import Product from './pages/Product';
 import Solutions from './pages/Solutions';
 import NotFound from './pages/NotFound';
-import { TeacherAssistant } from './components/ai/TeacherAssistant';
+import { TeacherAssistantProvider } from './components/ai/TeacherAssistant';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,7 +56,7 @@ const App = () => (
         >
           <AuthProvider>
             <LanguageProvider>
-              <TeacherAssistant />
+              <TeacherAssistantProvider>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/product" element={<Product />} />
@@ -105,6 +106,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/teacher/classroom/:id/activity/:resourceId"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <ClassroomActivityPage role="teacher" />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/teacher/submission/:id"
                   element={
                     <ProtectedRoute requiredRole="teacher">
@@ -147,6 +156,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/student/classroom/:id/activity/:resourceId"
+                  element={
+                    <ProtectedRoute requiredRole="student">
+                      <ClassroomActivityPage role="student" />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/student/assignment/:id"
                   element={
                     <ProtectedRoute requiredRole="student">
@@ -165,6 +182,7 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </TeacherAssistantProvider>
             </LanguageProvider>
           </AuthProvider>
         </BrowserRouter>

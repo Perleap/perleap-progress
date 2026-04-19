@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { assignmentKeys } from '@/hooks/queries';
+import type { AssignmentCompletionTone } from '@/types/submission';
 
 const AUTOSAVE_MS = 1200;
 
@@ -22,7 +23,7 @@ interface EssaySubmissionPageProps {
   /** When false, student submit does not run AI; teacher runs evaluation later. */
   autoPublishAiFeedback?: boolean;
   initialText?: string | null;
-  onComplete: () => void;
+  onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
 export function EssaySubmissionPage({
@@ -106,9 +107,7 @@ export function EssaySubmissionPage({
         });
         if (completeError) throw completeError;
 
-        toast.success(t('assignmentDetail.success.submittedAwaitingTeacher'));
-        queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-        onComplete();
+        await onComplete('awaitingTeacher');
         return;
       }
 
@@ -124,9 +123,7 @@ export function EssaySubmissionPage({
       const { error: completeError } = await completeSubmission(submissionId);
       if (completeError) throw completeError;
 
-      toast.success(t('assignmentDetail.success.completed'));
-      queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
-      onComplete();
+      await onComplete('activityCompleted');
     } catch (e) {
       console.error('Essay submit error:', e);
       toast.error(t('common.error'));

@@ -50,8 +50,6 @@ export interface WizardSectionData {
   objectives: string[];
   startDate: string;
   endDate: string;
-  resources: WizardResourceItem[];
-  notes: string;
   completion_status: CompletionStatus;
   /** Other sections' tempIds when release mode is prerequisites */
   prerequisites: string[];
@@ -79,13 +77,10 @@ export interface WizardData {
   // Step 2 – Syllabus Setup
   includeSyllabus: boolean;
   syllabusTitle: string;
-  syllabusSummary: string;
   structureType: SyllabusStructureType;
   policies: SyllabusPolicy[];
   gradingCategories: WizardGradingCategory[];
   release_mode: ReleaseMode;
-  /** When including a syllabus, whether to insert as draft or published (with notifications if published). */
-  syllabusInitialPublish: 'draft' | 'published';
 
   // Step 3 – Outline Builder (sections)
   sections: WizardSectionData[];
@@ -103,12 +98,10 @@ const DEFAULT_WIZARD_DATA: WizardData = {
 
   includeSyllabus: true,
   syllabusTitle: '',
-  syllabusSummary: '',
   structureType: 'weeks',
   policies: [],
   gradingCategories: [],
   release_mode: 'all_at_once',
-  syllabusInitialPublish: 'draft',
 
   sections: [],
 };
@@ -206,30 +199,14 @@ export const CreateClassroomWizard = ({
       // 2. Create syllabus if opted in (single service path — matches Course Outline)
       let syllabusCreated = true;
       if (wizardData.includeSyllabus) {
-        const bundleStatus: SyllabusStatus =
-          wizardData.syllabusInitialPublish === 'published' ? 'published' : 'draft';
+        const bundleStatus: SyllabusStatus = 'published';
         try {
-          const linkSummaries = (items: WizardResourceItem[]) =>
-            items.filter((r) => r.type === 'link').map((r) => r.url).join('\n') || null;
-
-          const sectionResourceItems: ProvisionBundleResourceItem[][] = wizardData.sections.map(
-            (s) => {
-              const row: ProvisionBundleResourceItem[] = [];
-              for (const r of s.resources) {
-                if (r.type === 'link') {
-                  row.push({ type: 'link', title: r.title || r.url, url: r.url });
-                } else if (r.type === 'file' && r.file) {
-                  row.push({ type: 'file', file: r.file, title: r.title });
-                }
-              }
-              return row;
-            },
-          );
+          const sectionResourceItems: ProvisionBundleResourceItem[][] = wizardData.sections.map(() => []);
 
           const provisioned = await provisionBundle.mutateAsync({
             classroom_id: classroom.id,
             title: wizardData.syllabusTitle || wizardData.courseTitle,
-            summary: wizardData.syllabusSummary || null,
+            summary: null,
             structure_type: wizardData.structureType,
             policies: wizardData.policies,
             status: bundleStatus,
@@ -242,8 +219,8 @@ export const CreateClassroomWizard = ({
               start_date: s.startDate || null,
               end_date: s.endDate || null,
               objectives: s.objectives.filter((o) => o.trim()),
-              resources: linkSummaries(s.resources),
-              notes: s.notes.trim() || null,
+              resources: null,
+              notes: null,
               content: s.content.trim() ? s.content : null,
               completion_status: s.completion_status,
               prerequisitesTempIds:
@@ -348,7 +325,6 @@ export const CreateClassroomWizard = ({
               <ReviewStep
                 data={wizardData}
                 isRTL={isRTL}
-                onChange={updateWizardData}
               />
             )}
           </div>

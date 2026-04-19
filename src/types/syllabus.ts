@@ -5,7 +5,35 @@
 
 export type SyllabusStructureType = 'weeks' | 'units' | 'modules';
 export type SyllabusStatus = 'draft' | 'published' | 'archived';
-export type ResourceType = 'file' | 'video' | 'link' | 'document' | 'image';
+export type ResourceType = 'file' | 'video' | 'link' | 'document' | 'image' | 'text' | 'lesson';
+
+/** Single text segment in a v1 lesson */
+export interface LessonTextBlockV1 {
+  id: string;
+  type: 'text';
+  body: string;
+}
+
+/** Single uploaded or linked video in a v1 lesson */
+export interface LessonVideoBlockV1 {
+  id: string;
+  type: 'video';
+  url: string | null;
+  file_path: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  display_name: string;
+}
+
+export type LessonBlockV1 = LessonTextBlockV1 | LessonVideoBlockV1;
+
+/** Stored in section_resources.lesson_content for resource_type lesson */
+export interface LessonContentV1 {
+  version: 1;
+  blocks: LessonBlockV1[];
+}
+/** draft = teacher-only; published = students see when syllabus is published */
+export type ActivityResourceStatus = 'draft' | 'published';
 export type CompletionStatus = 'auto' | 'completed' | 'skipped';
 export type StudentProgressStatus = 'not_started' | 'in_progress' | 'reviewed' | 'completed';
 export type ReleaseMode = 'all_at_once' | 'sequential' | 'date_based' | 'manual' | 'prerequisites';
@@ -75,8 +103,26 @@ export interface SectionResource {
   mime_type: string | null;
   file_size: number | null;
   order_index: number;
+  /** Module activity publish state; omit/legacy = treat as published */
+  status?: ActivityResourceStatus;
+  summary?: string | null;
+  /** Rich text / markdown for text-type activities */
+  body_text?: string | null;
+  /** Ordered text + video blocks for resource_type lesson (v1); null = legacy single body_text + url */
+  lesson_content?: LessonContentV1 | null;
+  estimated_duration_minutes?: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Junction: assignment ↔ module activity (section_resource) for AI context and product */
+export interface AssignmentModuleActivity {
+  id: string;
+  assignment_id: string;
+  section_resource_id: string;
+  order_index: number;
+  include_in_ai_context: boolean;
+  created_at: string;
 }
 
 export interface StudentSectionProgress {
@@ -186,8 +232,48 @@ export interface ProvisionSyllabusBundleInput {
 export type UpdateSyllabusSectionInput = Partial<Omit<SyllabusSection, 'id' | 'syllabus_id' | 'created_at' | 'updated_at'>>;
 export type CreateGradingCategoryInput = Omit<GradingCategory, 'id' | 'created_at' | 'updated_at'>;
 export type UpdateGradingCategoryInput = Partial<Omit<GradingCategory, 'id' | 'syllabus_id' | 'created_at' | 'updated_at'>>;
-export type CreateSectionResourceInput = Omit<SectionResource, 'id' | 'created_at' | 'updated_at'>;
+export type CreateSectionResourceInput = Omit<
+  SectionResource,
+  'id' | 'created_at' | 'updated_at' | 'status' | 'summary' | 'body_text' | 'estimated_duration_minutes'
+> & {
+  status?: ActivityResourceStatus;
+  summary?: string | null;
+  body_text?: string | null;
+  estimated_duration_minutes?: number | null;
+};
 export type UpdateSectionResourceInput = Partial<Omit<SectionResource, 'id' | 'section_id' | 'created_at' | 'updated_at'>>;
+
+export type AssignmentModuleActivityInput = {
+  section_resource_id: string;
+  order_index: number;
+  include_in_ai_context: boolean;
+};
+
+export type ModuleFlowStepKind = 'resource' | 'assignment';
+
+/** DB row: ordered step within a syllabus section (module). */
+export interface ModuleFlowStep {
+  id: string;
+  section_id: string;
+  order_index: number;
+  step_kind: ModuleFlowStepKind;
+  section_resource_id: string | null;
+  assignment_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StudentModuleFlowProgressStatus = 'in_progress' | 'completed';
+
+export interface StudentModuleFlowProgress {
+  id: string;
+  student_id: string;
+  module_flow_step_id: string;
+  status: StudentModuleFlowProgressStatus;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 /** Section status derived from dates (or teacher override), not stored */
 export type SectionStatus = 'upcoming' | 'in_progress' | 'completed' | 'skipped';

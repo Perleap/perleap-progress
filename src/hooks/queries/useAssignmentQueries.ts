@@ -4,6 +4,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getClassroomAssignments,
@@ -114,6 +116,10 @@ export const useCreateAssignment = () => {
         queryClient.invalidateQueries({
           queryKey: assignmentKeys.listByClassroom(data.classroom_id),
         });
+        queryClient.invalidateQueries({
+          queryKey: syllabusKeys.byClassroom(data.classroom_id),
+        });
+        queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
       }
       queryClient.invalidateQueries({ queryKey: assignmentKeys.lists() });
     },
@@ -144,6 +150,10 @@ export const useUpdateAssignment = () => {
         queryClient.invalidateQueries({
           queryKey: assignmentKeys.listByClassroom(data.classroom_id),
         });
+        queryClient.invalidateQueries({
+          queryKey: syllabusKeys.byClassroom(data.classroom_id),
+        });
+        queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
       }
     },
   });
@@ -172,6 +182,7 @@ export const useDeleteAssignment = () => {
         queryKey: assignmentKeys.listByClassroom(classroomId),
       });
       queryClient.invalidateQueries({ queryKey: assignmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
     },
   });
 };

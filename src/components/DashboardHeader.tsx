@@ -21,11 +21,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Settings, Moon, Sun, LogOut, Languages } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, type To } from 'react-router-dom';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { NotificationDropdown } from './common/NotificationDropdown';
+import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 
 interface DashboardHeaderProps {
   title: string;
@@ -33,6 +35,8 @@ interface DashboardHeaderProps {
   userType: 'teacher' | 'student';
   showBackButton?: boolean;
   onBackClick?: () => void;
+  /** When the default back handler runs and history cannot pop (e.g. direct load). */
+  backFallbackTo?: To;
 }
 
 export function DashboardHeader({
@@ -41,9 +45,11 @@ export function DashboardHeader({
   userType,
   showBackButton = false,
   onBackClick,
+  backFallbackTo,
 }: DashboardHeaderProps) {
   const { user, signOut, profile: authProfile } = useAuth();
   const navigate = useNavigate();
+  const navigateBackDefault = useNavigateBack(backFallbackTo ?? `/${userType}/dashboard`);
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { language = 'en', setLanguage, isRTL } = useLanguage();
@@ -76,7 +82,7 @@ export function DashboardHeader({
               variant="ghost"
               size="sm"
               className="gap-2"
-              onClick={onBackClick || (() => navigate(-1))}
+              onClick={onBackClick || navigateBackDefault}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -105,6 +111,7 @@ export function DashboardHeader({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {userType === 'teacher' && <TeacherAssistantTrigger />}
           {user?.id && <NotificationDropdown userId={user.id} />}
 
           <DropdownMenu>

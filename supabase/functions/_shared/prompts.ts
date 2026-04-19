@@ -321,7 +321,11 @@ function formatHardSkillsContext(assignmentDetails: any): string {
 /**
  * Format course materials context
  */
-function formatCourseMaterials(assignmentDetails: any, classroomResources: any): string {
+function formatCourseMaterials(
+  assignmentDetails: any,
+  classroomResources: any,
+  moduleActivityContext?: string,
+): string {
   const materials = [];
   
   // Add assignment-specific materials
@@ -353,6 +357,11 @@ function formatCourseMaterials(assignmentDetails: any, classroomResources: any):
     materials.push(classroomResources.course_outline);
   }
 
+  if (moduleActivityContext?.trim()) {
+    materials.push('\nLinked module activities (syllabus):');
+    materials.push(moduleActivityContext.trim());
+  }
+
   return materials.length > 0 
     ? materials.join('\n') 
     : 'No additional course materials provided. Use your knowledge to support the student.';
@@ -370,6 +379,7 @@ export async function generateEnhancedChatSystemPrompt(
   classroomResources: any,
   isInitialGreeting: boolean,
   language: string = 'en',
+  moduleActivityContext?: string,
 ): Promise<string> {
   const greetingInstruction = isInitialGreeting
     ? await getPrompt('chat_greeting_instruction', { teacherName }, language)
@@ -382,7 +392,11 @@ export async function generateEnhancedChatSystemPrompt(
   const teacherStyle = formatTeacherStyle(teacherProfile);
   const studentPreferences = formatStudentPreferences(studentProfile);
   const hardSkillsContext = formatHardSkillsContext(assignmentDetails);
-  const courseMaterials = formatCourseMaterials(assignmentDetails, classroomResources);
+  const courseMaterials = formatCourseMaterials(
+    assignmentDetails,
+    classroomResources,
+    moduleActivityContext,
+  );
 
   return await getPrompt('chat_system_enhanced', {
     teacher_style: teacherStyle,

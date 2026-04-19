@@ -157,20 +157,6 @@ export const SyllabusSetupStep = ({ data, onChange, isRTL }: SyllabusSetupStepPr
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t('syllabus.summary')}
-              </Label>
-              <Textarea
-                value={data.syllabusSummary}
-                onChange={(e) => onChange({ syllabusSummary: e.target.value })}
-                placeholder="Brief summary of the course plan and expectations..."
-                rows={3}
-                className="rounded-xl resize-none"
-                autoDirection
-              />
-            </div>
-
             {/* Structure Type */}
             <div className="space-y-3">
               <Label className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>

@@ -5,6 +5,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import type { SupabaseConfig, Message } from './types.ts';
+import { buildModuleActivityContextBundle } from '../_shared/assignmentContext.ts';
 
 /**
  * Get Supabase configuration from environment
@@ -190,6 +191,41 @@ export const getAssignmentDetails = async (assignmentId: string) => {
   }
 
   return data;
+};
+
+/**
+ * Plain-text bundle of linked module activities for AI prompts (chat, feedback).
+ */
+export const getAssignmentModuleActivityContextText = async (
+  assignmentId: string,
+): Promise<string> => {
+  const supabase = createSupabaseClient();
+
+  const { data: links, error } = await supabase
+    .from('assignment_module_activities')
+    .select('section_resource_id, order_index, include_in_ai_context')
+    .eq('assignment_id', assignmentId)
+    .order('order_index', { ascending: true });
+
+  if (error || !links?.length) {
+    return '';
+  }
+
+  const ids = [...new Set((links as { section_resource_id: string }[]).map((l) => l.section_resource_id))];
+  const { data: resources, error: resErr } = await supabase
+    .from('section_resources')
+    .select('id, title, resource_type, url, body_text, summary, status, lesson_content')
+    .in('id', ids);
+
+  if (resErr || !resources?.length) {
+    return '';
+  }
+
+  const map = new Map(
+    (resources as Record<string, unknown>[]).map((r) => [r.id as string, r as any]),
+  );
+  const { text } = buildModuleActivityContextBundle(links as any, map);
+  return text;
 };
 
 /**

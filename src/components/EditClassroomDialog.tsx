@@ -10,11 +10,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye, Sparkles } from 'lucide-react';
+import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -55,7 +55,6 @@ export const EditClassroomDialog = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
-  const [originalCourseDescription, setOriginalCourseDescription] = useState<string | null>(null);
   const [rephrasingCourseDescription, setRephrasingCourseDescription] = useState(false);
   const [formData, setFormData] = useState({
     courseTitle: '',
@@ -70,7 +69,6 @@ export const EditClassroomDialog = ({
 
   useEffect(() => {
     if (open && classroom) {
-      setOriginalCourseDescription(null);
       setFormData({
         courseTitle: classroom.course_title || classroom.name || '',
         startDate: classroom.start_date || '',
@@ -94,7 +92,6 @@ export const EditClassroomDialog = ({
       return;
     }
     setRephrasingCourseDescription(true);
-    setOriginalCourseDescription(formData.courseDescription);
     try {
       const { data: result, error } = await supabase.functions.invoke('rephrase-text', {
         body: {
@@ -371,65 +368,23 @@ export const EditClassroomDialog = ({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3 mb-2 flex-wrap w-full">
-                  <Label
-                    htmlFor="courseDescription"
-                    className={cn('text-body font-medium mb-0', isRTL ? 'text-right' : 'text-left')}
-                  >
-                    {t('createClassroom.courseDescription')}
-                  </Label>
-                  <div className={cn('flex gap-2 shrink-0', isRTL && 'flex-row-reverse')}>
-                    {originalCourseDescription !== null &&
-                      originalCourseDescription !== formData.courseDescription && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFormData((prev) => ({ ...prev, courseDescription: originalCourseDescription }));
-                            setOriginalCourseDescription(null);
-                          }}
-                          className="rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground"
-                        >
-                          {t('common.undo')}
-                        </Button>
-                      )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRephraseCourseDescription}
-                      disabled={!formData.courseDescription.trim() || rephrasingCourseDescription}
-                      className={cn('rounded-full text-xs font-semibold', isRTL && 'flex-row-reverse')}
-                    >
-                      {rephrasingCourseDescription ? (
-                        <>
-                          <Loader2 className={cn('h-3 w-3 animate-spin', isRTL ? 'ms-1' : 'me-1')} />
-                          {t('createClassroom.rephrasing')}
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className={cn('h-3 w-3', isRTL ? 'ms-1' : 'me-1')} />
-                          {t('createClassroom.rephraseButton')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <Textarea
+                <Label
+                  htmlFor="courseDescription"
+                  className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+                >
+                  {t('createClassroom.courseDescription')}
+                </Label>
+                <ExpandableTextarea
+                  key={open ? classroom.id : 'closed'}
                   id="courseDescription"
                   placeholder={t('createClassroom.courseDescriptionPlaceholder')}
                   value={formData.courseDescription}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFormData((prev) => ({ ...prev, courseDescription: v }));
-                    if (originalCourseDescription !== null && v === originalCourseDescription) {
-                      setOriginalCourseDescription(null);
-                    }
-                  }}
-                  className="min-h-[120px] rounded-xl resize-y focus-visible:ring-primary bg-muted/30"
+                  onChange={(v) => setFormData((prev) => ({ ...prev, courseDescription: v }))}
+                  className="min-h-[120px] resize-y focus-visible:ring-primary bg-muted/30"
                   dir={isRTL ? 'rtl' : 'ltr'}
                   autoDirection
+                  onRewrite={() => void handleRephraseCourseDescription()}
+                  isRewriting={rephrasingCourseDescription}
                 />
               </div>
 

@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatCourseDuration } from '@/lib/dateUtils';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,6 @@ import {
   Users,
   BookOpen,
   Calendar,
-  Plus,
   Edit,
   BarChart3,
   Trash2,
@@ -34,6 +33,7 @@ import {
   ChevronRight,
   Info,
   Map,
+  LayoutList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditClassroomDialog } from '@/components/EditClassroomDialog';
@@ -45,7 +45,7 @@ import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
-import { CourseOutlineSection } from '@/components/features/syllabus';
+import { CourseOutlineSection, TeacherCurriculumSection } from '@/components/features/syllabus';
 import {
   classroomKeys,
   useClassroom,
@@ -53,6 +53,16 @@ import {
   useClassroomStudents,
   useDeleteAssignment,
 } from '@/hooks/queries';
+import type { ClassroomLocationState } from '@/types/navigation';
+
+const TEACHER_SECTION_IDS = new Set([
+  'overview',
+  'outline',
+  'curriculum',
+  'students',
+  'submissions',
+  'analytics',
+]);
 
 interface CourseMaterial {
   type: 'pdf' | 'link';
@@ -108,6 +118,7 @@ interface EnrolledStudent {
 const ClassroomDetail = () => {
   const { t } = useTranslation();
   const { id } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -120,12 +131,35 @@ const ClassroomDetail = () => {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [curriculumAssignmentSectionId, setCurriculumAssignmentSectionId] = useState<string | null>(
+    null,
+  );
   const [editAssignmentDialogOpen, setEditAssignmentDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState(() => {
+    const raw = (location.state as ClassroomLocationState | null)?.activeSection;
+    const normalized =
+      raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    return normalized && TEACHER_SECTION_IDS.has(normalized) ? normalized : 'overview';
+  });
+
+  useEffect(() => {
+    const raw = (location.state as ClassroomLocationState | null)?.activeSection;
+    if (raw === undefined) return;
+    const normalized =
+      raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (TEACHER_SECTION_IDS.has(normalized)) {
+      setActiveSection(normalized);
+    }
+  }, [location.pathname, location.key]);
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    navigate(location.pathname, { replace: true, state: { activeSection: section } });
+  };
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
 
@@ -141,12 +175,10 @@ const ClassroomDetail = () => {
   } as unknown as Classroom : null, [rawClassroom]);
 
   // GSAP stagger animation refs - only trigger on section/tab change or data length changes
-  const assignmentsRef = useStaggerAnimation(':scope > div', 0.05, [activeSection, assignments.length]);
+  const curriculumRef = useStaggerAnimation(':scope > *', 0.05, [activeSection, assignments.length]);
   const studentsRef = useStaggerAnimation(':scope > div', 0.04, [activeSection, students.length]);
 
   const handleDeleteAssignment = async (assignmentId: string) => {
-    if (!confirm('Are you sure you want to delete this assignment?')) return;
-
     try {
       await deleteAssignmentMutation.mutateAsync({ assignmentId, classroomId: id! });
       toast.success(t('classroomDetail.success.assignmentDeleted'));
@@ -155,6 +187,9 @@ const ClassroomDetail = () => {
       toast.error(t('classroomDetail.errors.deleting'));
     }
   };
+
+  const submissionsAssignmentId =
+    (location.state as ClassroomLocationState | null)?.submissionsAssignmentId;
 
   const deleteClassroom = async () => {
     setIsDeleting(true);
@@ -219,7 +254,7 @@ const ClassroomDetail = () => {
   const classroomSections = [
     { id: 'overview', title: t('studentClassroom.about'), icon: Info },
     { id: 'outline', title: 'Course Outline', icon: Map },
-    { id: 'assignments', title: t('studentClassroom.assignments'), icon: BookOpen },
+    { id: 'curriculum', title: t('classroomDetail.curriculum.tabTitle'), icon: LayoutList },
     { id: 'students', title: t('classroomDetail.students'), icon: Users },
     { id: 'submissions', title: t('classroomDetail.submissionsTab'), icon: FileText },
     { id: 'analytics', title: t('classroomDetail.analytics'), icon: BarChart3 },
@@ -230,7 +265,7 @@ const ClassroomDetail = () => {
       classroomName={classroom.name}
       classroomSubject={classroom.subject}
       activeSection={activeSection}
-      onSectionChange={setActiveSection}
+      onSectionChange={handleSectionChange}
       customSections={classroomSections}
     >
       <div className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -528,160 +563,37 @@ const ClassroomDetail = () => {
 
         {/* Course Outline Section */}
         {activeSection === 'outline' && (
-          <CourseOutlineSection classroomId={id!} isRTL={isRTL} />
+          <CourseOutlineSection
+            classroomId={id!}
+            isRTL={isRTL}
+            onTeacherSelectAssignment={(assignmentId) => {
+              const row = assignments.find((a) => a.id === assignmentId);
+              if (row) {
+                setSelectedAssignment(row);
+                setEditAssignmentDialogOpen(true);
+              }
+            }}
+          />
         )}
 
-        {/* Assignments Section */}
-        {activeSection === 'assignments' && (
-          <div className="space-y-6">
-            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
-              <Button
-                onClick={() => setAssignmentDialogOpen(true)}
-                className={`w-full sm:w-auto shadow-md hover:shadow-lg transition-all ${isRTL ? 'sm:order-1' : 'sm:order-2'}`}
-              >
-                <Plus className="me-2 h-4 w-4" />
-                {t('classroomDetail.createAssignment')}
-              </Button>
-              <div className={`${isRTL ? 'text-right sm:order-2' : 'text-left sm:order-1'}`}>
-                <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('classroomDetail.assignments')}
-                </h2>
-                <p className={`text-muted-foreground mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('classroomDetail.assignmentsSubtitle')}
-                </p>
-              </div>
-            </div>
-
-            {assignments.length === 0 ? (
-              <Card className="rounded-xl border-dashed border-2 border-border bg-muted/20">
-                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center shadow-sm mb-4">
-                    <BookOpen className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">
-                    {t('classroomDetail.noAssignments')}
-                  </h3>
-                  <p className="text-muted-foreground max-w-md mb-6">
-                    {t('classroomDetail.noAssignmentsDesc')}
-                  </p>
-                  <Button onClick={() => setAssignmentDialogOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    {t('classroomDetail.createAssignment')}
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div ref={assignmentsRef} className="grid gap-4">
-                {assignments.map((assignment) => (
-                  <Card key={assignment.id} className="group rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border overflow-hidden">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <CardTitle className={`text-lg font-bold text-foreground truncate ${isRTL ? 'text-right' : 'text-left'}`}>
-                              {assignment.title}
-                            </CardTitle>
-                            {assignment.assigned_student_id && (
-                              <Badge
-                                variant="outline"
-                                className="rounded-full bg-primary/10 text-primary border-primary/20"
-                              >
-                                {t('classroomDetail.assignedTo')} {assignment.student_profiles?.full_name || t('common.student')}
-                              </Badge>
-                            )}
-                            <Badge
-                              variant={assignment.status === 'published' ? 'default' : 'secondary'}
-                              className={`rounded-full px-3 font-normal ${assignment.status === 'published'
-                                ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                                }`}
-                            >
-                              {t(`assignments.status.${assignment.status}`)}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
-                              {t('classroomDetail.type')} {t(`assignmentTypes.${assignment.type}`)}
-                            </span>
-                            {assignment.due_at && (
-                              <span className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
-                                {t('classroomDetail.due')} {new Date(assignment.due_at).toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-muted"
-                            onClick={() => {
-                              setSelectedAssignment(assignment);
-                              setEditAssignmentDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => handleDeleteAssignment(assignment.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className={`text-sm text-foreground/80 bg-muted/30 p-4 rounded-lg ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <SafeMathMarkdown content={assignment.instructions} />
-                      </div>
-
-                      {/* Course Materials */}
-                      {assignment.materials &&
-                        (() => {
-                          try {
-                            const materials: CourseMaterial[] = typeof assignment.materials === 'string'
-                              ? JSON.parse(assignment.materials)
-                              : assignment.materials;
-                            if (Array.isArray(materials) && materials.length > 0) {
-                              return (
-                                <div className="pt-2">
-                                  <p className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                    {t('classroomDetail.attachments')} ({materials.length})
-                                  </p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {materials.map((material, index) => (
-                                      <Button
-                                        key={index}
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.open(material.url, '_blank')}
-                                        className="gap-2 rounded-xl border-border bg-card"
-                                      >
-                                        {material.type === 'pdf' ? (
-                                          <FileText className="h-3.5 w-3.5 text-destructive" />
-                                        ) : (
-                                          <LinkIcon className="h-3.5 w-3.5 text-primary" />
-                                        )}
-                                        <span className="text-xs font-medium">{material.name}</span>
-                                      </Button>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          } catch (e) {
-                            // Ignore parsing errors
-                          }
-                          return null;
-                        })()}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+        {activeSection === 'curriculum' && (
+          <div ref={curriculumRef}>
+            <TeacherCurriculumSection
+              classroomId={id!}
+              isRTL={isRTL}
+              onCreateAssignmentForModule={(sectionId) => {
+                setCurriculumAssignmentSectionId(sectionId);
+                setAssignmentDialogOpen(true);
+              }}
+              onEditAssignment={(assignmentId) => {
+                const row = assignments.find((a) => a.id === assignmentId);
+                if (row) {
+                  setSelectedAssignment(row);
+                  setEditAssignmentDialogOpen(true);
+                }
+              }}
+              onDeleteAssignment={handleDeleteAssignment}
+            />
           </div>
         )}
 
@@ -787,7 +699,10 @@ const ClassroomDetail = () => {
                 {t('classroomDetail.submissions.subtitle')}
               </p>
             </div>
-            <SubmissionsTab classroomId={id!} />
+            <SubmissionsTab
+              classroomId={id!}
+              initialAssignmentFilterId={submissionsAssignmentId}
+            />
           </div>
         )}
 
@@ -816,9 +731,18 @@ const ClassroomDetail = () => {
 
       <CreateAssignmentDialog
         open={assignmentDialogOpen}
-        onOpenChange={setAssignmentDialogOpen}
+        onOpenChange={(open) => {
+          setAssignmentDialogOpen(open);
+          if (!open) setCurriculumAssignmentSectionId(null);
+        }}
         classroomId={id!}
         onSuccess={refetchAssignments}
+        initialData={
+          curriculumAssignmentSectionId
+            ? { syllabus_section_id: curriculumAssignmentSectionId }
+            : undefined
+        }
+        lockSyllabusSection={!!curriculumAssignmentSectionId}
       />
 
       {selectedAssignment && (
