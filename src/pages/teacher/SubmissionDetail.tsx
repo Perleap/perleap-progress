@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { DashboardLayout } from '@/components/layouts';
 import { Card, CardContent } from '@/components/ui/card';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
 import { MessageSquare, Sparkles, Calendar, BookOpen } from 'lucide-react';
@@ -76,7 +77,61 @@ const SubmissionDetail = () => {
         },
       });
 
-      if (error) throw error;
+      let fnErrorPayload: unknown = null;
+      if (error instanceof FunctionsHttpError) {
+        try {
+          fnErrorPayload = await error.context.clone().json();
+        } catch {
+          try {
+            fnErrorPayload = await error.context.clone().text();
+          } catch {
+            fnErrorPayload = null;
+          }
+        }
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7672/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd6fa3a' },
+        body: JSON.stringify({
+          sessionId: 'd6fa3a',
+          runId: 'pre-fix',
+          hypothesisId: 'H1-H5',
+          location: 'SubmissionDetail.tsx:invoke-followup',
+          message: 'generate-followup-assignment invoke result',
+          data: {
+            hasError: !!error,
+            errorName: error instanceof Error ? error.name : null,
+            errorMessage: error instanceof Error ? error.message : null,
+            fnErrorPayload,
+            hasData: data != null,
+            dataKeys:
+              data != null && typeof data === 'object' ? Object.keys(data as object) : [],
+            bodyPreview: {
+              hasTeacherFeedback: !!feedback?.teacher_feedback,
+              hasStudentFeedback: !!feedback?.student_feedback,
+              conversationContextIsArray: Array.isArray(feedback?.conversation_context),
+              conversationLen: Array.isArray(feedback?.conversation_context)
+                ? feedback.conversation_context.length
+                : null,
+            },
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
+      if (error) {
+        const serverMsg =
+          fnErrorPayload &&
+          typeof fnErrorPayload === 'object' &&
+          'error' in fnErrorPayload &&
+          typeof (fnErrorPayload as { error: unknown }).error === 'string'
+            ? (fnErrorPayload as { error: string }).error.trim()
+            : '';
+        throw new Error(serverMsg || error.message);
+      }
 
       if (data.error) {
         throw new Error(data.error);

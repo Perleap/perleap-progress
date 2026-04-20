@@ -36,20 +36,24 @@ export const createChatCompletion = async (
   // Use gpt-4o-mini for fast tier, gpt-4o for smart tier
   const model = modelTier === 'fast' ? 'gpt-4o-mini' : config.model;
 
+  const requestBody: Record<string, unknown> = {
+    model: model,
+    messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    temperature,
+    max_tokens: maxTokens,
+    stream,
+  };
+  if (responseFormat === 'json_object') {
+    requestBody.response_format = { type: 'json_object' };
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${config.apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: model,
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      temperature,
-      max_tokens: maxTokens,
-      stream,
-      response_format: { type: responseFormat }
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
