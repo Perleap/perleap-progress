@@ -90,38 +90,6 @@ const SubmissionDetail = () => {
         }
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7672/ingest/06e8b4df-1f3c-431c-8504-c340b8e8e7e8', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'd6fa3a' },
-        body: JSON.stringify({
-          sessionId: 'd6fa3a',
-          runId: 'pre-fix',
-          hypothesisId: 'H1-H5',
-          location: 'SubmissionDetail.tsx:invoke-followup',
-          message: 'generate-followup-assignment invoke result',
-          data: {
-            hasError: !!error,
-            errorName: error instanceof Error ? error.name : null,
-            errorMessage: error instanceof Error ? error.message : null,
-            fnErrorPayload,
-            hasData: data != null,
-            dataKeys:
-              data != null && typeof data === 'object' ? Object.keys(data as object) : [],
-            bodyPreview: {
-              hasTeacherFeedback: !!feedback?.teacher_feedback,
-              hasStudentFeedback: !!feedback?.student_feedback,
-              conversationContextIsArray: Array.isArray(feedback?.conversation_context),
-              conversationLen: Array.isArray(feedback?.conversation_context)
-                ? feedback.conversation_context.length
-                : null,
-            },
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
       if (error) {
         const serverMsg =
           fnErrorPayload &&
