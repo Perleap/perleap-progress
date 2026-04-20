@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -188,8 +188,16 @@ export function ClassroomSidebar({
                   <SidebarMenuButton
                     isActive={activeSection === section.id}
                     tooltip={section.title}
-                    onClick={() => onSectionChange(section.id)}
-                    className="cursor-pointer min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
+                    onClick={() => {
+                      if (section.disabled) return;
+                      onSectionChange(section.id);
+                    }}
+                    aria-disabled={section.disabled ? true : undefined}
+                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${
+                      section.disabled
+                        ? 'cursor-not-allowed opacity-55 pointer-events-none'
+                        : 'cursor-pointer'
+                    }`}
                   >
                     <section.icon className="size-5 group-data-[collapsible=icon]:size-5" />
                     <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{section.title}</span>

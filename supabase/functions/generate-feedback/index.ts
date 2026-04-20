@@ -13,6 +13,11 @@ import {
   getTeacherNameByAssignment,
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
+import {
+  domainForSkillComponent,
+  formatHardSkillPairsForPrompt,
+  parseHardSkillsFromDb,
+} from '../_shared/hardSkillsFormat.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -150,19 +155,14 @@ serve(async (req) => {
 
     const moduleActivityContextText = await getAssignmentModuleActivityContextText(assignmentId);
 
-    let hardSkillsList: string[] = [];
-    try {
-      if (assignmentData?.hard_skills) {
-        hardSkillsList = typeof assignmentData.hard_skills === 'string' 
-          ? JSON.parse(assignmentData.hard_skills) 
-          : assignmentData.hard_skills;
-      }
-    } catch (e) {
-      logError('Error parsing hard_skills, falling back to comma-separated parsing', e);
-      if (typeof assignmentData?.hard_skills === 'string') {
-        hardSkillsList = assignmentData.hard_skills.split(',').map(s => s.trim()).filter(Boolean);
-      }
-    }
+    const skillPairs = parseHardSkillsFromDb(
+      assignmentData?.hard_skills,
+      assignmentData?.hard_skill_domain,
+    );
+    const skillsAssessText = formatHardSkillPairsForPrompt(
+      skillPairs,
+      assignmentData?.hard_skill_domain,
+    );
 
     const feedbackPrompt = `You are an expert pedagogical AI assistant. Analyze the student's ${contextType === 'essay' ? 'written essay' : contextType} and provide feedback and 5D scores.
     
@@ -199,9 +199,9 @@ serve(async (req) => {
     - Focus on growth mindset.`;
 
     const hardSkillsPrompt = `Analyze the student's ${contextType === 'essay' ? 'essay' : 'conversation'} and assess their performance on specific hard skills.
-    
-    Domain: ${assignmentData?.hard_skill_domain}
-    Skills to assess: ${hardSkillsList.join(', ')}
+
+    Primary subject area (if single): ${assignmentData?.hard_skill_domain || 'N/A'}
+    Skills to assess (with subject area when listed): ${skillsAssessText || '(none specified)'}
     
     Provide your response in the following JSON format:
     {
@@ -232,7 +232,7 @@ serve(async (req) => {
         'json_object'
       ),
       // Call 2: Hard Skills (Fast/GPT-4o-mini)
-      hardSkillsList.length > 0 ? createChatCompletion(
+      skillPairs.length > 0 ? createChatCompletion(
         hardSkillsPrompt,
         [{ role: 'user', content: `Analyze this ${contextType} for hard skills:\n\n${conversationText}` }],
         0.3,
@@ -301,7 +301,11 @@ serve(async (req) => {
             submission_id: submissionId,
             assignment_id: assignmentId,
             student_id: studentId,
-            domain: assignmentData?.hard_skill_domain,
+            domain: domainForSkillComponent(
+              skillPairs,
+              assessment.skill_component,
+              assignmentData?.hard_skill_domain,
+            ),
             skill_component: assessment.skill_component,
             current_level_percent: Math.min(100, Math.max(0, assessment.current_level_percent)),
             proficiency_description: assessment.proficiency_description,

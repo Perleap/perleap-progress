@@ -26,9 +26,10 @@ export const getSectionResourceById = async (
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
-      .from('section_resources' as any)
+      .from('activity_list' as any)
       .select('*')
       .eq('id', resourceId)
+      .eq('active', true)
       .maybeSingle();
 
     if (error) return { data: null, error: handleSupabaseError(error) };
@@ -43,9 +44,10 @@ export const getSectionResources = async (
 ): Promise<{ data: SectionResource[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
-      .from('section_resources' as any)
+      .from('activity_list' as any)
       .select('*')
       .eq('section_id', sectionId)
+      .eq('active', true)
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
@@ -68,7 +70,7 @@ export const createSectionResource = async (
       estimated_duration_minutes: input.estimated_duration_minutes ?? null,
     };
     const { data, error } = await supabase
-      .from('section_resources' as any)
+      .from('activity_list' as any)
       .insert([row] as any)
       .select()
       .single();
@@ -86,7 +88,7 @@ export const updateSectionResource = async (
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
-      .from('section_resources' as any)
+      .from('activity_list' as any)
       .update(updates as any)
       .eq('id', resourceId)
       .select()
@@ -108,9 +110,10 @@ export const deleteSectionResource = async (
       await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
     }
 
+    const deletedAt = new Date().toISOString();
     const { error } = await supabase
-      .from('section_resources' as any)
-      .delete()
+      .from('activity_list' as any)
+      .update({ active: false, deleted_at: deletedAt })
       .eq('id', resourceId);
 
     if (error) return { error: handleSupabaseError(error) };

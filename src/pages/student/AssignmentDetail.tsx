@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardLayout } from '@/components/layouts';
+import { ClassroomLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -17,9 +17,10 @@ import {
 import { generateFeedback, completeSubmission, startNewSubmissionAttempt } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys, useStudentAssignmentDetails } from '@/hooks/queries';
+import { assignmentKeys, useClassroom, useStudentAssignmentDetails, useSyllabus } from '@/hooks/queries';
+import { getStudentClassroomNavSections } from '@/lib/classroomNavSections';
 import { Calendar, FileText, Link as LinkIcon, Download, Loader2, Clock, RefreshCw, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
@@ -49,6 +50,31 @@ const AssignmentDetail = () => {
   }>({ open: false, tone: 'activityCompleted' });
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(id);
+
+  const classroomId = assignmentData?.classroom_id;
+  const { data: classroomForNav } = useClassroom(classroomId);
+  const { data: syllabusForNav } = useSyllabus(classroomId);
+
+  const studentNavSections = useMemo(
+    () => getStudentClassroomNavSections(t, syllabusForNav?.status === 'published'),
+    [syllabusForNav?.status, t],
+  );
+
+  const allowedNavIds = useMemo(() => new Set(studentNavSections.map((s) => s.id)), [studentNavSections]);
+
+  const activeClassroomNavSection = useMemo(() => {
+    const preferred = 'curriculum';
+    if (allowedNavIds.has(preferred)) return preferred;
+    return 'overview';
+  }, [allowedNavIds]);
+
+  const handleClassroomNav = useCallback(
+    (section: string) => {
+      if (!classroomId) return;
+      navigate(`/student/classroom/${classroomId}`, { state: { activeSection: section } });
+    },
+    [classroomId, navigate],
+  );
 
   const sectionFlow = useStudentSectionModuleFlow(
     assignmentData?.classroom_id,
@@ -205,7 +231,13 @@ const AssignmentDetail = () => {
 
   if (assignmentSequentialBlocked) {
     return (
-      <DashboardLayout>
+      <ClassroomLayout
+        classroomName={classroomForNav?.name ?? assignment.classrooms?.name}
+        classroomSubject={classroomForNav?.subject}
+        activeSection={activeClassroomNavSection}
+        onSectionChange={handleClassroomNav}
+        customSections={studentNavSections}
+      >
         <div
           className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center"
           dir={isRTL ? 'rtl' : 'ltr'}
@@ -224,17 +256,17 @@ const AssignmentDetail = () => {
             {t('activityPage.backToActivities')}
           </Button>
         </div>
-      </DashboardLayout>
+      </ClassroomLayout>
     );
   }
 
   return (
-    <DashboardLayout
-      breadcrumbs={[
-        { label: t('nav.dashboard'), href: '/student/dashboard' },
-        { label: assignment.classrooms.name, href: `/student/classroom/${assignment.classroom_id}` },
-        { label: assignment.title }
-      ]}
+    <ClassroomLayout
+      classroomName={classroomForNav?.name ?? assignment.classrooms?.name}
+      classroomSubject={classroomForNav?.subject}
+      activeSection={activeClassroomNavSection}
+      onSectionChange={handleClassroomNav}
+      customSections={studentNavSections}
     >
       <div className="container py-4 px-0 max-w-4xl">
         <div className="space-y-6">
@@ -488,7 +520,7 @@ const AssignmentDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </ClassroomLayout>
   );
 };
 

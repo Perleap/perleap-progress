@@ -25,6 +25,7 @@ export const getClassroomAssignments = async (
       .from('assignments')
       .select('*, student_profiles(full_name)')
       .eq('classroom_id', classroomId)
+      .eq('active', true)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -81,6 +82,7 @@ export const getAssignmentById = async (
       .from('assignments')
       .select('*, student_profiles(full_name), classrooms(name, teacher_id)')
       .eq('id', assignmentId)
+      .eq('active', true)
       .maybeSingle();
 
     if (error) {
@@ -136,6 +138,7 @@ export const getStudentAssignmentDetails = async (
         )
       `)
       .eq('id', assignmentId)
+      .eq('active', true)
       .maybeSingle();
 
     if (assignError) throw assignError;
@@ -185,7 +188,8 @@ export const getStudentAssignments = async (
     const { data: enrollments, error: enrollError } = await supabase
       .from('enrollments')
       .select('classroom_id')
-      .eq('student_id', studentId);
+      .eq('student_id', studentId)
+      .eq('active', true);
 
     if (enrollError || !enrollments || enrollments.length === 0) {
       return { data: [], error: enrollError ? handleSupabaseError(enrollError) : null };
@@ -198,6 +202,7 @@ export const getStudentAssignments = async (
       .select('*, classrooms(name, teacher_id)')
       .in('classroom_id', classroomIds)
       .eq('status', 'published')
+      .eq('active', true)
       .order('due_at', { ascending: true });
 
     if (error) {
@@ -289,7 +294,11 @@ export const deleteAssignment = async (
   assignmentId: string
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { error } = await supabase.from('assignments').delete().eq('id', assignmentId);
+    const deletedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from('assignments')
+      .update({ active: false, deleted_at: deletedAt })
+      .eq('id', assignmentId);
 
     if (error) {
       return { success: false, error: handleSupabaseError(error) };

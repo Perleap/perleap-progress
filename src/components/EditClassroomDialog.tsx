@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
 import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';

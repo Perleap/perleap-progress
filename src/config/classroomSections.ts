@@ -5,6 +5,8 @@ export interface ClassroomSection {
   id: string;
   title: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Nav item shown but not yet actionable (e.g. syllabus query in flight). */
+  disabled?: boolean;
 }
 
 // Pre-defined sections for teacher classroom

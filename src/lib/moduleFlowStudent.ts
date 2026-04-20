@@ -2,8 +2,13 @@
  * Student sequential access for module flow (persisted steps + fallback computed flow).
  */
 
-import type { ComputedFlowItem } from '@/lib/moduleFlow';
-import type { ModuleFlowStep } from '@/types/syllabus';
+import {
+  computeDefaultModuleFlow,
+  getOrderedActivityCenterFlowSteps,
+  type AssignmentRow,
+  type ComputedFlowItem,
+} from '@/lib/moduleFlow';
+import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
 /** Maps: flow step id -> completed resource progress; assignment id -> submission complete */
 export type StudentFlowProgressContext = {
@@ -15,7 +20,7 @@ export function persistedStepDone(step: ModuleFlowStep, ctx: StudentFlowProgress
   if (step.step_kind === 'assignment' && step.assignment_id) {
     return ctx.assignmentDoneMap[step.assignment_id] ?? false;
   }
-  if (step.step_kind === 'resource' && step.section_resource_id) {
+  if (step.step_kind === 'resource' && step.activity_list_id) {
     return !!ctx.progressByStep[step.id];
   }
   return false;
@@ -124,4 +129,23 @@ export function canAccessComputedStep(
   ctx: StudentFlowProgressContext,
 ): boolean {
   return computedPreviousStepsComplete(items, index, ctx);
+}
+
+/** Same “all steps done” rule as Curriculum: persisted flow if any, else default computed flow. */
+export function isSectionActivityFlowFullyComplete(
+  sectionId: string,
+  persistedSteps: ModuleFlowStep[],
+  sectionResources: SectionResource[],
+  assignments: AssignmentRow[],
+  ctx: StudentFlowProgressContext,
+): boolean {
+  const orderedPersisted = getOrderedActivityCenterFlowSteps(persistedSteps, sectionResources);
+  const computed = computeDefaultModuleFlow(sectionId, sectionResources, assignments);
+  if (orderedPersisted.length > 0) {
+    return firstIncompletePersistedIndex(orderedPersisted, ctx) === -1;
+  }
+  if (computed.length > 0) {
+    return firstIncompleteComputedIndex(computed, ctx) === -1;
+  }
+  return false;
 }

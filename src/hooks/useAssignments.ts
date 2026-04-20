@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { getClassroomAssignments, getStudentAssignments } from '@/services';
 import type { Assignment, AssignmentWithClassroom, ApiError } from '@/types';
 

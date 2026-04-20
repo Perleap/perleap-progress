@@ -34,7 +34,6 @@ import {
   Pencil,
   Lock,
   Unlock,
-  GitBranch,
 } from 'lucide-react';
 import {
   useCreateSyllabusSection,
@@ -455,38 +454,6 @@ export const SyllabusEditor = ({
                 ))}
               </div>
 
-              {/* Prerequisites (only when release_mode is 'prerequisites') */}
-              {releaseMode === 'prerequisites' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium flex items-center gap-1">
-                    <GitBranch className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.prerequisites', 'Prerequisites')}
-                  </Label>
-                  <div className="space-y-1">
-                    {sections
-                      .filter((s) => s.id !== selected.id)
-                      .map((s) => {
-                        const prereqs = (getValue('prerequisites') as string[] | null) || [];
-                        const isChecked = prereqs.includes(s.id);
-                        return (
-                          <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded-lg px-2 py-1.5">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {
-                                const next = isChecked
-                                  ? prereqs.filter((id) => id !== s.id)
-                                  : [...prereqs, s.id];
-                                setField('prerequisites', next);
-                              }}
-                              className="rounded"
-                            />
-                            <span>{s.title}</span>
-                          </label>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
             </div>
 
             <Separator className="my-2" />

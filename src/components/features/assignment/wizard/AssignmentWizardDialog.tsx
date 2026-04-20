@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { createBulkNotifications } from '@/lib/notificationService';
 import { buildModuleContextTextFromSyllabusResources } from '@/lib/moduleContextTextFromSyllabus';
 import {
@@ -34,6 +34,12 @@ import { AssignmentSkillsMaterialsStep } from './steps/AssignmentSkillsMaterials
 import { AssignmentTestStep } from './steps/AssignmentTestStep';
 import { AssignmentReviewStep } from './steps/AssignmentReviewStep';
 import {
+  distinctDomains,
+  parseHardSkillsFromDb,
+  resolveHardSkillDomainForDb,
+  type HardSkillPair,
+} from '@/lib/hardSkillsFormat';
+import {
   ASSIGNMENT_WIZARD_FIRST_STEP,
   assignmentCreateDraftKey,
   assignmentWizardStepOrder,
@@ -44,6 +50,7 @@ import {
   type AssignmentWizardFormData,
   type AssignmentWizardStepId,
 } from './assignmentWizardTypes';
+import type { HardSkillsSuggestionStatus } from './steps/AssignmentSkillsMaterialsStep';
 
 type DialogOpenProps = {
   open: boolean;
@@ -140,6 +147,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
   const [hasSubmissions, setHasSubmissions] = useState(false);
 
+  const [hardSkillsSuggestionStatus, setHardSkillsSuggestionStatus] =
+    useState<HardSkillsSuggestionStatus>('idle');
+  const suggestHardSkillsTokenRef = useRef(0);
+
   const hasDueDateInDb = Boolean(assignment?.due_at?.trim());
   const policyFrozen = !isCreate && hasSubmissions && hasDueDateInDb;
 
@@ -170,6 +181,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     setUploadProgress(0);
     setLinkedModuleActivityIds([]);
     moduleLinkInitKeyRef.current = '';
+    setHardSkillsSuggestionStatus('idle');
   }, []);
 
   useEffect(() => {
@@ -213,7 +225,14 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       if (!raw) return;
       const draft = JSON.parse(raw) as AssignmentCreateDraftV1;
       if (draft.formData && typeof draft.formData === 'object') {
-        setFormData((prev) => ({ ...getDefaultAssignmentWizardFormData(), ...draft.formData }));
+        setFormData(() => {
+          const merged = { ...getDefaultAssignmentWizardFormData(), ...draft.formData };
+          const hs = merged.hard_skills as unknown;
+          if (Array.isArray(hs) && hs.length > 0 && typeof (hs as unknown[])[0] === 'string') {
+            merged.hard_skills = parseHardSkillsFromDb(hs as string[], merged.hard_skill_domain);
+          }
+          return merged;
+        });
       }
       if (Array.isArray(draft.testQuestions)) setTestQuestions(draft.testQuestions);
       if (typeof draft.gradingCategoryId === 'string') setGradingCategoryId(draft.gradingCategoryId);
@@ -237,7 +256,14 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       if (!raw) return;
       const draft = JSON.parse(raw) as AssignmentCreateDraftV1;
       if (draft.formData && typeof draft.formData === 'object') {
-        setFormData((prev) => ({ ...getDefaultAssignmentWizardFormData(), ...draft.formData }));
+        setFormData(() => {
+          const merged = { ...getDefaultAssignmentWizardFormData(), ...draft.formData };
+          const hs = merged.hard_skills as unknown;
+          if (Array.isArray(hs) && hs.length > 0 && typeof (hs as unknown[])[0] === 'string') {
+            merged.hard_skills = parseHardSkillsFromDb(hs as string[], merged.hard_skill_domain);
+          }
+          return merged;
+        });
       }
       if (Array.isArray(draft.testQuestions)) setTestQuestions(draft.testQuestions);
       if (typeof draft.gradingCategoryId === 'string') setGradingCategoryId(draft.gradingCategoryId);
@@ -323,28 +349,30 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
             .limit(1)
             .maybeSingle();
           if (!assignmentError && lastAssignment && !cancelled) {
-            let parsedSkills: string[] = [];
-            if (lastAssignment.hard_skills) {
+            const rawSkills = lastAssignment.hard_skills;
+            let parsedList: unknown = rawSkills;
+            if (typeof rawSkills === 'string') {
               try {
-                const skills =
-                  typeof lastAssignment.hard_skills === 'string'
-                    ? JSON.parse(lastAssignment.hard_skills)
-                    : lastAssignment.hard_skills;
-                if (Array.isArray(skills) && skills.length > 0) parsedSkills = skills;
+                parsedList = JSON.parse(rawSkills);
               } catch {
-                if (typeof lastAssignment.hard_skills === 'string') {
-                  parsedSkills = lastAssignment.hard_skills.split(',').map((s) => s.trim()).filter(Boolean);
-                }
+                parsedList = rawSkills.split(',').map((s) => s.trim()).filter(Boolean);
               }
             }
-            if (lastAssignment.hard_skill_domain || parsedSkills.length > 0) {
+            const pairs = parseHardSkillsFromDb(parsedList, lastAssignment.hard_skill_domain);
+            if (pairs.length > 0) {
+              const doms = distinctDomains(pairs);
+              const singleDomain = doms.length === 1 ? doms[0]! : '';
               setFormData((prev) => ({
                 ...prev,
-                hard_skill_domain: lastAssignment.hard_skill_domain || prev.hard_skill_domain,
-                hard_skills: parsedSkills.length > 0 ? parsedSkills : prev.hard_skills,
+                hard_skill_domain: singleDomain,
+                hard_skills: pairs,
               }));
-            }
-            if (lastAssignment.hard_skill_domain) {
+              if (singleDomain) {
+                setSelectedDomain(singleDomain);
+                const domain = domains.find((d) => d.name === singleDomain);
+                if (domain) setAvailableComponents(domain.components);
+              }
+            } else if (lastAssignment.hard_skill_domain) {
               setSelectedDomain(lastAssignment.hard_skill_domain);
               const domain = domains.find((d) => d.name === lastAssignment.hard_skill_domain);
               if (domain) setAvailableComponents(domain.components);
@@ -459,19 +487,18 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       setSyllabusSectionId((data as { syllabus_section_id?: string | null })?.syllabus_section_id || '');
       setGradingCategoryId((data as { grading_category_id?: string | null })?.grading_category_id || '');
 
-      let skills: string[] = [];
+      let pairs: HardSkillPair[] = [];
       if (data?.hard_skills) {
         const raw = data.hard_skills as unknown;
-        if (Array.isArray(raw)) {
-          skills = raw.filter((x): x is string => typeof x === 'string');
-        } else if (typeof raw === 'string') {
+        let parsedList: unknown = raw;
+        if (typeof raw === 'string') {
           try {
-            const parsed = JSON.parse(raw);
-            skills = Array.isArray(parsed) ? parsed : [];
+            parsedList = JSON.parse(raw);
           } catch {
-            skills = raw.split(',').map((s) => s.trim()).filter(Boolean);
+            parsedList = raw.split(',').map((s) => s.trim()).filter(Boolean);
           }
         }
+        pairs = parseHardSkillsFromDb(parsedList, data.hard_skill_domain);
       }
       let mats: Array<{ type: 'pdf' | 'link'; url: string; name: string }> = [];
       if (data?.materials) {
@@ -483,18 +510,24 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           mats = [];
         }
       }
-      const domain = data?.hard_skill_domain || '';
+      const hd = data?.hard_skill_domain || '';
+      const displayDomain =
+        pairs.length === 0
+          ? hd
+          : distinctDomains(pairs).length === 1
+            ? distinctDomains(pairs)[0]!
+            : '';
       setFormData((prev) => ({
         ...prev,
-        hard_skills: skills,
-        hard_skill_domain: domain,
+        hard_skills: pairs,
+        hard_skill_domain: displayDomain,
         materials: mats,
       }));
 
       const sid = (data as { syllabus_section_id?: string | null })?.syllabus_section_id;
       const { data: existingLinks } = await getLinkedActivitiesForAssignment(assignment.id);
       if (existingLinks && existingLinks.length > 0) {
-        setLinkedModuleActivityIds(existingLinks.map((l) => l.section_resource_id));
+        setLinkedModuleActivityIds(existingLinks.map((l) => l.activity_list_id));
       } else if (sid) {
         const { data: rids } = await getSectionResourceIdsForSectionInOrder(sid);
         setLinkedModuleActivityIds(rids ?? []);
@@ -690,10 +723,93 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     return true;
   };
 
+  const runSuggestHardSkills = useCallback(
+    async (snapshot: { instructions: string; type: string; title: string }) => {
+      if (!isCreate || !classroomId) {
+        console.info('[Perleap] suggest-assignment-hard-skills: skipped (not create mode or no classroomId)');
+        return;
+      }
+      if (!classroomDomains.length) {
+        console.info('[Perleap] suggest-assignment-hard-skills: skipped — classroom has no domains in domains[]');
+        setHardSkillsSuggestionStatus('idle');
+        return;
+      }
+      const token = ++suggestHardSkillsTokenRef.current;
+      setHardSkillsSuggestionStatus('loading');
+      console.info('[Perleap] suggest-assignment-hard-skills: invoking', {
+        token,
+        classroomId,
+        assignmentType: snapshot.type,
+        title: snapshot.title?.slice(0, 80),
+        instructionsPreview: snapshot.instructions?.trim().slice(0, 120),
+        domainCount: classroomDomains.length,
+      });
+      try {
+        const { data, error } = await supabase.functions.invoke<{
+          suggestions?: HardSkillPair[];
+          error?: string;
+        }>('suggest-assignment-hard-skills', {
+          body: {
+            classroomId,
+            instructions: snapshot.instructions,
+            assignmentType: snapshot.type,
+            title: snapshot.title,
+            domains: classroomDomains,
+            language: isRTL ? 'he' : 'en',
+          },
+        });
+        if (token !== suggestHardSkillsTokenRef.current) {
+          console.info('[Perleap] suggest-assignment-hard-skills: ignored stale response', { token, latest: suggestHardSkillsTokenRef.current });
+          return;
+        }
+        if (error) throw error;
+        const suggestions = Array.isArray(data?.suggestions) ? data!.suggestions! : [];
+        const doms = distinctDomains(suggestions);
+        const singleDomain = doms.length === 1 ? doms[0]! : '';
+        console.info('[Perleap] suggest-assignment-hard-skills: success', {
+          token,
+          count: suggestions.length,
+          skillsChosen: suggestions.map((p) => `${p.domain} → ${p.skill}`),
+          structured: suggestions,
+          singleDomainForForm: singleDomain || '(multiple or none)',
+        });
+        setFormData((prev) => ({
+          ...prev,
+          hard_skills: suggestions,
+          hard_skill_domain: singleDomain,
+        }));
+        if (singleDomain) {
+          const d = classroomDomains.find((x) => x.name === singleDomain);
+          setSelectedDomain(singleDomain);
+          if (d) setAvailableComponents(d.components);
+        } else {
+          setSelectedDomain('');
+          setAvailableComponents([]);
+        }
+        setHardSkillsSuggestionStatus('success');
+      } catch (e) {
+        if (token !== suggestHardSkillsTokenRef.current) {
+          console.info('[Perleap] suggest-assignment-hard-skills: error ignored (stale)', { token });
+          return;
+        }
+        console.error('[Perleap] suggest-assignment-hard-skills: error', e);
+        setHardSkillsSuggestionStatus('error');
+      }
+    },
+    [isCreate, classroomId, classroomDomains, isRTL],
+  );
+
   const handleNext = () => {
     if (!canProceedForStep(currentStepId)) return;
     const i = stepOrder.indexOf(currentStepId);
     if (i < 0 || i >= stepOrder.length - 1) return;
+    if (currentStepId === 'format' && isCreate) {
+      void runSuggestHardSkills({
+        instructions: formData.instructions,
+        type: formData.type,
+        title: formData.title,
+      });
+    }
     setCurrentStepId(stepOrder[i + 1]!);
   };
 
@@ -738,7 +854,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           attempt_mode: formData.attempt_mode,
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
-          hard_skill_domain: formData.hard_skill_domain || null,
+          hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
           materials: formData.materials,
           target_dimensions: formData.target_dimensions,
           personalization_flag: formData.personalization_flag,
@@ -757,7 +873,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
         if (assignmentRow) {
           const items = linkedModuleActivityIds.map((id, i) => ({
-            section_resource_id: id,
+            activity_list_id: id,
             order_index: i,
             include_in_ai_context: true,
           }));
@@ -880,7 +996,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           type: formData.type as Database['public']['Enums']['assignment_type'],
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
-          hard_skill_domain: formData.hard_skill_domain || null,
+          hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
           materials: formData.materials,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
           syllabus_section_id: syllabusSectionId || null,
@@ -899,7 +1015,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         if (error) throw error;
 
         const linkItems = linkedModuleActivityIds.map((id, i) => ({
-          section_resource_id: id,
+          activity_list_id: id,
           order_index: i,
           include_in_ai_context: true,
         }));
@@ -1002,22 +1118,14 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       : 'closed'
     : assignment?.id ?? 'closed';
 
-  const headerTitle = isCreate
-    ? initialData
-      ? t('editAssignment.title')
-      : t('createAssignment.title')
-    : t('editAssignment.title');
+  const headerTitle = isCreate ? t('createAssignment.title') : t('editAssignment.title');
 
   const headerDescription = isCreate
-    ? initialData
-      ? t('editAssignment.description')
-      : t('createAssignment.description')
+    ? t('createAssignment.description')
     : t('editAssignment.description');
 
   const finalButtonLabel = isCreate
-    ? initialData
-      ? t('editAssignment.saveButton')
-      : t('createAssignment.createButton')
+    ? t('createAssignment.createButton')
     : t('editAssignment.saveButton');
 
   return (
@@ -1096,6 +1204,17 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 onRemoveMaterial={handleRemoveMaterial}
                 uploadingMaterial={uploadingMaterial}
                 uploadProgress={uploadProgress}
+                hardSkillsSuggestionStatus={isCreate ? hardSkillsSuggestionStatus : 'idle'}
+                onRetrySuggestHardSkills={
+                  isCreate
+                    ? () =>
+                        void runSuggestHardSkills({
+                          instructions: formData.instructions,
+                          type: formData.type,
+                          title: formData.title,
+                        })
+                    : undefined
+                }
               />
             )}
             {currentStepId === 'test' && (

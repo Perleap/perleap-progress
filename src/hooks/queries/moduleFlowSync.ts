@@ -5,7 +5,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
-import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { invalidateModuleFlowQueriesForSection } from '@/hooks/queries/useModuleFlowQueries';
 import { buildResolvedModuleFlowStepInputs } from '@/lib/moduleFlow';
 import { getModuleFlowSteps, replaceModuleFlowSteps } from '@/services/moduleFlowService';
 import type { SyllabusWithSections } from '@/types/syllabus';
@@ -34,5 +34,5 @@ export async function syncModuleFlowToResolvedDisplayForSection(
   if (repErr) {
     console.error('module flow sync after assignment save:', repErr);
   }
-  await queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
+  await invalidateModuleFlowQueriesForSection(queryClient, sectionId);
 }

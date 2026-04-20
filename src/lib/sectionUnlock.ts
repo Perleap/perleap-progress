@@ -1,5 +1,10 @@
 import type { SyllabusSection, ReleaseMode, StudentProgressStatus } from '@/types/syllabus';
 
+/** Course order: `order_index` then stable `id` so ties are not non-deterministic across renders. */
+export function sectionsInCourseOrder(sections: SyllabusSection[]): SyllabusSection[] {
+  return [...sections].sort((a, b) => a.order_index - b.order_index || a.id.localeCompare(b.id));
+}
+
 export function isSectionUnlocked(
   section: SyllabusSection,
   allSections: SyllabusSection[],
@@ -11,10 +16,14 @@ export function isSectionUnlocked(
       return true;
 
     case 'sequential': {
-      if (section.order_index === 0) return true;
-      const prev = allSections.find((s) => s.order_index === section.order_index - 1);
-      if (!prev) return true;
-      return studentProgressMap[prev.id] === 'completed';
+      const ordered = sectionsInCourseOrder(allSections);
+      const idx = ordered.findIndex((s) => s.id === section.id);
+      if (idx < 0) return false;
+      if (idx === 0) return true;
+      for (let j = 0; j < idx; j++) {
+        if (studentProgressMap[ordered[j].id] !== 'completed') return false;
+      }
+      return true;
     }
 
     case 'date_based': {
@@ -24,12 +33,6 @@ export function isSectionUnlocked(
 
     case 'manual':
       return !section.is_locked;
-
-    case 'prerequisites': {
-      const prereqs = section.prerequisites ?? [];
-      if (prereqs.length === 0) return true;
-      return prereqs.every((id) => studentProgressMap[id] === 'completed');
-    }
 
     default:
       return true;

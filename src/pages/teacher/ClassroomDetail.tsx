@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Users,
@@ -194,11 +194,13 @@ const ClassroomDetail = () => {
   const deleteClassroom = async () => {
     setIsDeleting(true);
     try {
+      const deletedAt = new Date().toISOString();
       const { data: deletedRows, error } = await supabase
         .from('classrooms')
-        .delete()
+        .update({ active: false, deleted_at: deletedAt })
         .eq('id', id)
         .eq('teacher_id', user?.id)
+        .eq('active', true)
         .select('id');
 
       if (error) throw error;

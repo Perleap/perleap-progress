@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { BookOpen, GraduationCap, Scale, Layers, Lock, FileText, GitBranch } from 'lucide-react';
+import { BookOpen, GraduationCap, Scale, Layers, Lock, FileText } from 'lucide-react';
 import type { WizardData } from '../CreateClassroomWizard';
 
 interface ReviewStepProps {
@@ -121,9 +121,6 @@ export const ReviewStep = ({ data, isRTL }: ReviewStepProps) => {
               ) : (
                 <div className="space-y-2">
                   {data.sections.map((section, index) => {
-                    const prereqTitles = section.prerequisites
-                      .map((tid) => data.sections.find((x) => x.tempId === tid)?.title)
-                      .filter(Boolean) as string[];
                     return (
                     <div key={section.tempId} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30">
                       <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
@@ -154,12 +151,6 @@ export const ReviewStep = ({ data, isRTL }: ReviewStepProps) => {
                           {data.release_mode === 'manual' && section.is_locked ? (
                             <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 h-5 px-1.5">
                               <Lock className="h-2.5 w-2.5" /> {t('syllabus.sections.locked', 'Locked')}
-                            </Badge>
-                          ) : null}
-                          {data.release_mode === 'prerequisites' && prereqTitles.length > 0 ? (
-                            <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 h-5 px-1.5 max-w-[140px]">
-                              <GitBranch className="h-2.5 w-2.5 shrink-0" />
-                              <span className="truncate">{prereqTitles.join(', ')}</span>
                             </Badge>
                           ) : null}
                         </div>

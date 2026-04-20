@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Send, Loader2, CheckCircle, Volume2, VolumeX, Mic, Square, Play, Pause, Paperclip, X } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -61,6 +61,8 @@ import {
 } from '@/components/ui/dialog';
 import { FileText, Image as ImageIcon, ExternalLink, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
+const CHAT_INPUT_MAX_HEIGHT_PX = 200;
+
 // Helper to clean markdown for TTS
 const cleanTextForTTS = (text: string) => {
   return text
@@ -102,6 +104,14 @@ export function AssignmentChatInterface({
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; url?: string; type?: string } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const el = chatInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, CHAT_INPUT_MAX_HEIGHT_PX)}px`;
+  }, [input]);
 
   // Nuance tracking: detect first keystroke after AI message
   const hasTrackedTypingStart = useRef(false);
@@ -594,6 +604,7 @@ export function AssignmentChatInterface({
               <div className="flex gap-1.5 items-end mb-4">
                 <div className="flex-1 relative">
                   <Textarea
+                    ref={chatInputRef}
                     placeholder={conversationEnded ? t('assignmentChat.conversationEndedPlaceholder', 'Conversation ended - please complete the activity') : t('assignmentChat.placeholder')}
                     value={input}
                     onChange={(e) => {
@@ -612,7 +623,7 @@ export function AssignmentChatInterface({
                       }
                     }}
                     disabled={isDisabled}
-                    className={`min-h-[44px] max-h-[200px] resize-none pr-10 ${isRTL ? 'text-right' : 'text-left'}`}
+                    className={`min-h-[44px] max-h-[200px] resize-none overflow-y-auto ${isRTL ? 'pl-11 text-right' : 'pr-11 text-left'}`}
                     rows={1}
                     dir={isRTL ? 'rtl' : 'ltr'}
                     autoDirection
@@ -620,7 +631,7 @@ export function AssignmentChatInterface({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`absolute bottom-1.5 ${isRTL ? 'left-2' : 'right-2'} h-8 w-8 rounded-full ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`}
+                    className={`absolute bottom-1.5 ${isRTL ? 'left-3' : 'right-3'} h-8 w-8 rounded-full ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`}
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={isDisabled}
                   >

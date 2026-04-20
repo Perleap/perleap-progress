@@ -20,6 +20,7 @@ import type {
   ResourceType,
 } from '@/types/syllabus';
 import { createSectionResource, uploadResourceFile } from '@/services/syllabusResourceService';
+import { normalizeReleaseMode } from '@/lib/releaseMode';
 
 // ---------------------------------------------------------------------------
 // Syllabus
@@ -33,6 +34,7 @@ export const getSyllabusByClassroom = async (
       .from('syllabi' as any)
       .select('*')
       .eq('classroom_id', classroomId)
+      .eq('active', true)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -45,6 +47,7 @@ export const getSyllabusByClassroom = async (
         .from('syllabus_sections' as any)
         .select('*')
         .eq('syllabus_id', (syllabus as any).id)
+        .eq('active', true)
         .order('order_index', { ascending: true }),
       supabase
         .from('grading_categories' as any)
@@ -63,9 +66,10 @@ export const getSyllabusByClassroom = async (
     let sectionResourcesMap: Record<string, any[]> = {};
     if (sectionIds.length > 0) {
       const { data: resources } = await supabase
-        .from('section_resources' as any)
+        .from('activity_list' as any)
         .select('*')
         .in('section_id', sectionIds)
+        .eq('active', true)
         .order('order_index', { ascending: true });
 
       if (resources) {
@@ -76,9 +80,11 @@ export const getSyllabusByClassroom = async (
       }
     }
 
+    const s = syllabus as any;
     return {
       data: {
-        ...(syllabus as any),
+        ...s,
+        release_mode: normalizeReleaseMode(s.release_mode),
         sections: (sections as any[]) || [],
         grading_categories: (gradingCategories as any[]) || [],
         section_resources: sectionResourcesMap,
@@ -364,9 +370,10 @@ export const deleteSyllabusSection = async (
   sectionId: string
 ): Promise<{ error: ApiError | null }> => {
   try {
+    const deletedAt = new Date().toISOString();
     const { error } = await supabase
       .from('syllabus_sections' as any)
-      .delete()
+      .update({ active: false, deleted_at: deletedAt })
       .eq('id', sectionId);
 
     if (error) return { error: handleSupabaseError(error) };
@@ -535,6 +542,7 @@ export const getAssignmentsBySection = async (
       .from('assignments')
       .select('id, title, type, status, due_at, syllabus_section_id, grading_category_id')
       .eq('syllabus_section_id', sectionId)
+      .eq('active', true)
       .order('due_at', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
@@ -549,16 +557,40 @@ export const getSectionAssignmentProgress = async (
   studentId: string
 ): Promise<{ data: { total: number; submitted: number; graded: number; progressPercent: number } | null; error: ApiError | null }> => {
   try {
-    const { data: assignments, error: aErr } = await supabase
-      .from('assignments')
-      .select('id')
-      .eq('syllabus_section_id', sectionId);
-    if (aErr) return { data: null, error: handleSupabaseError(aErr) };
-    if (!assignments || assignments.length === 0) {
-      return { data: { total: 0, submitted: 0, graded: 0, progressPercent: 0 }, error: null };
+    const { data: flowRows, error: flowErr } = await supabase
+      .from('module_flow_steps' as any)
+      .select('step_kind, assignment_id, order_index')
+      .eq('section_id', sectionId)
+      .order('order_index', { ascending: true });
+    if (flowErr) return { data: null, error: handleSupabaseError(flowErr) };
+
+    let assignmentIds: string[];
+
+    if (flowRows && flowRows.length > 0) {
+      const seen = new Set<string>();
+      assignmentIds = [];
+      for (const row of flowRows as { step_kind: string; assignment_id: string | null }[]) {
+        if (row.step_kind === 'assignment' && row.assignment_id && !seen.has(row.assignment_id)) {
+          seen.add(row.assignment_id);
+          assignmentIds.push(row.assignment_id);
+        }
+      }
+    } else {
+      const { data: assignments, error: aErr } = await supabase
+        .from('assignments')
+        .select('id')
+        .eq('syllabus_section_id', sectionId)
+        .eq('active', true);
+      if (aErr) return { data: null, error: handleSupabaseError(aErr) };
+      if (!assignments || assignments.length === 0) {
+        return { data: { total: 0, submitted: 0, graded: 0, progressPercent: 0 }, error: null };
+      }
+      assignmentIds = assignments.map((a: any) => a.id);
     }
 
-    const assignmentIds = assignments.map((a: any) => a.id);
+    if (assignmentIds.length === 0) {
+      return { data: { total: 0, submitted: 0, graded: 0, progressPercent: 0 }, error: null };
+    }
     const { data: submissions, error: sErr } = await supabase
       .from('submissions')
       .select('id, status, assignment_id')
@@ -568,7 +600,7 @@ export const getSectionAssignmentProgress = async (
 
     const submitted = (submissions || []).filter((s: any) => s.status === 'submitted' || s.status === 'completed').length;
     const graded = (submissions || []).filter((s: any) => s.status === 'completed').length;
-    const total = assignments.length;
+    const total = assignmentIds.length;
 
     return {
       data: {
@@ -581,5 +613,37 @@ export const getSectionAssignmentProgress = async (
     };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/** Per-assignment: true if the student has any submission with status submitted or completed (matches getSectionAssignmentProgress). */
+export const getAssignmentSubmittedOrCompletedMap = async (
+  assignmentIds: string[],
+  studentId: string,
+): Promise<{ data: Record<string, boolean>; error: ApiError | null }> => {
+  try {
+    if (assignmentIds.length === 0) {
+      return { data: {}, error: null };
+    }
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('assignment_id, status')
+      .in('assignment_id', assignmentIds)
+      .eq('student_id', studentId);
+    if (error) return { data: {}, error: handleSupabaseError(error) };
+    const map: Record<string, boolean> = {};
+    assignmentIds.forEach((id) => {
+      map[id] = false;
+    });
+    (data ?? []).forEach((row: { assignment_id?: string; status?: string }) => {
+      const aid = row.assignment_id;
+      if (!aid) return;
+      if (row.status === 'submitted' || row.status === 'completed') {
+        map[aid] = true;
+      }
+    });
+    return { data: map, error: null };
+  } catch (error) {
+    return { data: {}, error: handleSupabaseError(error) };
   }
 };

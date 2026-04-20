@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 
 interface ProtectedRouteProps {
   children: ReactNode;

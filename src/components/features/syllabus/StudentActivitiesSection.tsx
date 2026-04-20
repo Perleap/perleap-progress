@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQueries } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -10,24 +9,21 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Loader2, Lock, CheckCircle2, Circle, ClipboardList, FileText, PlayCircle, ChevronDown } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   useSyllabus,
   useClassroomAssignments,
   useStudentProgress,
+  useStudentCurriculumFlowContext,
 } from '@/hooks/queries';
-import {
-  useModuleFlowStepsBulk,
-  useStudentModuleFlowProgressMap,
-} from '@/hooks/queries/useModuleFlowQueries';
-import { hasCompletedAssignmentSubmission } from '@/services/moduleFlowService';
+import { useModuleFlowStepsBulk } from '@/hooks/queries/useModuleFlowQueries';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  type AssignmentRow,
 } from '@/lib/moduleFlow';
 import {
-  type StudentFlowProgressContext,
   persistedStepVisualState,
   computedStepVisualState,
   firstIncompletePersistedIndex,
@@ -66,59 +62,15 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
 
   const resourceMap = syllabus?.section_resources ?? {};
 
-  const allStepIds = useMemo(() => {
-    const ids: string[] = [];
-    sectionIds.forEach((sid) => {
-      const persisted = flowBulk[sid] ?? [];
-      const sectionResources = resourceMap[sid] ?? [];
-      getOrderedActivityCenterFlowSteps(persisted, sectionResources).forEach((s) => ids.push(s.id));
-    });
-    return ids;
-  }, [flowBulk, sectionIds, resourceMap]);
+  const assignRows = assignments as AssignmentRow[];
 
-  const { data: progressByStep = {} } = useStudentModuleFlowProgressMap(user?.id, allStepIds);
-
-  const assignmentIdsInFlow = useMemo(() => {
-    const set = new Set<string>();
-    const assignRows = assignments as { id: string; syllabus_section_id?: string | null; due_at?: string | null }[];
-    sectionIds.forEach((sid) => {
-      const persisted = flowBulk[sid] ?? [];
-      const sectionResources = resourceMap[sid] ?? [];
-      getOrderedActivityCenterFlowSteps(persisted, sectionResources).forEach((step) => {
-        if (step.step_kind === 'assignment' && step.assignment_id) set.add(step.assignment_id);
-      });
-      computeDefaultModuleFlow(sid, sectionResources, assignRows).forEach((c) => {
-        if (c.kind === 'assignment') set.add(c.assignment_id);
-      });
-    });
-    return [...set];
-  }, [flowBulk, sectionIds, resourceMap, assignments]);
-
-  const assignmentDoneQueries = useQueries({
-    queries: assignmentIdsInFlow.map((aid) => ({
-      queryKey: ['assignment-flow-complete', aid, user?.id],
-      queryFn: async () => {
-        const { completed, error } = await hasCompletedAssignmentSubmission(aid, user!.id);
-        if (error) throw error;
-        return { aid, completed };
-      },
-      enabled: !!user?.id && !!aid,
-    })),
+  const { flowCtx } = useStudentCurriculumFlowContext({
+    userId: user?.id,
+    sectionIds,
+    flowBulk,
+    resourceMap,
+    assignments: assignRows,
   });
-
-  const assignmentDoneMap = useMemo(() => {
-    const m: Record<string, boolean> = {};
-    assignmentDoneQueries.forEach((q, i) => {
-      const aid = assignmentIdsInFlow[i];
-      if (aid && q.data) m[aid] = q.data.completed;
-    });
-    return m;
-  }, [assignmentDoneQueries, assignmentIdsInFlow]);
-
-  const flowCtx: StudentFlowProgressContext = useMemo(
-    () => ({ progressByStep, assignmentDoneMap }),
-    [progressByStep, assignmentDoneMap],
-  );
 
   const [moduleOpenById, setModuleOpenById] = useState<Record<string, boolean>>({});
 
@@ -189,11 +141,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
         const persisted = flowBulk[section.id] ?? [];
         const sectionResources = resourceMap[section.id] ?? [];
         const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, sectionResources);
-        const computed = computeDefaultModuleFlow(
-          section.id,
-          sectionResources,
-          assignments as { id: string; syllabus_section_id?: string | null; due_at?: string | null }[],
-        );
+        const computed = computeDefaultModuleFlow(section.id, sectionResources, assignRows);
 
         const usePersisted = orderedPersisted.length > 0;
         const steps = usePersisted ? orderedPersisted : null;
@@ -280,9 +228,9 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                       const isNextUp = nextIdx === index && visual === 'available';
                       const statusLabel = t(`studentClassroom.activities.stepA11y.${visual}`);
 
-                      if (step.step_kind === 'resource' && step.section_resource_id) {
+                      if (step.step_kind === 'resource' && step.activity_list_id) {
                         const label =
-                          resourceMap[section.id]?.find((r) => r.id === step.section_resource_id)?.title ??
+                          resourceMap[section.id]?.find((r) => r.id === step.activity_list_id)?.title ??
                           t('studentClassroom.activities.activity');
                         return (
                           <li key={step.id} className="text-sm">
@@ -303,7 +251,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                 <span className="text-muted-foreground">{label}</span>
                               ) : (
                                 <Link
-                                  to={`/student/classroom/${classroomId}/activity/${step.section_resource_id}`}
+                                  to={`/student/classroom/${classroomId}/activity/${step.activity_list_id}`}
                                   state={{ returnClassroomSection: 'curriculum' }}
                                   className="text-primary font-medium hover:underline inline-flex items-center gap-1"
                                 >
@@ -369,10 +317,10 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                         const statusLabel = t(`studentClassroom.activities.stepA11y.${visual}`);
 
                         if (c.kind === 'resource') {
-                          const r = resourceMap[section.id]?.find((x) => x.id === c.section_resource_id);
+                          const r = resourceMap[section.id]?.find((x) => x.id === c.activity_list_id);
                           const label = r?.title ?? t('studentClassroom.activities.activity');
                           return (
-                            <li key={`r-${c.section_resource_id}-${idx}`} className="text-sm">
+                            <li key={`r-${c.activity_list_id}-${idx}`} className="text-sm">
                               <div
                                 className={cn('inline-flex flex-wrap items-center gap-2', isRTL && 'flex-row-reverse')}
                                 aria-label={`${label}. ${statusLabel}`}
@@ -390,7 +338,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                   <span className="text-muted-foreground">{label}</span>
                                 ) : (
                                   <Link
-                                    to={`/student/classroom/${classroomId}/activity/${c.section_resource_id}`}
+                                    to={`/student/classroom/${classroomId}/activity/${c.activity_list_id}`}
                                     state={{ returnClassroomSection: 'curriculum' }}
                                     className="text-primary font-medium hover:underline inline-flex items-center gap-1"
                                   >

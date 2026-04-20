@@ -312,7 +312,7 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- 5b) Section resources (no Storage upload; links only)
-  INSERT INTO public.section_resources (id, section_id, title, resource_type, url, order_index)
+  INSERT INTO public.activity_list (id, section_id, title, resource_type, url, order_index)
   VALUES
     (v_res_a, v_sec_1, 'Meadows — introduction (example link)', 'link', 'https://example.org/thinking-in-systems', 0),
     (v_res_b, v_sec_2, 'IPCC FAQ (example)', 'link', 'https://example.org/ipcc-faq', 0)

@@ -1,6 +1,6 @@
 /**
  * Builds deterministic, size-bounded text for assignment-scoped AI (chat, feedback, etc.).
- * Module activities come from assignment_module_activities + section_resources.
+ * Module activities come from assignment_module_activities + activity_list.
  */
 
 export type ModuleActivityRow = {
@@ -16,7 +16,7 @@ export type ModuleActivityRow = {
 };
 
 export type AssignmentModuleLinkRow = {
-  section_resource_id: string;
+  activity_list_id: string;
   order_index: number;
   include_in_ai_context: boolean;
 };
@@ -77,7 +77,7 @@ export function buildModuleActivityContextBundle(
   let total = 0;
 
   for (const link of ordered) {
-    const r = resourcesById.get(link.section_resource_id);
+    const r = resourcesById.get(link.activity_list_id);
     if (!r) continue;
     if (r.status === 'draft') continue;
 

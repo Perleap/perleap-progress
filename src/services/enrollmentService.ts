@@ -34,6 +34,7 @@ export const enrollInClassroom = async (
       .from('classrooms')
       .select('id, name, teacher_id')
       .eq('invite_code', trimmedCode)
+      .eq('active', true)
       .maybeSingle();
 
     if (classroomError) {
@@ -56,6 +57,7 @@ export const enrollInClassroom = async (
       .select('id')
       .eq('classroom_id', classroom.id)
       .eq('student_id', studentId)
+      .eq('active', true)
       .maybeSingle();
 
     if (existingEnrollment) {
@@ -74,7 +76,11 @@ export const enrollInClassroom = async (
     if (enrollError) {
       const code = (enrollError as { code?: string }).code;
       const msg = (enrollError as { message?: string }).message ?? '';
-      if (code === '23505' || msg.includes('enrollments_classroom_id_student_id_key')) {
+      if (
+        code === '23505' ||
+        msg.includes('enrollments_classroom_id_student_id_key') ||
+        msg.includes('enrollments_active_classroom_student_unique')
+      ) {
         return {
           success: false,
           error: 'You are already enrolled in this classroom',
@@ -141,11 +147,13 @@ export const unenrollFromClassroom = async (
   studentId: string
 ): Promise<boolean> => {
   try {
+    const deletedAt = new Date().toISOString();
     const { error } = await supabase
       .from('enrollments')
-      .delete()
+      .update({ active: false, deleted_at: deletedAt })
       .eq('classroom_id', classroomId)
-      .eq('student_id', studentId);
+      .eq('student_id', studentId)
+      .eq('active', true);
 
     return !error;
   } catch (error) {
@@ -166,6 +174,7 @@ export const getEnrolledStudents = async (classroomId: string) => {
       .from('enrollments')
       .select('student_id, created_at, student_profiles(user_id, full_name, avatar_url)')
       .eq('classroom_id', classroomId)
+      .eq('active', true)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -191,6 +200,7 @@ export const isEnrolled = async (classroomId: string, studentId: string): Promis
       .select('id')
       .eq('classroom_id', classroomId)
       .eq('student_id', studentId)
+      .eq('active', true)
       .maybeSingle();
 
     return !error && data !== null;

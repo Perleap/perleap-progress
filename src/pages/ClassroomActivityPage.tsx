@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, ChevronRight, Lock } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { DashboardLayout } from '@/components/layouts';
+import { ClassroomLayout } from '@/components/layouts';
+import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 import { lessonActivityColumnClass } from '@/components/features/syllabus/content-blocks';
 import { LessonResourceBody, ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import {
@@ -48,7 +49,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
 
   const { data: flowSteps = [] } = useModuleFlowSteps(resource?.section_id);
   const flowStepForResource = useMemo(
-    () => flowSteps.find((s) => s.step_kind === 'resource' && s.section_resource_id === resource?.id),
+    () => flowSteps.find((s) => s.step_kind === 'resource' && s.activity_list_id === resource?.id),
     [flowSteps, resource?.id],
   );
 
@@ -82,10 +83,34 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
 
   const markComplete = useMarkFlowStepComplete();
 
+  const navSections = useMemo(() => {
+    if (role === 'teacher') return getTeacherClassroomNavSections(t);
+    return getStudentClassroomNavSections(t, syllabus?.status === 'published');
+  }, [role, syllabus?.status, t]);
+
+  const allowedNavIds = useMemo(() => new Set(navSections.map((s) => s.id)), [navSections]);
+
+  const activeClassroomNavSection = useMemo(() => {
+    const raw = returnClassroomSection ?? 'curriculum';
+    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (normalized && allowedNavIds.has(normalized)) return normalized;
+    return 'overview';
+  }, [returnClassroomSection, allowedNavIds]);
+
+  const handleClassroomNav = useCallback(
+    (section: string) => {
+      if (!classroomId) return;
+      const path =
+        role === 'teacher' ? `/teacher/classroom/${classroomId}` : `/student/classroom/${classroomId}`;
+      navigate(path, { state: { activeSection: section } });
+    },
+    [classroomId, navigate, role],
+  );
+
   const goToNextFlowStep = useCallback(() => {
     if (!nextFlowStep || !classroomId || role !== 'student') return;
-    if (nextFlowStep.step_kind === 'resource' && nextFlowStep.section_resource_id) {
-      navigate(`/student/classroom/${classroomId}/activity/${nextFlowStep.section_resource_id}`, {
+    if (nextFlowStep.step_kind === 'resource' && nextFlowStep.activity_list_id) {
+      navigate(`/student/classroom/${classroomId}/activity/${nextFlowStep.activity_list_id}`, {
         state: { returnClassroomSection: 'curriculum' },
       });
     } else if (nextFlowStep.step_kind === 'assignment' && nextFlowStep.assignment_id) {
@@ -160,7 +185,13 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
 
   if (sequentialBlocked) {
     return (
-      <DashboardLayout>
+      <ClassroomLayout
+        classroomName={classroom?.name}
+        classroomSubject={classroom?.subject}
+        activeSection={activeClassroomNavSection}
+        onSectionChange={handleClassroomNav}
+        customSections={navSections}
+      >
         <div
           className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center"
           dir={isRTL ? 'rtl' : 'ltr'}
@@ -179,7 +210,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             {t('activityPage.backToActivities')}
           </Button>
         </div>
-      </DashboardLayout>
+      </ClassroomLayout>
     );
   }
 
@@ -202,14 +233,6 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             {t('classroomDetail.activities.statusDraft')}
           </Badge>
         ) : null}
-        {canMarkComplete && isStepCompleted ? (
-          <Badge
-            variant="outline"
-            className="rounded-full border-emerald-500/35 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
-          >
-            {t('activityPage.completed')}
-          </Badge>
-        ) : null}
       </div>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{resource.title}</h1>
       {resource.summary ? (
@@ -219,7 +242,13 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   );
 
   return (
-    <DashboardLayout>
+    <ClassroomLayout
+      classroomName={classroom?.name}
+      classroomSubject={classroom?.subject}
+      activeSection={activeClassroomNavSection}
+      onSectionChange={handleClassroomNav}
+      customSections={navSections}
+    >
       <div
         className="flex w-full min-h-0 flex-1 flex-col gap-6 pb-8"
         dir={isRTL ? 'rtl' : 'ltr'}
@@ -298,6 +327,6 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
           </div>
         ) : null}
       </div>
-    </DashboardLayout>
+    </ClassroomLayout>
   );
 }

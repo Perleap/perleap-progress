@@ -12,6 +12,11 @@ import {
   getStudentName,
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
+import {
+  domainForSkillComponent,
+  formatHardSkillPairsForPrompt,
+  parseHardSkillsFromDb,
+} from '../_shared/hardSkillsFormat.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,22 +57,14 @@ serve(async (req) => {
     const classroomId = assignmentData?.classroom_id;
     const teacherId = (assignmentData as any)?.classrooms?.teacher_id;
 
-    let hardSkillsList: string[] = [];
-    try {
-      if (assignmentData?.hard_skills) {
-        hardSkillsList =
-          typeof assignmentData.hard_skills === 'string'
-            ? JSON.parse(assignmentData.hard_skills)
-            : assignmentData.hard_skills;
-      }
-    } catch (e) {
-      if (typeof assignmentData?.hard_skills === 'string') {
-        hardSkillsList = assignmentData.hard_skills
-          .split(',')
-          .map((s: string) => s.trim())
-          .filter(Boolean);
-      }
-    }
+    const skillPairs = parseHardSkillsFromDb(
+      assignmentData?.hard_skills,
+      assignmentData?.hard_skill_domain,
+    );
+    const skillsAssessText = formatHardSkillPairsForPrompt(
+      skillPairs,
+      assignmentData?.hard_skill_domain,
+    );
 
     const langLabel = language === 'he' ? 'Hebrew' : 'English';
 
@@ -104,8 +101,8 @@ Rules:
 
     const hardSkillsPrompt = `Based on a teacher's review of a student's work, assess specific hard skills.
 
-Domain: ${assignmentData?.hard_skill_domain}
-Skills to assess: ${hardSkillsList.join(', ')}
+Primary subject area (if single): ${assignmentData?.hard_skill_domain || 'N/A'}
+Skills to assess (with subject area when listed): ${skillsAssessText || '(none specified)'}
 
 Provide your response in the following JSON format:
 {
@@ -136,7 +133,7 @@ Rules:
         false,
         'json_object',
       ),
-      hardSkillsList.length > 0
+      skillPairs.length > 0
         ? createChatCompletion(
             hardSkillsPrompt,
             [{ role: 'user', content: `Teacher's feedback:\n\n${teacherFeedback}` }],
@@ -181,7 +178,11 @@ Rules:
                 submission_id: submissionId,
                 assignment_id: assignmentId,
                 student_id: studentId,
-                domain: assignmentData?.hard_skill_domain,
+                domain: domainForSkillComponent(
+                  skillPairs,
+                  a.skill_component,
+                  assignmentData?.hard_skill_domain,
+                ),
                 skill_component: a.skill_component,
                 current_level_percent: Math.min(100, Math.max(0, a.current_level_percent)),
                 proficiency_description: a.proficiency_description,

@@ -26,8 +26,8 @@ export function filterActivityCenterModuleFlowSteps(
 ): ModuleFlowStep[] {
   return steps.filter((step) => {
     if (step.step_kind === 'assignment') return true;
-    if (step.step_kind === 'resource' && step.section_resource_id) {
-      const r = sectionResources.find((x) => x.id === step.section_resource_id);
+    if (step.step_kind === 'resource' && step.activity_list_id) {
+      const r = sectionResources.find((x) => x.id === step.activity_list_id);
       return r ? isActivityCenterResource(r) : false;
     }
     return false;
@@ -55,7 +55,7 @@ export function getNextActivityCenterStep(
 }
 
 export type ComputedFlowItem =
-  | { kind: 'resource'; section_resource_id: string; order_index: number }
+  | { kind: 'resource'; activity_list_id: string; order_index: number }
   | { kind: 'assignment'; assignment_id: string; order_index: number };
 
 /** Assignment fields used for module flow ordering and merge. */
@@ -88,11 +88,30 @@ export function appendMissingSectionLinkedAssignments(
   return [...base, ...missing.map((a) => ({ kind: 'assignment' as const, assignmentId: a.id }))];
 }
 
+/** Append activity-center resources (lesson/text/video) for the section that are missing from `base`, by outline order. */
+export function appendMissingActivityCenterResources(
+  base: ModuleFlowLocalStep[],
+  sectionId: string,
+  resources: SectionResource[],
+): ModuleFlowLocalStep[] {
+  const present = new Set(
+    base
+      .filter((s): s is { kind: 'resource'; resourceId: string } => s.kind === 'resource')
+      .map((s) => s.resourceId),
+  );
+  const missing = resources
+    .filter((r) => r.section_id === sectionId && isActivityCenterResource(r) && !present.has(r.id))
+    .slice()
+    .sort((a, b) => a.order_index - b.order_index);
+  if (missing.length === 0) return base;
+  return [...base, ...missing.map((r) => ({ kind: 'resource' as const, resourceId: r.id }))];
+}
+
 /** Map computed default flow to local step shape (no assignment append). */
 export function computedFlowItemsToLocalSteps(items: ComputedFlowItem[]): ModuleFlowLocalStep[] {
   return items.map((c) =>
     c.kind === 'resource'
-      ? { kind: 'resource', resourceId: c.section_resource_id }
+      ? { kind: 'resource', resourceId: c.activity_list_id }
       : { kind: 'assignment', assignmentId: c.assignment_id },
   );
 }
@@ -115,8 +134,8 @@ export function resolveDisplayedModuleFlowBase(
     const ordered = [...filtered].sort((a, b) => a.order_index - b.order_index);
     if (ordered.length > 0) {
       base = ordered.map((s) =>
-        s.step_kind === 'resource' && s.section_resource_id
-          ? { kind: 'resource', resourceId: s.section_resource_id }
+        s.step_kind === 'resource' && s.activity_list_id
+          ? { kind: 'resource', resourceId: s.activity_list_id }
           : { kind: 'assignment', assignmentId: s.assignment_id! },
       );
     } else {
@@ -132,8 +151,24 @@ export function resolveDisplayedModuleFlowBase(
 /**
  * Steady-state module flow for display (Activities page) and as the server baseline in ModuleFlowEditor.
  * Matches persisted activity-center steps when present (ordered by order_index), else default computation,
- * then appends section-linked assignments missing from the list.
+ * then appends missing activity-center resources and section-linked assignments (same idea as outline sync).
  */
+/** Drop flow steps whose resource or assignment no longer exists (deleted rows, stale persisted steps). */
+function filterOrphanModuleFlowLocalSteps(
+  steps: ModuleFlowLocalStep[],
+  resources: SectionResource[],
+  allAssignments: AssignmentRow[],
+): ModuleFlowLocalStep[] {
+  const assignmentIds = new Set(allAssignments.map((a) => a.id));
+  return steps.filter((s) => {
+    if (s.kind === 'resource') {
+      const r = resources.find((x) => x.id === s.resourceId);
+      return r ? isActivityCenterResource(r) : false;
+    }
+    return assignmentIds.has(s.assignmentId);
+  });
+}
+
 export function resolveDisplayedModuleFlow(
   sectionId: string,
   resources: SectionResource[],
@@ -142,7 +177,9 @@ export function resolveDisplayedModuleFlow(
 ): ModuleFlowLocalStep[] {
   const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps);
   const sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
-  return appendMissingSectionLinkedAssignments(base, sectionAssignments);
+  let merged = appendMissingActivityCenterResources(base, sectionId, resources);
+  merged = appendMissingSectionLinkedAssignments(merged, sectionAssignments);
+  return filterOrphanModuleFlowLocalSteps(merged, resources, assignments);
 }
 
 export function moduleFlowLocalStepsEqual(a: ModuleFlowLocalStep[], b: ModuleFlowLocalStep[]): boolean {
@@ -178,7 +215,7 @@ export function computeDefaultModuleFlow(
   let i = 0;
   const out: ComputedFlowItem[] = [];
   for (const r of res) {
-    out.push({ kind: 'resource', section_resource_id: r.id, order_index: i++ });
+    out.push({ kind: 'resource', activity_list_id: r.id, order_index: i++ });
   }
   for (const a of assigns) {
     out.push({ kind: 'assignment', assignment_id: a.id, order_index: i++ });
@@ -191,10 +228,10 @@ export function computeDefaultModuleFlow(
  */
 export function flowItemMatchesStep(
   item: ComputedFlowItem,
-  step: { step_kind: ModuleFlowStepKind; section_resource_id: string | null; assignment_id: string | null },
+  step: { step_kind: ModuleFlowStepKind; activity_list_id: string | null; assignment_id: string | null },
 ): boolean {
   if (item.kind === 'resource' && step.step_kind === 'resource') {
-    return step.section_resource_id === item.section_resource_id;
+    return step.activity_list_id === item.activity_list_id;
   }
   if (item.kind === 'assignment' && step.step_kind === 'assignment') {
     return step.assignment_id === item.assignment_id;
@@ -214,16 +251,44 @@ export function moduleFlowLocalStepsToFlowInput(localSteps: ModuleFlowLocalStep[
       ? {
           order_index,
           step_kind: 'resource',
-          section_resource_id: s.resourceId,
+          activity_list_id: s.resourceId,
           assignment_id: null,
         }
       : {
           order_index,
           step_kind: 'assignment',
-          section_resource_id: null,
+          activity_list_id: null,
           assignment_id: s.assignmentId,
         },
   );
+}
+
+/**
+ * Student outline / linked-assignments lists: when the teacher saved `module_flow_steps`, only assignments
+ * that appear as assignment steps should show — not every row with `syllabus_section_id`.
+ * If there is no saved flow (`persistedFlowSteps` empty), keep legacy behavior (all section-linked assignments).
+ * Order matches module flow `order_index`.
+ */
+export function linkedAssignmentsVisibleInModuleFlow<T extends { id: string }>(
+  sectionLinked: T[],
+  persistedFlowSteps: ModuleFlowStep[] | undefined | null,
+): T[] {
+  if (!persistedFlowSteps || persistedFlowSteps.length === 0) {
+    return sectionLinked;
+  }
+  const orderedIds: string[] = [];
+  const seen = new Set<string>();
+  [...persistedFlowSteps]
+    .sort((a, b) => a.order_index - b.order_index)
+    .forEach((s) => {
+      if (s.step_kind === 'assignment' && s.assignment_id && !seen.has(s.assignment_id)) {
+        seen.add(s.assignment_id);
+        orderedIds.push(s.assignment_id);
+      }
+    });
+  if (orderedIds.length === 0) return [];
+  const byId = new Map(sectionLinked.map((a) => [a.id, a]));
+  return orderedIds.map((id) => byId.get(id)).filter((a): a is T => a !== undefined);
 }
 
 /** Same ordering the curriculum tab and flow editor use, ready for `replaceModuleFlowSteps`. */

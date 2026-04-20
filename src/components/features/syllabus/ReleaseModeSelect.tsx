@@ -15,7 +15,6 @@ const RELEASE_MODES: ReleaseMode[] = [
   'sequential',
   'date_based',
   'manual',
-  'prerequisites',
 ];
 
 interface ReleaseModeSelectProps {

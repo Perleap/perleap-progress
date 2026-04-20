@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 import { assignmentKeys } from '@/hooks/queries';
 import type { AssignmentCompletionTone } from '@/types/submission';

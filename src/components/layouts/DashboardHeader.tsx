@@ -6,7 +6,7 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 

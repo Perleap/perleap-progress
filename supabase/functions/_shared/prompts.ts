@@ -4,6 +4,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { parseHardSkillsFromDb } from './hardSkillsFormat.ts';
 
 // In-memory cache for prompts (edge function lifecycle)
 const promptCache = new Map<string, { template: string; timestamp: number }>();
@@ -295,24 +296,26 @@ function formatHardSkillsContext(assignmentDetails: any): string {
     return 'No specific hard skills defined for this assignment.';
   }
 
-  const parts = [];
-  
-  if (assignmentDetails.hard_skill_domain) {
+  let parsedList: unknown = assignmentDetails.hard_skills;
+  if (typeof parsedList === 'string') {
+    try {
+      parsedList = JSON.parse(parsedList);
+    } catch {
+      parsedList = [];
+    }
+  }
+  const pairs = parseHardSkillsFromDb(parsedList, assignmentDetails.hard_skill_domain);
+
+  const parts: string[] = [];
+  if (assignmentDetails.hard_skill_domain?.trim()) {
     parts.push(`Domain/Area: ${assignmentDetails.hard_skill_domain}`);
   }
-  
-  if (assignmentDetails.hard_skills) {
-    try {
-      const skills = JSON.parse(assignmentDetails.hard_skills);
-      if (Array.isArray(skills) && skills.length > 0) {
-        parts.push(`Skills to Develop:\n- ${skills.join('\n- ')}`);
-      }
-    } catch (e) {
-      // If parsing fails, use as-is if it's a string
-      if (typeof assignmentDetails.hard_skills === 'string' && assignmentDetails.hard_skills.length > 0) {
-        parts.push(`Skills to Develop: ${assignmentDetails.hard_skills}`);
-      }
-    }
+
+  if (pairs.length > 0) {
+    const bullets = pairs.map((p) =>
+      p.domain.trim() ? `- ${p.domain} — ${p.skill}` : `- ${p.skill}`,
+    );
+    parts.push(`Skills to Develop:\n${bullets.join('\n')}`);
   }
 
   return parts.length > 0 ? parts.join('\n\n') : 'Focus on helping the student understand the assignment material.';

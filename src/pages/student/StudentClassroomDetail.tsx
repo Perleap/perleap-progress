@@ -1,11 +1,3 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Calendar,
   Clock,
@@ -18,18 +10,37 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { formatCourseDuration } from '@/lib/dateUtils';
-import { ClassroomLayout } from '@/components/layouts';
-import { useClassroom, useClassroomAssignments, useTeacherProfile, useSyllabus, useStudentProgress } from '@/hooks/queries';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { useParams, useLocation } from 'react-router-dom';
+import type { ClassroomLocationState } from '@/types/navigation';
+import type { StudentProgressStatus } from '@/types/syllabus';
+import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
 import { ModuleSyllabusAccordion } from '@/components/features/syllabus/ModuleSyllabusAccordion';
+import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
 import { StudentActivitiesSection } from '@/components/features/syllabus/StudentActivitiesSection';
 import { StudentPoliciesView } from '@/components/features/syllabus/StudentPoliciesView';
-import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
-import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
+import { ClassroomLayout } from '@/components/layouts';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import {
+  useClassroom,
+  useClassroomAssignments,
+  useTeacherProfile,
+  useSyllabus,
+  useStudentProgress,
+} from '@/hooks/queries';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
+import { useModuleFlowStepsBulk, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
+import { linkedAssignmentsVisibleInModuleFlow } from '@/lib/moduleFlow';
+import { formatCourseDuration } from '@/lib/dateUtils';
 import { getStudyCtaTarget } from '@/lib/studyCtaTarget';
-import type { StudentProgressStatus } from '@/types/syllabus';
-import type { ClassroomLocationState } from '@/types/navigation';
+import { cn } from '@/lib/utils';
 
 const STUDENT_SECTION_IDS = new Set(['overview', 'outline', 'curriculum']);
 
@@ -47,20 +58,24 @@ interface Classroom {
 
 const StudentClassroomDetail = () => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const location = useLocation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
   const { data: rawClassroom } = useClassroom(id);
   const { data: rawAssignments = [] } = useClassroomAssignments(id);
-  
+
   const teacherId = rawClassroom?.teacher_id;
-  const { data: teacher } = useTeacherProfile(teacherId);
+  const { data: teacher, isLoading: teacherLoading, isError: teacherError } = useTeacherProfile(teacherId);
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(id);
-  const { data: studentProgressData } = useStudentProgress(
-    syllabus?.id,
-    user?.id
+  const { data: studentProgressData } = useStudentProgress(syllabus?.id, user?.id);
+
+  const syllabusSectionIds = useMemo(
+    () => (syllabus?.sections ? [...syllabus.sections].map((s) => s.id) : []),
+    [syllabus?.sections],
   );
+  const { data: moduleFlowBulk = {} } = useModuleFlowStepsBulk(syllabusSectionIds);
 
   const studentProgressMap = useMemo(() => {
     const map: Record<string, StudentProgressStatus> = {};
@@ -73,22 +88,41 @@ const StudentClassroomDetail = () => {
   }, [studentProgressData]);
 
   const linkedAssignmentsMap = useMemo(() => {
-    const map: Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>> = {};
+    const map: Record<
+      string,
+      Array<{ id: string; title: string; type: string; due_at: string | null }>
+    > = {};
     (rawAssignments as any[]).forEach((a: any) => {
       if (a.syllabus_section_id) {
         if (!map[a.syllabus_section_id]) map[a.syllabus_section_id] = [];
-        map[a.syllabus_section_id].push({ id: a.id, title: a.title, type: a.type, due_at: a.due_at });
+        map[a.syllabus_section_id].push({
+          id: a.id,
+          title: a.title,
+          type: a.type,
+          due_at: a.due_at,
+        });
       }
     });
+    for (const sectionId of Object.keys(map)) {
+      const flow = moduleFlowBulk[sectionId];
+      map[sectionId] = linkedAssignmentsVisibleInModuleFlow(map[sectionId], flow);
+    }
     return map;
-  }, [rawAssignments]);
+  }, [rawAssignments, moduleFlowBulk]);
 
   const [activeSection, setActiveSection] = useState(() => {
     const raw = (location.state as ClassroomLocationState | null)?.activeSection;
-    const normalized =
-      raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
     return normalized && STUDENT_SECTION_IDS.has(normalized) ? normalized : 'overview';
   });
+
+  /** Course Outline uses embedded section_resources from getSyllabusByClassroom; refetch when tab activates so it matches Curriculum after teacher edits. */
+  useEffect(() => {
+    if (!id || activeSection !== 'outline') return;
+    void queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(id) });
+    void queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
+    void queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(id) });
+  }, [activeSection, id, queryClient]);
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
   const [sectionVisitStack, setSectionVisitStack] = useState<string[]>([]);
   const openSectionIdRef = useRef<string | null>(null);
@@ -123,67 +157,96 @@ const StudentClassroomDetail = () => {
     });
   }, []);
 
-  const studyCta = useMemo(() => {
-    if (!syllabus || syllabus.status !== 'published') return null;
-    return getStudyCtaTarget(
-      syllabus.sections,
-      syllabus.release_mode || 'all_at_once',
-      studentProgressMap,
-    );
-  }, [syllabus, studentProgressMap]);
+  /** About CTA: open outline and deep-link to first module (syllabus start). */
+  const goToStudyOutlineFromAbout = useCallback(
+    (previousSection: string) => {
+      if (!syllabus || syllabus.status !== 'published') {
+        sectionBackReturnsToOverviewRef.current = false;
+        setActiveSection('overview');
+        return;
+      }
+      const { targetSectionId } = getStudyCtaTarget(
+        syllabus.sections,
+        syllabus.release_mode || 'all_at_once',
+        studentProgressMap,
+        { aboutPrimaryCta: true }
+      );
+      sectionBackReturnsToOverviewRef.current = previousSection === 'overview';
+      setActiveSection('outline');
+      if (targetSectionId) goToSection(targetSectionId);
+    },
+    [syllabus, studentProgressMap, goToSection]
+  );
 
   const handleStudyCtaClick = useCallback(() => {
-    if (!syllabus || syllabus.status !== 'published') {
+    goToStudyOutlineFromAbout(activeSection);
+  }, [goToStudyOutlineFromAbout, activeSection]);
+
+  const handleClassroomSectionChange = useCallback((section: string) => {
+    if (section === 'outline') {
       sectionBackReturnsToOverviewRef.current = false;
-      setActiveSection('overview');
+      openSectionIdRef.current = null;
+      setOpenSectionId(null);
+      setSectionVisitStack([]);
+      setActiveSection('outline');
       return;
     }
-    const { targetSectionId } = getStudyCtaTarget(
-      syllabus.sections,
-      syllabus.release_mode || 'all_at_once',
-      studentProgressMap,
-    );
-    sectionBackReturnsToOverviewRef.current = activeSection === 'overview';
-    setActiveSection('outline');
-    if (targetSectionId) goToSection(targetSectionId);
-  }, [syllabus, studentProgressMap, goToSection, activeSection]);
+    setActiveSection(section);
+  }, []);
 
   const classroom = rawClassroom as unknown as Classroom | null;
 
-  if (!classroom) return null;
-
   const hasPublishedSyllabus = syllabus && syllabus.status === 'published';
 
-  const studyCtaLabel = studyCta
-    ? t(`studentClassroom.studyCta.${studyCta.variant}`)
-    : t('studentClassroom.studyCta.viewAssignments');
+  const studyCtaLabelStart = t('studentClassroom.studyCta.start');
+  const studyCtaLabelView = t('studentClassroom.studyCta.viewAssignments');
 
-  // Define classroom sections with translated titles
-  const classroomSections = [
-    { id: 'overview', title: t('studentClassroom.about'), icon: Info },
-    ...(hasPublishedSyllabus ? [{ id: 'outline', title: t('syllabus.courseOutline'), icon: Map }] : []),
-    ...(hasPublishedSyllabus
-      ? [{ id: 'curriculum', title: t('classroomDetail.curriculum.tabTitle'), icon: LayoutList }]
-      : []),
-  ];
+  const aboutPrimaryButtonLabel = hasPublishedSyllabus ? studyCtaLabelStart : studyCtaLabelView;
+
+  /** While syllabus is loading we keep 3 nav slots (outline/curriculum disabled) so the sidebar does not jump 1→3 when data arrives. */
+  const showSyllabusNavSlots = syllabusLoading || hasPublishedSyllabus;
+
+  const classroomSections = useMemo(() => {
+    const overview = { id: 'overview' as const, title: t('studentClassroom.about'), icon: Info };
+    if (!showSyllabusNavSlots) return [overview];
+    return [
+      overview,
+      {
+        id: 'outline' as const,
+        title: t('syllabus.courseOutline'),
+        icon: Map,
+        disabled: syllabusLoading,
+      },
+      {
+        id: 'curriculum' as const,
+        title: t('classroomDetail.curriculum.tabTitle'),
+        icon: LayoutList,
+        disabled: syllabusLoading,
+      },
+    ];
+  }, [t, syllabusLoading, showSyllabusNavSlots]);
+
+  if (!classroom) return null;
 
   return (
     <ClassroomLayout
       classroomName={classroom.name}
       classroomSubject={classroom.subject}
       activeSection={activeSection}
-      onSectionChange={setActiveSection}
+      onSectionChange={handleClassroomSectionChange}
       customSections={classroomSections}
     >
       <div className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Overview Section */}
         {activeSection === 'overview' && (
           <div className="space-y-6">
-            <h2 className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+            <h2
+              className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('studentClassroom.about')}
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-6 md:items-stretch">
+            <div className="grid md:grid-cols-3 gap-6 md:items-start">
               {/* Main Info Card */}
               <Card
                 className="md:col-span-2 flex min-h-0 flex-col border border-border shadow-sm rounded-xl bg-card overflow-hidden pt-2 pb-6 h-full"
@@ -197,7 +260,9 @@ const StudentClassroomDetail = () => {
                 <CardContent className="flex flex-1 flex-col pt-6">
                   {classroom.resources && (
                     <div className="min-w-0 shrink-0">
-                      <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <h3
+                        className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                      >
                         {t('classroomDetail.overview.about')}
                       </h3>
                       <div
@@ -210,28 +275,56 @@ const StudentClassroomDetail = () => {
                   <div
                     className={cn(
                       'mt-auto flex w-full justify-center',
-                      classroom.resources && 'border-t border-border/60 pt-6',
+                      classroom.resources && 'border-t border-border/60 pt-6'
                     )}
                   >
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="min-h-[4.5rem] gap-3 px-10 py-6 text-xl [&_svg]:!size-7"
-                      onClick={handleStudyCtaClick}
-                    >
-                      <span>{studyCtaLabel}</span>
-                      <ArrowRight className={cn('shrink-0', isRTL && 'rotate-180')} />
-                    </Button>
+                    {syllabusLoading ? (
+                      <div
+                        className="h-[4.5rem] w-full max-w-md rounded-xl bg-muted/70 animate-pulse"
+                        aria-hidden
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        size="lg"
+                        className="min-h-[4.5rem] gap-3 px-10 py-6 text-xl [&_svg]:!size-7"
+                        onClick={handleStudyCtaClick}
+                      >
+                        <span className="inline-grid min-w-0 place-items-center">
+                          <span
+                            className="col-start-1 row-start-1 invisible whitespace-nowrap pointer-events-none select-none"
+                            aria-hidden
+                          >
+                            {studyCtaLabelStart}
+                          </span>
+                          <span
+                            className="col-start-1 row-start-1 invisible whitespace-nowrap pointer-events-none select-none"
+                            aria-hidden
+                          >
+                            {studyCtaLabelView}
+                          </span>
+                          <span className="col-start-1 row-start-1 whitespace-nowrap">
+                            {aboutPrimaryButtonLabel}
+                          </span>
+                        </span>
+                        <ArrowRight className={cn('shrink-0', isRTL && 'rotate-180')} />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Sidebar Info */}
+              {/* Sidebar Info — always reserve teacher card height so async profile load does not reflow main-column text */}
               <div className="space-y-6">
-                {teacher && (
-                  <Card className="border border-border shadow-sm rounded-xl bg-card overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                {teacherId && (
+                  <Card
+                    className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
                     <CardHeader className="pb-3 border-b border-border bg-transparent">
-                      <CardTitle className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                      >
                         <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center">
                           <Users className="h-4 w-4 text-foreground" />
                         </div>
@@ -239,28 +332,51 @@ const StudentClassroomDetail = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-4">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden">
-                          {teacher.avatar_url ? (
-                            <img src={teacher.avatar_url} alt={teacher.full_name} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-muted-foreground font-medium text-lg">
-                              {teacher.full_name?.charAt(0) || 'T'}
-                            </div>
-                          )}
+                      {teacherLoading ? (
+                        <div className="flex animate-pulse items-center gap-4" aria-hidden>
+                          <div className="h-12 w-12 shrink-0 rounded-full bg-muted border-2 border-background shadow-sm" />
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div className="h-4 w-36 max-w-full rounded bg-muted" />
+                            <div className="h-3 w-20 rounded bg-muted" />
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-base text-foreground">{teacher.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{t('common.teacher')}</p>
+                      ) : teacher ? (
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden">
+                            {teacher.avatar_url ? (
+                              <img
+                                src={teacher.avatar_url}
+                                alt={teacher.full_name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-muted-foreground font-medium text-lg">
+                                {teacher.full_name?.charAt(0) || 'T'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-base text-foreground truncate">{teacher.full_name}</p>
+                            <p className="text-xs text-muted-foreground">{t('common.teacher')}</p>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {teacherError ? t('common.error') : '—'}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 )}
 
-                <Card className="border border-border shadow-sm rounded-xl bg-card overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                <Card
+                  className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                >
                   <CardHeader className="pb-3 border-b border-border bg-transparent">
-                    <CardTitle className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <CardTitle
+                      className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center">
                         <Calendar className="h-4 w-4 text-foreground" />
                       </div>
@@ -272,8 +388,12 @@ const StudentClassroomDetail = () => {
                       <div className="flex items-start gap-3">
                         <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">{t('studentClassroom.duration')}</p>
-                          <p className="text-sm font-medium text-foreground">{formatCourseDuration(classroom.start_date, classroom.end_date)}</p>
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">
+                            {t('studentClassroom.duration')}
+                          </p>
+                          <p className="text-sm font-medium text-foreground">
+                            {formatCourseDuration(classroom.start_date, classroom.end_date)}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -282,16 +402,26 @@ const StudentClassroomDetail = () => {
                       <div className="space-y-3 pt-2 border-t border-border/50">
                         {classroom.start_date && (
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-muted-foreground font-medium">{t('studentClassroom.startDate')}</span>
-                            <Badge variant="outline" className="bg-muted/50 text-foreground border-border/50 font-mono text-[10px]">
+                            <span className="text-xs text-muted-foreground font-medium">
+                              {t('studentClassroom.startDate')}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="bg-muted/50 text-foreground border-border/50 font-mono text-[10px]"
+                            >
                               {new Date(classroom.start_date).toLocaleDateString()}
                             </Badge>
                           </div>
                         )}
                         {classroom.end_date && (
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-muted-foreground font-medium">{t('studentClassroom.endDate')}</span>
-                            <Badge variant="outline" className="bg-muted/50 text-foreground border-border/50 font-mono text-[10px]">
+                            <span className="text-xs text-muted-foreground font-medium">
+                              {t('studentClassroom.endDate')}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="bg-muted/50 text-foreground border-border/50 font-mono text-[10px]"
+                            >
                               {new Date(classroom.end_date).toLocaleDateString()}
                             </Badge>
                           </div>
@@ -302,9 +432,14 @@ const StudentClassroomDetail = () => {
                 </Card>
 
                 {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
-                  <Card className="border border-border shadow-sm rounded-xl bg-card overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <Card
+                    className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
                     <CardHeader className="pb-3 border-b border-border bg-transparent">
-                      <CardTitle className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                      >
                         <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center text-success">
                           <CheckCircle2 className="h-4 w-4" />
                         </div>
@@ -314,7 +449,10 @@ const StudentClassroomDetail = () => {
                     <CardContent className="pt-4">
                       <ul className="space-y-2">
                         {classroom.learning_outcomes.map((outcome, index) => (
-                          <li key={index} className={`flex items-start gap-2 text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <li
+                            key={index}
+                            className={`flex items-start gap-2 text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}
+                          >
                             <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/30 flex-shrink-0" />
                             <span>{outcome}</span>
                           </li>
@@ -325,9 +463,14 @@ const StudentClassroomDetail = () => {
                 )}
 
                 {classroom.key_challenges && classroom.key_challenges.length > 0 && (
-                  <Card className="border border-border shadow-sm rounded-xl bg-card overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <Card
+                    className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
                     <CardHeader className="pb-3 border-b border-border bg-transparent">
-                      <CardTitle className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <CardTitle
+                        className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                      >
                         <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center text-warning">
                           <AlertCircle className="h-4 w-4" />
                         </div>
@@ -337,7 +480,10 @@ const StudentClassroomDetail = () => {
                     <CardContent className="pt-4">
                       <ul className="space-y-2">
                         {classroom.key_challenges.map((challenge, index) => (
-                          <li key={index} className={`flex items-start gap-2 text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <li
+                            key={index}
+                            className={`flex items-start gap-2 text-sm text-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}
+                          >
                             <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground/30 flex-shrink-0" />
                             <span>{challenge}</span>
                           </li>
@@ -352,10 +498,13 @@ const StudentClassroomDetail = () => {
         )}
 
         {/* Course Outline Section (Student — read-only) */}
-        {activeSection === 'outline' && hasPublishedSyllabus && (
-          openSectionId ? (
+        {activeSection === 'outline' &&
+          hasPublishedSyllabus &&
+          (openSectionId ? (
             <SectionContentPage
               sectionId={openSectionId}
+              classroomId={id!}
+              moduleFlowSteps={moduleFlowBulk[openSectionId] ?? []}
               sections={syllabus.sections}
               sectionResources={syllabus.section_resources || {}}
               linkedAssignmentsMap={linkedAssignmentsMap}
@@ -368,10 +517,7 @@ const StudentClassroomDetail = () => {
             />
           ) : (
             <div className="space-y-6">
-              <GradingBreakdownView
-                categories={syllabus.grading_categories}
-                isRTL={isRTL}
-              />
+              <GradingBreakdownView categories={syllabus.grading_categories} isRTL={isRTL} />
 
               {syllabusLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -383,7 +529,6 @@ const StudentClassroomDetail = () => {
                   sectionResources={syllabus.section_resources}
                   linkedAssignmentsMap={linkedAssignmentsMap}
                   classroomId={id!}
-                  syllabusId={syllabus.id}
                   structureType={syllabus.structure_type}
                   releaseMode={syllabus.release_mode || 'all_at_once'}
                   mode="student"
@@ -396,13 +541,9 @@ const StudentClassroomDetail = () => {
                 />
               )}
 
-              <StudentPoliciesView
-                policies={syllabus.policies ?? []}
-                isRTL={isRTL}
-              />
+              <StudentPoliciesView policies={syllabus.policies ?? []} isRTL={isRTL} />
             </div>
-          )
-        )}
+          ))}
 
         {activeSection === 'curriculum' && hasPublishedSyllabus && (
           <StudentActivitiesSection classroomId={id!} isRTL={isRTL} />

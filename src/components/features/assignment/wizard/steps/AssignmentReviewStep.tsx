@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { distinctDomains } from '@/lib/hardSkillsFormat';
 import type { AssignmentWizardFormData, AssignmentWizardStepId } from '../assignmentWizardTypes';
 import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
 import type { SyllabusWithSections } from '@/types/syllabus';
@@ -127,12 +128,23 @@ export function AssignmentReviewStep({
       step: 'skills',
       title: t('createAssignment.wizard.steps.skills'),
       rows: [
-        { label: t('createAssignment.subjectAreaLabel'), value: formData.hard_skill_domain?.trim() || '' },
+        {
+          label: t('createAssignment.subjectAreaLabel'),
+          value: (() => {
+            const doms = distinctDomains(formData.hard_skills);
+            if (doms.length > 1) return doms.join(', ');
+            if (doms.length === 1) return doms[0]!;
+            return formData.hard_skill_domain?.trim() || '';
+          })(),
+        },
         {
           label: t('createAssignment.skillsToAssess'),
           value:
-            formData.hard_skills.filter(Boolean).length > 0
-              ? formData.hard_skills.filter(Boolean).join(', ')
+            formData.hard_skills.filter((p) => p.skill.trim()).length > 0
+              ? formData.hard_skills
+                  .filter((p) => p.skill.trim())
+                  .map((p) => (p.domain.trim() ? `${p.domain} — ${p.skill}` : p.skill))
+                  .join('; ')
               : '',
         },
         {

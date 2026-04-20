@@ -1,28 +1,20 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2, Search, Pencil, Trash2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { useSyllabus, useClassroomAssignments, useReplaceModuleFlow } from '@/hooks/queries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { useModuleFlowStepsBulk, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import {
-  isActivityCenterResource,
   moduleFlowLocalStepsToFlowInput,
-  resolveDisplayedModuleFlow,
+  resolveDisplayedModuleFlowBase,
 } from '@/lib/moduleFlow';
 import type { SectionResource } from '@/types/syllabus';
 import { cn } from '@/lib/utils';
-import { ModuleFlowEditor, type ModuleFlowEditorHandle } from './ModuleFlowEditor';
 import { ModuleLessonActivityDialog } from './ModuleLessonActivityDialog';
 import { ModuleActivityCard } from './activities/ModuleActivityCard';
 
@@ -98,21 +90,14 @@ export function TeacherCurriculumSection({
     });
   }, [assignmentRows, sectionIdSet]);
 
-  const [flowSectionId, setFlowSectionId] = useState<string | null>(null);
   const [lessonSectionId, setLessonSectionId] = useState<string | null>(null);
   const [editingLesson, setEditingLesson] = useState<SectionResource | null>(null);
   const [moduleSearch, setModuleSearch] = useState('');
   const [moduleOpenById, setModuleOpenById] = useState<Record<string, boolean>>({});
 
-  const flowEditorRef = useRef<ModuleFlowEditorHandle>(null);
-  const lessonCreatedFromFlowSheetRef = useRef(false);
   const lessonCreatedFromExpandedPlusRef = useRef(false);
 
-  const openNewLesson = (sectionId: string, fromFlowSheet?: boolean) => {
-    lessonCreatedFromFlowSheetRef.current = fromFlowSheet === true;
-    if (fromFlowSheet === true) {
-      lessonCreatedFromExpandedPlusRef.current = false;
-    }
+  const openNewLesson = (sectionId: string) => {
     setLessonSectionId(sectionId);
     setEditingLesson(null);
   };
@@ -125,8 +110,29 @@ export function TeacherCurriculumSection({
   const filteredSections = useMemo(() => {
     const q = moduleSearch.trim().toLowerCase();
     if (!q) return sections;
-    return sections.filter((s) => s.title.toLowerCase().includes(q));
-  }, [sections, moduleSearch]);
+    return sections.filter((s) => {
+      if (s.title.toLowerCase().includes(q)) return true;
+      const resources = resourceMap[s.id] ?? [];
+      const persisted = flowBulk[s.id] ?? [];
+      const flowSteps = resolveDisplayedModuleFlowBase(s.id, resources, assignmentRows, persisted);
+      for (const step of flowSteps) {
+        if (step.kind === 'resource') {
+          const r = resources.find((x) => x.id === step.resourceId);
+          if (r?.title.toLowerCase().includes(q)) return true;
+        } else {
+          const a = assignmentById[step.assignmentId];
+          if (a?.title.toLowerCase().includes(q)) return true;
+        }
+      }
+      return false;
+    });
+  }, [sections, moduleSearch, resourceMap, flowBulk, assignmentRows, assignmentById]);
+
+  const filteredUnassignedAssignments = useMemo(() => {
+    const q = moduleSearch.trim().toLowerCase();
+    if (!q) return unassignedAssignments;
+    return unassignedAssignments.filter((a) => a.title.toLowerCase().includes(q));
+  }, [unassignedAssignments, moduleSearch]);
 
   const allFilteredOpen = useMemo(
     () =>
@@ -134,6 +140,18 @@ export function TeacherCurriculumSection({
       filteredSections.every((s) => moduleOpenById[s.id] === true),
     [filteredSections, moduleOpenById],
   );
+
+  useEffect(() => {
+    const q = moduleSearch.trim();
+    if (!q) return;
+    setModuleOpenById((prev) => {
+      const next = { ...prev };
+      for (const s of filteredSections) {
+        next[s.id] = true;
+      }
+      return next;
+    });
+  }, [moduleSearch, filteredSections]);
 
   if (isLoading) {
     return (
@@ -157,8 +175,6 @@ export function TeacherCurriculumSection({
       </Card>
     );
   }
-
-  const flowSection = flowSectionId ? sections.find((s) => s.id === flowSectionId) : null;
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -223,14 +239,14 @@ export function TeacherCurriculumSection({
         </div>
       </div>
 
-      {unassignedAssignments.length > 0 ? (
+      {filteredUnassignedAssignments.length > 0 ? (
         <Card className="rounded-xl border border-border/80 bg-muted/20 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t('classroomDetail.curriculum.unassignedTitle')}</CardTitle>
             <CardDescription>{t('classroomDetail.curriculum.unassignedDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 pt-0">
-            {unassignedAssignments.map((a) => (
+            {filteredUnassignedAssignments.map((a) => (
               <div
                 key={a.id}
                 className={cn(
@@ -304,9 +320,9 @@ export function TeacherCurriculumSection({
         <div className="flex flex-col gap-3">
           {filteredSections.map((section) => {
             const resources = resourceMap[section.id] ?? [];
-            const activityResources = resources.filter(isActivityCenterResource);
             const persisted = flowBulk[section.id] ?? [];
-            const flowSteps = resolveDisplayedModuleFlow(
+            /** Saved `module_flow_steps` order (or computed default when empty). */
+            const flowSteps = resolveDisplayedModuleFlowBase(
               section.id,
               resources,
               assignmentRows,
@@ -322,18 +338,17 @@ export function TeacherCurriculumSection({
                 classroomId={classroomId}
                 section={{ id: section.id, title: section.title }}
                 flowSteps={flowSteps}
-                activityResources={activityResources}
                 assignmentById={assignmentById}
                 resourceById={resourceById}
                 isRTL={isRTL}
+                curriculumSearchQuery={moduleSearch}
                 open={moduleOpenById[section.id] ?? false}
                 onOpenChange={(next) =>
                   setModuleOpenById((prev) => ({ ...prev, [section.id]: next }))
                 }
-                onOpenFlowSheet={() => setFlowSectionId(section.id)}
                 onAddActivity={() => {
                   lessonCreatedFromExpandedPlusRef.current = true;
-                  openNewLesson(section.id, false);
+                  openNewLesson(section.id);
                 }}
                 onCreateAssignmentForModule={() => onCreateAssignmentForModule(section.id)}
                 onEditResource={(resourceId) => {
@@ -348,46 +363,6 @@ export function TeacherCurriculumSection({
         </div>
       )}
 
-      <Sheet open={!!flowSectionId} onOpenChange={(o) => !o && setFlowSectionId(null)}>
-        <SheetContent
-          className="w-full sm:max-w-lg overflow-y-auto overflow-x-hidden overscroll-y-contain [overflow-anchor:none]"
-          dir={isRTL ? 'rtl' : 'ltr'}
-        >
-          <SheetHeader>
-            <SheetDescription className="text-base text-foreground">
-              {flowSection?.title}
-            </SheetDescription>
-          </SheetHeader>
-          {flowSectionId ? (
-            <div className="mt-6">
-              <ModuleFlowEditor
-                ref={flowEditorRef}
-                flowHeading={t('classroomDetail.activitiesFlow.sheetTitle')}
-                sectionId={flowSectionId}
-                classroomId={classroomId}
-                resources={resourceMap[flowSectionId] ?? []}
-                assignments={
-                  assignmentsQuery as {
-                    id: string;
-                    title: string;
-                    syllabus_section_id?: string | null;
-                    due_at?: string | null;
-                  }[]
-                }
-                isRTL={isRTL}
-                onRequestNewActivity={() => openNewLesson(flowSectionId, true)}
-                onEditAssignment={onEditAssignment}
-                onEditResource={(resourceId) => {
-                  const list = resourceMap[flowSectionId] ?? [];
-                  const r = list.find((x) => x.id === resourceId);
-                  if (r) openEditLesson(flowSectionId, r);
-                }}
-              />
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
-
       <ModuleLessonActivityDialog
         classroomId={classroomId}
         isRTL={isRTL}
@@ -396,7 +371,6 @@ export function TeacherCurriculumSection({
           if (!o) {
             setLessonSectionId(null);
             setEditingLesson(null);
-            lessonCreatedFromFlowSheetRef.current = false;
             lessonCreatedFromExpandedPlusRef.current = false;
           }
         }}
@@ -404,20 +378,11 @@ export function TeacherCurriculumSection({
         editingLesson={editingLesson}
         sectionResourcesBySection={resourceMap}
         onLessonCreated={async (resourceId) => {
-          if (
-            lessonCreatedFromFlowSheetRef.current &&
-            flowSectionId &&
-            lessonSectionId === flowSectionId
-          ) {
-            await flowEditorRef.current?.appendStep('resource', resourceId);
-            lessonCreatedFromFlowSheetRef.current = false;
-            return;
-          }
           if (lessonCreatedFromExpandedPlusRef.current && lessonSectionId) {
             const sid = lessonSectionId;
             const resources = resourceMap[sid] ?? [];
             const persisted = flowBulk[sid] ?? [];
-            const next = resolveDisplayedModuleFlow(sid, resources, assignmentRows, persisted);
+            const next = resolveDisplayedModuleFlowBase(sid, resources, assignmentRows, persisted);
             const already = next.some(
               (s) => s.kind === 'resource' && s.resourceId === resourceId,
             );

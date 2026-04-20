@@ -8,7 +8,7 @@ import { ScrollHighlightText } from "@/components/landing/ScrollHighlightText";
 import { FlowChart } from "@/components/landing/FlowChart";
 import { Customers } from "@/components/landing/Customers";
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Loader2 } from 'lucide-react';
 import {
   isAccountJustDeletedSessionFlagSet,

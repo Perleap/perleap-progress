@@ -6,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
@@ -51,8 +51,6 @@ export interface WizardSectionData {
   startDate: string;
   endDate: string;
   completion_status: CompletionStatus;
-  /** Other sections' tempIds when release mode is prerequisites */
-  prerequisites: string[];
   is_locked: boolean;
 }
 
@@ -223,8 +221,7 @@ export const CreateClassroomWizard = ({
               notes: null,
               content: s.content.trim() ? s.content : null,
               completion_status: s.completion_status,
-              prerequisitesTempIds:
-                wizardData.release_mode === 'prerequisites' ? s.prerequisites : [],
+              prerequisitesTempIds: [],
               is_locked: wizardData.release_mode === 'manual' ? s.is_locked : false,
             })),
             gradingCategories: wizardData.gradingCategories

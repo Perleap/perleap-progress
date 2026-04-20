@@ -36,7 +36,7 @@ export interface LessonContentV1 {
 export type ActivityResourceStatus = 'draft' | 'published';
 export type CompletionStatus = 'auto' | 'completed' | 'skipped';
 export type StudentProgressStatus = 'not_started' | 'in_progress' | 'reviewed' | 'completed';
-export type ReleaseMode = 'all_at_once' | 'sequential' | 'date_based' | 'manual' | 'prerequisites';
+export type ReleaseMode = 'all_at_once' | 'sequential' | 'date_based' | 'manual';
 
 export type SyllabusPolicyType =
   | 'grading'
@@ -115,11 +115,11 @@ export interface SectionResource {
   updated_at: string;
 }
 
-/** Junction: assignment ↔ module activity (section_resource) for AI context and product */
+/** Junction: assignment ↔ activity_list row for AI context and product */
 export interface AssignmentModuleActivity {
   id: string;
   assignment_id: string;
-  section_resource_id: string;
+  activity_list_id: string;
   order_index: number;
   include_in_ai_context: boolean;
   created_at: string;
@@ -244,7 +244,7 @@ export type CreateSectionResourceInput = Omit<
 export type UpdateSectionResourceInput = Partial<Omit<SectionResource, 'id' | 'section_id' | 'created_at' | 'updated_at'>>;
 
 export type AssignmentModuleActivityInput = {
-  section_resource_id: string;
+  activity_list_id: string;
   order_index: number;
   include_in_ai_context: boolean;
 };
@@ -257,7 +257,7 @@ export interface ModuleFlowStep {
   section_id: string;
   order_index: number;
   step_kind: ModuleFlowStepKind;
-  section_resource_id: string | null;
+  activity_list_id: string | null;
   assignment_id: string | null;
   created_at: string;
   updated_at: string;

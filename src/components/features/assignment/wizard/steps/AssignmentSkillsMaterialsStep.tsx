@@ -1,9 +1,10 @@
-import { Target, FileText, X, Upload, Link as LinkIcon, Plus, Eye, Loader2 } from 'lucide-react';
+import { Target, FileText, X, Upload, Link as LinkIcon, Plus, Eye, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -12,7 +13,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { pairKey } from '@/lib/hardSkillsFormat';
 import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+
+const MAX_HARD_SKILLS = 5;
+
+export type HardSkillsSuggestionStatus = 'idle' | 'loading' | 'success' | 'error';
 
 interface AssignmentSkillsMaterialsStepProps {
   formData: AssignmentWizardFormData;
@@ -34,6 +40,8 @@ interface AssignmentSkillsMaterialsStepProps {
   onRemoveMaterial: (index: number) => void;
   uploadingMaterial: boolean;
   uploadProgress: number;
+  hardSkillsSuggestionStatus?: HardSkillsSuggestionStatus;
+  onRetrySuggestHardSkills?: () => void;
 }
 
 export function AssignmentSkillsMaterialsStep({
@@ -56,8 +64,11 @@ export function AssignmentSkillsMaterialsStep({
   onRemoveMaterial,
   uploadingMaterial,
   uploadProgress,
+  hardSkillsSuggestionStatus = 'idle',
+  onRetrySuggestHardSkills,
 }: AssignmentSkillsMaterialsStepProps) {
   const { t } = useTranslation();
+  const atCap = formData.hard_skills.length >= MAX_HARD_SKILLS;
 
   return (
     <div className="space-y-8">
@@ -72,6 +83,45 @@ export function AssignmentSkillsMaterialsStep({
         <p className={`text-sm text-subtle mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
           {isEditMode ? t('editAssignment.subjectAreasHelper') : t('createAssignment.subjectAreasHelper')}
         </p>
+
+        {!isEditMode && hardSkillsSuggestionStatus === 'loading' && (
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground',
+              isRTL ? 'flex-row-reverse' : '',
+            )}
+          >
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+            <span>{t('createAssignment.hardSkillsSuggestion.loading')}</span>
+          </div>
+        )}
+        {!isEditMode && hardSkillsSuggestionStatus === 'error' && (
+          <div
+            className={cn(
+              'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm',
+              isRTL ? 'flex-row-reverse' : '',
+            )}
+          >
+            <span className="text-destructive">{t('createAssignment.hardSkillsSuggestion.error')}</span>
+            {onRetrySuggestHardSkills ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => onRetrySuggestHardSkills()}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t('createAssignment.hardSkillsSuggestion.retry')}
+              </Button>
+            ) : null}
+          </div>
+        )}
+        {!isEditMode && hardSkillsSuggestionStatus === 'success' && (
+          <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+            {t('createAssignment.hardSkillsSuggestion.successHint')}
+          </p>
+        )}
 
         <div className="space-y-2">
           <Label
@@ -131,16 +181,16 @@ export function AssignmentSkillsMaterialsStep({
             {t('createAssignment.skillsToAssess')}
           </Label>
 
-          {selectedDomain && availableComponents.length > 0 && (
+          {selectedDomain && availableComponents.length > 0 && !atCap && (
             <div className="space-y-2">
               <Select
                 onValueChange={(value: string) => {
-                  if (!formData.hard_skills.includes(value)) {
-                    onFormChange((prev) => ({
-                      ...prev,
-                      hard_skills: [...prev.hard_skills, value],
-                    }));
-                  }
+                  const next = { domain: selectedDomain, skill: value };
+                  onFormChange((prev) => {
+                    const keys = new Set(prev.hard_skills.map(pairKey));
+                    if (keys.has(pairKey(next)) || prev.hard_skills.length >= MAX_HARD_SKILLS) return prev;
+                    return { ...prev, hard_skills: [...prev.hard_skills, next] };
+                  });
                 }}
               >
                 <SelectTrigger
@@ -161,17 +211,25 @@ export function AssignmentSkillsMaterialsStep({
           )}
 
           <div className="space-y-2">
-            {formData.hard_skills.map((skill, index) => (
-              <div key={index} className="flex items-center gap-2">
+            {formData.hard_skills.map((pair, index) => (
+              <div key={index} className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : '')}>
+                {pair.domain.trim() ? (
+                  <Badge variant="secondary" className="max-w-[40%] shrink-0 truncate text-xs font-normal">
+                    {pair.domain}
+                  </Badge>
+                ) : null}
                 <Input
-                  value={skill}
+                  value={pair.skill}
                   onChange={(e) => {
-                    const newSkills = [...formData.hard_skills];
-                    newSkills[index] = e.target.value;
-                    onFormChange((prev) => ({ ...prev, hard_skills: newSkills }));
+                    const v = e.target.value;
+                    onFormChange((prev) => {
+                      const next = [...prev.hard_skills];
+                      next[index] = { ...next[index]!, skill: v };
+                      return { ...prev, hard_skills: next };
+                    });
                   }}
                   placeholder={t('createAssignment.skillPlaceholder', { number: index + 1 })}
-                  className="flex-1 rounded-lg bg-background/80 h-10"
+                  className="min-w-0 flex-1 rounded-lg bg-background/80 h-10"
                   dir={isRTL ? 'rtl' : 'ltr'}
                   autoDirection
                 />
@@ -180,10 +238,12 @@ export function AssignmentSkillsMaterialsStep({
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    const newSkills = formData.hard_skills.filter((_, i) => i !== index);
-                    onFormChange((prev) => ({ ...prev, hard_skills: newSkills }));
+                    onFormChange((prev) => ({
+                      ...prev,
+                      hard_skills: prev.hard_skills.filter((_, i) => i !== index),
+                    }));
                   }}
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -193,10 +253,11 @@ export function AssignmentSkillsMaterialsStep({
               type="button"
               variant="ghost"
               size="sm"
+              disabled={atCap}
               onClick={() =>
                 onFormChange((prev) => ({
                   ...prev,
-                  hard_skills: [...prev.hard_skills, ''],
+                  hard_skills: [...prev.hard_skills, { domain: '', skill: '' }],
                 }))
               }
               className="text-primary hover:bg-primary/5 text-xs font-semibold"
@@ -204,6 +265,11 @@ export function AssignmentSkillsMaterialsStep({
               <Plus className="h-3 w-3 me-1" />
               {t('createAssignment.addSkillManually')}
             </Button>
+            {atCap ? (
+              <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('createAssignment.hardSkillsMax', { max: MAX_HARD_SKILLS })}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

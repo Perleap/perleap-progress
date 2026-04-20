@@ -30,11 +30,9 @@ export interface ModuleActivityCardProps {
   classroomId: string;
   section: { id: string; title: string };
   flowSteps: ModuleFlowLocalStep[];
-  activityResources: SectionResource[];
   assignmentById: Record<string, AssignmentLite>;
   resourceById: Record<string, SectionResource>;
   isRTL: boolean;
-  onOpenFlowSheet: () => void;
   onAddActivity: () => void;
   onCreateAssignmentForModule: () => void;
   onEditResource: (resourceId: string) => void;
@@ -43,17 +41,17 @@ export interface ModuleActivityCardProps {
   /** When set, collapsible state is controlled by the parent (expand/collapse all). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Teacher curriculum search: when set, narrow visible steps to matches unless the module title matches. */
+  curriculumSearchQuery?: string;
 }
 
 export function ModuleActivityCard({
   classroomId,
   section,
   flowSteps,
-  activityResources,
   assignmentById,
   resourceById,
   isRTL,
-  onOpenFlowSheet,
   onAddActivity,
   onCreateAssignmentForModule,
   onEditResource,
@@ -61,6 +59,7 @@ export function ModuleActivityCard({
   onDeleteAssignment,
   open: openProp,
   onOpenChange,
+  curriculumSearchQuery,
 }: ModuleActivityCardProps) {
   const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -74,20 +73,28 @@ export function ModuleActivityCard({
     }
   };
 
-  const flowResourceIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const s of flowSteps) {
-      if (s.kind === 'resource') ids.add(s.resourceId);
-    }
-    return ids;
-  }, [flowSteps]);
+  const displayFlowSteps = useMemo(() => {
+    const q = curriculumSearchQuery?.trim().toLowerCase() ?? '';
+    if (!q) return flowSteps;
+    if (section.title.toLowerCase().includes(q)) return flowSteps;
+    return flowSteps.filter((step) => {
+      if (step.kind === 'resource') {
+        const title = resourceById[step.resourceId]?.title ?? '';
+        return title.toLowerCase().includes(q);
+      }
+      const title = assignmentById[step.assignmentId]?.title ?? '';
+      return title.toLowerCase().includes(q);
+    });
+  }, [
+    flowSteps,
+    curriculumSearchQuery,
+    section.title,
+    resourceById,
+    assignmentById,
+  ]);
 
-  const orphanResources = useMemo(
-    () => activityResources.filter((r) => !flowResourceIds.has(r.id)),
-    [activityResources, flowResourceIds],
-  );
-
-  const stepCount = flowSteps.length;
+  const searchActive = Boolean(curriculumSearchQuery?.trim());
+  const stepCount = displayFlowSteps.length;
 
   return (
     <Collapsible
@@ -117,7 +124,7 @@ export function ModuleActivityCard({
           <div className="min-w-0 flex-1 space-y-1">
             <h3 className="text-base font-semibold leading-snug text-foreground">{section.title}</h3>
             <p className="text-xs text-muted-foreground">
-              {stepCount === 0
+              {flowSteps.length === 0
                 ? t('classroomDetail.activities.emptyModuleSummary')
                 : stepCount === 1
                   ? t('classroomDetail.activities.stepCountOne')
@@ -152,36 +159,13 @@ export function ModuleActivityCard({
 
       <CollapsibleContent>
         <div className="space-y-3 px-3 pb-4 pt-1 sm:px-4">
-          {orphanResources.length > 0 ? (
-            <div
-              className={cn(
-                'rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-950 dark:text-amber-100/90',
-                isRTL && 'text-right',
-              )}
-            >
-              <p>
-                {t('classroomDetail.activities.notInFlowHint', {
-                  count: orphanResources.length,
-                })}
-              </p>
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto p-0 text-xs text-amber-900 underline dark:text-amber-200"
-                onClick={onOpenFlowSheet}
-              >
-                {t('classroomDetail.curriculum.openFlowToFixOrphans')}
-              </Button>
-            </div>
-          ) : null}
-
           {flowSteps.length === 0 ? (
             <div className={cn('rounded-lg bg-muted/30 px-3 py-6 text-center', isRTL && 'text-right')}>
               <p className="text-sm text-muted-foreground">{t('classroomDetail.activities.emptyModule')}</p>
             </div>
-          ) : (
+          ) : displayFlowSteps.length === 0 ? null : (
             <ul className="space-y-2">
-              {flowSteps.map((step, idx) => {
+              {displayFlowSteps.map((step, idx) => {
                 const key = step.kind === 'resource' ? `r:${step.resourceId}` : `a:${step.assignmentId}`;
                 const r = step.kind === 'resource' ? resourceById[step.resourceId] : undefined;
                 const a = step.kind === 'assignment' ? assignmentById[step.assignmentId] : undefined;

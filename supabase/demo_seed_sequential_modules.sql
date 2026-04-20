@@ -121,7 +121,7 @@ BEGIN
      NULL, NULL, '<p>Capstone presentations.</p>', 'auto', '{}', false)
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO public.section_resources (id, section_id, title, resource_type, url, order_index)
+  INSERT INTO public.activity_list (id, section_id, title, resource_type, url, order_index)
   VALUES (v_res, v_m2, 'Chart chooser cheatsheet (example)', 'link', 'https://example.org/chart-chooser', 0)
   ON CONFLICT (id) DO NOTHING;
 

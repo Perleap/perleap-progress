@@ -189,9 +189,6 @@ export const SyllabusSetupStep = ({ data, onChange, isRTL }: SyllabusSetupStepPr
               isRTL={isRTL}
               onChange={(release_mode) => {
                 let sections = data.sections;
-                if (release_mode !== 'prerequisites') {
-                  sections = sections.map((s) => ({ ...s, prerequisites: [] }));
-                }
                 if (release_mode !== 'manual') {
                   sections = sections.map((s) => ({ ...s, is_locked: false }));
                 }

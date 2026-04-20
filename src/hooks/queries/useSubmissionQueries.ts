@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   getStudentSubmissionContext,
   getSubmissionById,
@@ -18,6 +18,7 @@ import {
   generateFeedback,
 } from '@/services/submissionService';
 import type { ChatRequest, FeedbackRequest } from '@/types';
+import { assignmentSubmittedFlagsKeys } from './useModuleFlowQueries';
 
 // Query Keys
 export const submissionKeys = {
@@ -117,6 +118,7 @@ export const useCompleteSubmission = () => {
     onSuccess: (_, submissionId) => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.detail(submissionId) });
       queryClient.invalidateQueries({ queryKey: submissionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
     },
   });
 };

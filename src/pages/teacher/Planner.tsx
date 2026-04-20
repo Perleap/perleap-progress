@@ -57,7 +57,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -189,7 +189,8 @@ const Planner = () => {
       const { data, error } = await supabase
         .from('classrooms')
         .select('id, name')
-        .eq('teacher_id', user?.id || '');
+        .eq('teacher_id', user?.id || '')
+        .eq('active', true);
 
       if (error) throw error;
 
@@ -214,7 +215,8 @@ const Planner = () => {
       const { data, error } = await supabase
         .from('assignments')
         .select('id, title, due_at, classroom_id, status, instructions, type')
-        .in('classroom_id', classroomIds);
+        .in('classroom_id', classroomIds)
+        .eq('active', true);
 
       if (error) throw error;
 
@@ -287,10 +289,12 @@ const Planner = () => {
     if (!selectedEvent) return;
 
     try {
+      const deletedAt = new Date().toISOString();
       const { error } = await supabase
         .from('assignments')
-        .delete()
-        .eq('id', selectedEvent.resource.assignmentId);
+        .update({ active: false, deleted_at: deletedAt })
+        .eq('id', selectedEvent.resource.assignmentId)
+        .eq('active', true);
 
       if (error) throw error;
       toast.success(t('common.deleted') || 'Assignment deleted');

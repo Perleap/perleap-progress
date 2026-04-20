@@ -427,6 +427,13 @@
     "subjectAreasHelper": "מלא זאת כדי שהסוכן יוכל להעריך את התקדמות התלמיד על פי טבלה זו",
     "skillsToAssess": "מיומנויות להערכה",
     "addSkillManually": "הוסף מיומנות ידנית",
+    "hardSkillsSuggestion": {
+      "loading": "בוחרים את המיומנויות המתאימות למשימה…",
+      "error": "לא ניתן להציע מיומנויות. אפשר לבחור ידנית.",
+      "retry": "נסה שוב",
+      "successHint": "הוצעו מיומנויות — אפשר לערוך אותן בכל עת."
+    },
+    "hardSkillsMax": "לכל היותר {{max}} מיומנויות.",
     "uploadPDF": "העלה PDF",
     "addLink": "הוסף קישור",
     "typeOptions": {
@@ -654,9 +661,9 @@
       "addBlockAriaLabel": "הוספת בלוק",
       "addBlockMenuText": "בלוק טקסט",
       "addBlockMenuVideo": "וידאו",
-      "searchModulesPlaceholder": "חיפוש מודולים…",
+      "searchModulesPlaceholder": "חיפוש מודולים, פעילויות ומטלות…",
       "manageOutline": "מתווה הקורס",
-      "noModulesMatchSearch": "אין מודולים התואמים לחיפוש.",
+      "noModulesMatchSearch": "אין תוצאות התואמות לחיפוש.",
       "emptyModuleSummary": "אין עדיין צעדים בזרימת המודול.",
       "stepCountOne": "צעד אחד",
       "stepCountMany": "{{count}} צעדים",
@@ -1763,7 +1770,10 @@
       "settings": "הגדרות"
     },
     "moduleAccordion": {
-      "courseCurriculumTitle": "סילבוס הקורס",
+      "studentFlowCaption": "עברו על המודולים לפי הסדר. פתחו מודול לעמוד המלא, או השתמשו ברשימה למטה.",
+      "openModulePage": "פתח מודול: {{title}}",
+      "expandModuleActivities": "הצג או הסתר פעילויות במודול זה",
+      "courseCurriculumTitle": "מתווה הקורס",
       "courseCurriculumSummaryNoDuration": "{{modules}} מודולים • {{lessons}} שיעורים",
       "courseCurriculumSummaryWithDuration": "{{modules}} מודולים • {{lessons}} שיעורים • {{duration}} סה״כ",
       "moduleLessonSubline": "{{count}} שיעורים • {{duration}}",
@@ -1782,6 +1792,7 @@
       "noActivities": "אין פעילויות עדיין.",
       "noAssignments": "אין מטלות במודול זה.",
       "lockedModule": "מודול זה נעול עד שיתקיימו דרישות הקדם.",
+      "lockedModuleSequential": "השלימו את \"{{previous}}\" לפני פתיחת מודול זה.",
       "addActivity": "הוסף פעילות",
       "createAssignment": "צור מטלה"
     },
@@ -1879,7 +1890,6 @@
       "bulkScheduleFailed": "החלת התזמון נכשלה",
       "content": "תוכן",
       "contentPlaceholder": "הוסף תוכן שיעור, הנחיות, חומרים...",
-      "prerequisites": "דרישות קדם",
       "locked": "נעול",
       "unlockRequirements": "השלם את הפרקים הנדרשים כדי לפתוח תוכן זה.",
       "lockSection": "נעל",
@@ -1997,6 +2007,7 @@
       "description": "תיאור",
       "objectives": "מטרות",
       "resources": "משאבים",
+      "activityStepLabel": "פעילות",
       "notes": "הערות",
       "closeDetails": "סגור פרטים",
       "linkedAssignments": "מטלות מקושרות"
@@ -2080,7 +2091,8 @@
       "reviewed": "נסקר",
       "completed": "הושלם",
       "autoProgress": "התקדמות אוטומטית",
-      "assignmentProgress": "התקדמות מטלות"
+      "assignmentProgress": "התקדמות מטלות",
+      "moduleProgress": "התקדמות במודול"
     },
     "releaseMode": {
       "label": "מצב שחרור",
@@ -2091,9 +2103,7 @@
       "date_based": "לפי תאריך",
       "date_basedDesc": "פרקים נפתחים כשתאריך ההתחלה מגיע",
       "manual": "ידני",
-      "manualDesc": "המורה נועל/פותח כל פרק",
-      "prerequisites": "דרישות קדם",
-      "prerequisitesDesc": "המורה מגדיר אילו פרקים צריך להשלים קודם"
+      "manualDesc": "המורה נועל/פותח כל פרק"
     },
     "newCategory": "קטגוריה חדשה"
   },

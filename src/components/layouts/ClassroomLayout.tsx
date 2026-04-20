@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
@@ -30,6 +30,7 @@ interface ClassroomLayoutProps {
     id: string;
     title: string;
     icon: React.ComponentType<{ className?: string }>;
+    disabled?: boolean;
   }>;
 }
 

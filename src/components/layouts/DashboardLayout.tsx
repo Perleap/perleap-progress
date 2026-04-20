@@ -16,7 +16,7 @@ import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 
 interface BreadcrumbItem {

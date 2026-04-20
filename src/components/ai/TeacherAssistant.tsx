@@ -13,9 +13,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { X, Send, Trash2, Loader2, Sparkles, Bot } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import type { User } from '@supabase/supabase-js';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getTeacherProfile } from '@/services/profileService';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -46,7 +47,8 @@ function useTeacherAssistantContext() {
 }
 
 export function TeacherAssistantProvider({ children }: { children: ReactNode }) {
-  const { user, profile } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [teacherFullName, setTeacherFullName] = useState<string | null>(null);
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const location = useLocation();
@@ -57,6 +59,32 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
   const isTeacher = user?.user_metadata?.role === 'teacher';
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id || !isTeacher) {
+      setTeacherFullName(null);
+      return;
+    }
+    let cancelled = false;
+    void getTeacherProfile(user.id).then(({ data }) => {
+      if (!cancelled) setTeacherFullName(data?.full_name ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, isTeacher]);
 
   useEffect(() => {
     if (user?.id && isTeacher) {
@@ -97,7 +125,7 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
 
     const context = {
       route: location.pathname,
-      teacherName: profile?.full_name,
+      teacherName: teacherFullName ?? undefined,
     };
 
     try {
@@ -122,7 +150,7 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, location.pathname, profile?.full_name, t]);
+  }, [input, isLoading, messages, location.pathname, teacherFullName, t]);
 
   const clearChat = useCallback(() => {
     if (confirm(t('common.areYouSure') || 'Clear chat history?')) {

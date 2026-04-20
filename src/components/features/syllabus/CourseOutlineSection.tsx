@@ -35,12 +35,13 @@ import {
   useUpdateSyllabus,
   usePublishSyllabus,
   useClassroomAssignments,
+  useUpdateSyllabusSection,
 } from '@/hooks/queries';
 import { SyllabusEditor } from './SyllabusEditor';
 import { GradingCategoriesManager } from './GradingCategoriesManager';
 import { AssignmentLinker } from './AssignmentLinker';
 import type { SyllabusStructureType, SyllabusPolicy, ReleaseMode } from '@/types/syllabus';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
 
 interface CourseOutlineSectionProps {
@@ -61,6 +62,7 @@ export const CourseOutlineSection = ({
   const { data: assignments = [] } = useClassroomAssignments(classroomId);
   const createMutation = useCreateSyllabus();
   const updateMutation = useUpdateSyllabus();
+  const updateSectionMutation = useUpdateSyllabusSection();
   const publishMutation = usePublishSyllabus();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -151,6 +153,20 @@ export const CourseOutlineSection = ({
         },
         classroomId,
       });
+      if (metaReleaseMode !== 'manual') {
+        const locked = syllabus.sections.filter((s) => s.is_locked);
+        if (locked.length > 0) {
+          await Promise.all(
+            locked.map((s) =>
+              updateSectionMutation.mutateAsync({
+                sectionId: s.id,
+                updates: { is_locked: false },
+                classroomId,
+              })
+            )
+          );
+        }
+      }
       setEditingMeta(false);
       toast.success(t('syllabus.updated'));
     } catch {

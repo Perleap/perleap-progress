@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen, Sparkles, Clock, LayoutGrid, List, Grid2x2, LayoutList, Table2, CalendarDays, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,7 +36,7 @@ import { DashboardLayout } from '@/components/layouts';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { SkeletonCardGrid, SkeletonRowList } from '@/components/ui/GsapSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useClassrooms, useStudentAssignments, useJoinClassroom } from '@/hooks/queries';
+import { useClassrooms, useStudentAssignments, useJoinClassroom, prefetchSyllabusByClassroom } from '@/hooks/queries';
 import { ClassroomTableView } from '@/components/features/dashboard/ClassroomTableView';
 import { ClassroomTimelineView } from '@/components/features/dashboard/ClassroomTimelineView';
 import { copyToClipboard } from '@/lib/utils';
@@ -90,6 +91,7 @@ const StudentDashboard = () => {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: rawClassrooms = [], isLoading: classroomsLoading, refetch: refetchClassrooms } = useClassrooms('student');
   const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useStudentAssignments();
@@ -102,6 +104,25 @@ const StudentDashboard = () => {
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
   const [assignmentsTab, setAssignmentsTab] = useState<'active' | 'finished'>('active');
   const [teacherProfiles, setTeacherProfiles] = useState<Record<string, { full_name: string; avatar_url?: string }>>({});
+
+  const warmSyllabusForClassroom = useCallback(
+    (classroomId: string) => {
+      void prefetchSyllabusByClassroom(queryClient, classroomId);
+    },
+    [queryClient]
+  );
+
+  const classroomIdsForPrefetch = useMemo(
+    () => rawClassrooms.map((c: { id: string }) => c.id),
+    [rawClassrooms]
+  );
+
+  useEffect(() => {
+    if (!classroomIdsForPrefetch.length) return;
+    for (const id of classroomIdsForPrefetch.slice(0, 16)) {
+      void prefetchSyllabusByClassroom(queryClient, id);
+    }
+  }, [queryClient, classroomIdsForPrefetch]);
 
   // Fetch teacher profiles when classrooms or assignments change
   useEffect(() => {
@@ -480,6 +501,8 @@ const StudentDashboard = () => {
                     <Card
                       key={classroom.id}
                       className="group relative overflow-hidden cursor-pointer hover:border-primary/30 transition-all duration-200 active:scale-[0.98] bg-card border-border"
+                      onMouseEnter={() => warmSyllabusForClassroom(classroom.id)}
+                      onPointerDown={() => warmSyllabusForClassroom(classroom.id)}
                       onClick={() => navigate(`/student/classroom/${classroom.id}`)}
                     >
                       <CardContent className="p-4 relative">
@@ -529,6 +552,8 @@ const StudentDashboard = () => {
                     <Card
                       key={classroom.id}
                       className="group cursor-pointer hover:border-primary/30 transition-all duration-200 bg-card border-border"
+                      onMouseEnter={() => warmSyllabusForClassroom(classroom.id)}
+                      onPointerDown={() => warmSyllabusForClassroom(classroom.id)}
                       onClick={() => navigate(`/student/classroom/${classroom.id}`)}
                     >
                       <CardContent className="p-3">
@@ -568,6 +593,8 @@ const StudentDashboard = () => {
                     <Card
                       key={classroom.id}
                       className="group cursor-pointer hover:border-primary/30 transition-all duration-200 bg-card border-border"
+                      onMouseEnter={() => warmSyllabusForClassroom(classroom.id)}
+                      onPointerDown={() => warmSyllabusForClassroom(classroom.id)}
                       onClick={() => navigate(`/student/classroom/${classroom.id}`)}
                     >
                       <CardContent className="p-4">
@@ -609,6 +636,8 @@ const StudentDashboard = () => {
                     <Card
                       key={classroom.id}
                       className="group cursor-pointer hover:border-primary/30 transition-all duration-200 bg-card border-border"
+                      onMouseEnter={() => warmSyllabusForClassroom(classroom.id)}
+                      onPointerDown={() => warmSyllabusForClassroom(classroom.id)}
                       onClick={() => navigate(`/student/classroom/${classroom.id}`)}
                     >
                       <CardContent className="p-5">

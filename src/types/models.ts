@@ -77,7 +77,8 @@ export interface Assignment {
   target_dimensions: TargetDimensions;
   personalization_flag: boolean;
   materials?: CourseMaterial[] | null;
-  hard_skills?: string[] | null;
+  /** JSON string or legacy string[]; may contain `{ domain, skill }[]` pairs */
+  hard_skills?: string | unknown[] | null;
   hard_skill_domain?: string | null;
   /** When true (default), students see AI feedback as soon as it is generated. */
   auto_publish_ai_feedback?: boolean;

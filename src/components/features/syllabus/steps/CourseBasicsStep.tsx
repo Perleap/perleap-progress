@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
 import {
   Upload,

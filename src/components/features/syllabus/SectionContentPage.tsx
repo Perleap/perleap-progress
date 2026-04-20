@@ -12,6 +12,7 @@ import {
   Calendar,
   Target,
   BookOpen,
+  ClipboardList,
   FileText,
   Lock,
   ChevronLeft,
@@ -19,19 +20,27 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { RichTextViewer } from '@/components/ui/rich-text-editor';
-import { ResourceViewer } from './ResourceViewer';
-import { useAuth } from '@/contexts/AuthContext';
-import { useUpdateStudentProgress, useSectionAssignmentProgress } from '@/hooks/queries';
-import { isSectionUnlocked } from '@/lib/sectionUnlock';
+import { useAuth } from '@/contexts/useAuth';
+import {
+  useUpdateStudentProgress,
+  useStudentModuleFlowProgressMap,
+  useAssignmentSubmittedOrCompletedMap,
+} from '@/hooks/queries';
+import { isSectionUnlocked, sectionsInCourseOrder } from '@/lib/sectionUnlock';
+import { getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
 import type {
   SyllabusSection,
   SectionResource,
   StudentProgressStatus,
   ReleaseMode,
+  ModuleFlowStep,
 } from '@/types/syllabus';
 
 interface SectionContentPageProps {
   sectionId: string;
+  classroomId: string;
+  /** Persisted teacher module flow; when non-empty, outline shows assignments + activity steps in order. */
+  moduleFlowSteps: ModuleFlowStep[];
   sections: SyllabusSection[];
   sectionResources: Record<string, SectionResource[]>;
   linkedAssignmentsMap: Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>>;
@@ -52,6 +61,8 @@ const EMPTY_LINKED_ASSIGNMENTS: Array<{
 
 export const SectionContentPage = ({
   sectionId,
+  classroomId,
+  moduleFlowSteps,
   sections,
   sectionResources,
   linkedAssignmentsMap,
@@ -66,10 +77,7 @@ export const SectionContentPage = ({
   const { user } = useAuth();
   const updateProgress = useUpdateStudentProgress();
 
-  const sortedSections = useMemo(
-    () => [...sections].sort((a, b) => a.order_index - b.order_index),
-    [sections],
-  );
+  const sortedSections = useMemo(() => sectionsInCourseOrder(sections), [sections]);
   const currentIndex = sortedSections.findIndex((s) => s.id === sectionId);
   const section = sortedSections[currentIndex];
   const prevSection = currentIndex > 0 ? sortedSections[currentIndex - 1] : null;
@@ -79,35 +87,110 @@ export const SectionContentPage = ({
     () => linkedAssignmentsMap[sectionId] ?? EMPTY_LINKED_ASSIGNMENTS,
     [linkedAssignmentsMap, sectionId],
   );
-  const studentProgress = studentProgressMap[sectionId];
-  const { data: sectionAssignmentProg } = useSectionAssignmentProgress(
-    sectionId,
+  const orderedFlow = useMemo(
+    () =>
+      moduleFlowSteps.length > 0
+        ? getOrderedActivityCenterFlowSteps(moduleFlowSteps, resources)
+        : [],
+    [moduleFlowSteps, resources],
+  );
+  const useFlowList = orderedFlow.length > 0;
+  const assignmentById = useMemo(() => {
+    const m: Record<string, (typeof assignments)[number]> = {};
+    assignments.forEach((a) => {
+      m[a.id] = a;
+    });
+    return m;
+  }, [assignments]);
+  const resourceById = useMemo(() => {
+    const m: Record<string, SectionResource> = {};
+    resources.forEach((r) => {
+      m[r.id] = r;
+    });
+    return m;
+  }, [resources]);
+
+  const flowStepIds = useMemo(() => orderedFlow.map((s) => s.id), [orderedFlow]);
+
+  const { data: progressByStep = {} } = useStudentModuleFlowProgressMap(user?.id, flowStepIds);
+
+  const assignmentIdsForSubmissionQuery = useMemo(() => {
+    if (useFlowList) {
+      const ids: string[] = [];
+      for (const step of orderedFlow) {
+        if (
+          step.step_kind === 'assignment' &&
+          step.assignment_id &&
+          assignmentById[step.assignment_id]
+        ) {
+          ids.push(step.assignment_id);
+        }
+      }
+      return ids;
+    }
+    return assignments.map((a) => a.id);
+  }, [useFlowList, orderedFlow, assignmentById, assignments]);
+
+  const { data: assignmentDoneMap = {} } = useAssignmentSubmittedOrCompletedMap(
+    assignmentIdsForSubmissionQuery,
     user?.id,
   );
 
-  const assignmentProgress = sectionAssignmentProg ?? null;
+  const moduleProgressStats = useMemo(() => {
+    if (useFlowList) {
+      let total = 0;
+      let done = 0;
+      for (const step of orderedFlow) {
+        if (step.step_kind === 'resource' && step.activity_list_id) {
+          if (!resourceById[step.activity_list_id]) continue;
+          total += 1;
+          if (progressByStep[step.id]) done += 1;
+        } else if (step.step_kind === 'assignment' && step.assignment_id) {
+          if (!assignmentById[step.assignment_id]) continue;
+          total += 1;
+          if (assignmentDoneMap[step.assignment_id]) done += 1;
+        }
+      }
+      return {
+        total,
+        done,
+        percent: total > 0 ? Math.round((done / total) * 100) : 0,
+      };
+    }
+    const total = assignments.length;
+    let done = 0;
+    for (const a of assignments) {
+      if (assignmentDoneMap[a.id]) done += 1;
+    }
+    return {
+      total,
+      done,
+      percent: total > 0 ? Math.round((done / total) * 100) : 0,
+    };
+  }, [useFlowList, orderedFlow, resourceById, assignmentById, progressByStep, assignmentDoneMap, assignments]);
 
-  // Auto-mark section as completed when all assignments are submitted
+  const studentProgress = studentProgressMap[sectionId];
+
   useEffect(() => {
     if (
-      assignmentProgress &&
-      assignmentProgress.total > 0 &&
-      assignmentProgress.submitted >= assignmentProgress.total &&
+      moduleProgressStats.total > 0 &&
+      moduleProgressStats.done >= moduleProgressStats.total &&
       studentProgress !== 'completed' &&
-      user?.id
+      user?.id &&
+      section?.id
     ) {
       updateProgress.mutate({
-        sectionId: section?.id ?? '',
+        sectionId: section.id,
         studentId: user.id,
         status: 'completed',
         syllabusId,
       });
     }
-  }, [assignmentProgress, studentProgress, user?.id, section?.id, syllabusId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [moduleProgressStats, studentProgress, user?.id, section?.id, syllabusId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!section) return null;
 
-  const locked = !isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
+  const locked = !isSectionUnlocked(section, sortedSections, releaseMode, studentProgressMap);
 
   const topNavRow = (
     <div className={cn('flex items-center justify-between', isRTL && 'flex-row-reverse')}>
@@ -167,10 +250,6 @@ export const SectionContentPage = ({
   );
 
   if (locked) {
-    const prereqNames = (section.prerequisites ?? [])
-      .map((id) => sections.find((s) => s.id === id)?.title)
-      .filter(Boolean);
-
     return (
       <div className="space-y-6">
         {topNavRow}
@@ -183,15 +262,6 @@ export const SectionContentPage = ({
             <p className="text-muted-foreground max-w-md mb-4">
               {t('syllabus.sections.unlockRequirements', 'Complete the required sections to unlock this content.')}
             </p>
-            {prereqNames.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-center">
-                {prereqNames.map((name, i) => (
-                  <Badge key={i} variant="outline" className="rounded-full">
-                    {name}
-                  </Badge>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
         {bottomNavRow}
@@ -216,16 +286,17 @@ export const SectionContentPage = ({
               <Calendar className="h-3.5 w-3.5" /> {dateRange}
             </span>
           )}
-          {assignments.length > 0 && (
+          {useFlowList ? (
             <Badge variant="secondary" className="rounded-full text-xs">
-              <BookOpen className="h-3 w-3 me-1" /> {assignments.length} {t('syllabus.sections.linkedAssignments', 'assignments')}
+              <BookOpen className="h-3 w-3 me-1" /> {orderedFlow.length}{' '}
+              {t('syllabus.detail.moduleSteps', 'module steps')}
             </Badge>
-          )}
-          {resources.length > 0 && (
+          ) : assignments.length > 0 ? (
             <Badge variant="secondary" className="rounded-full text-xs">
-              <FileText className="h-3 w-3 me-1" /> {resources.length} {t('syllabus.detail.resources', 'resources')}
+              <BookOpen className="h-3 w-3 me-1" /> {assignments.length}{' '}
+              {t('syllabus.sections.linkedAssignments', 'assignments')}
             </Badge>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -269,61 +340,142 @@ export const SectionContentPage = ({
         </div>
       )}
 
-      {/* Resources */}
-      {resources.length > 0 && (
-        <ResourceViewer resources={resources} isRTL={isRTL} />
-      )}
-
-      {/* Linked assignments */}
-      {assignments.length > 0 && (
+      {/* Module flow (assignments + activities) or linked assignments only */}
+      {(useFlowList || assignments.length > 0) && (
         <div>
           <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1">
-            <BookOpen className="h-3 w-3" /> {t('syllabus.detail.linkedAssignments', 'Assignments')}
+            <BookOpen className="h-3 w-3" />{' '}
+            {useFlowList
+              ? t('syllabus.detail.moduleStepsHeading', 'Module steps')
+              : t('syllabus.detail.linkedAssignments', 'Assignments')}
           </h4>
-          {assignmentProgress && assignmentProgress.total > 0 && (
+          {moduleProgressStats.total > 0 && (
             <div className="mb-3">
               <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                <span>{t('syllabus.progress.assignmentProgress', 'Assignment Progress')}</span>
-                <span>{assignmentProgress.submitted} / {assignmentProgress.total}</span>
+                <span>{t('syllabus.progress.moduleProgress', 'Module progress')}</span>
+                <span>
+                  {moduleProgressStats.done} / {moduleProgressStats.total}
+                </span>
               </div>
-              <Progress value={assignmentProgress.progressPercent} className="h-2" />
+              <Progress value={moduleProgressStats.percent} className="h-2" />
             </div>
           )}
           <div className="space-y-1.5">
-            {assignments.map((a) => (
-              <Link
-                key={a.id}
-                to={`/student/assignment/${a.id}`}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
-                  'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
-                  isRTL && 'flex-row-reverse'
-                )}
-              >
-                <div className="p-1.5 rounded-md bg-muted/50">
-                  <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-                  <span className="text-sm font-medium text-foreground truncate block">{a.title}</span>
-                  <span className="text-[10px] text-muted-foreground">{a.type}</span>
-                </div>
-                {a.due_at && (
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1 flex-shrink-0">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(a.due_at).toLocaleDateString()}
-                  </span>
-                )}
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
-                    isRTL && 'flex-row-reverse'
-                  )}
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {t('syllabus.resources.open')}
-                </span>
-              </Link>
-            ))}
+            {useFlowList
+              ? orderedFlow.map((step) => {
+                  if (step.step_kind === 'resource' && step.activity_list_id) {
+                    const r = resourceById[step.activity_list_id];
+                    const title =
+                      r?.title ?? t('studentClassroom.activities.activity', 'Activity');
+                    const sub = t('syllabus.detail.activityStepLabel', 'Activity');
+                    return (
+                      <Link
+                        key={step.id}
+                        to={`/student/classroom/${classroomId}/activity/${step.activity_list_id}`}
+                        state={{ returnClassroomSection: 'outline' }}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
+                          'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
+                          isRTL && 'flex-row-reverse',
+                        )}
+                      >
+                        <div className="p-1.5 rounded-md bg-muted/50">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <span className="text-sm font-medium text-foreground truncate block">
+                            {title}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{sub}</span>
+                        </div>
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
+                            isRTL && 'flex-row-reverse',
+                          )}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {t('syllabus.resources.open')}
+                        </span>
+                      </Link>
+                    );
+                  }
+                  if (step.step_kind === 'assignment' && step.assignment_id) {
+                    const a = assignmentById[step.assignment_id];
+                    if (!a) return null;
+                    return (
+                      <Link
+                        key={step.id}
+                        to={`/student/assignment/${a.id}`}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
+                          'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
+                          isRTL && 'flex-row-reverse',
+                        )}
+                      >
+                        <div className="p-1.5 rounded-md bg-muted/50">
+                          <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <span className="text-sm font-medium text-foreground truncate block">
+                            {a.title}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{a.type}</span>
+                        </div>
+                        {a.due_at && (
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1 flex-shrink-0">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(a.due_at).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
+                            isRTL && 'flex-row-reverse',
+                          )}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {t('syllabus.resources.open')}
+                        </span>
+                      </Link>
+                    );
+                  }
+                  return null;
+                })
+              : assignments.map((a) => (
+                  <Link
+                    key={a.id}
+                    to={`/student/assignment/${a.id}`}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
+                      'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
+                      isRTL && 'flex-row-reverse',
+                    )}
+                  >
+                    <div className="p-1.5 rounded-md bg-muted/50">
+                      <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <span className="text-sm font-medium text-foreground truncate block">{a.title}</span>
+                      <span className="text-[10px] text-muted-foreground">{a.type}</span>
+                    </div>
+                    {a.due_at && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 flex-shrink-0">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(a.due_at).toLocaleDateString()}
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
+                        isRTL && 'flex-row-reverse',
+                      )}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {t('syllabus.resources.open')}
+                    </span>
+                  </Link>
+                ))}
           </div>
         </div>
       )}

@@ -426,6 +426,13 @@
     "subjectAreaPlaceholder": "Enter subject area",
     "skillsToAssess": "Skills to Assess",
     "addSkillManually": "Add skill manually",
+    "hardSkillsSuggestion": {
+      "loading": "Finding the best skills for this assignment…",
+      "error": "Could not suggest skills. You can still pick them manually.",
+      "retry": "Retry",
+      "successHint": "Suggested skills were filled in. You can change them anytime."
+    },
+    "hardSkillsMax": "At most {{max}} skills.",
     "assignmentMaterials": "Assignment Materials",
     "selectFromClassroomMaterials": "Select from classroom materials:",
     "uploadPDF": "Upload PDF",
@@ -667,9 +674,9 @@
       "addBlockAriaLabel": "Add block",
       "addBlockMenuText": "Text block",
       "addBlockMenuVideo": "Video",
-      "searchModulesPlaceholder": "Search modules…",
+      "searchModulesPlaceholder": "Search modules, activities, assignments…",
       "manageOutline": "Course outline",
-      "noModulesMatchSearch": "No modules match your search.",
+      "noModulesMatchSearch": "No results match your search.",
       "emptyModuleSummary": "No steps in this module’s flow yet.",
       "stepCountOne": "1 step",
       "stepCountMany": "{{count}} steps",
@@ -1772,7 +1779,10 @@
       "settings": "Settings"
     },
     "moduleAccordion": {
-      "courseCurriculumTitle": "Course Syllabus",
+      "studentFlowCaption": "Work through each module in order. Open a module for the full page to study, or use the list below.",
+      "openModulePage": "Open module: {{title}}",
+      "expandModuleActivities": "Show or hide activities in this module",
+      "courseCurriculumTitle": "Course Outline",
       "courseCurriculumSummaryNoDuration": "{{modules}} modules • {{lessons}} lessons",
       "courseCurriculumSummaryWithDuration": "{{modules}} modules • {{lessons}} lessons • {{duration}} total",
       "moduleLessonSubline": "{{count}} lessons • {{duration}}",
@@ -1791,6 +1801,7 @@
       "noActivities": "No activities yet.",
       "noAssignments": "No assignments in this module.",
       "lockedModule": "This module is locked until prerequisites are met.",
+      "lockedModuleSequential": "Complete “{{previous}}” before opening this module.",
       "addActivity": "Add activity",
       "createAssignment": "Create assignment"
     },
@@ -1888,7 +1899,6 @@
       "bulkScheduleFailed": "Failed to apply schedule",
       "content": "Content",
       "contentPlaceholder": "Add lesson content, instructions, materials...",
-      "prerequisites": "Prerequisites",
       "locked": "Locked",
       "unlockRequirements": "Complete the required sections to unlock this content.",
       "lockSection": "Lock",
@@ -2006,6 +2016,7 @@
       "description": "Description",
       "objectives": "Objectives",
       "resources": "Resources",
+      "activityStepLabel": "Activity",
       "notes": "Notes",
       "closeDetails": "Close details",
       "linkedAssignments": "Linked Assignments"
@@ -2089,7 +2100,8 @@
       "reviewed": "Reviewed",
       "completed": "Completed",
       "autoProgress": "Auto-progress",
-      "assignmentProgress": "Assignment Progress"
+      "assignmentProgress": "Assignment Progress",
+      "moduleProgress": "Module progress"
     },
     "releaseMode": {
       "label": "Release Mode",
@@ -2100,9 +2112,7 @@
       "date_based": "Date-based",
       "date_basedDesc": "Sections unlock when their start date arrives",
       "manual": "Manual",
-      "manualDesc": "Teacher toggles lock/unlock per section",
-      "prerequisites": "Prerequisites",
-      "prerequisitesDesc": "Teacher sets which sections must be completed first"
+      "manualDesc": "Teacher toggles lock/unlock per section"
     },
     "newCategory": "New Category"
   },

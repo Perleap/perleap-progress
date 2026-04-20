@@ -53,17 +53,21 @@ export const getModuleFlowSteps = async (
 export type FlowStepInput = {
   order_index: number;
   step_kind: 'resource' | 'assignment';
-  section_resource_id?: string | null;
+  activity_list_id?: string | null;
   assignment_id?: string | null;
 };
 
 /**
  * Replace all flow steps for a section (delete + insert). See plan: teacher save persists rows.
+ * Serialized per `sectionId` so concurrent callers (e.g. syllabus save + assignment wizard) cannot
+ * interleave delete/insert and hit UNIQUE(section_id, order_index) with 409.
  */
-export const replaceModuleFlowSteps = async (
+const __replaceModuleFlowTailBySection = new Map<string, Promise<unknown>>();
+
+async function replaceModuleFlowStepsImpl(
   sectionId: string,
   steps: FlowStepInput[],
-): Promise<{ error: ApiError | null }> => {
+): Promise<{ error: ApiError | null }> {
   try {
     const { error: delErr } = await supabase
       .from('module_flow_steps' as any)
@@ -78,7 +82,7 @@ export const replaceModuleFlowSteps = async (
       section_id: sectionId,
       order_index: s.order_index,
       step_kind: s.step_kind,
-      section_resource_id: s.step_kind === 'resource' ? s.section_resource_id : null,
+      activity_list_id: s.step_kind === 'resource' ? s.activity_list_id : null,
       assignment_id: s.step_kind === 'assignment' ? s.assignment_id : null,
     }));
 
@@ -89,6 +93,16 @@ export const replaceModuleFlowSteps = async (
   } catch (error) {
     return { error: handleSupabaseError(error) };
   }
+}
+
+export const replaceModuleFlowSteps = (
+  sectionId: string,
+  steps: FlowStepInput[],
+): Promise<{ error: ApiError | null }> => {
+  const prev = __replaceModuleFlowTailBySection.get(sectionId) ?? Promise.resolve();
+  const job = prev.then(() => replaceModuleFlowStepsImpl(sectionId, steps));
+  __replaceModuleFlowTailBySection.set(sectionId, job.catch(() => {}));
+  return job;
 };
 
 export const getStudentModuleFlowProgress = async (

@@ -33,9 +33,10 @@ export async function getSectionResourceIdsForSectionInOrder(
 ): Promise<{ data: string[] | null; error: ApiError | null }> {
   try {
     const { data, error } = await supabase
-      .from('section_resources' as any)
+      .from('activity_list' as any)
       .select('id')
       .eq('section_id', sectionId)
+      .eq('active', true)
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
@@ -46,18 +47,19 @@ export async function getSectionResourceIdsForSectionInOrder(
 }
 
 /**
- * Validates that every section_resource_id belongs to the given syllabus section.
+ * Validates that every activity_list row id belongs to the given syllabus section.
  */
 async function validateLinksBelongToSection(
   sectionId: string,
   items: AssignmentModuleActivityInput[],
 ): Promise<{ ok: boolean; error: ApiError | null }> {
   if (items.length === 0) return { ok: true, error: null };
-  const ids = items.map((i) => i.section_resource_id);
+  const ids = items.map((i) => i.activity_list_id);
   const { data, error } = await supabase
-    .from('section_resources' as any)
+    .from('activity_list' as any)
     .select('id')
     .eq('section_id', sectionId)
+    .eq('active', true)
     .in('id', ids);
 
   if (error) return { ok: false, error: handleSupabaseError(error) };
@@ -103,7 +105,7 @@ export async function setAssignmentLinkedActivities(
 
     const rows = items.map((item) => ({
       assignment_id: assignmentId,
-      section_resource_id: item.section_resource_id,
+      activity_list_id: item.activity_list_id,
       order_index: item.order_index,
       include_in_ai_context: item.include_in_ai_context,
     }));
@@ -126,7 +128,7 @@ export async function setDefaultLinksForAssignmentFromSection(
   const { data: ids, error } = await getSectionResourceIdsForSectionInOrder(syllabusSectionId);
   if (error) return { error };
   const items: AssignmentModuleActivityInput[] = (ids || []).map((id, i) => ({
-    section_resource_id: id,
+    activity_list_id: id,
     order_index: i,
     include_in_ai_context: true,
   }));

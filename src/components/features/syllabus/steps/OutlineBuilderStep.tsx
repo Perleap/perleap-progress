@@ -25,7 +25,6 @@ import {
   Sparkles,
   Loader2,
   Pencil,
-  GitBranch,
   Lock,
   Unlock,
 } from 'lucide-react';
@@ -55,7 +54,6 @@ const createEmptySection = (): WizardSectionData => ({
   startDate: '',
   endDate: '',
   completion_status: 'auto',
-  prerequisites: [],
   is_locked: false,
 });
 
@@ -85,7 +83,6 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
       ...src,
       tempId: crypto.randomUUID(),
       title: `${src.title} (copy)`,
-      prerequisites: [],
     };
     const updated = [...sections.slice(0, index + 1), dup, ...sections.slice(index + 1)];
     onChange({ sections: updated });
@@ -345,48 +342,6 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                       </>
                     )}
                   </Button>
-                </div>
-              )}
-
-              {data.release_mode === 'prerequisites' && (
-                <div className="space-y-2">
-                  <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                    <GitBranch className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.prerequisites', 'Prerequisites')}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">{t('syllabus.wizard.prereqHint', 'Students must complete checked sections before this one unlocks.')}</p>
-                  <div className="space-y-1">
-                    {sections
-                      .filter((s) => s.tempId !== selected.tempId)
-                      .map((s) => {
-                        const orderIdx = sections.findIndex((x) => x.tempId === s.tempId);
-                        const prereqs = selected.prerequisites;
-                        const isChecked = prereqs.includes(s.tempId);
-                        const isEarlier = orderIdx < selectedIndex;
-                        return (
-                          <label
-                            key={s.tempId}
-                            className={cn(
-                              'flex items-center gap-2 text-sm rounded-lg px-2 py-1.5',
-                              isEarlier ? 'cursor-pointer hover:bg-muted/50' : 'opacity-40 cursor-not-allowed',
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              disabled={!isEarlier}
-                              checked={isChecked}
-                              onChange={() => {
-                                const next = isChecked
-                                  ? prereqs.filter((id) => id !== s.tempId)
-                                  : [...prereqs, s.tempId];
-                                updateSection(selectedIndex, { prerequisites: next });
-                              }}
-                              className="rounded"
-                            />
-                            <span>{s.title || `${structureLabel} ${orderIdx + 1}`}</span>
-                          </label>
-                        );
-                      })}
-                  </div>
                 </div>
               )}
             </div>

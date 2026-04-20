@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Settings, Moon, Sun, LogOut, Languages } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useNavigate, type To } from 'react-router-dom';
 import { useNavigateBack } from '@/hooks/useNavigateBack';
 import { useTranslation } from 'react-i18next';

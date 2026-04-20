@@ -203,7 +203,7 @@ export const getAssignmentModuleActivityContextText = async (
 
   const { data: links, error } = await supabase
     .from('assignment_module_activities')
-    .select('section_resource_id, order_index, include_in_ai_context')
+    .select('activity_list_id, order_index, include_in_ai_context')
     .eq('assignment_id', assignmentId)
     .order('order_index', { ascending: true });
 
@@ -211,11 +211,12 @@ export const getAssignmentModuleActivityContextText = async (
     return '';
   }
 
-  const ids = [...new Set((links as { section_resource_id: string }[]).map((l) => l.section_resource_id))];
+  const ids = [...new Set((links as { activity_list_id: string }[]).map((l) => l.activity_list_id))];
   const { data: resources, error: resErr } = await supabase
-    .from('section_resources')
+    .from('activity_list')
     .select('id, title, resource_type, url, body_text, summary, status, lesson_content')
-    .in('id', ids);
+    .in('id', ids)
+    .eq('active', true);
 
   if (resErr || !resources?.length) {
     return '';

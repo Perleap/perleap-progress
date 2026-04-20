@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.compute-nuance-insights]
 verify_jwt = false
+
+[functions.suggest-assignment-hard-skills]
+verify_jwt = false

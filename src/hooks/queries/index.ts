@@ -112,6 +112,7 @@ export type {
 // Syllabus Queries
 export {
   syllabusKeys,
+  prefetchSyllabusByClassroom,
   useSyllabus,
   useCreateSyllabus,
   useProvisionSyllabusBundle,
@@ -157,10 +158,13 @@ export {
 export {
   moduleFlowKeys,
   studentFlowProgressKeys,
+  assignmentSubmittedFlagsKeys,
   useModuleFlowSteps,
   useModuleFlowStepsBulk,
   useReplaceModuleFlow,
+  useStudentCurriculumFlowContext,
   useStudentModuleFlowProgressMap,
+  useAssignmentSubmittedOrCompletedMap,
   useMarkFlowStepComplete,
   useAssignmentFlowCompletion,
 } from './useModuleFlowQueries';

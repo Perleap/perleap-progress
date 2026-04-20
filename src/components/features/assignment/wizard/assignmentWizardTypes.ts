@@ -1,5 +1,8 @@
 import type { Database } from '@/integrations/supabase/types';
 import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
+import type { HardSkillPair } from '@/lib/hardSkillsFormat';
+
+export type { HardSkillPair } from '@/lib/hardSkillsFormat';
 
 export type AssignmentWizardStepId =
   | 'basics'
@@ -24,7 +27,7 @@ export type AssignmentWizardFormData = {
   type: string;
   due_at: string;
   status: string;
-  hard_skills: string[];
+  hard_skills: HardSkillPair[];
   hard_skill_domain: string;
   target_dimensions: {
     vision: boolean;

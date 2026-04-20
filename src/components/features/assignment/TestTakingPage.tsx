@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { useTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
 import { generateFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import type { AssignmentCompletionTone } from '@/types/submission';
 
 interface TestTakingPageProps {

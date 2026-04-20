@@ -22,7 +22,8 @@ export const getTeacherClassrooms = async (
     const { data, error } = await supabase
       .from('classrooms')
       .select('*, enrollments(count)')
-      .eq('teacher_id', teacherId);
+      .eq('teacher_id', teacherId)
+      .eq('active', true);
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };

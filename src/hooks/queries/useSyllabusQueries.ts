@@ -3,7 +3,7 @@
  * React Query hooks for syllabus operations
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { syncModuleFlowToResolvedDisplayForSection } from '@/hooks/queries/moduleFlowSync';
 import {
@@ -66,6 +66,23 @@ export const syllabusKeys = {
 // Syllabus
 // ---------------------------------------------------------------------------
 
+/** Keep low so students see teacher syllabus/release_mode changes without waiting minutes (separate browsers don't share invalidation). */
+const SYLLABUS_STALE_MS = 0;
+
+/** Warm cache before opening classroom detail (reduces nav + CTA layout jumps). */
+export function prefetchSyllabusByClassroom(queryClient: QueryClient, classroomId: string | undefined) {
+  if (!classroomId) return;
+  return queryClient.prefetchQuery({
+    queryKey: syllabusKeys.byClassroom(classroomId),
+    queryFn: async () => {
+      const { data, error } = await getSyllabusByClassroom(classroomId);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: SYLLABUS_STALE_MS,
+  });
+}
+
 export const useSyllabus = (classroomId: string | undefined) => {
   return useQuery({
     queryKey: syllabusKeys.byClassroom(classroomId || ''),
@@ -76,7 +93,7 @@ export const useSyllabus = (classroomId: string | undefined) => {
       return data;
     },
     enabled: !!classroomId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: SYLLABUS_STALE_MS,
   });
 };
 

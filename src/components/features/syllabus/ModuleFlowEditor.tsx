@@ -42,11 +42,9 @@ import { toast } from 'sonner';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
 import {
-  computeDefaultModuleFlow,
   isActivityCenterResource,
   moduleFlowLocalStepsEqual,
   moduleFlowLocalStepsToFlowInput,
-  resolveDisplayedModuleFlow,
   resolveDisplayedModuleFlowBase,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
@@ -176,7 +174,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
     ref,
   ) {
     const { t } = useTranslation();
-    const { data: persisted = [], isLoading } = useModuleFlowSteps(sectionId);
+    const { data: persisted = [], isLoading, isFetching } = useModuleFlowSteps(sectionId);
     const replaceMutation = useReplaceModuleFlow();
     const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -189,11 +187,6 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
     const sectionAssignments = useMemo(
       () => assignments.filter((a) => a.syllabus_section_id === sectionId),
       [assignments, sectionId],
-    );
-
-    const computedDefault = useMemo(
-      () => computeDefaultModuleFlow(sectionId, resources, assignments),
-      [sectionId, resources, assignments],
     );
 
     /** Stable ref — inline object would retrigger CreateAssignmentDialog effects every render. */
@@ -226,8 +219,8 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
 
     useEffect(() => {
       const persistedForResolve = isLoading ? [] : persisted;
-      const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedForResolve);
-      const merged = resolveDisplayedModuleFlow(sectionId, resources, assignments, persistedForResolve);
+      /** Editor uses base flow only (no appendMissing): student list elsewhere still uses `resolveDisplayedModuleFlow`. */
+      const merged = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedForResolve);
       const prevSnap = localStepsRef.current;
       const next = computeHydratedSteps(prevSnap, merged);
       const prevKeys = new Set(prevSnap.map(stepSortId));
@@ -235,26 +228,26 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
 
       setLocalSteps((p) => (moduleFlowLocalStepsEqual(p, next) ? p : next));
 
-      if (!isLoading) {
+      /** Avoid re-persisting "additions" while server snapshot is stale (e.g. right after delete). */
+      const blockAdditionsAutoPersist =
+        replaceMutation.isPending ||
+        (isFetching && prevSnap.length > 0 && additions.length > 0);
+
+      if (!isLoading && !blockAdditionsAutoPersist) {
         if (additions.length > 0) {
           void persistFlow([...prevSnap, ...additions]);
-        } else if (
-          prevSnap.length === 0 &&
-          merged.length > 0 &&
-          !moduleFlowLocalStepsEqual(merged, base)
-        ) {
-          void persistFlow(merged);
         }
       }
     }, [
       persisted,
-      computedDefault,
       isLoading,
+      isFetching,
       sectionId,
       resources,
       assignments,
       sectionAssignments,
       persistFlow,
+      replaceMutation.isPending,
     ]);
 
     const sortableIds = useMemo(() => localSteps.map(stepSortId), [localSteps]);

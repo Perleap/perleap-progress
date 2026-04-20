@@ -28,7 +28,7 @@ import type {
   StudentProgressStatus,
   CompletionStatus,
 } from '@/types/syllabus';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useUpdateStudentProgress } from '@/hooks/queries';
 
 interface SectionDetailModalProps {
