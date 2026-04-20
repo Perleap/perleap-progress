@@ -219,7 +219,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
               {!unlocked ? (
                 <p className="text-sm text-muted-foreground">{t('studentClassroom.activities.unlockHint')}</p>
               ) : usePersisted && steps ? (
-                <ol className="space-y-2 list-decimal list-inside">
+                <ol className="list-none space-y-2">
                   {(() => {
                     const nextIdx = firstIncompletePersistedIndex(steps, flowCtx);
                     return steps.map((step, index) => {
@@ -233,9 +233,20 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                           resourceMap[section.id]?.find((r) => r.id === step.activity_list_id)?.title ??
                           t('studentClassroom.activities.activity');
                         return (
-                          <li key={step.id} className="text-sm">
+                          <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
+                            <span
+                              className={cn(
+                                'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
+                                isRTL ? 'text-start' : 'text-end',
+                              )}
+                            >
+                              {index + 1}.
+                            </span>
                             <div
-                              className={cn('inline-flex flex-wrap items-center gap-2', isRTL && 'flex-row-reverse')}
+                              className={cn(
+                                'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                isRTL && 'flex-row-reverse',
+                              )}
                               aria-label={`${label}. ${statusLabel}`}
                             >
                               {visual === 'locked' ? (
@@ -253,10 +264,10 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                 <Link
                                   to={`/student/classroom/${classroomId}/activity/${step.activity_list_id}`}
                                   state={{ returnClassroomSection: 'curriculum' }}
-                                  className="text-primary font-medium hover:underline inline-flex items-center gap-1"
+                                  className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline"
                                 >
-                                  <FileText className="h-3.5 w-3.5" />
-                                  {label}
+                                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{label}</span>
                                 </Link>
                               )}
                             </div>
@@ -268,9 +279,20 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                         const a = (assignments as { id: string; title: string }[]).find((x) => x.id === step.assignment_id);
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
                         return (
-                          <li key={step.id} className="text-sm">
+                          <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
+                            <span
+                              className={cn(
+                                'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
+                                isRTL ? 'text-start' : 'text-end',
+                              )}
+                            >
+                              {index + 1}.
+                            </span>
                             <div
-                              className={cn('inline-flex flex-wrap items-center gap-2', isRTL && 'flex-row-reverse')}
+                              className={cn(
+                                'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                isRTL && 'flex-row-reverse',
+                              )}
                               aria-label={`${label}. ${statusLabel}`}
                             >
                               {visual === 'locked' ? (
@@ -289,11 +311,11 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                   to={`/student/assignment/${step.assignment_id}`}
                                   className={cn(
                                     buttonVariants({ variant: 'link', size: 'default' }),
-                                    'h-auto p-0 text-base inline-flex items-center gap-1',
+                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
                                   )}
                                 >
-                                  <ClipboardList className="h-3.5 w-3.5" />
-                                  {label}
+                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{label}</span>
                                 </Link>
                               )}
                             </div>
@@ -307,7 +329,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
               ) : computed.length > 0 ? (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">{t('studentClassroom.activities.fallbackFlowHint')}</p>
-                  <ol className="space-y-2 list-decimal list-inside">
+                  <ol className="list-none space-y-2">
                     {(() => {
                       const nextIdx = firstIncompleteComputedIndex(computed, flowCtx);
                       return computed.map((c, idx) => {
@@ -320,9 +342,23 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                           const r = resourceMap[section.id]?.find((x) => x.id === c.activity_list_id);
                           const label = r?.title ?? t('studentClassroom.activities.activity');
                           return (
-                            <li key={`r-${c.activity_list_id}-${idx}`} className="text-sm">
+                            <li
+                              key={`r-${c.activity_list_id}-${idx}`}
+                              className="flex min-w-0 items-center gap-2 text-sm"
+                            >
+                              <span
+                                className={cn(
+                                  'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
+                                  isRTL ? 'text-start' : 'text-end',
+                                )}
+                              >
+                                {idx + 1}.
+                              </span>
                               <div
-                                className={cn('inline-flex flex-wrap items-center gap-2', isRTL && 'flex-row-reverse')}
+                                className={cn(
+                                  'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                  isRTL && 'flex-row-reverse',
+                                )}
                                 aria-label={`${label}. ${statusLabel}`}
                               >
                                 {visual === 'locked' ? (
@@ -340,10 +376,10 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                   <Link
                                     to={`/student/classroom/${classroomId}/activity/${c.activity_list_id}`}
                                     state={{ returnClassroomSection: 'curriculum' }}
-                                    className="text-primary font-medium hover:underline inline-flex items-center gap-1"
+                                    className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline"
                                   >
-                                    <FileText className="h-3.5 w-3.5" />
-                                    {label}
+                                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">{label}</span>
                                   </Link>
                                 )}
                               </div>
@@ -353,9 +389,23 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                         const a = (assignments as { id: string; title: string }[]).find((x) => x.id === c.assignment_id);
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
                         return (
-                          <li key={`a-${c.assignment_id}-${idx}`} className="text-sm">
+                          <li
+                            key={`a-${c.assignment_id}-${idx}`}
+                            className="flex min-w-0 items-center gap-2 text-sm"
+                          >
+                            <span
+                              className={cn(
+                                'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
+                                isRTL ? 'text-start' : 'text-end',
+                              )}
+                            >
+                              {idx + 1}.
+                            </span>
                             <div
-                              className={cn('inline-flex flex-wrap items-center gap-2', isRTL && 'flex-row-reverse')}
+                              className={cn(
+                                'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                isRTL && 'flex-row-reverse',
+                              )}
                               aria-label={`${label}. ${statusLabel}`}
                             >
                               {visual === 'locked' ? (
@@ -374,11 +424,11 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                   to={`/student/assignment/${c.assignment_id}`}
                                   className={cn(
                                     buttonVariants({ variant: 'link', size: 'default' }),
-                                    'h-auto p-0 text-base inline-flex items-center gap-1',
+                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
                                   )}
                                 >
-                                  <ClipboardList className="h-3.5 w-3.5" />
-                                  {label}
+                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{label}</span>
                                 </Link>
                               )}
                             </div>

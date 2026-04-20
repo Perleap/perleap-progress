@@ -6,7 +6,11 @@ import type { QueryClient } from '@tanstack/react-query';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { invalidateModuleFlowQueriesForSection } from '@/hooks/queries/useModuleFlowQueries';
-import { buildResolvedModuleFlowStepInputs } from '@/lib/moduleFlow';
+import {
+  moduleFlowLocalStepsToFlowInput,
+  resolveDisplayedModuleFlow,
+  type ModuleFlowLocalStep,
+} from '@/lib/moduleFlow';
 import { getModuleFlowSteps, replaceModuleFlowSteps } from '@/services/moduleFlowService';
 import type { SyllabusWithSections } from '@/types/syllabus';
 
@@ -14,6 +18,7 @@ export async function syncModuleFlowToResolvedDisplayForSection(
   queryClient: QueryClient,
   classroomId: string,
   sectionId: string,
+  options?: { ensureAssignmentIds?: string[] },
 ): Promise<void> {
   await queryClient.refetchQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });
   await queryClient.refetchQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
@@ -29,7 +34,27 @@ export async function syncModuleFlowToResolvedDisplayForSection(
     console.error('module flow fetch before sync:', fetchErr);
     return;
   }
-  const steps = buildResolvedModuleFlowStepInputs(sectionId, resources, assignments ?? [], persisted ?? []);
+  let localSteps: ModuleFlowLocalStep[] = resolveDisplayedModuleFlow(
+    sectionId,
+    resources,
+    assignments ?? [],
+    persisted ?? [],
+  );
+  const ensure = options?.ensureAssignmentIds?.filter(Boolean) ?? [];
+  if (ensure.length > 0) {
+    const present = new Set(
+      localSteps
+        .filter((s): s is { kind: 'assignment'; assignmentId: string } => s.kind === 'assignment')
+        .map((s) => s.assignmentId),
+    );
+    for (const id of ensure) {
+      if (!present.has(id)) {
+        localSteps = [...localSteps, { kind: 'assignment', assignmentId: id }];
+        present.add(id);
+      }
+    }
+  }
+  const steps = moduleFlowLocalStepsToFlowInput(localSteps);
   const { error: repErr } = await replaceModuleFlowSteps(sectionId, steps);
   if (repErr) {
     console.error('module flow sync after assignment save:', repErr);

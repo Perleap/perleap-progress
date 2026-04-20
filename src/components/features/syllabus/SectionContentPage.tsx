@@ -28,6 +28,7 @@ import {
 } from '@/hooks/queries';
 import { isSectionUnlocked, sectionsInCourseOrder } from '@/lib/sectionUnlock';
 import { getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
+import { persistedStepDone } from '@/lib/moduleFlowStudent';
 import type {
   SyllabusSection,
   SectionResource,
@@ -138,19 +139,20 @@ export const SectionContentPage = ({
 
   const moduleProgressStats = useMemo(() => {
     if (useFlowList) {
+      const flowCtx = { progressByStep, assignmentDoneMap };
       let total = 0;
       let done = 0;
-      for (const step of orderedFlow) {
+      orderedFlow.forEach((step, i) => {
         if (step.step_kind === 'resource' && step.activity_list_id) {
-          if (!resourceById[step.activity_list_id]) continue;
+          if (!resourceById[step.activity_list_id]) return;
           total += 1;
-          if (progressByStep[step.id]) done += 1;
+          if (persistedStepDone(step, orderedFlow, i, flowCtx)) done += 1;
         } else if (step.step_kind === 'assignment' && step.assignment_id) {
-          if (!assignmentById[step.assignment_id]) continue;
+          if (!assignmentById[step.assignment_id]) return;
           total += 1;
-          if (assignmentDoneMap[step.assignment_id]) done += 1;
+          if (persistedStepDone(step, orderedFlow, i, flowCtx)) done += 1;
         }
-      }
+      });
       return {
         total,
         done,

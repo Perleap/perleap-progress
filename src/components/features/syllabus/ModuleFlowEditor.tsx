@@ -48,7 +48,12 @@ import {
   resolveDisplayedModuleFlowBase,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
-import { useModuleFlowSteps, useReplaceModuleFlow } from '@/hooks/queries';
+import {
+  useModuleFlowSteps,
+  useReplaceModuleFlow,
+  useDeleteAssignment,
+  useDeleteResource,
+} from '@/hooks/queries';
 import type { SectionResource } from '@/types/syllabus';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 
@@ -176,6 +181,8 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
     const { t } = useTranslation();
     const { data: persisted = [], isLoading, isFetching } = useModuleFlowSteps(sectionId);
     const replaceMutation = useReplaceModuleFlow();
+    const deleteAssignmentMutation = useDeleteAssignment();
+    const deleteResourceMutation = useDeleteResource();
     const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
@@ -274,13 +281,49 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       setActiveDragId(null);
     };
 
-    const remove = (index: number) => {
-      setLocalSteps((rows) => {
+    const remove = useCallback(
+      async (index: number) => {
+        const rows = localStepsRef.current;
+        const removed = rows[index];
+        if (!removed) return;
         const next = rows.filter((_, i) => i !== index);
-        void persistFlow(next);
-        return next;
-      });
-    };
+        setLocalSteps(next);
+        const ok = await persistFlow(next);
+        if (ok && removed.kind === 'assignment') {
+          try {
+            await deleteAssignmentMutation.mutateAsync({
+              assignmentId: removed.assignmentId,
+              classroomId,
+            });
+          } catch {
+            toast.error(t('classroomDetail.errors.deleting'));
+          }
+        }
+        if (ok && removed.kind === 'resource') {
+          try {
+            const filePath =
+              resources.find((r) => r.id === removed.resourceId)?.file_path ?? null;
+            await deleteResourceMutation.mutateAsync({
+              resourceId: removed.resourceId,
+              filePath,
+              sectionId,
+              classroomId,
+            });
+          } catch {
+            toast.error(t('classroomDetail.activities.deleteFailed'));
+          }
+        }
+      },
+      [
+        classroomId,
+        deleteAssignmentMutation,
+        deleteResourceMutation,
+        persistFlow,
+        resources,
+        sectionId,
+        t,
+      ],
+    );
 
     const resourceById = useMemo(() => {
       const m: Record<string, SectionResource> = {};
@@ -464,7 +507,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 shrink-0 text-destructive"
-                              onClick={() => remove(index)}
+                              onClick={() => void remove(index)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

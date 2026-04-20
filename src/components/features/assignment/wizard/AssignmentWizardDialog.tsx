@@ -969,7 +969,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         toast.success(t('createAssignment.success.created'));
         if (assignmentRow?.id) onCreatedAssignment?.(assignmentRow.id);
         if (syllabusSectionId) {
-          await syncModuleFlowToResolvedDisplayForSection(queryClient, classroomId, syllabusSectionId);
+          await syncModuleFlowToResolvedDisplayForSection(queryClient, classroomId, syllabusSectionId, {
+            ensureAssignmentIds: assignmentRow?.id ? [assignmentRow.id] : undefined,
+          });
         } else {
           await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
           await queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });

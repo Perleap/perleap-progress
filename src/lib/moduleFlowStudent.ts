@@ -16,12 +16,32 @@ export type StudentFlowProgressContext = {
   assignmentDoneMap: Record<string, boolean>;
 };
 
-export function persistedStepDone(step: ModuleFlowStep, ctx: StudentFlowProgressContext): boolean {
+/**
+ * Resource steps: done when progress exists, or when any later assignment in this flow has a
+ * completed submission (covers lost `student_module_flow_progress` rows after flow replace).
+ */
+export function persistedStepDone(
+  step: ModuleFlowStep,
+  steps: ModuleFlowStep[],
+  stepIndex: number,
+  ctx: StudentFlowProgressContext,
+): boolean {
   if (step.step_kind === 'assignment' && step.assignment_id) {
     return ctx.assignmentDoneMap[step.assignment_id] ?? false;
   }
   if (step.step_kind === 'resource' && step.activity_list_id) {
-    return !!ctx.progressByStep[step.id];
+    if (ctx.progressByStep[step.id]) return true;
+    for (let k = stepIndex + 1; k < steps.length; k++) {
+      const s = steps[k];
+      if (
+        s.step_kind === 'assignment' &&
+        s.assignment_id &&
+        ctx.assignmentDoneMap[s.assignment_id]
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
   return false;
 }
@@ -34,7 +54,7 @@ export function persistedPreviousStepsComplete(
 ): boolean {
   if (index === 0) return true;
   for (let i = 0; i < index; i++) {
-    if (!persistedStepDone(steps[i], ctx)) return false;
+    if (!persistedStepDone(steps[i], steps, i, ctx)) return false;
   }
   return true;
 }
@@ -45,8 +65,8 @@ export function stepVisualStateFromFlags(
   done: boolean,
   previousStepsComplete: boolean,
 ): StepVisualState {
-  if (!previousStepsComplete) return 'locked';
   if (done) return 'done';
+  if (!previousStepsComplete) return 'locked';
   return 'available';
 }
 
@@ -57,7 +77,7 @@ export function persistedStepVisualState(
   ctx: StudentFlowProgressContext,
 ): StepVisualState {
   const prevOk = persistedPreviousStepsComplete(steps, index, ctx);
-  const done = persistedStepDone(step, ctx);
+  const done = persistedStepDone(step, steps, index, ctx);
   return stepVisualStateFromFlags(done, prevOk);
 }
 
@@ -68,7 +88,7 @@ export function firstIncompletePersistedIndex(
 ): number {
   for (let i = 0; i < steps.length; i++) {
     if (!persistedPreviousStepsComplete(steps, i, ctx)) continue;
-    if (!persistedStepDone(steps[i], ctx)) return i;
+    if (!persistedStepDone(steps[i], steps, i, ctx)) return i;
   }
   return -1;
 }
@@ -120,6 +140,8 @@ export function canAccessPersistedStep(
   index: number,
   ctx: StudentFlowProgressContext,
 ): boolean {
+  const step = steps[index];
+  if (persistedStepDone(step, steps, index, ctx)) return true;
   return persistedPreviousStepsComplete(steps, index, ctx);
 }
 

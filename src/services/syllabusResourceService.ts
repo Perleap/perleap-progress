@@ -17,6 +17,35 @@ import type {
 
 const STORAGE_BUCKET = 'syllabus-resources';
 
+/**
+ * Keys allowed on activity_list insert/update. PostgREST returns 400 if the JSON includes a
+ * column name that does not exist (e.g. after manually dropping columns).
+ * Slim schema (typical): section_id, title, resource_type, order_index, status, lesson_content,
+ * active, deleted_at. Re-add any of summary, body_text, estimated_duration_minutes, file_path,
+ * url, mime_type, file_size when those columns exist in your DB.
+ */
+const ACTIVITY_LIST_WRITE_KEYS = new Set([
+  'section_id',
+  'title',
+  'resource_type',
+  'order_index',
+  'status',
+  'lesson_content',
+  'active',
+  'deleted_at',
+]);
+
+function pickActivityListWritePayload(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(row)) {
+    if (!ACTIVITY_LIST_WRITE_KEYS.has(key)) continue;
+    const v = row[key];
+    if (v === undefined) continue;
+    out[key] = v;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Section Resources
 // ---------------------------------------------------------------------------
@@ -61,14 +90,11 @@ export const createSectionResource = async (
   input: CreateSectionResourceInput
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
-    const row = {
+    const row = pickActivityListWritePayload({
       ...input,
       status: input.status ?? 'published',
-      summary: input.summary ?? null,
-      body_text: input.body_text ?? null,
       lesson_content: input.lesson_content ?? null,
-      estimated_duration_minutes: input.estimated_duration_minutes ?? null,
-    };
+    });
     const { data, error } = await supabase
       .from('activity_list' as any)
       .insert([row] as any)
@@ -87,9 +113,10 @@ export const updateSectionResource = async (
   updates: UpdateSectionResourceInput,
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
+    const payload = pickActivityListWritePayload(updates as Record<string, unknown>);
     const { data, error } = await supabase
       .from('activity_list' as any)
-      .update(updates as any)
+      .update(payload as any)
       .eq('id', resourceId)
       .select()
       .single();
@@ -106,6 +133,13 @@ export const deleteSectionResource = async (
   filePath?: string | null
 ): Promise<{ error: ApiError | null }> => {
   try {
+    const { error: junctionErr } = await supabase
+      .from('assignment_module_activities' as any)
+      .delete()
+      .eq('activity_list_id', resourceId);
+
+    if (junctionErr) return { error: handleSupabaseError(junctionErr) };
+
     if (filePath) {
       await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
     }

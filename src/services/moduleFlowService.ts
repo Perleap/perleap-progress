@@ -44,7 +44,7 @@ export const getModuleFlowSteps = async (
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: (data as any[]) as ModuleFlowStep[], error: null };
+    return { data: ((data ?? []) as any[]) as ModuleFlowStep[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -69,26 +69,19 @@ async function replaceModuleFlowStepsImpl(
   steps: FlowStepInput[],
 ): Promise<{ error: ApiError | null }> {
   try {
-    const { error: delErr } = await supabase
-      .from('module_flow_steps' as any)
-      .delete()
-      .eq('section_id', sectionId);
-
-    if (delErr) return { error: handleSupabaseError(delErr) };
-
-    if (steps.length === 0) return { error: null };
-
-    const rows = steps.map((s) => ({
-      section_id: sectionId,
+    const payload = steps.map((s) => ({
       order_index: s.order_index,
       step_kind: s.step_kind,
       activity_list_id: s.step_kind === 'resource' ? s.activity_list_id : null,
       assignment_id: s.step_kind === 'assignment' ? s.assignment_id : null,
     }));
 
-    const { error: insErr } = await supabase.from('module_flow_steps' as any).insert(rows as any);
+    const { error: rpcErr } = await supabase.rpc('replace_module_flow_steps' as any, {
+      p_section_id: sectionId,
+      p_steps: payload,
+    });
 
-    if (insErr) return { error: handleSupabaseError(insErr) };
+    if (rpcErr) return { error: handleSupabaseError(rpcErr) };
     return { error: null };
   } catch (error) {
     return { error: handleSupabaseError(error) };

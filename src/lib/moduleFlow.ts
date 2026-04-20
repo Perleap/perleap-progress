@@ -178,7 +178,13 @@ export function resolveDisplayedModuleFlow(
   const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps);
   const sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
   let merged = appendMissingActivityCenterResources(base, sectionId, resources);
-  merged = appendMissingSectionLinkedAssignments(merged, sectionAssignments);
+  /** When the teacher has a saved flow, do not append every section-linked assignment — that undoes removals from the flow. */
+  const hasSavedActivityCenterFlow =
+    persistedSteps.length > 0 &&
+    filterActivityCenterModuleFlowSteps(persistedSteps, resources).length > 0;
+  if (!hasSavedActivityCenterFlow) {
+    merged = appendMissingSectionLinkedAssignments(merged, sectionAssignments);
+  }
   return filterOrphanModuleFlowLocalSteps(merged, resources, assignments);
 }
 

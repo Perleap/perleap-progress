@@ -81,6 +81,18 @@ describe('isSectionActivityFlowFullyComplete', () => {
     expect(isSectionActivityFlowFullyComplete(sid, [step], [r], [], emptyCtx)).toBe(false);
   });
 
+  it('persisted path: resource inferred done when a later assignment is complete', () => {
+    const r = lessonResource('res-1', sid);
+    const stepR = flowResourceStep('step-r', sid, r.id, 0);
+    const stepA = flowAssignmentStep('step-a', sid, 'a1', 1);
+    expect(
+      isSectionActivityFlowFullyComplete(sid, [stepR, stepA], [r], [], {
+        progressByStep: {},
+        assignmentDoneMap: { a1: true },
+      }),
+    ).toBe(true);
+  });
+
   it('persisted path: assignment step follows assignmentDoneMap', () => {
     const step = flowAssignmentStep('step-1', sid, 'a1', 0);
     expect(
