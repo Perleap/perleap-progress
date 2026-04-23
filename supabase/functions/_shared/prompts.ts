@@ -401,7 +401,7 @@ export async function generateEnhancedChatSystemPrompt(
     moduleActivityContext,
   );
 
-  return await getPrompt('chat_system_enhanced', {
+  const base = await getPrompt('chat_system_enhanced', {
     teacher_style: teacherStyle,
     student_preferences: studentPreferences,
     hard_skills_context: hardSkillsContext,
@@ -410,4 +410,11 @@ export async function generateEnhancedChatSystemPrompt(
     greeting_instruction: greetingInstruction,
     after_greeting: afterGreeting,
   }, language);
+
+  const typographyNote =
+    language === 'he'
+      ? '\n\nסגנון: אל תשתמש במקף הארוך (—) בתשובות לתלמיד; העדף פסיק או מקף רגיל עם רווחים ( - ).'
+      : '\n\nStyle: Do not use em dashes (—) in your replies to the student; prefer a comma or a spaced hyphen ( - ) for asides.';
+
+  return base + typographyNote;
 }

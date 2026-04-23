@@ -15,6 +15,7 @@ import {
 import type { Message } from '../shared/types.ts';
 import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
 import { polishAssistantDraft } from './polish.ts';
+import { normalizeAssistantDashes } from './typography.ts';
 
 const CHAT_TEMPERATURE = 0.25;
 const CHAT_MAX_TOKENS = 2048;
@@ -182,6 +183,8 @@ CORRECT example:
       let aiMessage = aiMessageRaw;
       if (isPolishEnabled()) {
         aiMessage = await polishAssistantDraft(aiMessageRaw, language);
+      } else {
+        aiMessage = normalizeAssistantDashes(aiMessageRaw);
       }
 
       // Check for conversation completion marker (case-insensitive and flexible)
@@ -281,8 +284,9 @@ CORRECT example:
                     modelAccum += content;
                     if (polishOn) continue;
 
-                    fullContent += content;
-                    streamBuffer += content;
+                    const piece = normalizeAssistantDashes(content);
+                    fullContent += piece;
+                    streamBuffer += piece;
 
                     if (!wasEndDetected) {
                       const upperBuffer = streamBuffer.toUpperCase();

@@ -116,6 +116,28 @@ const StudentClassroomDetail = () => {
     return normalized && STUDENT_SECTION_IDS.has(normalized) ? normalized : 'overview';
   });
 
+  /** When navigation provides activeSection (e.g. back from assignment), apply it — init only runs once. */
+  useEffect(() => {
+    const raw = (location.state as ClassroomLocationState | null)?.activeSection;
+    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (normalized && STUDENT_SECTION_IDS.has(normalized)) {
+      setActiveSection(normalized);
+    }
+  }, [location.key, location.state]);
+
+  /** Show Curriculum from the top when switching to that tab (scroll was staying at end of About / long pages). */
+  useEffect(() => {
+    if (activeSection !== 'curriculum') return;
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      const inset = document.querySelector('main[data-slot="sidebar-inset"]');
+      if (inset instanceof HTMLElement) {
+        inset.scrollTop = 0;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeSection]);
+
   /** Course Outline uses embedded section_resources from getSyllabusByClassroom; refetch when tab activates so it matches Curriculum after teacher edits. */
   useEffect(() => {
     if (!id || activeSection !== 'outline') return;

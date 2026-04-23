@@ -158,14 +158,16 @@ const AssignmentDetail = () => {
       navigate('/student/dashboard');
       return;
     }
-    if (canGoBackInHistory()) {
-      navigate(-1);
-      return;
-    }
+    /** Prefer explicit classroom + tab: history back often lacks activeSection and About is shown. */
     if (classroomId) {
       navigate(`/student/classroom/${classroomId}`, {
         state: { activeSection: linkState?.returnClassroomSection ?? 'curriculum' },
+        replace: true,
       });
+      return;
+    }
+    if (canGoBackInHistory()) {
+      navigate(-1);
       return;
     }
     navigateBackOrTo(navigate, '/student/dashboard');

@@ -1,4 +1,5 @@
 import { createChatCompletion } from '../shared/openai.ts';
+import { normalizeAssistantDashes } from './typography.ts';
 
 const COMPLETION_MARKER = '[CONVERSATION_COMPLETE]';
 
@@ -49,14 +50,16 @@ export async function polishAssistantDraft(draft: string, language: string): Pro
     )) as { content: string };
 
     const polished = (content ?? '').trim();
-    if (!polished) return draft;
+    if (!polished) return normalizeAssistantDashes(draft);
 
     const draftHasMarker = draft.toUpperCase().includes(COMPLETION_MARKER);
     const polishedHasMarker = polished.toUpperCase().includes(COMPLETION_MARKER);
-    if (draftHasMarker && !polishedHasMarker) return draft;
+    if (draftHasMarker && !polishedHasMarker) {
+      return normalizeAssistantDashes(draft);
+    }
 
-    return polished;
+    return normalizeAssistantDashes(polished);
   } catch {
-    return draft;
+    return normalizeAssistantDashes(draft);
   }
 }
