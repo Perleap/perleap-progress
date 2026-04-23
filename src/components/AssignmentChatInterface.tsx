@@ -22,6 +22,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useConversation } from '@/hooks/useConversation';
 import { useStudentProfile } from '@/hooks/queries';
 import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
+import { validateChatAttachmentFile } from '@/lib/chatAttachment';
 import SafeMathMarkdown from './SafeMathMarkdown';
 
 interface Message {
@@ -50,6 +51,8 @@ interface AssignmentChatInterfaceProps {
   submissionId: string;
   onComplete: () => void;
   nuanceTracking?: NuanceTrackingCallbacks;
+  /** primary = chat completes the assignment; companion = Q&A only above another task UI */
+  variant?: 'primary' | 'companion';
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -85,6 +88,7 @@ export function AssignmentChatInterface({
   submissionId,
   onComplete,
   nuanceTracking,
+  variant = 'primary',
 }: AssignmentChatInterfaceProps) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -161,15 +165,16 @@ export function AssignmentChatInterface({
     assignmentInstructions,
     studentId: user?.id || '',
     assignmentId,
+    companionMode: variant === 'companion',
   });
 
-  // Update local state when hook reports conversation ended
+  // Update local state when hook reports conversation ended (primary assignments only)
   useEffect(() => {
-    if (hookConversationEnded && !conversationEnded) {
+    if (variant === 'primary' && hookConversationEnded && !conversationEnded) {
       setConversationEnded(true);
       setDialogType('aiDetected');
     }
-  }, [hookConversationEnded, conversationEnded]);
+  }, [variant, hookConversationEnded, conversationEnded]);
 
   // Nuance: record AI message arrival when streaming finishes
   useEffect(() => {
@@ -197,50 +202,90 @@ export function AssignmentChatInterface({
     }
   }, [messages, loading, sending]);
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingFile(true);
-    try {
-      const isText = file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.txt');
-
-      if (isText) {
-        const text = await file.text();
-        setAttachedFile({ name: file.name, content: text, type: 'text' });
-      } else {
-        // Upload binary files (PDF, images) to Supabase storage
-        const filePath = `${submissionId}/${Date.now()}_${file.name}`;
-        
-        const { error } = await supabase.storage
-          .from('submission-files')
-          .upload(filePath, file, { upsert: true });
-
-        if (error) {
-          throw error;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('submission-files')
-          .getPublicUrl(filePath);
-
-        const isImage = file.type.startsWith('image/');
-        setAttachedFile({ 
-          name: file.name, 
-          content: `[File: ${file.name}]\nURL: ${urlData.publicUrl}`,
-          url: urlData.publicUrl,
-          type: isImage ? 'image' : 'pdf'
-        });
+  const processAttachmentFile = useCallback(
+    async (file: File) => {
+      const validated = validateChatAttachmentFile(file);
+      if (!validated.ok) {
+        toast.error(
+          validated.reason === 'size'
+            ? t('assignmentChat.errors.fileTooLarge')
+            : t('assignmentChat.errors.fileTypeNotAllowed'),
+        );
+        return;
       }
-      toast.success(t('assignmentChat.success.fileAttached'));
-    } catch (err) {
-      toast.error(t('assignmentChat.errors.fileUpload'));
-    } finally {
-      setUploadingFile(false);
-      // Reset input so the same file can be re-selected
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }, [submissionId, t]);
+
+      setUploadingFile(true);
+      try {
+        const isText =
+          file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.txt');
+
+        if (isText) {
+          const text = await file.text();
+          setAttachedFile({ name: file.name, content: text, type: 'text' });
+        } else {
+          const safeName = file.name?.trim() || `pasted-${Date.now()}.bin`;
+          const filePath = `${submissionId}/${Date.now()}_${safeName}`;
+
+          const { error } = await supabase.storage.from('submission-files').upload(filePath, file, { upsert: true });
+
+          if (error) {
+            throw error;
+          }
+
+          const { data: urlData } = supabase.storage.from('submission-files').getPublicUrl(filePath);
+
+          const isImage = file.type.startsWith('image/');
+          setAttachedFile({
+            name: safeName,
+            content: `[File: ${safeName}]\nURL: ${urlData.publicUrl}`,
+            url: urlData.publicUrl,
+            type: isImage ? 'image' : 'pdf',
+          });
+        }
+        toast.success(t('assignmentChat.success.fileAttached'));
+      } catch (err) {
+        toast.error(t('assignmentChat.errors.fileUpload'));
+      } finally {
+        setUploadingFile(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    [submissionId, t],
+  );
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await processAttachmentFile(file);
+    },
+    [processAttachmentFile],
+  );
+
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = e.clipboardData?.items;
+      if (items?.length) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.kind === 'file') {
+            const file = item.getAsFile();
+            if (file) {
+              e.preventDefault();
+              await processAttachmentFile(file);
+              return;
+            }
+          }
+        }
+      }
+      const files = e.clipboardData?.files;
+      if (files && files.length > 0) {
+        e.preventDefault();
+        await processAttachmentFile(files[0]);
+      }
+    },
+    [processAttachmentFile],
+  );
 
   const handleSendMessage = async () => {
     if ((!input.trim() && !attachedFile) || loading || sending) return;
@@ -567,7 +612,7 @@ export function AssignmentChatInterface({
                 </div>
               </ScrollArea>
 
-              {conversationEnded && (
+              {variant === 'primary' && conversationEnded && (
                 <div
                   className={`bg-success/10 border border-success/20 rounded-lg p-3 text-sm text-success mb-4 ${isRTL ? 'text-right' : 'text-left'}`}
                   dir={isRTL ? 'rtl' : 'ltr'}
@@ -614,6 +659,7 @@ export function AssignmentChatInterface({
                         hasTrackedTypingStart.current = true;
                       }
                     }}
+                    onPaste={(e) => void handlePaste(e)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -658,24 +704,26 @@ export function AssignmentChatInterface({
                 </Button>
               </div>
 
-              <Button
-                onClick={handleComplete}
-                disabled={!canComplete}
-                className="w-full mt-auto"
-                variant={conversationEnded ? "default" : "secondary"}
-              >
-                {completing ? (
-                  <>
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                    {t('assignmentChat.generatingFeedback')}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="me-2 h-4 w-4" />
-                    {t('assignmentChat.completeActivity')}
-                  </>
-                )}
-              </Button>
+              {variant === 'primary' ? (
+                <Button
+                  onClick={handleComplete}
+                  disabled={!canComplete}
+                  className="w-full mt-auto"
+                  variant={conversationEnded ? 'default' : 'secondary'}
+                >
+                  {completing ? (
+                    <>
+                      <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                      {t('assignmentChat.generatingFeedback')}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="me-2 h-4 w-4" />
+                      {t('assignmentChat.completeActivity')}
+                    </>
+                  )}
+                </Button>
+              ) : null}
             </div>
 
             <TabsContent value="resources" className="flex-1 mt-0 overflow-visible">

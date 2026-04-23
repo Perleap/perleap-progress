@@ -28,6 +28,8 @@ interface UseConversationParams {
   assignmentInstructions: string;
   studentId: string;
   assignmentId: string;
+  /** When true, AI "conversation complete" does not lock the chat or drive assignment submission. */
+  companionMode?: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export const useConversation = ({
   assignmentInstructions,
   studentId,
   assignmentId,
+  companionMode = false,
 }: UseConversationParams): UseConversationResult => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationEnded, setConversationEnded] = useState(false);
@@ -102,7 +105,7 @@ export const useConversation = ({
           'סיימת את הפעילות'
         ];
           
-          if (semanticPhrases.some(phrase => upperContent.includes(phrase))) {
+          if (!companionMode && semanticPhrases.some(phrase => upperContent.includes(phrase))) {
             setConversationEnded(true);
           }
         }
@@ -199,7 +202,7 @@ export const useConversation = ({
         return;
       }
 
-      if (data?.shouldEnd) {
+      if (data?.shouldEnd && !companionMode) {
         setConversationEnded(true);
       }
     } catch (err) {

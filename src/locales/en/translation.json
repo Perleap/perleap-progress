@@ -275,6 +275,8 @@
       "stt": "Error transcribing audio",
       "micAccess": "Microphone access denied",
       "fileUpload": "Failed to attach file",
+      "fileTooLarge": "File is too large (max 10 MB).",
+      "fileTypeNotAllowed": "This file type is not supported. Use PDF, PNG, JPG, or text files.",
       "completing": "Error completing activity"
     },
     "success": {
@@ -933,6 +935,9 @@
       "completed": "Activity completed successfully!",
       "submittedAwaitingTeacher": "Your work was submitted. Your teacher will run AI evaluation; you will be notified when feedback is ready."
     },
+    "continue": "Continue",
+    "continueNextModule": "Continue to next module",
+    "openCurriculum": "Open curriculum",
     "completionModal": {
       "title": "You're all set",
       "dismiss": "OK"
@@ -1064,6 +1069,8 @@
     "completed": "Completed",
     "continueNext": "Continue to next activity",
     "continueToAssignment": "Continue to assignment",
+    "continueNextModule": "Continue to next module",
+    "openCurriculum": "Open curriculum",
     "flowEnd": "You've completed the last step in this module's activity list.",
     "sequentialBlockedTitle": "Complete earlier steps first",
     "sequentialBlockedBody": "Your teacher set an order for this module. Finish the previous activities or assignments before opening this one.",
@@ -1115,6 +1122,7 @@
       "emptyModule": "Nothing in this module yet.",
       "activity": "Activity",
       "assignment": "Assignment",
+      "assignmentUnavailable": "This assignment is no longer available.",
       "stepA11y": {
         "locked": "Locked until previous steps are complete",
         "available": "Available now",

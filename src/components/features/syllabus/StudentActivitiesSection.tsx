@@ -277,7 +277,11 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
 
                       if (step.step_kind === 'assignment' && step.assignment_id) {
                         const a = (assignments as { id: string; title: string }[]).find((x) => x.id === step.assignment_id);
+                        const assignmentUnavailable = !a;
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
+                        const displayLabel = assignmentUnavailable
+                          ? t('studentClassroom.activities.assignmentUnavailable')
+                          : label;
                         return (
                           <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
                             <span
@@ -293,7 +297,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                 'flex min-w-0 flex-1 flex-wrap items-center gap-2',
                                 isRTL && 'flex-row-reverse',
                               )}
-                              aria-label={`${label}. ${statusLabel}`}
+                              aria-label={`${displayLabel}. ${statusLabel}`}
                             >
                               {visual === 'locked' ? (
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -304,11 +308,12 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                               ) : (
                                 <Circle className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               )}
-                              {locked ? (
-                                <span className="text-muted-foreground">{label}</span>
+                              {locked || assignmentUnavailable ? (
+                                <span className="text-muted-foreground">{displayLabel}</span>
                               ) : (
                                 <Link
                                   to={`/student/assignment/${step.assignment_id}`}
+                                  state={{ returnClassroomSection: 'curriculum' }}
                                   className={cn(
                                     buttonVariants({ variant: 'link', size: 'default' }),
                                     'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
@@ -387,7 +392,11 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                           );
                         }
                         const a = (assignments as { id: string; title: string }[]).find((x) => x.id === c.assignment_id);
+                        const assignmentUnavailable = !a;
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
+                        const displayLabel = assignmentUnavailable
+                          ? t('studentClassroom.activities.assignmentUnavailable')
+                          : label;
                         return (
                           <li
                             key={`a-${c.assignment_id}-${idx}`}
@@ -406,7 +415,7 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                                 'flex min-w-0 flex-1 flex-wrap items-center gap-2',
                                 isRTL && 'flex-row-reverse',
                               )}
-                              aria-label={`${label}. ${statusLabel}`}
+                              aria-label={`${displayLabel}. ${statusLabel}`}
                             >
                               {visual === 'locked' ? (
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -417,11 +426,12 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
                               ) : (
                                 <Circle className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               )}
-                              {locked ? (
-                                <span className="text-muted-foreground">{label}</span>
+                              {locked || assignmentUnavailable ? (
+                                <span className="text-muted-foreground">{displayLabel}</span>
                               ) : (
                                 <Link
                                   to={`/student/assignment/${c.assignment_id}`}
+                                  state={{ returnClassroomSection: 'curriculum' }}
                                   className={cn(
                                     buttonVariants({ variant: 'link', size: 'default' }),
                                     'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',

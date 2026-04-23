@@ -116,8 +116,12 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Edge Functions (set in Supabase dashboard)
 OPENAI_API_KEY=your_openai_key
-OPENAI_MODEL=gpt-4-turbo-preview (optional)
+OPENAI_MODEL=gpt-5.4
+# Optional: grammar polish pass for perleap-chat (extra latency + cost per turn)
+PERLEAP_CHAT_POLISH=true
 ```
+
+After changing secrets, redeploy edge functions (at least `perleap-chat`). If `OPENAI_MODEL` is unset, the code default is `gpt-5.4`.
 
 ## 🧪 Testing (Future)
 

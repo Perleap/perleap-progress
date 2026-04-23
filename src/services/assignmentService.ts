@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { removeAssignmentFromModuleFlows } from './moduleFlowService';
 import { getStudentSubmissionContext } from './submissionService';
 import type {
   Assignment,
@@ -302,6 +303,11 @@ export const deleteAssignment = async (
 
     if (error) {
       return { success: false, error: handleSupabaseError(error) };
+    }
+
+    const { error: flowError } = await removeAssignmentFromModuleFlows(assignmentId);
+    if (flowError) {
+      return { success: false, error: flowError };
     }
 
     return { success: true, error: null };

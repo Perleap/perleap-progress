@@ -766,7 +766,11 @@ const StudentDashboard = () => {
                         <Card
                           key={assignment.id}
                           className="group py-0 hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-xl bg-card overflow-hidden ring-1 ring-border"
-                          onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                          onClick={() =>
+                            navigate(`/student/assignment/${assignment.id}`, {
+                              state: { fromStudentDashboard: true },
+                            })
+                          }
                         >
                           <div className="flex flex-col sm:flex-row sm:items-start gap-3 px-4 py-3">
                             <div className="flex-1 min-w-0">
@@ -836,7 +840,11 @@ const StudentDashboard = () => {
                         <Card
                           key={assignment.id}
                           className="group py-0 hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm rounded-xl bg-muted/20 overflow-hidden opacity-80 hover:opacity-100 ring-1 ring-border"
-                          onClick={() => navigate(`/student/assignment/${assignment.id}`)}
+                          onClick={() =>
+                            navigate(`/student/assignment/${assignment.id}`, {
+                              state: { fromStudentDashboard: true },
+                            })
+                          }
                         >
                           <div className="flex flex-col sm:flex-row sm:items-start gap-3 px-4 py-3">
                             <div className="flex-1 min-w-0">

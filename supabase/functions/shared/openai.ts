@@ -14,10 +14,13 @@ export const getOpenAIConfig = (): OpenAIConfig => {
     throw new Error('OPENAI_API_KEY not configured. Please set the environment variable.');
   }
 
-  const model = Deno.env.get('OPENAI_MODEL') || 'gpt-4o';
+  const model = Deno.env.get('OPENAI_MODEL') || 'gpt-5.4';
 
   return { apiKey, model };
 };
+
+/** GPT-5 chat/completions expects max_completion_tokens, not max_tokens (400 otherwise). */
+const usesMaxCompletionTokens = (model: string): boolean => /^gpt-5/i.test(model.trim());
 
 /**
  * Create chat completion with OpenAI
@@ -33,16 +36,20 @@ export const createChatCompletion = async (
 ): Promise<{ content: string; usage?: unknown } | Response> => {
   const config = getOpenAIConfig();
   
-  // Use gpt-4o-mini for fast tier, gpt-4o for smart tier
+  // Fast tier: gpt-4o-mini. Smart tier: OPENAI_MODEL or default gpt-5.4
   const model = modelTier === 'fast' ? 'gpt-4o-mini' : config.model;
 
   const requestBody: Record<string, unknown> = {
     model: model,
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
     temperature,
-    max_tokens: maxTokens,
     stream,
   };
+  if (usesMaxCompletionTokens(model)) {
+    requestBody.max_completion_tokens = maxTokens;
+  } else {
+    requestBody.max_tokens = maxTokens;
+  }
   if (responseFormat === 'json_object') {
     requestBody.response_format = { type: 'json_object' };
   }

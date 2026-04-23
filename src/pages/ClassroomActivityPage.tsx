@@ -17,8 +17,10 @@ import {
   useModuleFlowSteps,
   useMarkFlowStepComplete,
   useStudentModuleFlowProgressMap,
+  useClassroomAssignments,
 } from '@/hooks/queries';
-import { getNextActivityCenterStep, getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
+import { getNextActivityCenterStep, getOrderedActivityCenterFlowSteps, type AssignmentRow } from '@/lib/moduleFlow';
+import { getFirstNavigableInSection, getNextSectionId } from '@/lib/moduleFlowNavigation';
 import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import { canAccessPersistedStep } from '@/lib/moduleFlowStudent';
@@ -48,6 +50,24 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   const { data: resource, isLoading: loadingRes, isError } = useSectionResourceById(resourceId);
 
   const { data: flowSteps = [] } = useModuleFlowSteps(resource?.section_id);
+
+  const nextSectionId = useMemo(
+    () => getNextSectionId(syllabus?.sections, resource?.section_id),
+    [syllabus?.sections, resource?.section_id],
+  );
+  const { data: nextSectionFlowSteps = [] } = useModuleFlowSteps(nextSectionId);
+  const { data: classroomAssignments = [] } = useClassroomAssignments(classroomId);
+
+  const firstInNextSection = useMemo(() => {
+    if (!nextSectionId) return null;
+    return getFirstNavigableInSection({
+      sectionId: nextSectionId,
+      sectionResources: syllabus?.section_resources?.[nextSectionId] ?? [],
+      assignments: classroomAssignments as AssignmentRow[],
+      persistedSteps: nextSectionFlowSteps,
+    });
+  }, [nextSectionId, syllabus?.section_resources, classroomAssignments, nextSectionFlowSteps]);
+
   const flowStepForResource = useMemo(
     () => flowSteps.find((s) => s.step_kind === 'resource' && s.activity_list_id === resource?.id),
     [flowSteps, resource?.id],
@@ -114,9 +134,28 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
         state: { returnClassroomSection: 'curriculum' },
       });
     } else if (nextFlowStep.step_kind === 'assignment' && nextFlowStep.assignment_id) {
-      navigate(`/student/assignment/${nextFlowStep.assignment_id}`);
+      navigate(`/student/assignment/${nextFlowStep.assignment_id}`, {
+        state: { returnClassroomSection: 'curriculum' },
+      });
     }
   }, [nextFlowStep, classroomId, navigate, role]);
+
+  const goToNextModuleOrCurriculum = useCallback(() => {
+    if (!classroomId || role !== 'student') return;
+    if (firstInNextSection) {
+      if (firstInNextSection.kind === 'resource') {
+        navigate(`/student/classroom/${classroomId}/activity/${firstInNextSection.id}`, {
+          state: { returnClassroomSection: 'curriculum' },
+        });
+      } else {
+        navigate(`/student/assignment/${firstInNextSection.id}`, {
+          state: { returnClassroomSection: 'curriculum' },
+        });
+      }
+    } else {
+      navigate(`/student/classroom/${classroomId}`, { state: { activeSection: 'curriculum' } });
+    }
+  }, [classroomId, role, firstInNextSection, navigate]);
 
   const goBackFromActivity = useCallback(() => {
     if (classroomId) {
@@ -286,7 +325,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
 
         {canMarkComplete ? (
           <div className="flex w-full shrink-0 flex-col gap-3">
-            {isStepCompleted && !nextFlowStep ? (
+            {isStepCompleted && !nextFlowStep && !isStudentView ? (
               <p
                 className={cn(
                   'text-sm text-muted-foreground',
@@ -297,6 +336,12 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
               </p>
             ) : null}
             <div className={cn('flex flex-wrap items-center gap-2', isRTL ? 'justify-start' : 'justify-end')}>
+              {isStepCompleted && !nextFlowStep && isStudentView ? (
+                <Button type="button" variant="default" className="gap-1" onClick={goToNextModuleOrCurriculum}>
+                  {firstInNextSection ? t('activityPage.continueNextModule') : t('activityPage.openCurriculum')}
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : null}
               {isStepCompleted && nextFlowStep ? (
                 <Button type="button" variant="outline" className="gap-1" onClick={goToNextFlowStep}>
                   {nextFlowStep.step_kind === 'assignment'

@@ -159,6 +159,7 @@ export {
   moduleFlowKeys,
   studentFlowProgressKeys,
   assignmentSubmittedFlagsKeys,
+  assignmentFlowCompleteKeys,
   useModuleFlowSteps,
   useModuleFlowStepsBulk,
   useReplaceModuleFlow,

@@ -14,11 +14,20 @@ import {
 } from '../shared/supabase.ts';
 import type { Message } from '../shared/types.ts';
 import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
+import { polishAssistantDraft } from './polish.ts';
+
+const CHAT_TEMPERATURE = 0.25;
+const CHAT_MAX_TOKENS = 2048;
+const POLISH_STREAM_CHUNK = 256;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+function isPolishEnabled(): boolean {
+  return Deno.env.get('PERLEAP_CHAT_POLISH') === 'true';
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -162,13 +171,18 @@ CORRECT example:
       : '';
 
     if (!stream) {
-      const { content: aiMessage } = await createChatCompletion(
+      const { content: aiMessageRaw } = await createChatCompletion(
         systemPrompt,
         formattedOpenAIMessages,
-        0.7,
-        1500,
+        CHAT_TEMPERATURE,
+        CHAT_MAX_TOKENS,
         'smart'
       ) as { content: string };
+
+      let aiMessage = aiMessageRaw;
+      if (isPolishEnabled()) {
+        aiMessage = await polishAssistantDraft(aiMessageRaw, language);
+      }
 
       // Check for conversation completion marker (case-insensitive and flexible)
       const completionMarker = '[CONVERSATION_COMPLETE]';
@@ -216,21 +230,23 @@ CORRECT example:
     const response = await createChatCompletion(
       systemPrompt,
       formattedOpenAIMessages,
-      0.7,
-      1500,
+      CHAT_TEMPERATURE,
+      CHAT_MAX_TOKENS,
       'smart',
       true
     ) as Response;
 
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
     let fullContent = '';
     const completionMarker = '[CONVERSATION_COMPLETE]';
-    let wasEndDetected = false;
-    let streamBuffer = '';
+    const polishOn = isPolishEnabled();
 
     const readableStream = new ReadableStream({
       async start(controller) {
+        let wasEndDetected = false;
+        let streamBuffer = '';
+        let modelAccum = '';
+
         // Send deterministic greeting prefix before AI stream begins
         if (greetingPrefix) {
           controller.enqueue(encoder.encode(greetingPrefix));
@@ -243,12 +259,14 @@ CORRECT example:
           return;
         }
 
+        const sseDecoder = new TextDecoder();
+
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
+            const chunk = sseDecoder.decode(value, { stream: true });
             const lines = chunk.split('\n');
 
             for (const line of lines) {
@@ -260,24 +278,23 @@ CORRECT example:
                   const data = JSON.parse(dataStr);
                   const content = data.choices[0]?.delta?.content || '';
                   if (content) {
+                    modelAccum += content;
+                    if (polishOn) continue;
+
                     fullContent += content;
                     streamBuffer += content;
-                    
+
                     if (!wasEndDetected) {
                       const upperBuffer = streamBuffer.toUpperCase();
                       if (upperBuffer.includes(completionMarker)) {
                         wasEndDetected = true;
-                        // Send everything in buffer up to the marker
                         const markerIndex = upperBuffer.indexOf(completionMarker);
                         const beforeMarker = streamBuffer.substring(0, markerIndex);
                         if (beforeMarker) {
                           controller.enqueue(encoder.encode(beforeMarker));
                         }
-                        streamBuffer = ''; // Clear buffer
+                        streamBuffer = '';
                       } else {
-                        // If buffer is long enough that it can't be part of the marker, 
-                        // send the beginning of it to keep stream smooth.
-                        // We keep the last few characters in case the marker starts there.
                         const safetyMargin = completionMarker.length;
                         if (streamBuffer.length > safetyMargin * 2) {
                           const toSend = streamBuffer.substring(0, streamBuffer.length - safetyMargin);
@@ -294,24 +311,58 @@ CORRECT example:
             }
           }
 
-          // Final flush of remaining buffer (if no marker was found)
+          sseDecoder.decode();
+
+          if (polishOn) {
+            const modelPolished = await polishAssistantDraft(modelAccum, language);
+            fullContent = greetingPrefix + modelPolished;
+            const markerIndex = fullContent.toUpperCase().indexOf(completionMarker);
+            const streamBody =
+              markerIndex >= 0
+                ? fullContent.substring(0, markerIndex)
+                : fullContent;
+            for (let i = 0; i < streamBody.length; i += POLISH_STREAM_CHUNK) {
+              controller.enqueue(
+                encoder.encode(streamBody.slice(i, i + POLISH_STREAM_CHUNK)),
+              );
+            }
+
+            let cleanedContent = fullContent;
+            if (markerIndex !== -1) {
+              cleanedContent =
+                fullContent.substring(0, markerIndex) +
+                fullContent.substring(markerIndex + completionMarker.length);
+              cleanedContent = cleanedContent.trim();
+              controller.enqueue(encoder.encode('__CONVERSATION_END__'));
+            }
+
+            messages.push({ role: 'assistant', content: cleanedContent });
+            await saveConversation(
+              conversation.id,
+              submissionId,
+              studentId,
+              assignmentId,
+              messages,
+            );
+            controller.close();
+            return;
+          }
+
           if (!wasEndDetected && streamBuffer) {
             controller.enqueue(encoder.encode(streamBuffer));
           }
 
-          // Handle conversation end detection and cleanup
           let cleanedContent = fullContent;
           const markerIndex = fullContent.toUpperCase().indexOf(completionMarker);
-          
+
           if (markerIndex !== -1) {
-            cleanedContent = fullContent.substring(0, markerIndex) + 
-                            fullContent.substring(markerIndex + completionMarker.length);
+            cleanedContent =
+              fullContent.substring(0, markerIndex) +
+              fullContent.substring(markerIndex + completionMarker.length);
             cleanedContent = cleanedContent.trim();
-            // Send a hidden signal to frontend
             controller.enqueue(encoder.encode('__CONVERSATION_END__'));
           }
 
-          // Save the full conversation at the end
           messages.push({ role: 'assistant', content: cleanedContent });
           await saveConversation(
             conversation.id,

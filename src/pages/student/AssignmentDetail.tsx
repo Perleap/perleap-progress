@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
@@ -19,9 +19,24 @@ import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys, useClassroom, useStudentAssignmentDetails, useSyllabus } from '@/hooks/queries';
+import {
+  assignmentFlowCompleteKeys,
+  assignmentKeys,
+  assignmentSubmittedFlagsKeys,
+  useClassroom,
+  useStudentAssignmentDetails,
+  useSyllabus,
+  useModuleFlowSteps,
+} from '@/hooks/queries';
 import { getStudentClassroomNavSections } from '@/lib/classroomNavSections';
-import { Calendar, FileText, Link as LinkIcon, Download, Loader2, Clock, RefreshCw, Lock } from 'lucide-react';
+import {
+  getFirstNavigableInSection,
+  getNextInSectionAfterAssignment,
+  getNextSectionId,
+  type FlowStepTarget,
+} from '@/lib/moduleFlowNavigation';
+import type { AssignmentRow } from '@/lib/moduleFlow';
+import { ArrowLeft, Calendar, Loader2, Clock, RefreshCw, Lock, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -32,16 +47,19 @@ import { EssaySubmissionPage } from '@/components/features/assignment/EssaySubmi
 import { useNuanceTracking } from '@/hooks/useNuanceTracking';
 import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
+import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
+import type { AssignmentLinkState } from '@/types/navigation';
 import type { AssignmentCompletionTone } from '@/types/submission';
-
-const NON_CHAT_ASSIGNMENT_TYPES = ['test', 'project', 'presentation', 'langchain', 'text_essay'] as const;
+import { cn } from '@/lib/utils';
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
   const { language: uiLanguage = 'en', isRTL } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
   const [completionModal, setCompletionModal] = useState<{
@@ -82,6 +100,82 @@ const AssignmentDetail = () => {
     user?.id,
   );
 
+  const nextSectionIdForNav = useMemo(
+    () => getNextSectionId(syllabusForNav?.sections, assignmentData?.syllabus_section_id),
+    [syllabusForNav?.sections, assignmentData?.syllabus_section_id],
+  );
+
+  const { data: nextSectionFlowSteps = [] } = useModuleFlowSteps(nextSectionIdForNav);
+
+  const assignmentFlowContinue = useMemo(() => {
+    if (!assignmentData?.syllabus_section_id || !assignmentData.id) return null;
+    const nextIn = getNextInSectionAfterAssignment({
+      usePersistedFlow: sectionFlow.usePersistedFlow,
+      orderedPersisted: sectionFlow.orderedPersisted,
+      computed: sectionFlow.computed,
+      assignmentId: assignmentData.id,
+    });
+    const nextModId = getNextSectionId(syllabusForNav?.sections, assignmentData.syllabus_section_id);
+    const firstNext =
+      nextModId && syllabusForNav
+        ? getFirstNavigableInSection({
+            sectionId: nextModId,
+            sectionResources: syllabusForNav.section_resources?.[nextModId] ?? [],
+            assignments: sectionFlow.assignments as AssignmentRow[],
+            persistedSteps: nextSectionFlowSteps,
+          })
+        : null;
+    return { nextIn, firstNext, nextModId };
+  }, [
+    assignmentData?.id,
+    assignmentData?.syllabus_section_id,
+    sectionFlow.usePersistedFlow,
+    sectionFlow.orderedPersisted,
+    sectionFlow.computed,
+    sectionFlow.assignments,
+    syllabusForNav,
+    nextSectionFlowSteps,
+  ]);
+
+  const navigateToFlowTarget = useCallback(
+    (target: FlowStepTarget) => {
+      if (!classroomId) return;
+      if (target.kind === 'resource') {
+        navigate(`/student/classroom/${classroomId}/activity/${target.id}`, {
+          state: { returnClassroomSection: 'curriculum' },
+        });
+      } else {
+        navigate(`/student/assignment/${target.id}`, {
+          state: { returnClassroomSection: 'curriculum' } satisfies AssignmentLinkState,
+        });
+      }
+    },
+    [classroomId, navigate],
+  );
+
+  const handleBackFromAssignment = useCallback(() => {
+    if (linkState?.fromStudentDashboard) {
+      navigate('/student/dashboard');
+      return;
+    }
+    if (canGoBackInHistory()) {
+      navigate(-1);
+      return;
+    }
+    if (classroomId) {
+      navigate(`/student/classroom/${classroomId}`, {
+        state: { activeSection: linkState?.returnClassroomSection ?? 'curriculum' },
+      });
+      return;
+    }
+    navigateBackOrTo(navigate, '/student/dashboard');
+  }, [classroomId, linkState, navigate]);
+
+  const goCurriculum = useCallback(() => {
+    if (!classroomId) return;
+    navigate(`/student/classroom/${classroomId}`, { state: { activeSection: 'curriculum' } });
+  }, [classroomId, navigate]);
+
   const flowGuardLoading = !!assignmentData?.syllabus_section_id && sectionFlow.loading;
 
   const assignmentSequentialBlocked = useMemo(() => {
@@ -117,18 +211,14 @@ const AssignmentDetail = () => {
     studentId: user?.id,
     assignmentId: id,
     submissionId: submission?.id,
-    enabled:
-      !!assignment &&
-      !!submission &&
-      !feedback &&
-      !NON_CHAT_ASSIGNMENT_TYPES.includes(
-        assignment.type as (typeof NON_CHAT_ASSIGNMENT_TYPES)[number],
-      ),
+    enabled: !!assignment && !!submission && !feedback,
   });
 
   const handleAssignmentCompleted = useCallback(
     async (tone: AssignmentCompletionTone = 'activityCompleted') => {
       queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
+      queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
       await refetch();
       setCompletionModal({ open: true, tone });
     },
@@ -270,6 +360,18 @@ const AssignmentDetail = () => {
     >
       <div className="container py-4 px-0 max-w-4xl">
         <div className="space-y-6">
+          <div className={cn('flex shrink-0 items-center gap-3', isRTL && 'flex-row-reverse')}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={handleBackFromAssignment}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t('common.back')}
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -301,79 +403,58 @@ const AssignmentDetail = () => {
                 <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">{t('assignmentDetail.instructions')}</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">
-                  {assignment.instructions}
-                </p>
-              </div>
-
-              {/* Course Materials Section */}
-              {assignment.materials &&
-                (() => {
-                  try {
-                    // Handle both JSONB (object) and old TEXT (string) formats
-                    const materials = typeof assignment.materials === 'string'
-                      ? JSON.parse(assignment.materials)
-                      : assignment.materials;
-                    if (Array.isArray(materials) && materials.length > 0) {
-                      return (
-                        <div>
-                          <h3 className="font-semibold mb-2">{t('assignmentDetail.courseMaterials')}</h3>
-                          <div className="space-y-2">
-                            {materials.map((material, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2 p-3 bg-muted/50 rounded-md hover:bg-muted transition-colors"
-                              >
-                                {material.type === 'pdf' ? (
-                                  <FileText className="h-5 w-5 text-primary" />
-                                ) : (
-                                  <LinkIcon className="h-5 w-5 text-primary" />
-                                )}
-                                <span className="flex-1 text-sm font-medium truncate">
-                                  {material.name}
-                                </span>
-                                {material.type === 'pdf' ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(material.url, '_blank')}
-                                    className="gap-2"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                    {t('assignmentDetail.download')}
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(material.url, '_blank')}
-                                    className="gap-2"
-                                  >
-                                    <LinkIcon className="h-4 w-4" />
-                                    {t('assignmentDetail.open')}
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                  } catch (e) {
-                    // Ignore parsing errors
-                  }
-                  return null;
-                })()}
-            </CardContent>
           </Card>
 
           {!feedback && submission && (() => {
             const MANUAL_EVAL_TYPES = ['project', 'presentation', 'langchain'];
             const isManualEvalType = MANUAL_EVAL_TYPES.includes(assignment.type);
             const isCompleted = submission.status === 'completed';
+
+            const flowContinueRow =
+              assignmentFlowContinue &&
+              assignment.syllabus_section_id &&
+              submission.status === 'completed' ? (
+                <div
+                  className="flex flex-wrap justify-center gap-2 pt-4"
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                >
+                  {assignmentFlowContinue.nextIn ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1 bg-background"
+                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.nextIn!)}
+                    >
+                      {assignmentFlowContinue.nextIn.kind === 'assignment'
+                        ? t('assignmentDetail.continue')
+                        : t('activityPage.continueNext')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {!assignmentFlowContinue.nextIn && assignmentFlowContinue.firstNext ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1 bg-background"
+                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.firstNext!)}
+                    >
+                      {t('assignmentDetail.continueNextModule')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {!assignmentFlowContinue.nextIn && !assignmentFlowContinue.firstNext ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1 bg-background"
+                      onClick={goCurriculum}
+                    >
+                      {t('assignmentDetail.openCurriculum')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null;
 
             if (isCompleted && submission.awaiting_teacher_feedback_release) {
               return (
@@ -383,6 +464,7 @@ const AssignmentDetail = () => {
                     <p className="text-sm font-medium text-primary">
                       {t('assignmentDetail.awaitingTeacherFeedback')}
                     </p>
+                    {flowContinueRow}
                   </CardContent>
                 </Card>
               );
@@ -397,57 +479,86 @@ const AssignmentDetail = () => {
                     <p className="text-sm font-medium text-primary">
                       {t(awaitingKey)}
                     </p>
+                    {flowContinueRow}
                   </CardContent>
                 </Card>
               );
             }
 
+            const companionChat = (
+              <AssignmentChatInterface
+                assignmentId={assignment.id}
+                assignmentTitle={assignment.title}
+                teacherName={assignment.classrooms.teacher_profiles?.full_name || 'Teacher'}
+                assignmentInstructions={assignment.instructions}
+                submissionId={submission.id}
+                onComplete={() => {}}
+                nuanceTracking={nuanceTracking}
+                variant="companion"
+              />
+            );
+
             switch (assignment.type) {
               case 'test':
                 return (
-                  <TestTakingPage
-                    assignmentId={assignment.id}
-                    assignmentInstructions={assignment.instructions}
-                    submissionId={submission.id}
-                    autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
-                    onComplete={handleAssignmentCompleted}
-                  />
+                  <div className="space-y-6">
+                    {companionChat}
+                    <TestTakingPage
+                      assignmentId={assignment.id}
+                      assignmentInstructions={assignment.instructions}
+                      submissionId={submission.id}
+                      autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
+                      onComplete={handleAssignmentCompleted}
+                    />
+                  </div>
                 );
               case 'text_essay':
                 return (
-                  <EssaySubmissionPage
-                    assignmentId={assignment.id}
-                    submissionId={submission.id}
-                    assignmentInstructions={assignment.instructions}
-                    autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
-                    initialText={submission.text_body}
-                    onComplete={handleAssignmentCompleted}
-                  />
+                  <div className="space-y-6">
+                    {companionChat}
+                    <EssaySubmissionPage
+                      assignmentId={assignment.id}
+                      submissionId={submission.id}
+                      assignmentInstructions={assignment.instructions}
+                      autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
+                      initialText={submission.text_body}
+                      onComplete={handleAssignmentCompleted}
+                    />
+                  </div>
                 );
               case 'project':
                 return (
-                  <ProjectSubmissionPage
-                    assignmentId={assignment.id}
-                    submissionId={submission.id}
-                    onComplete={handleAssignmentCompleted}
-                  />
+                  <div className="space-y-6">
+                    {companionChat}
+                    <ProjectSubmissionPage
+                      assignmentId={assignment.id}
+                      submissionId={submission.id}
+                      onComplete={handleAssignmentCompleted}
+                    />
+                  </div>
                 );
               case 'presentation':
                 return (
-                  <PresentationSubmissionPage
-                    assignmentId={assignment.id}
-                    submissionId={submission.id}
-                    onComplete={handleAssignmentCompleted}
-                  />
+                  <div className="space-y-6">
+                    {companionChat}
+                    <PresentationSubmissionPage
+                      assignmentId={assignment.id}
+                      submissionId={submission.id}
+                      onComplete={handleAssignmentCompleted}
+                    />
+                  </div>
                 );
               case 'langchain':
                 return (
-                  <LangchainBuilderPage
-                    assignmentId={assignment.id}
-                    submissionId={submission.id}
-                    initialPipelineText={submission.text_body}
-                    onComplete={handleAssignmentCompleted}
-                  />
+                  <div className="space-y-6">
+                    {companionChat}
+                    <LangchainBuilderPage
+                      assignmentId={assignment.id}
+                      submissionId={submission.id}
+                      initialPipelineText={submission.text_body}
+                      onComplete={handleAssignmentCompleted}
+                    />
+                  </div>
                 );
               default:
                 return (
@@ -459,6 +570,7 @@ const AssignmentDetail = () => {
                     submissionId={submission.id}
                     onComplete={handleActivityComplete}
                     nuanceTracking={nuanceTracking}
+                    variant="primary"
                   />
                 );
             }
@@ -481,14 +593,77 @@ const AssignmentDetail = () => {
             </Card>
           )}
 
-          {canRetry && submission?.status === 'completed' && (
-            <div className="flex justify-center">
+          {submission?.status === 'completed' &&
+          feedback &&
+          (canRetry || (assignmentFlowContinue && assignment.syllabus_section_id)) ? (
+            <div
+              className="flex w-full flex-wrap items-center justify-center gap-2 not-prose pt-2"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
+              {canRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 bg-background"
+                  onClick={() => void handleStartNewAttempt()}
+                  disabled={retryLoading}
+                >
+                  {retryLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {t('assignmentDetail.startNewAttempt')}
+                </Button>
+              ) : null}
+              {assignmentFlowContinue && assignment.syllabus_section_id ? (
+                <>
+                  {assignmentFlowContinue.nextIn ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1 bg-background"
+                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.nextIn!)}
+                    >
+                      {assignmentFlowContinue.nextIn.kind === 'assignment'
+                        ? t('assignmentDetail.continue')
+                        : t('activityPage.continueNext')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {!assignmentFlowContinue.nextIn && assignmentFlowContinue.firstNext ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1 bg-background"
+                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.firstNext!)}
+                    >
+                      {t('assignmentDetail.continueNextModule')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  {!assignmentFlowContinue.nextIn && !assignmentFlowContinue.firstNext ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-1 bg-background"
+                      onClick={goCurriculum}
+                    >
+                      {t('assignmentDetail.openCurriculum')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : canRetry && submission?.status === 'completed' ? (
+            <div className="flex justify-center pt-2">
               <Button
                 type="button"
                 variant="outline"
+                className="gap-2 bg-background"
                 onClick={() => void handleStartNewAttempt()}
                 disabled={retryLoading}
-                className="gap-2"
               >
                 {retryLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -498,7 +673,7 @@ const AssignmentDetail = () => {
                 {t('assignmentDetail.startNewAttempt')}
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -513,8 +688,63 @@ const AssignmentDetail = () => {
               {completionModalDescription(completionModal.tone)}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:flex-row-reverse' : ''}>
-            <AlertDialogAction onClick={() => setCompletionModal((prev) => ({ ...prev, open: false }))}>
+          <AlertDialogFooter
+            className={`flex-col gap-3 sm:flex-col ${isRTL ? 'flex-row-reverse sm:flex-row-reverse' : ''}`}
+          >
+            {submission?.status === 'completed' &&
+            assignmentFlowContinue &&
+            assignment.syllabus_section_id ? (
+              <div className="flex w-full flex-wrap justify-center gap-2">
+                {assignmentFlowContinue.nextIn ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-1 bg-background"
+                    onClick={() => {
+                      navigateToFlowTarget(assignmentFlowContinue.nextIn!);
+                      setCompletionModal((prev) => ({ ...prev, open: false }));
+                    }}
+                  >
+                    {assignmentFlowContinue.nextIn.kind === 'assignment'
+                      ? t('assignmentDetail.continue')
+                      : t('activityPage.continueNext')}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                {!assignmentFlowContinue.nextIn && assignmentFlowContinue.firstNext ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-1 bg-background"
+                    onClick={() => {
+                      navigateToFlowTarget(assignmentFlowContinue.firstNext!);
+                      setCompletionModal((prev) => ({ ...prev, open: false }));
+                    }}
+                  >
+                    {t('assignmentDetail.continueNextModule')}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                {!assignmentFlowContinue.nextIn && !assignmentFlowContinue.firstNext ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-1 bg-background"
+                    onClick={() => {
+                      goCurriculum();
+                      setCompletionModal((prev) => ({ ...prev, open: false }));
+                    }}
+                  >
+                    {t('assignmentDetail.openCurriculum')}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            <AlertDialogAction
+              className="w-full sm:w-full"
+              onClick={() => setCompletionModal((prev) => ({ ...prev, open: false }))}
+            >
               {t('assignmentDetail.completionModal.dismiss')}
             </AlertDialogAction>
           </AlertDialogFooter>

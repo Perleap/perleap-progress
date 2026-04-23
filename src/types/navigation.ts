@@ -4,6 +4,13 @@ export type ActivityLinkState = {
   returnClassroomSection?: string;
 };
 
+/** Passed on `<Link>` / `navigate` to `/student/assignment/:id` for Back fallback when history is empty. */
+export type AssignmentLinkState = {
+  returnClassroomSection?: string;
+  /** When true, Back with no history goes to `/student/dashboard` instead of classroom. */
+  fromStudentDashboard?: boolean;
+};
+
 /** Passed when navigating to `/classroom/:id` to open a specific tab. */
 export type ClassroomLocationState = {
   /** Student: `overview` | `outline` | `curriculum`; teacher: includes `curriculum`, etc. */

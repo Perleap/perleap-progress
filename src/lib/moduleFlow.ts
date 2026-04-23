@@ -154,7 +154,7 @@ export function resolveDisplayedModuleFlowBase(
  * then appends missing activity-center resources and section-linked assignments (same idea as outline sync).
  */
 /** Drop flow steps whose resource or assignment no longer exists (deleted rows, stale persisted steps). */
-function filterOrphanModuleFlowLocalSteps(
+export function filterOrphanModuleFlowLocalSteps(
   steps: ModuleFlowLocalStep[],
   resources: SectionResource[],
   allAssignments: AssignmentRow[],
@@ -167,6 +167,17 @@ function filterOrphanModuleFlowLocalSteps(
     }
     return assignmentIds.has(s.assignmentId);
   });
+}
+
+/** Teacher curriculum list: persisted/default base without full student merge, but hide orphan steps. */
+export function resolveTeacherCurriculumModuleFlow(
+  sectionId: string,
+  resources: SectionResource[],
+  assignments: AssignmentRow[],
+  persistedSteps: ModuleFlowStep[],
+): ModuleFlowLocalStep[] {
+  const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps);
+  return filterOrphanModuleFlowLocalSteps(base, resources, assignments);
 }
 
 export function resolveDisplayedModuleFlow(

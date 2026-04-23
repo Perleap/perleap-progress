@@ -82,6 +82,13 @@ export const assignmentSubmittedFlagsKeys = {
     [...assignmentSubmittedFlagsKeys.all, studentId, assignmentIds.slice().sort().join(',')] as const,
 };
 
+/** Per-assignment completion for curriculum module flow (matches hasCompletedAssignmentSubmission). */
+export const assignmentFlowCompleteKeys = {
+  all: ['assignment-flow-complete'] as const,
+  byAssignmentStudent: (assignmentId: string, studentId: string) =>
+    [...assignmentFlowCompleteKeys.all, assignmentId, studentId] as const,
+};
+
 export const useAssignmentSubmittedOrCompletedMap = (
   assignmentIds: string[],
   studentId: string | undefined,
@@ -215,7 +222,7 @@ export function useStudentCurriculumFlowContext(options: {
 
   const assignmentDoneQueries = useQueries({
     queries: assignmentIdsInFlow.map((aid) => ({
-      queryKey: ['assignment-flow-complete', aid, userId],
+      queryKey: assignmentFlowCompleteKeys.byAssignmentStudent(aid, userId!),
       queryFn: async () => {
         const { completed, error } = await hasCompletedAssignmentSubmission(aid, userId!);
         if (error) throw error;
@@ -302,7 +309,7 @@ export const useAssignmentFlowCompletion = (
   studentId: string | undefined,
 ) => {
   return useQuery({
-    queryKey: ['assignment-flow-complete', assignmentId, studentId],
+    queryKey: assignmentFlowCompleteKeys.byAssignmentStudent(assignmentId || '', studentId || ''),
     queryFn: async () => {
       if (!assignmentId || !studentId) return false;
       const { completed, error } = await hasCompletedAssignmentSubmission(

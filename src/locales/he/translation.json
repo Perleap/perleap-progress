@@ -275,6 +275,8 @@
       "stt": "שגיאה בתמלול אודיו",
       "micAccess": "הגישה למיקרופון נדחתה",
       "fileUpload": "נכשל בצירוף הקובץ",
+      "fileTooLarge": "הקובץ גדול מדי (מקסימום 10 מ״ב).",
+      "fileTypeNotAllowed": "סוג הקובץ לא נתמך. השתמש ב-PDF, PNG, JPG או קבצי טקסט.",
       "completing": "שגיאה בהשלמת הפעילות"
     },
     "success": {
@@ -920,6 +922,9 @@
       "completed": "הפעילות הושלמה בהצלחה!",
       "submittedAwaitingTeacher": "העבודה הוגשה. המורה יפעיל הערכת בינה מלאכותית; תקבל התראה כשהמשוב יהיה מוכן."
     },
+    "continue": "המשך",
+    "continueNextModule": "המשך למודול הבא",
+    "openCurriculum": "פתח את תוכנית הלימודים",
     "completionModal": {
       "title": "ההגשה התקבלה",
       "dismiss": "אישור"
@@ -1080,6 +1085,7 @@
       "emptyModule": "אין עדיין תוכן במודול זה.",
       "activity": "פעילות",
       "assignment": "משימה",
+      "assignmentUnavailable": "המשימה אינה זמינה עוד.",
       "stepA11y": {
         "locked": "נעול עד להשלמת השלבים הקודמים",
         "available": "זמין כעת",
@@ -1095,6 +1101,8 @@
     "completed": "הושלם",
     "continueNext": "המשך לפעילות הבאה",
     "continueToAssignment": "המשך למשימה",
+    "continueNextModule": "המשך למודול הבא",
+    "openCurriculum": "פתח את תוכנית הלימודים",
     "flowEnd": "הגעת לשלב האחרון ברשימת הפעילויות של המודול.",
     "sequentialBlockedTitle": "יש להשלים קודם שלבים מוקדמים יותר",
     "sequentialBlockedBody": "המורה הגדיר סדר במודול. יש להשלים את הפעילויות או המשימות הקודמות לפני פתיחת זו.",

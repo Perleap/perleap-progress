@@ -409,6 +409,7 @@ export const SectionContentPage = ({
                       <Link
                         key={step.id}
                         to={`/student/assignment/${a.id}`}
+                        state={{ returnClassroomSection: 'curriculum' }}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
                           'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
@@ -448,6 +449,7 @@ export const SectionContentPage = ({
                   <Link
                     key={a.id}
                     to={`/student/assignment/${a.id}`}
+                    state={{ returnClassroomSection: 'curriculum' }}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
                       'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',

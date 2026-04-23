@@ -9,6 +9,7 @@ import {
   useClassroomAssignments,
 } from '@/hooks/queries';
 import {
+  assignmentFlowCompleteKeys,
   useModuleFlowSteps,
   useStudentModuleFlowProgressMap,
 } from '@/hooks/queries/useModuleFlowQueries';
@@ -71,7 +72,7 @@ export function useStudentSectionModuleFlow(
 
   const assignmentDoneQueries = useQueries({
     queries: assignmentIdsInSection.map((aid) => ({
-      queryKey: ['assignment-flow-complete', aid, studentId],
+      queryKey: assignmentFlowCompleteKeys.byAssignmentStudent(aid, studentId!),
       queryFn: async () => {
         const { completed, error } = await hasCompletedAssignmentSubmission(aid, studentId!);
         if (error) throw error;

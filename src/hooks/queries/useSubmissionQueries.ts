@@ -18,7 +18,7 @@ import {
   generateFeedback,
 } from '@/services/submissionService';
 import type { ChatRequest, FeedbackRequest } from '@/types';
-import { assignmentSubmittedFlagsKeys } from './useModuleFlowQueries';
+import { assignmentFlowCompleteKeys, assignmentSubmittedFlagsKeys } from './useModuleFlowQueries';
 
 // Query Keys
 export const submissionKeys = {
@@ -118,6 +118,7 @@ export const useCompleteSubmission = () => {
     onSuccess: (_, submissionId) => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.detail(submissionId) });
       queryClient.invalidateQueries({ queryKey: submissionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
     },
   });

@@ -539,8 +539,21 @@ export const streamChatMessage = async (
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to stream chat');
+      const errorText = await response.text();
+      let errorPayload: unknown = null;
+      try {
+        errorPayload = JSON.parse(errorText) as unknown;
+      } catch {
+        errorPayload = null;
+      }
+      const errMsg =
+        typeof errorPayload === 'object' &&
+        errorPayload !== null &&
+        'error' in errorPayload &&
+        typeof (errorPayload as { error: unknown }).error === 'string'
+          ? (errorPayload as { error: string }).error
+          : errorText.slice(0, 500);
+      throw new Error(errMsg || 'Failed to stream chat');
     }
 
     const reader = response.body?.getReader();

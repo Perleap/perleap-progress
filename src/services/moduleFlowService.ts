@@ -98,6 +98,50 @@ export const replaceModuleFlowSteps = (
   return job;
 };
 
+function moduleFlowStepsToReplaceInput(steps: ModuleFlowStep[]): FlowStepInput[] {
+  return steps.map((s, order_index) => ({
+    order_index,
+    step_kind: s.step_kind,
+    activity_list_id: s.step_kind === 'resource' ? s.activity_list_id : null,
+    assignment_id: s.step_kind === 'assignment' ? s.assignment_id : null,
+  }));
+}
+
+/**
+ * Remove all module_flow_steps rows that reference this assignment (per section via replace RPC
+ * so student_module_flow_progress is remapped). Call after soft-deleting an assignment.
+ */
+export const removeAssignmentFromModuleFlows = async (
+  assignmentId: string,
+): Promise<{ error: ApiError | null }> => {
+  try {
+    const { data: refs, error: refErr } = await supabase
+      .from('module_flow_steps' as any)
+      .select('section_id')
+      .eq('assignment_id', assignmentId);
+
+    if (refErr) return { error: handleSupabaseError(refErr) };
+
+    const sectionIds = [...new Set(((refs ?? []) as { section_id: string }[]).map((r) => r.section_id))];
+    if (sectionIds.length === 0) return { error: null };
+
+    for (const sectionId of sectionIds) {
+      const { data: current, error: loadErr } = await getModuleFlowSteps(sectionId);
+      if (loadErr) return { error: loadErr };
+      const rows = current ?? [];
+      const kept = rows.filter(
+        (s) => !(s.step_kind === 'assignment' && s.assignment_id === assignmentId),
+      );
+      const { error: repErr } = await replaceModuleFlowSteps(sectionId, moduleFlowStepsToReplaceInput(kept));
+      if (repErr) return { error: repErr };
+    }
+
+    return { error: null };
+  } catch (error) {
+    return { error: handleSupabaseError(error) };
+  }
+};
+
 export const getStudentModuleFlowProgress = async (
   studentId: string,
   stepIds: string[],

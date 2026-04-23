@@ -11,7 +11,7 @@ import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { useModuleFlowStepsBulk, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import {
   moduleFlowLocalStepsToFlowInput,
-  resolveDisplayedModuleFlowBase,
+  resolveTeacherCurriculumModuleFlow,
 } from '@/lib/moduleFlow';
 import type { SectionResource } from '@/types/syllabus';
 import { cn } from '@/lib/utils';
@@ -114,7 +114,7 @@ export function TeacherCurriculumSection({
       if (s.title.toLowerCase().includes(q)) return true;
       const resources = resourceMap[s.id] ?? [];
       const persisted = flowBulk[s.id] ?? [];
-      const flowSteps = resolveDisplayedModuleFlowBase(s.id, resources, assignmentRows, persisted);
+      const flowSteps = resolveTeacherCurriculumModuleFlow(s.id, resources, assignmentRows, persisted);
       for (const step of flowSteps) {
         if (step.kind === 'resource') {
           const r = resources.find((x) => x.id === step.resourceId);
@@ -322,7 +322,7 @@ export function TeacherCurriculumSection({
             const resources = resourceMap[section.id] ?? [];
             const persisted = flowBulk[section.id] ?? [];
             /** Saved `module_flow_steps` order (or computed default when empty). */
-            const flowSteps = resolveDisplayedModuleFlowBase(
+            const flowSteps = resolveTeacherCurriculumModuleFlow(
               section.id,
               resources,
               assignmentRows,
@@ -382,7 +382,7 @@ export function TeacherCurriculumSection({
             const sid = lessonSectionId;
             const resources = resourceMap[sid] ?? [];
             const persisted = flowBulk[sid] ?? [];
-            const next = resolveDisplayedModuleFlowBase(sid, resources, assignmentRows, persisted);
+            const next = resolveTeacherCurriculumModuleFlow(sid, resources, assignmentRows, persisted);
             const already = next.some(
               (s) => s.kind === 'resource' && s.resourceId === resourceId,
             );
