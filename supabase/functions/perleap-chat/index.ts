@@ -317,10 +317,12 @@ CORRECT example:
             const modelPolished = await polishAssistantDraft(modelAccum, language);
             fullContent = greetingPrefix + modelPolished;
             const markerIndex = fullContent.toUpperCase().indexOf(completionMarker);
+            // Greeting was already streamed above; only emit the polished model text here.
+            const markerInModel = modelPolished.toUpperCase().indexOf(completionMarker);
             const streamBody =
-              markerIndex >= 0
-                ? fullContent.substring(0, markerIndex)
-                : fullContent;
+              markerInModel >= 0
+                ? modelPolished.substring(0, markerInModel)
+                : modelPolished;
             for (let i = 0; i < streamBody.length; i += POLISH_STREAM_CHUNK) {
               controller.enqueue(
                 encoder.encode(streamBody.slice(i, i + POLISH_STREAM_CHUNK)),
