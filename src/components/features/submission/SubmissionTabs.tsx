@@ -187,20 +187,35 @@ export function SubmissionTabs({
   };
 
   return (
-    <Tabs defaultValue="feedback" className="w-full">
+    <Tabs defaultValue="evaluation" className="w-full">
       <TabsList className="grid w-full grid-cols-3 h-12 rounded-xl bg-muted/50 p-1">
+        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm">
+          {t('submissionDetail.tabs.evaluation')}
+        </TabsTrigger>
         <TabsTrigger value="feedback" className="rounded-lg data-[state=active]:shadow-sm">
           {t('submissionDetail.tabs.feedback')}
         </TabsTrigger>
         <TabsTrigger value="assignment" className="rounded-lg data-[state=active]:shadow-sm">
           {t('submissionDetail.tabs.assignment')}
         </TabsTrigger>
-        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm">
-          {t('submissionDetail.tabs.evaluation')}
-        </TabsTrigger>
       </TabsList>
 
-      {/* Tab 1: Feedback */}
+      {/* Tab 1: Evaluation */}
+      <TabsContent value="evaluation" className="mt-6 space-y-8">
+        <StudentAnalytics
+          studentId={submission.student_id}
+          classroomId={submission.assignments.classroom_id}
+          currentSubmissionId={submission.id}
+        />
+
+        <HardSkillsAssessmentTable
+          submissionId={submission.id}
+          title={t('cra.title')}
+          description={t('classroomAnalytics.hardSkillsFor', { student: studentName })}
+        />
+      </TabsContent>
+
+      {/* Tab 2: Feedback */}
       <TabsContent value="feedback" className="mt-6 space-y-6">
         {alerts.length > 0 && (
           <WellbeingAlertCard
@@ -291,7 +306,7 @@ export function SubmissionTabs({
         )}
       </TabsContent>
 
-      {/* Tab 2: Assignment (type-dependent content) */}
+      {/* Tab 3: Assignment (type-dependent content) */}
       <TabsContent value="assignment" className="mt-6">
         {(() => {
           const evalProps = {
@@ -500,21 +515,6 @@ export function SubmissionTabs({
             }
           }
         })()}
-      </TabsContent>
-
-      {/* Tab 3: Evaluation */}
-      <TabsContent value="evaluation" className="mt-6 space-y-8">
-        <StudentAnalytics
-          studentId={submission.student_id}
-          classroomId={submission.assignments.classroom_id}
-          currentSubmissionId={submission.id}
-        />
-
-        <HardSkillsAssessmentTable
-          submissionId={submission.id}
-          title={t('cra.title')}
-          description={t('classroomAnalytics.hardSkillsFor', { student: studentName })}
-        />
       </TabsContent>
     </Tabs>
   );

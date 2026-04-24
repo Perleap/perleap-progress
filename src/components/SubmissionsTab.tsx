@@ -44,7 +44,7 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import { useEnrichedClassroomSubmissions } from '@/hooks/queries';
+import { useEnrichedClassroomSubmissions, useSyllabus } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui/date-picker';
 
@@ -87,6 +87,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   // Filter states
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
+  const [selectedModule, setSelectedModule] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
@@ -95,12 +96,24 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const [viewMode, setViewMode] = useState<SubmissionViewMode>('list');
 
   const { data: submissions = [], isLoading: loading } = useEnrichedClassroomSubmissions(classroomId);
+  const { data: syllabus } = useSyllabus(classroomId);
 
   useEffect(() => {
     if (initialAssignmentFilterId) {
       setSelectedAssignment(initialAssignmentFilterId);
     }
   }, [initialAssignmentFilterId, classroomId]);
+
+  useEffect(() => {
+    setSelectedModule('all');
+  }, [classroomId]);
+
+  const modules = useMemo(() => {
+    const list = syllabus?.sections ?? [];
+    return [...list]
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((s) => ({ id: s.id, title: s.title }));
+  }, [syllabus?.sections]);
 
   // Get unique students and assignments from submissions for filters
   const students = useMemo(() => {
@@ -142,6 +155,10 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
 
     if (selectedAssignment !== 'all') {
       filtered = filtered.filter((s) => s.assignment_id === selectedAssignment);
+    }
+
+    if (selectedModule !== 'all') {
+      filtered = filtered.filter((s) => s.syllabus_section_id === selectedModule);
     }
 
     if (effectiveStatus === 'completed') {
@@ -186,7 +203,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     }
 
     return filtered;
-  }, [submissions, selectedStudent, selectedAssignment, selectedStatus, searchQuery, startDate, endDate]);
+  }, [submissions, selectedStudent, selectedAssignment, selectedModule, selectedStatus, searchQuery, startDate, endDate]);
 
   const timelineSubmissions = useMemo(
     () =>
@@ -214,6 +231,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const activeFiltersCount = [
     selectedStudent !== 'all',
     selectedAssignment !== 'all',
+    selectedModule !== 'all',
     selectedStatus !== 'all',
     startDate !== '',
     endDate !== ''
@@ -222,6 +240,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const clearFilters = () => {
     setSelectedStudent('all');
     setSelectedAssignment('all');
+    setSelectedModule('all');
     setSelectedStatus('all');
     setStartDate('');
     setEndDate('');
@@ -415,6 +434,25 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                   </div>
 
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
+                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.module')}</label>
+                    <Select value={selectedModule} onValueChange={setSelectedModule} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                        <SelectValue>
+                          {selectedModule === 'all' ? t('submissionsTab.allModules') : modules.find((m) => m.id === selectedModule)?.title}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                        <SelectItem value="all">{t('submissionsTab.allModules')}</SelectItem>
+                        {modules.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
                     <Select value={selectedStatus} onValueChange={setSelectedStatus} dir={isRTL ? 'rtl' : 'ltr'}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -441,21 +479,36 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {activeFiltersCount > 0 && (
-                  <div className={`flex mt-4 ${isRTL ? 'justify-start' : 'justify-end'}`}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                  {activeFiltersCount > 0 && (
+                    <div
+                      className={cn(
+                        'space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0',
+                        isRTL ? 'sm:me-auto' : 'sm:ms-auto',
+                      )}
                     >
-                      <X className="h-3.5 w-3.5 me-1.5" />
-                      {t('submissionsTab.clearFilters')}
-                    </Button>
-                  </div>
-                )}
+                      <label
+                        className={cn(
+                          'text-xs font-medium text-muted-foreground ms-1 block invisible select-none',
+                          isRTL ? 'text-right' : 'text-left',
+                        )}
+                        aria-hidden
+                      >
+                        {t('submissionsTab.clearFilters')}
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="h-10 w-full sm:w-auto rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-4"
+                      >
+                        <X className="h-3.5 w-3.5 me-1.5" />
+                        {t('submissionsTab.clearFilters')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CollapsibleContent>
             </div>
           </Collapsible>
@@ -593,7 +646,8 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
             viewMode === 'grid' && 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4',
             viewMode === 'compact' &&
               'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2',
-            viewMode === 'list' && 'flex flex-col gap-2 w-full max-w-4xl',
+            viewMode === 'list' &&
+              'grid w-full min-w-0 grid-cols-1 gap-2 auto-rows-auto justify-items-stretch',
             viewMode === 'detailed' && 'grid grid-cols-1 lg:grid-cols-2 gap-6',
           )}
         >

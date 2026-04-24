@@ -258,8 +258,8 @@ export function SubmissionCard({
   );
 
   const listRow = (
-    <div className="flex w-full gap-3">
-      <div className="pt-0.5 shrink-0">{listAvatar}</div>
+    <div className="flex w-full items-center gap-3">
+      <div className="shrink-0">{listAvatar}</div>
       <div className="min-w-0 flex-1 flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2 sm:gap-3">
           <h3 className="min-w-0 flex-1 text-start font-semibold leading-snug text-foreground line-clamp-2 text-base sm:text-[1.0625rem]">
@@ -293,7 +293,7 @@ export function SubmissionCard({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         'disabled:opacity-60 disabled:pointer-events-none cursor-pointer disabled:cursor-not-allowed',
         isList &&
-          'rounded-xl border border-border/80 bg-card p-4 shadow-sm hover:border-border hover:bg-muted/20 hover:shadow-md sm:p-4',
+          'flex-none h-auto rounded-xl border border-border/80 bg-card p-4 shadow-sm hover:border-border hover:bg-muted/20 hover:shadow-md sm:p-4',
         !isList && 'rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border',
         isList && 'min-h-0',
         !isList && variant === 'compact' && 'gap-3 p-4 min-h-[280px]',

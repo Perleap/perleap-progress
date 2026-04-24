@@ -1,5 +1,27 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DraggableAttributes,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,8 +44,6 @@ import {
   Plus,
   Trash2,
   GripVertical,
-  ChevronUp,
-  ChevronDown,
   Save,
   BookOpen,
   Calendar,
@@ -51,6 +71,31 @@ import { ModuleFlowEditor, type ModuleFlowEditorHandle } from './ModuleFlowEdito
 import { ModuleLessonActivityDialog } from './ModuleLessonActivityDialog';
 
 const EMPTY_SECTION_RESOURCES: SectionResource[] = [];
+
+function SortableSectionRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (args: {
+    dragAttributes: DraggableAttributes;
+    dragListeners: Record<string, unknown> | undefined;
+  }) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? undefined : transition,
+    opacity: isDragging ? 0 : undefined,
+  };
+  return (
+    <li ref={setNodeRef} style={style} className={cn('list-none', isDragging && 'z-10')}>
+      {children({ dragAttributes: attributes, dragListeners: listeners })}
+    </li>
+  );
+}
 
 interface SyllabusEditorProps {
   syllabusId: string;
@@ -86,8 +131,19 @@ export const SyllabusEditor = ({
   const [rewritingField, setRewritingField] = useState<string | null>(null);
   const [lessonSectionId, setLessonSectionId] = useState<string | null>(null);
   const [editingLesson, setEditingLesson] = useState<SectionResource | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const flowEditorRef = useRef<ModuleFlowEditorHandle>(null);
   const lessonCreatedFromSectionFlowRef = useRef(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const sortableSectionIds = useMemo(() => sections.map((s) => s.id), [sections]);
+  const activeDragSection = useMemo(
+    () => (activeDragId ? sections.find((s) => s.id === activeDragId) : null),
+    [activeDragId, sections],
+  );
 
   const createMutation = useCreateSyllabusSection();
   const updateMutation = useUpdateSyllabusSection();
@@ -228,24 +284,32 @@ export const SyllabusEditor = ({
     );
   };
 
-  const moveSection = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= sections.length) return;
-    const ordered = [...sections];
-    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
-    setSelectedIndex(target);
-    
+  const handleSectionDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id));
+  };
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sections.findIndex((s) => s.id === String(active.id));
+    const newIndex = sections.findIndex((s) => s.id === String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    const ordered = arrayMove(sections, oldIndex, newIndex);
+    const orderedIds = ordered.map((s) => s.id);
+    const selectedId = selected?.id;
+    if (selectedId) {
+      const nextIdx = orderedIds.indexOf(selectedId);
+      if (nextIdx >= 0) setSelectedIndex(nextIdx);
+    }
     reorderMutation.mutate(
-      {
-        syllabusId,
-        orderedIds: ordered.map((s) => s.id),
-        classroomId,
-        swapPair: [Math.min(index, target), Math.max(index, target)] as [number, number],
-      },
-      {
-        onError: () => toast.error(t('syllabus.sections.reorderFailed')),
-      }
+      { syllabusId, orderedIds, classroomId },
+      { onError: () => toast.error(t('syllabus.sections.reorderFailed')) },
     );
+  };
+
+  const handleSectionDragCancel = () => {
+    setActiveDragId(null);
   };
 
   const handleBulkSchedule = async () => {
@@ -283,7 +347,7 @@ export const SyllabusEditor = ({
   return (
     <div className="flex gap-6 min-h-[400px]">
       {/* Sidebar */}
-      <div className={cn('w-64 flex-shrink-0 flex flex-col', isRTL && 'order-2')}>
+      <div className={cn('w-64 min-h-0 flex-shrink-0 flex flex-col', isRTL && 'order-2')}>
         <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <h4 className="font-bold text-sm text-foreground">{t('syllabus.sections.title')}</h4>
           <div className="flex items-center gap-1">
@@ -316,44 +380,83 @@ export const SyllabusEditor = ({
             </div>
           </div>
         )}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="w-full min-w-0 self-start max-h-[min(32rem,70dvh)]">
           {sections.length === 0 ? (
             <div className="p-4 border-2 border-dashed border-border rounded-xl bg-muted/10 text-center">
               <p className="text-xs text-muted-foreground">{t('syllabus.sections.noSections')}</p>
             </div>
           ) : (
-            <div className="space-y-1">
-              {sections.map((section, index) => (
-                <div
-                  key={section.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleSectionClick(index)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSectionClick(index); }}
-                  className={cn(
-                    'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all group text-sm cursor-pointer',
-                    selectedIndex === index
-                      ? 'bg-primary/10 border border-primary/30 text-primary'
-                      : 'hover:bg-muted/50 border border-transparent text-foreground',
-                    isRTL && 'text-right flex-row-reverse'
-                  )}
-                >
-                  <GripVertical className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 opacity-40" />
-                  {releaseMode === 'manual' && section.is_locked && (
-                    <Lock className="h-3 w-3 text-destructive flex-shrink-0" />
-                  )}
-                  <span className="flex-1 min-w-0 truncate font-medium">{section.title}</span>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(index, -1); }} disabled={index === 0} className="p-0.5 disabled:opacity-30">
-                      <ChevronUp className="h-3 w-3" />
-                    </button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(index, 1); }} disabled={index === sections.length - 1} className="p-0.5 disabled:opacity-30">
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              autoScroll={boundedPointerAutoScroll}
+              modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
+              onDragStart={handleSectionDragStart}
+              onDragEnd={handleSectionDragEnd}
+              onDragCancel={handleSectionDragCancel}
+            >
+              <SortableContext items={sortableSectionIds} strategy={verticalListSortingStrategy}>
+                <ul className="min-w-0 space-y-1 [contain:layout]">
+                  {sections.map((section, index) => (
+                    <SortableSectionRow key={section.id} id={section.id}>
+                      {({ dragAttributes, dragListeners }) => (
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSectionClick(index)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') handleSectionClick(index);
+                          }}
+                          className={cn(
+                            'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all text-sm cursor-pointer',
+                            selectedIndex === index
+                              ? 'bg-primary/10 border border-primary/30 text-primary'
+                              : 'hover:bg-muted/50 border border-transparent text-foreground',
+                            isRTL && 'text-right flex-row-reverse',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded-md shrink-0"
+                            aria-label={t('classroomDetail.activitiesFlow.dragReorder')}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            {...dragListeners}
+                            {...dragAttributes}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                          {releaseMode === 'manual' && section.is_locked && (
+                            <Lock className="h-3 w-3 text-destructive flex-shrink-0" />
+                          )}
+                          <span className="flex-1 min-w-0 truncate font-medium">{section.title}</span>
+                        </div>
+                      )}
+                    </SortableSectionRow>
+                  ))}
+                </ul>
+              </SortableContext>
+              <div
+                aria-hidden
+                className="pointer-events-none mt-2 min-h-[3.5rem] w-full shrink-0"
+              />
+              <DragOverlay dropAnimation={null}>
+                {activeDragSection ? (
+                  <div
+                    className={cn(
+                      'flex w-64 min-w-0 max-w-64 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-sm text-foreground shadow-lg',
+                      isRTL && 'flex-row-reverse',
+                    )}
+                  >
+                    <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {releaseMode === 'manual' && activeDragSection.is_locked && (
+                      <Lock className="h-3 w-3 shrink-0 text-destructive" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate font-medium">{activeDragSection.title}</span>
                   </div>
-                </div>
-              ))}
-            </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </ScrollArea>
       </div>

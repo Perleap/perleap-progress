@@ -45,7 +45,7 @@ import {
   isActivityCenterResource,
   moduleFlowLocalStepsEqual,
   moduleFlowLocalStepsToFlowInput,
-  resolveDisplayedModuleFlowBase,
+  resolveTeacherCurriculumModuleFlow,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
 import {
@@ -226,8 +226,8 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
 
     useEffect(() => {
       const persistedForResolve = isLoading ? [] : persisted;
-      /** Editor uses base flow only (no appendMissing): student list elsewhere still uses `resolveDisplayedModuleFlow`. */
-      const merged = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedForResolve);
+      /** Same orphan filtering as teacher Curriculum; no student `appendMissing*` merge. */
+      const merged = resolveTeacherCurriculumModuleFlow(sectionId, resources, assignments, persistedForResolve);
       const prevSnap = localStepsRef.current;
       const next = computeHydratedSteps(prevSnap, merged);
       const prevKeys = new Set(prevSnap.map(stepSortId));
@@ -522,7 +522,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
           </SortableContext>
           <div
             aria-hidden
-            className="pointer-events-none mt-2 min-h-[3.5rem] w-full shrink-0 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/25"
+            className="pointer-events-none mt-2 min-h-[3.5rem] w-full shrink-0"
           />
           <DragOverlay dropAnimation={null}>
             {activeStep ? (

@@ -401,10 +401,10 @@ export const LessonBlocksEditor = ({
               })}
             </ul>
           </SortableContext>
-          {/* Fixed end cap: bounds max scroll + drop affordance below the last real block */}
+          {/* Spacer below last block: scroll/drop bounds without visible chrome */}
           <div
             aria-hidden
-            className="pointer-events-none mt-3 min-h-[5rem] w-full shrink-0 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/25"
+            className="pointer-events-none mt-3 min-h-[5rem] w-full shrink-0"
           />
         </DndContext>
       )}

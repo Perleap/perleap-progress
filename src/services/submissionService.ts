@@ -310,7 +310,9 @@ export const getEnrichedClassroomSubmissions = async (
     // 1. Get all assignments in this classroom with their assigned student profile if any
     const { data: assignments, error: assignError } = await supabase
       .from('assignments')
-      .select('id, title, created_at, assigned_student_id, status, student_profiles(user_id, full_name, avatar_url)')
+      .select(
+        'id, title, created_at, assigned_student_id, status, syllabus_section_id, student_profiles(user_id, full_name, avatar_url)',
+      )
       .eq('classroom_id', classroomId);
 
     if (assignError) throw assignError;
@@ -357,6 +359,7 @@ export const getEnrichedClassroomSubmissions = async (
         student_name: studentProfile?.full_name || 'Unknown',
         student_avatar_url: studentProfile?.avatar_url,
         assignment_title: assignment?.title || 'Unknown Assignment',
+        syllabus_section_id: assignment?.syllabus_section_id ?? null,
         has_feedback: !!fb,
         teacher_feedback: fb?.teacher_feedback,
         conversation_context: (fb?.conversation_context as unknown as Message[]) || []
@@ -379,6 +382,7 @@ export const getEnrichedClassroomSubmissions = async (
             student_name: studentProfile.full_name || 'Unknown',
             student_avatar_url: studentProfile.avatar_url,
             assignment_title: assign.title,
+            syllabus_section_id: assign.syllabus_section_id ?? null,
             has_feedback: false,
             teacher_feedback: null,
             conversation_context: []

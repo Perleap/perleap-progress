@@ -755,6 +755,8 @@
     "search": "Search",
     "searchPlaceholder": "Search conversations, feedback, names...",
     "assignment": "Assignment",
+    "module": "Module",
+    "allModules": "All Modules",
     "allStudents": "All Students",
     "allAssignments": "All Assignments",
     "noMatches": "No submissions match your filters",
