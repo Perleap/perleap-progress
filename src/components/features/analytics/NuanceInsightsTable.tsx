@@ -12,24 +12,38 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Brain, ChevronDown, Loader2, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Brain, ChevronDown, Loader2, ArrowUpDown, RefreshCw, Info } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNuanceInsights } from '@/hooks/queries';
 import type { NuanceMetric, NuanceRecommendation } from '@/hooks/queries/useNuanceQueries';
 import { StudentInsightCard } from './StudentInsightCard';
+import { NuanceUnderstandingCuePanel } from './NuanceUnderstandingCuePanel';
 import { AnalyticsFilterControls } from './AnalyticsFilterControls';
+import type { AnalyticsAssignmentRef, AnalyticsModuleRef } from '@/lib/analyticsScope';
+import type { AnalyticsModuleFilter } from '@/lib/analyticsScope';
 
 interface NuanceInsightsTableProps {
   classroomId: string;
   students: { id: string; name: string }[];
-  assignments: { id: string; title: string }[];
+  /** All classroom assignments (for labels) */
+  assignments: AnalyticsAssignmentRef[];
+  modules: AnalyticsModuleRef[];
+  showUnplacedOption: boolean;
+  selectedModule: AnalyticsModuleFilter;
+  onModuleChange: (value: AnalyticsModuleFilter) => void;
+  moduleFilterLabel: string;
+  allModulesLabel: string;
+  allAssignmentsInScopeLabel: string;
+  visibleAssignments: AnalyticsAssignmentRef[];
+  filterAssignmentIds: string[];
   selectedStudent: string;
   selectedAssignment: string;
   onStudentChange: (value: string) => void;
   onAssignmentChange: (value: string) => void;
 }
 
-type SortField = 'name' | 'latency' | 'idle' | 'completion' | 'sessions';
+type SortField = 'name' | 'latency' | 'idle' | 'completion' | 'sessions' | 'cues';
 type SortDir = 'asc' | 'desc';
 
 function formatLatency(ms: number | null): string {
@@ -51,6 +65,7 @@ interface AggregatedRow {
   idleRatio: number;
   completionRate: number;
   sessionCount: number;
+  understandingCueCount: number;
   recommendation?: NuanceRecommendation;
 }
 
@@ -58,6 +73,15 @@ export function NuanceInsightsTable({
   classroomId,
   students,
   assignments,
+  modules,
+  showUnplacedOption,
+  selectedModule,
+  onModuleChange,
+  moduleFilterLabel,
+  allModulesLabel,
+  allAssignmentsInScopeLabel,
+  visibleAssignments,
+  filterAssignmentIds,
   selectedStudent,
   selectedAssignment,
   onStudentChange,
@@ -69,11 +93,33 @@ export function NuanceInsightsTable({
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [howNuanceOpen, setHowNuanceOpen] = useState(false);
 
   const { data, isLoading, isFetching, refetch } = useNuanceInsights(classroomId);
 
+  const classBaseline = data?.baselines?.class;
+  const classReferenceLine = useMemo(() => {
+    if (!classBaseline || !classBaseline.assignment_count || classBaseline.assignment_count <= 0) {
+      return null;
+    }
+    return t('nuance.classReference', {
+      latency: formatLatency(
+        classBaseline.avg_latency > 0 ? classBaseline.avg_latency : null,
+      ),
+      idle: formatPercent(classBaseline.avg_idle_ratio),
+      completion: formatPercent(classBaseline.avg_completion_rate),
+      n: classBaseline.assignment_count,
+    });
+  }, [classBaseline, t]);
+
   const metrics = data?.metrics || [];
   const recommendations = data?.recommendations || [];
+
+  const filteredMetrics = useMemo(() => {
+    if (filterAssignmentIds.length === 0) return [];
+    const set = new Set(filterAssignmentIds);
+    return metrics.filter((m) => set.has(m.assignment_id));
+  }, [metrics, filterAssignmentIds]);
 
   const recMap = useMemo(() => {
     const map = new Map<string, NuanceRecommendation>();
@@ -95,15 +141,19 @@ export function NuanceInsightsTable({
     return map;
   }, [assignments]);
 
+  const scopingAssignmentCount = filterAssignmentIds.length;
+
   const rows: AggregatedRow[] = useMemo(() => {
-    if (metrics.length === 0) return [];
+    if (filteredMetrics.length === 0) return [];
+    const sameStudent = (a: string, b: string) => String(a) === String(b);
+    const sameAssignment = (a: string, b: string) => String(a) === String(b);
 
     // Specific student → one row per assignment
     if (selectedStudent !== 'all') {
-      const studentMetrics = metrics.filter((m) => m.student_id === selectedStudent);
+      const studentMetrics = filteredMetrics.filter((m) => sameStudent(m.student_id, selectedStudent));
       const filtered =
         selectedAssignment !== 'all'
-          ? studentMetrics.filter((m) => m.assignment_id === selectedAssignment)
+          ? studentMetrics.filter((m) => sameAssignment(m.assignment_id, selectedAssignment))
           : studentMetrics;
 
       return filtered.map((m) => ({
@@ -115,6 +165,7 @@ export function NuanceInsightsTable({
         idleRatio: m.idle_ratio,
         completionRate: m.completion_status === 'completed' ? 1 : 0,
         sessionCount: m.session_count,
+        understandingCueCount: m.understanding_cue_count ?? 0,
         recommendation: recMap.get(m.student_id),
       }));
     }
@@ -122,8 +173,8 @@ export function NuanceInsightsTable({
     // All students → aggregate per student (optionally filtered by assignment)
     const filtered =
       selectedAssignment !== 'all'
-        ? metrics.filter((m) => m.assignment_id === selectedAssignment)
-        : metrics;
+        ? filteredMetrics.filter((m) => sameAssignment(m.assignment_id, selectedAssignment))
+        : filteredMetrics;
 
     const grouped = new Map<string, NuanceMetric[]>();
     for (const m of filtered) {
@@ -131,7 +182,7 @@ export function NuanceInsightsTable({
       grouped.get(m.student_id)!.push(m);
     }
 
-    const totalAssignments = selectedAssignment !== 'all' ? 1 : assignments.length;
+    const totalAssignments = selectedAssignment !== 'all' ? 1 : Math.max(scopingAssignmentCount, 1);
 
     const result: AggregatedRow[] = [];
     for (const [sid, mets] of grouped) {
@@ -150,12 +201,23 @@ export function NuanceInsightsTable({
         idleRatio: mets.reduce((s, m) => s + m.idle_ratio, 0) / mets.length,
         completionRate: denominator > 0 ? completed / denominator : 0,
         sessionCount: Math.round(mets.reduce((s, m) => s + m.session_count, 0) / mets.length),
+        understandingCueCount: Math.round(
+          mets.reduce((s, m) => s + (m.understanding_cue_count ?? 0), 0) / mets.length,
+        ),
         recommendation: recMap.get(sid),
       });
     }
 
     return result;
-  }, [metrics, selectedStudent, selectedAssignment, recMap, studentNameMap, assignmentTitleMap]);
+  }, [
+    filteredMetrics,
+    selectedStudent,
+    selectedAssignment,
+    scopingAssignmentCount,
+    recMap,
+    studentNameMap,
+    assignmentTitleMap,
+  ]);
 
   // Sorting
   const sortedRows = useMemo(() => {
@@ -178,11 +240,54 @@ export function NuanceInsightsTable({
         case 'sessions':
           cmp = a.sessionCount - b.sessionCount;
           break;
+        case 'cues':
+          cmp = a.understandingCueCount - b.understandingCueCount;
+          break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return sorted;
   }, [rows, sortField, sortDir]);
+
+  const selectedStudentHasNuanceOutsideFilter = useMemo(() => {
+    if (selectedStudent === 'all' || filterAssignmentIds.length === 0) return false;
+    const scope = new Set(filterAssignmentIds);
+    return metrics.some(
+      (m) => String(m.student_id) === String(selectedStudent) && !scope.has(m.assignment_id),
+    );
+  }, [metrics, filterAssignmentIds, selectedStudent]);
+
+  const emptyNuanceMessage = useMemo(() => {
+    if (isLoading || sortedRows.length > 0) return null;
+    const same = (a: string, b: string) => String(a) === String(b);
+    if (metrics.length === 0) return t('nuance.noData');
+    if (filterAssignmentIds.length === 0) return t('nuance.emptyNoAssignmentsInFilter');
+    if (filteredMetrics.length === 0) return t('nuance.emptyNoDataInFilter');
+    if (selectedStudent !== 'all' && selectedAssignment !== 'all') {
+      const ok = filteredMetrics.some(
+        (m) => same(m.student_id, selectedStudent) && same(m.assignment_id, selectedAssignment),
+      );
+      if (!ok) return t('nuance.emptyNoDataForPairInFilter');
+    }
+    if (selectedStudent !== 'all') {
+      const ok = filteredMetrics.some((m) => same(m.student_id, selectedStudent));
+      if (!ok) return t('nuance.emptyNoDataForStudentInFilter');
+    }
+    if (selectedAssignment !== 'all') {
+      const ok = filteredMetrics.some((m) => same(m.assignment_id, selectedAssignment));
+      if (!ok) return t('nuance.emptyNoDataForAssignmentInFilter');
+    }
+    return t('nuance.noData');
+  }, [
+    isLoading,
+    sortedRows.length,
+    metrics.length,
+    filterAssignmentIds.length,
+    filteredMetrics,
+    selectedStudent,
+    selectedAssignment,
+    t,
+  ]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -286,12 +391,55 @@ export function NuanceInsightsTable({
       <CardContent className="space-y-6">
         <AnalyticsFilterControls
           allStudents={students}
-          assignments={assignments}
+          assignments={visibleAssignments}
+          modules={modules}
+          showUnplacedOption={showUnplacedOption}
+          selectedModule={selectedModule}
+          onModuleChange={onModuleChange}
+          moduleFilterLabel={moduleFilterLabel}
+          allModulesLabel={allModulesLabel}
           selectedStudent={selectedStudent}
           selectedAssignment={selectedAssignment}
           onStudentChange={onStudentChange}
           onAssignmentChange={onAssignmentChange}
+          allAssignmentsInScopeLabel={allAssignmentsInScopeLabel}
         />
+        <div className={`space-y-2 text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+          <p>{t('nuance.baselinesClassWide')}</p>
+          <p>{t('nuance.insightScope')}</p>
+          {classReferenceLine && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <p className="text-foreground/90 cursor-help decoration-dotted underline-offset-2 underline">
+                    {classReferenceLine}
+                  </p>
+                }
+              />
+              <TooltipContent className="max-w-sm">{t('nuance.classReferenceScope')}</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        <Collapsible open={howNuanceOpen} onOpenChange={setHowNuanceOpen} className="rounded-xl border border-border bg-muted/20">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-primary shrink-0" />
+                {t('nuance.howNuanceTitle')}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${howNuanceOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="border-t border-border px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
+            {t('nuance.howNuanceBody')}
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Table */}
         {isLoading ? (
@@ -301,12 +449,18 @@ export function NuanceInsightsTable({
         ) : sortedRows.length === 0 ? (
           <div className="text-center py-12 bg-muted/30 rounded-xl border border-dashed border-border">
             <Brain className="h-8 w-8 text-muted-foreground/50 mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">
-              {t('nuance.noData', 'No behavioral data available yet. Data will appear as students complete activities.')}
+            <p className="text-muted-foreground text-sm max-w-lg mx-auto leading-relaxed">
+              {emptyNuanceMessage ?? t('nuance.noData')}
             </p>
+            {selectedStudent !== 'all' && selectedStudentHasNuanceOutsideFilter && (
+              <p className="text-muted-foreground text-sm max-w-lg mx-auto mt-4 leading-relaxed border-t border-border/60 pt-4">
+                {t('nuance.hintStudentNuanceInOtherScope')}
+              </p>
+            )}
           </div>
         ) : (
-          <div className="rounded-xl border border-border overflow-hidden [&_[data-slot=table-container]]:overflow-hidden">
+          <div className="space-y-2">
+            <div className="rounded-xl border border-border overflow-hidden [&_[data-slot=table-container]]:overflow-hidden">
             <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -328,8 +482,14 @@ export function NuanceInsightsTable({
                   <SortableHeader field="sessions" tooltip={t('nuance.tooltips.sessions')}>
                     {t('nuance.columns.sessions', 'Sessions')}
                   </SortableHeader>
-                  <TableHead className="w-[60px] px-1">
-                    <div className="flex justify-center ltr:-translate-x-1 rtl:translate-x-1">
+                  <SortableHeader
+                    field="cues"
+                    tooltip={t('nuance.tooltips.cuesInChatColumn', t('nuance.tooltips.cuesInChat'))}
+                  >
+                    {t('nuance.columns.cuesInChat', 'Cues in chat')}
+                  </SortableHeader>
+                  <TableHead className="w-[100px] min-w-[5.5rem] px-1">
+                    <div className="flex justify-center ltr:-translate-x-0.5">
                       <Tooltip>
                         <TooltipTrigger className="text-xs font-semibold uppercase tracking-wider cursor-default">
                           {t('nuance.columns.status', 'Status')}
@@ -367,27 +527,57 @@ export function NuanceInsightsTable({
                         {formatPercent(row.completionRate)}
                       </TableCell>
                       <TableCell className="px-2 py-3 text-center tabular-nums">{row.sessionCount}</TableCell>
-                      <TableCell className="px-2 py-3 text-center">
-                        <div className="flex justify-center ltr:-translate-x-1 rtl:translate-x-1">
+                      <TableCell className="px-2 py-3 text-center tabular-nums text-xs">
+                        {row.understandingCueCount}
+                      </TableCell>
+                      <TableCell className="px-1 py-2 text-center">
+                        <div
+                          className="flex items-center justify-center gap-1.5 flex-wrap"
+                          title={
+                            row.recommendation
+                              ? t(`nuance.types.${row.recommendation.recommendation_type}`)
+                              : t('nuance.statusRow.typical')
+                          }
+                        >
                           {row.recommendation ? (
-                            <span className="flex h-3 w-3 rounded-full bg-amber-500" title={t(`nuance.types.${row.recommendation.recommendation_type}`)} />
+                            <>
+                              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
+                              <span className="text-[10px] font-medium leading-tight text-amber-700 dark:text-amber-400 max-w-[4.5rem]">
+                                {t('nuance.statusRow.insight')}
+                              </span>
+                            </>
                           ) : (
-                            <span className="flex h-3 w-3 rounded-full bg-emerald-500/60" />
+                            <>
+                              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70 shrink-0" />
+                              <span className="text-[10px] font-medium leading-tight text-muted-foreground max-w-[4.5rem]">
+                                {t('nuance.statusRow.typical')}
+                              </span>
+                            </>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
                     {expandedRow === row.key && (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={7} className="p-0">
-                          <div className="px-4 py-3 bg-muted/20 border-t border-border w-0 min-w-full overflow-hidden">
+                        <TableCell colSpan={8} className="p-0">
+                          <div className="px-4 py-3 bg-muted/20 border-t border-border w-0 min-w-full overflow-hidden space-y-1">
                             {row.recommendation ? (
                               <StudentInsightCard recommendation={row.recommendation} />
                             ) : (
                               <div className="text-sm text-muted-foreground text-center py-4">
-                                {t('nuance.noRecommendation', 'No recommendations — activity patterns are within normal range.')}
+                                {t('nuance.noRecommendation')}
                               </div>
                             )}
+                            <NuanceUnderstandingCuePanel
+                              studentId={row.studentId}
+                              assignmentScopeIds={
+                                row.assignmentId
+                                  ? [row.assignmentId]
+                                  : filterAssignmentIds
+                              }
+                              isExpanded
+                              assignmentTitleMap={assignmentTitleMap}
+                            />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -396,6 +586,16 @@ export function NuanceInsightsTable({
                 ))}
               </TableBody>
             </Table>
+            </div>
+            {filterAssignmentIds.length > 0 && selectedStudent === 'all' && (
+              <p
+                className={`text-xs text-muted-foreground max-w-3xl leading-relaxed ${
+                  isRTL ? 'text-right' : 'text-left'
+                }`}
+              >
+                {t('nuance.notAllEnrolledInTable')}
+              </p>
+            )}
           </div>
         )}
       </CardContent>

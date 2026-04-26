@@ -76,7 +76,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (studentProfile?.preferred_language) {
           dbLanguage = studentProfile.preferred_language as Language;
         }
-      } else if (userRole === 'teacher') {
+      } else if (userRole === 'teacher' || userRole === 'admin') {
         const { data: teacherProfile } = await supabase
           .from('teacher_profiles')
           .select('preferred_language')
@@ -113,9 +113,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         // Silently try to update database to match localStorage
         if (localPref === 'he') {
           const userRole = user.user_metadata?.role;
-          const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+          const table =
+            userRole === 'teacher' || userRole === 'admin' ? 'teacher_profiles' : 'student_profiles';
           
-          if (userRole === 'teacher' || userRole === 'student') {
+          if (userRole === 'teacher' || userRole === 'student' || userRole === 'admin') {
             console.log(`🌐 Attempting to sync Hebrew to ${table}...`);
             supabase
               .from(table)
@@ -149,9 +150,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Update user profile if logged in (ONLY if different from what's in database)
     if (user) {
       const userRole = user.user_metadata?.role;
-      const table = userRole === 'teacher' ? 'teacher_profiles' : 'student_profiles';
+      const table =
+        userRole === 'teacher' || userRole === 'admin' ? 'teacher_profiles' : 'student_profiles';
 
-      if (userRole === 'teacher' || userRole === 'student') {
+      if (userRole === 'teacher' || userRole === 'student' || userRole === 'admin') {
         try {
           supabase
             .from(table)

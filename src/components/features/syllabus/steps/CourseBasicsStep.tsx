@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
+import type { StorageUploadOptions } from '@/lib/storageUpload';
 import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
 import {
@@ -89,13 +90,17 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
     setUploadProgress(0);
     try {
       const fileName = `${user.id}/${Date.now()}.pdf`;
+      const uploadOptions: StorageUploadOptions = {
+        cacheControl: '3600',
+        upsert: true,
+        onUploadProgress: (progress) => {
+          if (progress.total <= 0) return;
+          setUploadProgress(Math.round((progress.loaded / progress.total) * 100));
+        },
+      };
       const { error: uploadError } = await supabase.storage
         .from('course-materials')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true,
-          onUploadProgress: (p) => setUploadProgress(Math.round((p.loaded / p.total) * 100)),
-        });
+        .upload(fileName, file, uploadOptions);
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from('course-materials').getPublicUrl(fileName);
       onChange({ materials: [...data.materials, { type: 'pdf', url: urlData.publicUrl, name: file.name }] });
@@ -106,6 +111,7 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
       toast.error(err.message || 'Upload failed');
     } finally {
       setUploadingMaterial(false);
+      setUploadProgress(0);
     }
   };
 

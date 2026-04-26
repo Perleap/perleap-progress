@@ -65,6 +65,7 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
     // Fallback based on notification type
     switch (type) {
       case 'feedback_received':
+      case 'feedback_updated':
       case 'assignment_created':
       case 'assignment_graded':
         return 'T'; // Teacher

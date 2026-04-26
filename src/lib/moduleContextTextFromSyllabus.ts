@@ -2,7 +2,8 @@
  * Plain-text bundle of selected module activities for teacher-side AI (e.g. rephrase instructions).
  * Keep extraction rules and caps in sync with supabase/functions/_shared/assignmentContext.ts
  */
-import type { SectionResource } from '@/types/syllabus';
+import { getLessonTextBlockBodiesForContext } from '@/lib/lessonContent';
+import type { LessonTextBlockV1, SectionResource } from '@/types/syllabus';
 
 const MAX_TOTAL_CHARS = 12_000;
 const MAX_PER_ITEM_CHARS = 4_000;
@@ -38,9 +39,12 @@ function bodyFromLessonRow(r: ResourceRow): string {
   ) {
     const pieces: string[] = [];
     for (const b of lc.blocks) {
-      if (b.type === 'text' && typeof b.body === 'string' && b.body.trim()) {
-        const plain = stripHtmlLite(b.body);
-        if (plain) pieces.push(truncate(plain, MAX_PER_ITEM_CHARS));
+      if (b.type === 'text' && typeof b.body === 'string') {
+        for (const seg of getLessonTextBlockBodiesForContext(b as LessonTextBlockV1)) {
+          if (!seg.trim()) continue;
+          const plain = stripHtmlLite(seg);
+          if (plain) pieces.push(truncate(plain, MAX_PER_ITEM_CHARS));
+        }
       } else if (b.type === 'video') {
         const u = typeof b.url === 'string' ? b.url.trim() : '';
         const fp = typeof b.file_path === 'string' ? b.file_path : '';

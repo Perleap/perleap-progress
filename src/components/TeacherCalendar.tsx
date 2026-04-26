@@ -26,17 +26,22 @@ const isDateInRange = (date: Date, startDate: string | null, endDate: string | n
 
 interface TeacherCalendarProps {
   teacherId: string;
+  /** When set, calendar loads all classrooms visible to the user (app admin). */
+  isAppAdmin?: boolean;
 }
 
 export function TeacherCalendar({
   teacherId,
+  isAppAdmin = false,
 }: TeacherCalendarProps) {
   const { t } = useTranslation();
   const { language = 'en' } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [month, setMonth] = useState<Date>(new Date());
 
-  const { data, isLoading: loading } = useTeacherCalendarData(teacherId);
+  const { data, isLoading: loading } = useTeacherCalendarData(teacherId, {
+    isAdmin: isAppAdmin || undefined,
+  });
 
   const classrooms = data?.classrooms || [];
   const assignments = data?.assignments || [];

@@ -8,7 +8,7 @@ ALTER TABLE public.section_resources
 
 ALTER TABLE public.section_resources
   ADD CONSTRAINT section_resources_resource_type_check
-  CHECK (resource_type IN ('file', 'video', 'link', 'document', 'image', 'text'));
+  CHECK (resource_type IN ('file', 'video', 'link', 'document', 'image', 'text', 'lesson'));
 
 ALTER TABLE public.section_resources
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'published'

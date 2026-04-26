@@ -112,10 +112,18 @@ export const FEATURES = {
   REAL_TIME_CHAT: false,
 } as const;
 
+/**
+ * When true, teacher written notes on `assignment_feedback` are included in 5D LLM evidence
+ * (capped) alongside student AI feedback. `useClassroomAnalytics` is teacher-only; keep false
+ * until product approves. Students never use that hook.
+ */
+export const INCLUDE_TEACHER_5D_EVIDENCE = false;
+
 // User Roles
 export const USER_ROLES = {
   TEACHER: 'teacher',
   STUDENT: 'student',
+  ADMIN: 'admin',
 } as const;
 
 // Local Storage Keys

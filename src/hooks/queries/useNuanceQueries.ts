@@ -14,6 +14,8 @@ export interface NuanceMetric {
   session_count: number;
   total_session_duration_ms: number;
   first_interaction_latency_ms: number | null;
+  /** Count of in-chat "understanding" cues; optional for older API/cache rows. */
+  understanding_cue_count?: number;
 }
 
 export interface NuanceRecommendation {
@@ -44,7 +46,49 @@ export interface NuanceInsightsResponse {
 export const nuanceKeys = {
   all: ['nuance'] as const,
   insights: (classroomId: string) => [...nuanceKeys.all, 'insights', classroomId] as const,
+  understandingCueEvents: (studentId: string, scopeKey: string) =>
+    [...nuanceKeys.all, 'understandingCues', studentId, scopeKey] as const,
 };
+
+export interface NuanceUnderstandingCueEventRow {
+  id: string;
+  created_at: string;
+  assignment_id: string;
+  metadata: {
+    reason_codes?: string[];
+    locale_hint?: string;
+    message_index?: number;
+    length_bucket?: string;
+    [key: string]: unknown;
+  } | null;
+}
+
+/** Teacher-visible raw understanding_cue events (no message text; RLS on student_nuance_events). */
+export function useNuanceUnderstandingCueEvents(
+  studentId: string | undefined,
+  assignmentIdsInScope: string[],
+  enabled: boolean,
+) {
+  const scopeKey = [...assignmentIdsInScope].sort().join(',') || '_';
+  return useQuery({
+    queryKey: nuanceKeys.understandingCueEvents(studentId || '', scopeKey),
+    queryFn: async () => {
+      if (!studentId || assignmentIdsInScope.length === 0) return [] as NuanceUnderstandingCueEventRow[];
+      const { data, error } = await supabase
+        .from('student_nuance_events')
+        .select('id, created_at, assignment_id, metadata')
+        .eq('student_id', studentId)
+        .eq('event_type', 'understanding_cue')
+        .in('assignment_id', assignmentIdsInScope)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return (data ?? []) as NuanceUnderstandingCueEventRow[];
+    },
+    enabled: Boolean(enabled && studentId && assignmentIdsInScope.length > 0),
+    staleTime: 15_000,
+  });
+}
 
 export const useNuanceInsights = (classroomId: string | undefined) => {
   return useQuery<NuanceInsightsResponse>({

@@ -12,6 +12,8 @@ export interface LessonTextBlockV1 {
   id: string;
   type: 'text';
   body: string;
+  /** When present with 2+ entries, the student view shows a horizontal slide carousel; `body` should mirror the first slide for AI/legacy. */
+  slides?: string[];
 }
 
 /** Single uploaded or linked video in a v1 lesson */
@@ -279,7 +281,7 @@ export interface StudentModuleFlowProgress {
 export type SectionStatus = 'upcoming' | 'in_progress' | 'completed' | 'skipped';
 
 /** Data shape used by roadmap nodes */
-export interface RoadmapNodeData {
+export interface RoadmapNodeData extends Record<string, unknown> {
   title: string;
   description: string | null;
   startDate: string | null;

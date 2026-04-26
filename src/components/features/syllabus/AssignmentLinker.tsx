@@ -105,7 +105,7 @@ export const AssignmentLinker = ({
                     <Select
                       key={`link-to-section-${assignment.id}-${linkSelectReset[assignment.id] ?? 0}`}
                       onValueChange={(sectionId) => {
-                        if (sectionId) void handleLink(assignment.id, sectionId);
+                        if (sectionId) void handleLink(assignment.id, String(sectionId));
                       }}
                     >
                       <SelectTrigger

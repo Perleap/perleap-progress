@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { FileText, GripVertical, Loader2, Plus, Trash2, Video } from 'lucide-react';
-import { useEffect, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { LessonBlockV1 } from '@/types/syllabus';
@@ -35,6 +35,7 @@ import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
 import { uploadResourceFile } from '@/services/syllabusResourceService';
+import { SortableLessonTextSlides } from '@/components/features/syllabus/SortableLessonTextSlides';
 
 const SortableLessonBlock = ({
   id,
@@ -99,6 +100,8 @@ export const LessonBlocksEditor = ({
   onUploadStateChange,
 }: LessonBlocksEditorProps) => {
   const { t } = useTranslation();
+  /** Editor-only: when switching to single text, remember full `slides` so re-enabling multi-slide can restore. */
+  const textSlidesBackupRef = useRef(new Map<string, string[]>());
   const [uploadTarget, setUploadTarget] = useState<{ blockId: string; fileName: string } | null>(
     null
   );
@@ -150,6 +153,81 @@ export const LessonBlocksEditor = ({
   const updateText = (blockId: string, body: string) => {
     onChange((prev) =>
       prev.map((b) => (b.id === blockId && b.type === 'text' ? { ...b, body } : b))
+    );
+  };
+
+  const updateSlide = (blockId: string, slideIndex: number, body: string) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'text' || !b.slides) return b;
+        const next = [...b.slides];
+        next[slideIndex] = body;
+        return { ...b, slides: next, body: next[0] ?? '' };
+      })
+    );
+  };
+
+  const enableTextSlides = (blockId: string) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'text') return b;
+        const saved = textSlidesBackupRef.current.get(blockId);
+        if (saved && saved.length > 0) {
+          const nextSlides = [b.body, ...saved.slice(1)];
+          textSlidesBackupRef.current.delete(blockId);
+          return { ...b, slides: nextSlides, body: nextSlides[0] ?? b.body };
+        }
+        const one = b.body || '';
+        return { ...b, slides: [one], body: one };
+      })
+    );
+  };
+
+  const disableTextSlides = (blockId: string) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'text') return b;
+        if (b.slides && b.slides.length) {
+          textSlidesBackupRef.current.set(blockId, [...b.slides]);
+          return { ...b, body: b.slides[0] ?? b.body, slides: undefined };
+        }
+        return b;
+      })
+    );
+  };
+
+  const addTextSlide = (blockId: string) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'text') return b;
+        if (b.slides && b.slides.length) {
+          const next = [...b.slides, ''];
+          return { ...b, slides: next, body: next[0] ?? b.body };
+        }
+        return { ...b, slides: [b.body || '', ''], body: b.body || '' };
+      })
+    );
+  };
+
+  const removeTextSlide = (blockId: string, slideIndex: number) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'text' || !b.slides) return b;
+        if (b.slides.length <= 1) {
+          return { ...b, body: b.slides[0] ?? b.body, slides: undefined };
+        }
+        const next = b.slides.filter((_, i) => i !== slideIndex);
+        return { ...b, slides: next, body: next[0] ?? '' };
+      })
+    );
+  };
+
+  const reorderTextSlides = (blockId: string, reordered: string[]) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'text' || !b.slides) return b;
+        return { ...b, slides: reordered, body: reordered[0] ?? '' };
+      })
     );
   };
 
@@ -247,51 +325,125 @@ export const LessonBlocksEditor = ({
                   <li key={block.id} className="w-full">
                     {block.type === 'text' ? (
                       <SortableLessonBlock id={block.id}>
-                        {({ dragAttributes, dragListeners }) => (
-                          <div className={cn('flex gap-2', isRTL && 'flex-row-reverse')}>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={cn(
-                                'mt-1 h-9 w-9 shrink-0 touch-none text-muted-foreground',
-                                disabled && 'pointer-events-none opacity-50'
-                              )}
-                              aria-label={t('classroomDetail.activities.blockDragHandle')}
-                              {...dragAttributes}
-                              {...dragListeners}
-                            >
-                              <GripVertical className="h-4 w-4" />
-                            </Button>
-                            <div className="min-w-0 flex-1 space-y-2">
-                              <div className={cn(rephrasingBlockId === block.id && 'opacity-90')}>
-                                <RichTextEditor
-                                  content={lessonTextBodyToHtml(block.body)}
-                                  onChange={(html) => updateText(block.id, html)}
-                                  placeholder={t('classroomDetail.activities.richTextPlaceholder')}
-                                  className="min-h-[220px]"
-                                  disabled={disabled || rephrasingBlockId === block.id}
-                                  dir={isRTL ? 'rtl' : 'ltr'}
-                                  onRewrite={() => void onRephraseBlock(block.id)}
-                                  isRewriting={rephrasingBlockId === block.id}
-                                />
-                              </div>
-                              <div className={cn('flex', isRTL && 'justify-start')}>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => removeBlock(block.id)}
-                                  disabled={disabled}
+                        {({ dragAttributes, dragListeners }) => {
+                          const slideMode = Boolean(block.slides && block.slides.length > 0);
+                          return (
+                            <div className={cn('flex gap-2', isRTL && 'flex-row-reverse')}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  'mt-1 h-9 w-9 shrink-0 touch-none text-muted-foreground',
+                                  disabled && 'pointer-events-none opacity-50'
+                                )}
+                                aria-label={t('classroomDetail.activities.blockDragHandle')}
+                                {...dragAttributes}
+                                {...dragListeners}
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </Button>
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <div
+                                  className={cn(
+                                    'flex flex-wrap items-center gap-2',
+                                    isRTL && 'flex-row-reverse',
+                                  )}
                                 >
-                                  <Trash2 className="me-1 h-3.5 w-3.5" />
-                                  {t('classroomDetail.activities.removeBlock')}
-                                </Button>
+                                  <div
+                                    className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5"
+                                    role="group"
+                                    aria-label={t(
+                                      'classroomDetail.activities.textSlides.modeGroupAria',
+                                    )}
+                                  >
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={!slideMode ? 'default' : 'ghost'}
+                                      className="h-8 rounded-md px-3 shadow-none"
+                                      disabled={disabled}
+                                      onClick={() => {
+                                        if (slideMode) disableTextSlides(block.id);
+                                      }}
+                                    >
+                                      {t('classroomDetail.activities.textSlides.modeSingle')}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={slideMode ? 'default' : 'ghost'}
+                                      className="h-8 rounded-md px-3 shadow-none"
+                                      disabled={disabled}
+                                      onClick={() => {
+                                        if (!slideMode) enableTextSlides(block.id);
+                                      }}
+                                    >
+                                      {t('classroomDetail.activities.textSlides.modeSlides')}
+                                    </Button>
+                                  </div>
+                                  {slideMode ? (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 shrink-0 text-foreground"
+                                      disabled={disabled}
+                                      aria-label={t('classroomDetail.activities.textSlides.addSlide')}
+                                      onClick={() => addTextSlide(block.id)}
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  ) : null}
+                                </div>
+                                {!slideMode ? (
+                                  <div className={cn(rephrasingBlockId === block.id && 'opacity-90')}>
+                                    <RichTextEditor
+                                      content={lessonTextBodyToHtml(block.body)}
+                                      onChange={(html) => updateText(block.id, html)}
+                                      placeholder={t('classroomDetail.activities.richTextPlaceholder')}
+                                      className="min-h-[220px]"
+                                      disabled={disabled || rephrasingBlockId === block.id}
+                                      dir={isRTL ? 'rtl' : 'ltr'}
+                                      onRewrite={() => void onRephraseBlock(block.id)}
+                                      isRewriting={rephrasingBlockId === block.id}
+                                    />
+                                  </div>
+                                ) : (
+                                  <SortableLessonTextSlides
+                                    key={block.id}
+                                    blockId={block.id}
+                                    slides={block.slides ?? []}
+                                    isRTL={isRTL}
+                                    disabled={disabled}
+                                    rephrasingBlockId={rephrasingBlockId}
+                                    onRephraseBlock={onRephraseBlock}
+                                    onReorderSlides={(reordered) =>
+                                      reorderTextSlides(block.id, reordered)
+                                    }
+                                    onUpdateSlide={(slideIdx, html) =>
+                                      updateSlide(block.id, slideIdx, html)
+                                    }
+                                    onRemoveSlide={(slideIdx) => removeTextSlide(block.id, slideIdx)}
+                                  />
+                                )}
+                                <div className={cn('flex', isRTL && 'justify-start')}>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={disabled}
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => removeBlock(block.id)}
+                                  >
+                                    <Trash2 className="me-1 h-3.5 w-3.5" />
+                                    {t('classroomDetail.activities.removeBlock')}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        }}
                       </SortableLessonBlock>
                     ) : (
                       <SortableLessonBlock id={block.id}>
@@ -383,7 +535,7 @@ export const LessonBlocksEditor = ({
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="text-destructive hover:text-destructive"
+                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                                   onClick={() => removeBlock(block.id)}
                                   disabled={disabled || uploadingHere}
                                 >
@@ -401,11 +553,6 @@ export const LessonBlocksEditor = ({
               })}
             </ul>
           </SortableContext>
-          {/* Spacer below last block: scroll/drop bounds without visible chrome */}
-          <div
-            aria-hidden
-            className="pointer-events-none mt-3 min-h-[5rem] w-full shrink-0"
-          />
         </DndContext>
       )}
     </div>

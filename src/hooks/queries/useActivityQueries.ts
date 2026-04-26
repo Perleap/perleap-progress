@@ -14,18 +14,26 @@ export const activityKeys = {
 /**
  * Hook to fetch recent activity for a teacher
  */
-export const useRecentActivity = (userId: string | undefined, teacherProfile: any) => {
+export const useRecentActivity = (
+  userId: string | undefined,
+  teacherProfile: any,
+  options?: { isAppAdmin?: boolean }
+) => {
+  const isAppAdmin = options?.isAppAdmin === true;
   return useQuery({
-    queryKey: activityKeys.recent(userId || ''),
+    queryKey: [...activityKeys.recent(userId || ''), isAppAdmin ? 'all' : 'own'] as const,
     queryFn: async () => {
       if (!userId) throw new Error('Missing user ID');
 
-      const { data: events, error } = await supabase
+      let evQ = supabase
         .from('activity_events' as any)
         .select('*')
-        .eq('teacher_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
+      if (!isAppAdmin) {
+        evQ = evQ.eq('teacher_id', userId);
+      }
+      const { data: events, error } = await evQ;
 
       if (error) throw error;
       const rawEvents = (events as any[]) || [];

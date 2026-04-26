@@ -3,6 +3,14 @@
  * Content Related Abilities (CRA) assessment types for student hard skills
  */
 
+/** Optional embed from `assignments` + `syllabus_sections` when using expanded select. */
+export interface HardSkillAssignmentEmbed {
+  id: string;
+  title: string;
+  syllabus_section_id: string | null;
+  syllabus_sections?: { title: string | null; order_index?: number | null } | null;
+}
+
 export interface HardSkillAssessment {
   id: string;
   submission_id: string;
@@ -14,6 +22,7 @@ export interface HardSkillAssessment {
   proficiency_description: string;
   actionable_challenge: string;
   created_at: string;
+  assignments?: HardSkillAssignmentEmbed | null;
 }
 
 export interface HardSkillAssessmentWithStudent extends HardSkillAssessment {

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Download, FileIcon, ExternalLink } from 'lucide-react';
 import { TeacherEvaluationForm } from './TeacherEvaluationForm';
 
@@ -51,17 +52,14 @@ export function ProjectSubmissionView({
                     <ExternalLink className="h-3.5 w-3.5" />
                     {t('submissionDetail.projectView.preview')}
                   </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    asChild
-                    className="gap-1.5"
+                  <a
+                    href={fileUrl}
+                    download
+                    className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'gap-1.5')}
                   >
-                    <a href={fileUrl} download>
-                      <Download className="h-3.5 w-3.5" />
-                      {t('submissionDetail.projectView.download')}
-                    </a>
-                  </Button>
+                    <Download className="h-3.5 w-3.5" />
+                    {t('submissionDetail.projectView.download')}
+                  </a>
                 </div>
               </div>
 

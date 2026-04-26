@@ -57,6 +57,7 @@ interface ClassroomSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   sections: ClassroomSection[];
+  hideGlobalNav?: boolean;
 }
 
 export function ClassroomSidebar({
@@ -65,6 +66,7 @@ export function ClassroomSidebar({
   activeSection,
   onSectionChange,
   sections,
+  hideGlobalNav = false,
 }: ClassroomSidebarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -75,7 +77,8 @@ export function ClassroomSidebar({
 
   const [logoutOpen, setLogoutOpen] = React.useState(false);
 
-  const isTeacher = user?.user_metadata?.role === 'teacher';
+  const isTeacher =
+    user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
   const basePath = isTeacher ? '/teacher' : '/student';
 
   const navigateBackOrDashboard = useNavigateBack(`${basePath}/dashboard`);
@@ -142,41 +145,45 @@ export function ClassroomSidebar({
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            {t('nav.navigation')}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip={t('nav.dashboard')}
-                  onClick={() => navigate(`${basePath}/dashboard`)}
-                  isActive={isDashboardActive}
-                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isDashboardActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
-                >
-                  <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
-                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {isTeacher && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    tooltip={t('nav.planner')}
-                    onClick={() => navigate('/teacher/planner')}
-                    isActive={isPlannerActive}
-                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isPlannerActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
-                  >
-                    <Calendar className="size-5 group-data-[collapsible=icon]:size-5" />
-                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.planner')}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {!hideGlobalNav && (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {t('nav.navigation')}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-1">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip={t('nav.dashboard')}
+                      onClick={() => navigate(`${basePath}/dashboard`)}
+                      isActive={isDashboardActive}
+                      className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isDashboardActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                    >
+                      <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
+                      <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {isTeacher && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        tooltip={t('nav.planner')}
+                        onClick={() => navigate('/teacher/planner')}
+                        isActive={isPlannerActive}
+                        className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isPlannerActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                      >
+                        <Calendar className="size-5 group-data-[collapsible=icon]:size-5" />
+                        <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.planner')}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-        <SidebarSeparator className="my-2" />
+            <SidebarSeparator className="my-2" />
+          </>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel className="px-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             {t('nav.classroomSections')}

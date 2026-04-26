@@ -136,7 +136,7 @@ export function StudentAnalytics({
           };
 
           bestForAverage.forEach((snapshot) => {
-            const scores = snapshot.scores as FiveDScores;
+            const scores = snapshot.scores as unknown as FiveDScores;
             (Object.keys(totals) as Array<keyof FiveDScores>).forEach((key) => {
               totals[key] += scores[key] || 0;
             });
@@ -177,10 +177,10 @@ export function StudentAnalytics({
       setPerSubmissionScores(
         data
           ? {
-            scores: data.scores as FiveDScores,
-            score_explanations: data.score_explanations as any,
-          }
-          : null
+              scores: data.scores as unknown as FiveDScores,
+              score_explanations: data.score_explanations as unknown,
+            }
+          : null,
       );
     } catch {
       toast.error(t('analytics.scoresError'));

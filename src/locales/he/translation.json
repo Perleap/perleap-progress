@@ -17,6 +17,9 @@
     "logoutConfirmTitle": "להתנתק?",
     "logoutConfirmDescription": "תצטרך להתחבר שוב כדי לגשת לחשבון."
   },
+  "admin": {
+    "modeBanner": "מצב מנהל: ניתן לצפות ולערוך את כל כיתות המורים. פעולות עשויות להירשם."
+  },
   "planner": {
     "subtitle": "נהל את לוח הזמנים והמטלות",
     "classroomsTitle": "כיתות",
@@ -507,7 +510,13 @@
       "questionCount": "{{count}} שאלות",
       "editSection": "עריכה",
       "fixValidation": "נא להשלים את השדות הנדרשים בשלבים הקודמים.",
-      "testQuestionsLocked": "לא ניתן לערוך שאלות מבחן לאחר שהתלמידים כבר הגישו ניסיונות."
+      "testQuestionsLocked": "לא ניתן לערוך שאלות מבחן לאחר שהתלמידים כבר הגישו ניסיונות.",
+      "studentFacingTitle": "מה התלמידים רואים",
+      "studentFacingHint": "תקציר קצר וברור של המשימה. ניתן ליצור מההוראות המלאות ואז לערוך.",
+      "studentFacingPlaceholder": "התלמידים יקראו זאת לפני תחילת העבודה. לחצו ״יצירה״ כדי לטיוטה מההוראות.",
+      "generateForStudents": "יצירה לתלמידים",
+      "studentFacingGenerated": "נוצר תקציר — עברו עליו ושמרו כשמסיימים.",
+      "studentFacingGenerateFailed": "לא ניתן ליצור תקציר. נסו שוב או כתבו ידנית."
     },
     "testBuilder": {
       "title": "שאלות מבחן",
@@ -663,6 +672,20 @@
       "addBlockAriaLabel": "הוספת בלוק",
       "addBlockMenuText": "בלוק טקסט",
       "addBlockMenuVideo": "וידאו",
+      "textSlides": {
+        "useSlides": "מצב שקופיות (מסכים מרובים)",
+        "useSingle": "טקסט רציף",
+        "modeSingle": "רציף",
+        "modeSlides": "שקופיות",
+        "modeGroupAria": "מצב תצוגת טקסט: רציף או שקופיות",
+        "addSlide": "הוסף שקופית",
+        "slideLabel": "שקופית {{n}}",
+        "dragSlide": "גרור לשינוי סדר שקופיות",
+        "removeSlide": "הסר שקופית",
+        "prev": "שקופית קודמת",
+        "next": "שקופית הבאה",
+        "counter": "שקופית {{current}} מתוך {{count}}"
+      },
       "searchModulesPlaceholder": "חיפוש מודולים, פעילויות ומטלות…",
       "manageOutline": "מתווה הקורס",
       "noModulesMatchSearch": "אין תוצאות התואמות לחיפוש.",
@@ -770,6 +793,7 @@
     "tableStatus": "סטטוס",
     "tableSubmitted": "הוגש",
     "tableMessages": "צ'אט",
+    "tableChatFlow": "זרימת צ'אט",
     "tableFeedback": "משוב"
   },
   "submissionCard": {
@@ -785,6 +809,8 @@
     "teacherFeedback": "משוב מורה",
     "ai": "Perleap AI",
     "notStarted": "טרם התחיל",
+    "conversationFlowComplete": "הצ'אט הושלם",
+    "conversationFlowEarly": "הסתיים מוקדם",
     "fullReport": "דוח מלא"
   },
   "submissionDetail": {
@@ -891,7 +917,9 @@
       "action": "שחרר לתלמיד",
       "success": "המשוב גלוי כעת לתלמיד.",
       "alreadyVisible": "המשוב כבר פורסם לתלמיד. ניתן עדיין לערוך את הטקסט למעלה ולשמור שינויים."
-    }
+    },
+    "conversationFlowEarlyTitle": "הוגש לפני שהשיחה הושלמה",
+    "conversationFlowEarlyDescription": "התלמיד הגיש בזמן שמצב ״השיחה הושלמה״ בצ'אט עדיין לא הופעל. עיין/י בשרשור למטה להקשר."
   },
   "essaySubmission": {
     "title": "תשובתך",
@@ -902,6 +930,10 @@
   },
   "assignmentDetail": {
     "title": "פרטי משימה",
+    "studentTaskTitle": "המשימה שלך",
+    "loadingStudentTask": "מנסחים בקצרה מה נדרש ממך…",
+    "studentTaskNotSetYet": "לא הצלחנו לייצר כאן תקציר קצר. המורה יכול/ה להוסיף או ללטש בעריכת המטלה (סקירה → יצירה לתלמידים). בינתיים המשיכו בפעילות בצ׳אט למטה.",
+    "studentTaskFallback": "עקבו אחרי הצ׳אט עם העוזר ההוראי כדי להשלים את ״{{title}}״. המורה ינחה את השלבים שם.",
     "instructions": "הוראות",
     "attemptBannerSingle": "ניתן להגיש משימה זו פעם אחת.",
     "attemptBannerUntil": "ניתן להגיש מספר פעמים עד {{date}}.",
@@ -1073,6 +1105,7 @@
       "noFinishedAssignmentsDesc": "משימות שהושלמו יעברו לכאן לאחר שתסיים אותן.",
     "studyCta": {
       "continue": "המשך ללמוד",
+      "continueCourse": "המשך בקורס",
       "start": "התחל את הקורס",
       "review": "סקור את הקורס",
       "viewAssignments": "עבור למשימות"
@@ -1099,7 +1132,8 @@
     "notFound": "לא ניתן לטעון את הפעילות.",
     "lessonEmpty": "אין עדיין תוכן לשיעור.",
     "markComplete": "סימון כהושלם",
-    "finish": "סיום",
+    "finish": "המשך",
+    "continue": "המשך",
     "completed": "הושלם",
     "continueNext": "המשך לפעילות הבאה",
     "continueToAssignment": "המשך למשימה",
@@ -1242,7 +1276,23 @@
     "students": "תלמידים",
     "noData": "אין נתונים זמינים עדיין",
     "filtersTitle": "מסנני ניתוח",
-    "filtersDescription": "סינון תרשימים ומדדי כיתה לפי תלמיד או משימה.",
+    "filtersDescription": "סינון תרשימים ומדדי כיתה לפי מקטע סילבוס, תלמיד או משימה.",
+    "filterBySyllabusSection": "סנן לפי {{sectionType}}",
+    "allSyllabusSections": "כל {{sectionType}}",
+    "unplacedAssignments": "לא מקושר (לא בסילבוס)",
+    "allAssignmentsInScope": "הכל בטווח הזה",
+    "emptyModuleOrScope": "אין משימות בטווח הזה. בחר מקטע אחר או קשר משימות במסלל.",
+    "regenerateClassWideNote": "חישוב מחדש של 5D תמיד לכל הכיתה, לא רק לפי המסנן.",
+    "coverageInScope": "{{covered}} מתוך {{enrolled}} תלמידים עם עבודה בציון בטווח הנוכחי",
+    "compareSections": "השוואה בין שני מקטעים (5D)",
+    "compareModuleA": "מקטע א׳",
+    "compareModuleB": "מקטע ב׳",
+    "compareSelectSection": "בחר מקטע",
+    "compareHint": "השווה ממוצע 5D של הכיתה בין שני מקטעי סילבוס. \"לא מקושר\" — משימות בלי שיוך.",
+    "compareSameSection": "בחרו שני מקטעים שונים.",
+    "compareDelta": "הפרש (ב − א)",
+    "exportCsv": "ייצוא CSV",
+    "compareDimension": "ממד",
     "filterByStudent": "סנן לפי תלמיד",
     "filterByAssignment": "סנן לפי משימה",
     "all": "הכל",
@@ -1269,29 +1319,93 @@
     "noAssignments": "לא נמצאו משימות",
     "noCompletedSubmissions": "לא נמצאו הגשות שהושלמו",
     "regenerateAll5DScores": "חשב מחדש את כל ציוני 5D",
+    "regenerateScoresConfirmTitle": "לחשב מחדש את כל ציוני 5D?",
+    "regenerateScoresConfirmDescription": "הפעולה רצה על כל הכיתה (לא רק המסנן הנוכחי). ציוני 5D מחושבים מחדש באמצעות בינה מלאכותית לפי צ'אט המטלה, רק עבור הגשות שכבר כוללות משוב. פעולה זו מחליפה את תמונת ה־5D השמורה עבור הגשות אלה, וייתכן שתימשך זמן רב אם יש מספר גדול של תלמידים.",
+    "regenerateScoresConfirmAction": "חשב מחדש",
     "refresh5D": "רענן 5D",
     "regeneratingScores": "מרענן…",
     "regenerateError": "שגיאה ביצירת ציונים מחדש",
     "regenerateSuccess": "נוצרו מחדש {{count}} פרופילי 5D של תלמידים",
-    "regenerateFail": "נכשל ביצירת {{count}} פרופילים מחדש"
+    "regenerateFail": "נכשל ביצירת {{count}} פרופילים מחדש",
+    "narrative": {
+      "loading": "יוצרים פרשנות בינה…",
+      "error": "לא ניתן לטעון פרשנות. מוצגים תיאורי ממדים ברירת מחדל.",
+      "basedOnSources": "סונתז מתוך {{count}} מקטעי הערכה בתצוגה זו",
+      "scoresOnlyHint": "אין בטווח הזה מקטעי הערכה טקסטואליים. הפרשנות מבוססת רק על ציוני ממוצעים והמסננים."
+    },
+    "compareNarrativeScope": "השוואה: {{a}} מול {{b}}. מסננים: {{filters}}"
   },
   "nuance": {
+    "baselinesClassWide": "המספרים בטבלה מכבדים את מסנן המודול, התלמיד והפעילות. אפשר להשוות בין תלמידים או להתמקד בפעילות אחת.",
+    "insightScope": "דגל Nuance מבוסס על הדפוס האחרון של התלמיד בכיתה, לא רק על שורה בודדת. אותה תובנה מוצגת בכל מסך עבור אותו תלמיד.",
+    "classReferenceScope": "השורה הזו לכל הכיתה (כל הפעילויות שיש להן מדדי Nuance). הטבלה למטה משתמשת רק במסננים הנוכחיים (יחידה, תלמיד, פעילות).",
+    "classReference": "ייחוס לכיתה (כל הפעילויות בנתוני Nuance): ממוצע תגובה {{latency}}, זמן מחוץ ללשונית {{idle}}, הושלם {{completion}} ({{n}} נקודות נתונים).",
+    "classReferenceCompact": "כיתה: תגובה {{latency}} · מחוץ ללשונית {{idle}} · הושלם {{completion}}",
+    "howNuanceTitle": "איך Nuance עובד",
+    "howNuanceBody": "Nuance מנתחת אותות מהמטלה: זמן לתגובה אחרי הודעה, זמן עם הלשונית ברקע, מספר פתיחות, השלמה, ובשילוב רמזים אופציונליים מניסוח בצ'אט כשהתלמיד נשמע מבולבל. זה אינו ציון. הדגלים הן בדיקות פשוטות ביחס לתלמיד ולכיתה, ואז ניסוח מעשי. בכל ספק — שלבו עם בדיקת הגשות ושיחה בכיתה.",
+    "statusRow": {
+      "typical": "רגיל",
+      "insight": "תובנת Nuance"
+    },
+    "metricLabels": {
+      "idle_ratio": "זמן מחוץ ללשונית (ממוצע)",
+      "baseline_idle_ratio": "רגיל אצל התלמיד",
+      "focus_loss_count": "מעבר לחלון אחר",
+      "high_idle_sessions": "מפגשים עם זמן רב מחוץ ללשונית",
+      "avg_response_latency_ms": "זמן ממוצע לתגובה אחרי הודעה",
+      "baseline_latency_ms": "זמן תגובה אופייני",
+      "latency_ratio": "לעומת המהירות הרגילה",
+      "completion_rate": "השלמה בחלון אחרון",
+      "baseline_completion_rate": "אחוז השלמה אופייני",
+      "incomplete_count": "לא הושלמו בחלון",
+      "session_count_avg": "ממוצע פתיחות לפעילות",
+      "understanding_cue_count": "רמזי הבהרה/בלבול בצ'אט",
+      "understanding_cue_count_recent": "רמזים בחלון אחרון",
+      "scaffolding_note": "רבים ביחד להשלמה סבירה — ייתכן שימוש בסיס, לא ממצא שלילי.",
+      "scaffolding_signal": "בקשות להבהרה יחד עם התקדמות (תקין לרוב)"
+    },
     "title": "תובנות התנהגותיות של תלמידים",
-    "description": "המלצות מערכת הנואנס מבוססות על דפוסי פעילות",
+    "description": "Nuance הופכת דפוסי פעילות בזמן אמת לרעיונות קצרים לכיתה",
     "filterStudent": "תלמיד",
     "filterActivity": "פעילות",
     "refresh": "רענן תובנות",
     "noData": "אין נתונים התנהגותיים עדיין. הנתונים יופיעו כשהתלמידים ישלימו פעילויות.",
-    "noRecommendation": "אין המלצות — דפוסי הפעילות בטווח הנורמלי.",
-    "whyTriggered": "למה זה הופעל",
-    "supportingData": "נתונים תומכים",
+    "emptyNoAssignmentsInFilter": "אין פעילויות שתואמות את המסננים, ולכן אין מה להציג בטבלה.",
+    "emptyNoDataInFilter": "אין מדדי Nuance לפעילויות בטווח המסנן. שורת ה״ייחוס לכיתה״ עדיין מסכמת נתונים מכל המחלקה—לא רק מיחידה/תלמיד נוכחי.",
+    "emptyNoDataForStudentInFilter": "אין שורת Nuance לתלמיד הזה בפעילויות בטווח. ייתכן שאחרים כן. ודאו שהתלמיד פתח את המשימות (מעקב פעיל: הגשה פעילה, בלי משוב) ורעננו.",
+    "emptyNoDataForAssignmentInFilter": "אין נתוני Nuance לפעילות הזו בטווח. נסו יחידה אחרת או ״הכל בקטע״.",
+    "emptyNoDataForPairInFilter": "אין שורה לתלמיד+פעילות. ודאו שבוצע שימוש בצ׳אט אחרי שהמעקב הופעל, ורעננו.",
+    "notAllEnrolledInTable": "רק תלמידים שיש להם לפחות שורת Nuance לפעילויות בטווח המסנן מופיעים כאן. אחרים ברשימה עדיין יכולים להופיע ביחידה אחרת או בפעילויות שלא קושרו לקטע הזה בסילבוס.",
+    "hintStudentNuanceInOtherScope": "לתלמיד הזה יש נתוני Nuance בכיתה מחוץ לטווח המסנן. הרחיבו את מסנן היחידה/הפעילות (או כל המשימות בכיתה) כדי לראות, ובדקו איפה הפעילות ממוקמת בסילבוס אם ציפיתם לרואות אותה ביחידה הזו.",
+    "noRecommendation": "אין דגל Nuance — הדפוסים נראים בטווח. המספרים בטבלה עדיין לפי המסנן הנוכחי.",
+    "cueDetail": {
+      "title": "רמזי הבנה (פירוט)",
+      "privacy": "טקסט ההודעה אינו נשמר. זמנים ומדד תור מסייעים למקם את הרמז בצ'אט.",
+      "loading": "טוען פירוט רמזים…",
+      "error": "לא ניתן לטעון את פירוט הרמזים.",
+      "noneInScope": "אין רמזים בטווח המסנן הזה.",
+      "headings": {
+        "time": "זמן",
+        "activity": "פעילות",
+        "turn": "תור",
+        "kind": "אות"
+      },
+      "kind": {
+        "strong": "ניסוח חזק (הבהרה / בלבול)",
+        "weak": "ניסוח קל (ייתכן בקשה)",
+        "unknown": "—"
+      }
+    },
+    "whyTriggered": "מה הפעיל את זה",
+    "supportingData": "מאחורי המספרים",
     "columns": {
       "student": "תלמיד",
       "activity": "פעילות",
       "responseTime": "תגובה ממוצעת",
-      "idleRatio": "יחס חוסר פעילות",
+      "idleRatio": "זמן מחוץ ללשונית",
       "completion": "השלמה",
       "sessions": "סשנים",
+      "cuesInChat": "רמזים בצ'אט",
       "status": "סטטוס"
     },
     "tooltips": {
@@ -1300,7 +1414,9 @@
       "idleRatio": "אחוז זמן הסשן בו התלמיד היה לא פעיל או עבר לחלון אחר.",
       "completion": "אחוז המשימות שהתלמיד התחיל ובאמת סיים.",
       "sessions": "מספר ממוצע של פעמים שהתלמיד פתח כל משימה.",
-      "status": "ירוק = דפוסים תקינים, כתום = נוצרה המלצה."
+      "cuesInChat": "תדירות שבה ניסוח ההודעות בצ'אט מרמז על בלבול או צורך בהבהרה, בפעילות הזו.",
+      "cuesInChatColumn": "לפי פעילות: כמה פעמים ניסוח התלמיד נשמע כבקשת הבהרה. בתצוגת 'כל התלמידים' המספר הוא ממוצע של הערכים לפי פעילויות בטווח. הרחבת שורה מציגה את הרמזים; סכום הרשימה אינו זהה לממוצע.",
+      "status": "רגיל: בטווח. תובנת Nuance: יש המלצה — הרחבו את השורה."
     },
     "types": {
       "engagement_support": "תמיכה במעורבות",
@@ -1428,6 +1544,27 @@
     "loading": "טוען...",
     "nextSteps": "הצעדים הבאים",
     "unknown": "לא ידוע",
+    "unknownAssignment": "משימה לא ידועה",
+    "unplacedSection": "לא מקושר למקטע בסילבוס",
+    "scopeSummary": "{{skills}} מיומנויות CRA ב-{{assignments}} משימות, {{students}} תלמידים. התחום המוביל בממוצע: {{topDomain}}. הנמוך: {{bottomDomain}}.",
+    "groupByModule": "קיבוץ לפי מקטע (מודול)",
+    "groupByDomain": "קיבוץ לפי תחום בתוך משימה",
+    "table": {
+      "student": "תלמיד",
+      "module": "מודול",
+      "assignment": "משימה",
+      "domain": "תחום",
+      "skill": "מיומנות",
+      "percent": "%",
+      "level": "רמה",
+      "showDetails": "הצג פרטים",
+      "hideDetails": "הסתר פרטים",
+      "detailsHeading": "מיומנות והמשך צעדים",
+      "detailsProficiencyPrefix": "מיומנות:",
+      "detailsNextStepsPrefix": "המשך צעדים:",
+      "scrollHint": "אם הטבלה רחבה מן המסך, גלול אופקית כדי לראות את כל העמודות.",
+      "detailsDialogTitle": "{{domain}} — {{skill}}"
+    },
     "performance": {
       "advanced": "מתקדם",
       "intermediate": "בינוני",
@@ -1586,10 +1723,13 @@
   "classroomAnalytics": {
     "classOverview": "סקירת כיתה",
     "averageScoresAcross": "ציוני 5D ממוצעים בכל ההגשות",
+    "averageScoresInSection": "ציוני 5D ממוצעים ב־{{section}}",
+    "averageScoresUnplaced": "ציוני 5D ממוצעים למשימות שלא שויכו למקטע סילבוס",
     "scoresFor": "ציונים עבור {{assignment}}",
     "studentPerformanceOverview": "סקירת ביצועי תלמידים",
     "detailedBreakdown": "פירוט מפורט לפי תלמיד",
     "noStudentData": "אין עדיין נתוני תלמידים זמינים",
+    "noStudentDataInScope": "אין עדיין נתונים בטווח הזה",
     "submissions": "הגשות",
     "average5DProfile": "פרופיל 5D ממוצע",
     "allHardSkills": "כל הערכות המיומנויות הקשות בכל המשימות",
@@ -1684,8 +1824,12 @@
     "errors": {
       "markingRead": "שגיאה בסימון התראות כנקראו"
     },
+    "messages": {
+      "feedbackUpdated": "המשוב שלך עבור \"{{title}}\" עודכן על ידי המורה."
+    },
     "titles": {
       "feedbackReceived": "משוב התקבל",
+      "feedbackUpdated": "המשוב עודכן",
       "successfullyEnrolled": "נרשמת בהצלחה",
       "newAssignment": "מטלה אישית חדשה",
       "studentEnrolled": "תלמיד חדש נרשם"

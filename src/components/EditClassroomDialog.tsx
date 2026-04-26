@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
+import type { StorageUploadOptions } from '@/lib/storageUpload';
 import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
 import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye } from 'lucide-react';
@@ -137,10 +139,10 @@ export const EditClassroomDialog = ({
           start_date: formData.startDate || null,
           end_date: formData.endDate || null,
           resources: formData.courseDescription || '',
-          learning_outcomes: formData.learningOutcomes.filter((o) => o.trim()),
-          key_challenges: formData.keyChallenges.filter((c) => c.trim()),
-          domains: filteredDomains,
-          materials: formData.materials,
+          learning_outcomes: formData.learningOutcomes.filter((o) => o.trim()) as unknown as Json,
+          key_challenges: formData.keyChallenges.filter((c) => c.trim()) as unknown as Json,
+          domains: filteredDomains as unknown as Json,
+          materials: formData.materials as unknown as Json,
         })
         .eq('id', classroom.id);
 
@@ -242,17 +244,22 @@ export const EditClassroomDialog = ({
       const fileExt = 'pdf';
       const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
 
+      const uploadOptions: StorageUploadOptions = {
+        cacheControl: '3600',
+        upsert: true,
+        onUploadProgress: (progress) => {
+          if (progress.total <= 0) return;
+          const percentage = Math.round((progress.loaded / progress.total) * 100);
+          setUploadProgress(percentage);
+          console.log(
+            `Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`,
+          );
+        },
+      };
+
       const { data, error: uploadError } = await supabase.storage
         .from('course-materials')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true,
-          onUploadProgress: (progress) => {
-            const percentage = Math.round((progress.loaded / progress.total) * 100);
-            setUploadProgress(percentage);
-            console.log(`Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`);
-          }
-        });
+        .upload(fileName, file, uploadOptions);
 
       if (uploadError) {
         console.error('Supabase upload error:', uploadError);
@@ -277,6 +284,7 @@ export const EditClassroomDialog = ({
       toast.error(`${t('createClassroom.errors.creating')}: ${error.message || 'Unknown error'}`);
     } finally {
       setUploadingMaterial(false);
+      setUploadProgress(0);
     }
   };
 

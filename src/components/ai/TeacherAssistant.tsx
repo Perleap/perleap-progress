@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+import { formatInlineListsForChatMarkdown } from '@/lib/chatDisplay';
 import SafeMathMarkdown from '../SafeMathMarkdown';
 
 interface Message {
@@ -58,7 +59,8 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
   const [isLoading, setIsLoading] = useState(false);
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
-  const isTeacher = user?.user_metadata?.role === 'teacher';
+  const isTeacher =
+    user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
 
   useEffect(() => {
     const {
@@ -239,7 +241,9 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
                       : 'bg-card border border-border rounded-bl-none text-card-foreground'
                   }`}
                 >
-                  <SafeMathMarkdown content={m.content} />
+                  <SafeMathMarkdown
+                    content={m.role === 'assistant' ? formatInlineListsForChatMarkdown(m.content) : m.content}
+                  />
                 </div>
               </div>
             ))}

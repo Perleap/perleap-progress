@@ -5,10 +5,14 @@ import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRecentActivity } from '@/hooks/queries';
+import { USER_ROLES } from '@/config/constants';
 
 export function RecentActivity() {
     const { user, profile } = useAuth();
-    const { data: activities = [], isLoading: loading } = useRecentActivity(user?.id, profile);
+    const isAppAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
+    const { data: activities = [], isLoading: loading } = useRecentActivity(user?.id, profile, {
+      isAppAdmin,
+    });
 
     const getInitials = (name: string) => {
         return name

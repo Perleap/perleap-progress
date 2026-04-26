@@ -7,6 +7,7 @@ export * from './analyticsService';
 export * from './assignmentService';
 export * from './avatarService';
 export * from './classroomService';
+export * from './adminAuditService';
 export * from './enrollmentService';
 export * from './profileService';
 export * from './submissionService';

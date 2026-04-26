@@ -368,20 +368,6 @@ serve(async (req) => {
         if (assignmentData) {
           const assignmentTitle = assignmentData.title;
           const notifications: PromiseLike<unknown>[] = [];
-          if (autoPublishAiFeedback) {
-            notifications.push(
-              supabase.from('notifications').insert({
-                user_id: studentId,
-                type: 'feedback_received',
-                title: 'Feedback Received',
-                message: `Your feedback for "${assignmentTitle}" is ready`,
-                link: `/student/assignment/${assignmentId}`,
-                actor_id: teacherId,
-                metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
-                is_read: false,
-              }),
-            );
-          }
           if (teacherId) {
             notifications.push(
               supabase.from('notifications').insert({

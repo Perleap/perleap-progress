@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -184,10 +185,10 @@ export const CreateClassroomWizard = ({
           start_date: wizardData.startDate || null,
           end_date: wizardData.endDate || null,
           resources: wizardData.courseDescription || '',
-          learning_outcomes: wizardData.learningOutcomes.filter((o) => o.trim()),
-          key_challenges: wizardData.keyChallenges.filter((c) => c.trim()),
-          domains: filteredDomains,
-          materials: wizardData.materials,
+          learning_outcomes: wizardData.learningOutcomes.filter((o) => o.trim()) as unknown as Json,
+          key_challenges: wizardData.keyChallenges.filter((c) => c.trim()) as unknown as Json,
+          domains: filteredDomains as unknown as Json,
+          materials: wizardData.materials as unknown as Json,
         })
         .select()
         .single();

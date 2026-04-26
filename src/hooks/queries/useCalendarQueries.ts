@@ -14,18 +14,27 @@ export const calendarKeys = {
 
 /**
  * Hook to fetch all data needed for the teacher calendar
+ * @param isAdmin - when true, do not filter by teacher_id (RLS limits rows to what the user may see)
  */
-export const useTeacherCalendarData = (teacherId: string | undefined) => {
+export const useTeacherCalendarData = (
+  teacherId: string | undefined,
+  options?: { isAdmin?: boolean }
+) => {
+  const isAdmin = options?.isAdmin === true;
   return useQuery({
-    queryKey: calendarKeys.teacher(teacherId || ''),
+    queryKey: [...calendarKeys.teacher(teacherId || ''), isAdmin ? 'all' : 'own'] as const,
     queryFn: async () => {
       if (!teacherId) throw new Error('Missing teacher ID');
 
       // 1. Fetch classrooms
-      const { data: classrooms, error: classroomError } = await supabase
+      let classQ = supabase
         .from('classrooms')
         .select('id, name, subject, start_date, end_date')
-        .eq('teacher_id', teacherId);
+        .eq('active', true);
+      if (!isAdmin) {
+        classQ = classQ.eq('teacher_id', teacherId);
+      }
+      const { data: classrooms, error: classroomError } = await classQ;
 
       if (classroomError) throw classroomError;
       if (!classrooms || classrooms.length === 0) return { classrooms: [], assignments: [] };

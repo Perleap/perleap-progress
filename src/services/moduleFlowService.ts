@@ -4,6 +4,7 @@
 
 import { supabase, handleSupabaseError } from '@/api/client';
 import { SUBMISSION_STATUS } from '@/config/constants';
+import type { Json } from '@/integrations/supabase/types';
 import type { ApiError } from '@/types';
 import type {
   ModuleFlowStep,
@@ -17,12 +18,12 @@ export const getModuleFlowStepsBySections = async (
   try {
     if (sectionIds.length === 0) return { data: [], error: null };
     const { data, error } = await supabase
-      .from('module_flow_steps' as any)
+      .from('module_flow_steps')
       .select('*')
       .in('section_id', sectionIds);
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    const rows = ((data as any[]) as ModuleFlowStep[]).slice();
+    const rows = ((data ?? []) as unknown as ModuleFlowStep[]).slice();
     rows.sort((a, b) => {
       if (a.section_id !== b.section_id) return a.section_id.localeCompare(b.section_id);
       return a.order_index - b.order_index;
@@ -38,7 +39,7 @@ export const getModuleFlowSteps = async (
 ): Promise<{ data: ModuleFlowStep[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
-      .from('module_flow_steps' as any)
+      .from('module_flow_steps')
       .select('*')
       .eq('section_id', sectionId)
       .order('order_index', { ascending: true });
@@ -76,9 +77,9 @@ async function replaceModuleFlowStepsImpl(
       assignment_id: s.step_kind === 'assignment' ? s.assignment_id : null,
     }));
 
-    const { error: rpcErr } = await supabase.rpc('replace_module_flow_steps' as any, {
+    const { error: rpcErr } = await supabase.rpc('replace_module_flow_steps', {
       p_section_id: sectionId,
-      p_steps: payload,
+      p_steps: payload as unknown as Json,
     });
 
     if (rpcErr) return { error: handleSupabaseError(rpcErr) };
@@ -116,13 +117,15 @@ export const removeAssignmentFromModuleFlows = async (
 ): Promise<{ error: ApiError | null }> => {
   try {
     const { data: refs, error: refErr } = await supabase
-      .from('module_flow_steps' as any)
+      .from('module_flow_steps')
       .select('section_id')
       .eq('assignment_id', assignmentId);
 
     if (refErr) return { error: handleSupabaseError(refErr) };
 
-    const sectionIds = [...new Set(((refs ?? []) as { section_id: string }[]).map((r) => r.section_id))];
+    const sectionIds = [
+      ...new Set((refs ?? []).map((r) => r.section_id)),
+    ];
     if (sectionIds.length === 0) return { error: null };
 
     for (const sectionId of sectionIds) {
@@ -150,13 +153,13 @@ export const getStudentModuleFlowProgress = async (
     if (stepIds.length === 0) return { data: [], error: null };
 
     const { data, error } = await supabase
-      .from('student_module_flow_progress' as any)
+      .from('student_module_flow_progress')
       .select('*')
       .eq('student_id', studentId)
       .in('module_flow_step_id', stepIds);
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: (data as any[]) as StudentModuleFlowProgress[], error: null };
+    return { data: (data ?? []) as unknown as StudentModuleFlowProgress[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -170,7 +173,7 @@ export const upsertStudentModuleFlowProgress = async (
   try {
     const now = new Date().toISOString();
     const { data: existing } = await supabase
-      .from('student_module_flow_progress' as any)
+      .from('student_module_flow_progress')
       .select('id')
       .eq('student_id', studentId)
       .eq('module_flow_step_id', moduleFlowStepId)
@@ -178,21 +181,21 @@ export const upsertStudentModuleFlowProgress = async (
 
     if (existing) {
       const { data, error } = await supabase
-        .from('student_module_flow_progress' as any)
+        .from('student_module_flow_progress')
         .update({
           status,
           completed_at: status === 'completed' ? now : null,
         })
-        .eq('id', (existing as any).id)
+        .eq('id', existing.id)
         .select()
         .single();
 
       if (error) return { data: null, error: handleSupabaseError(error) };
-      return { data: data as any as StudentModuleFlowProgress, error: null };
+      return { data: data as unknown as StudentModuleFlowProgress, error: null };
     }
 
     const { data, error } = await supabase
-      .from('student_module_flow_progress' as any)
+      .from('student_module_flow_progress')
       .insert({
         student_id: studentId,
         module_flow_step_id: moduleFlowStepId,
@@ -203,7 +206,7 @@ export const upsertStudentModuleFlowProgress = async (
       .single();
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: data as any as StudentModuleFlowProgress, error: null };
+    return { data: data as unknown as StudentModuleFlowProgress, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

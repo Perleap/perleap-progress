@@ -160,8 +160,11 @@ async function exportEditedVideo(
       /** Audio tracks often appear only after playback has started (see HTMLMediaElement.captureStream). */
       const startRecordingPipeline = () => {
         let outputStream: MediaStream;
-        if (typeof video.captureStream === 'function') {
-          const fromEl = video.captureStream();
+        const mediaEl = video as HTMLVideoElement & {
+          captureStream?: (frameRate?: number) => MediaStream;
+        };
+        if (typeof mediaEl.captureStream === 'function') {
+          const fromEl = mediaEl.captureStream();
           const audioTracks = fromEl.getAudioTracks();
           outputStream =
             audioTracks.length > 0
@@ -489,7 +492,8 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
     const wrap = videoRef.current?.parentElement;
     if (!wrap) return;
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (ev: Event) => {
+      const e = ev as globalThis.MouseEvent;
       const rect = wrap.getBoundingClientRect();
       const dx = ((e.clientX - textDragRef.current.startX) / rect.width) * 100;
       const dy = ((e.clientY - textDragRef.current.startY) / rect.height) * 100;
@@ -506,10 +510,10 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
       );
     };
     const onUp = () => setDraggingTextId(null);
-    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mousemove', onMove as EventListener);
     window.addEventListener('mouseup', onUp);
     return () => {
-      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mousemove', onMove as EventListener);
       window.removeEventListener('mouseup', onUp);
     };
   }, [draggingTextId]);

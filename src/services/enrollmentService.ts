@@ -163,30 +163,6 @@ export const unenrollFromClassroom = async (
 };
 
 /**
- * Get all students enrolled in a classroom
- *
- * @param classroomId - Classroom ID
- * @returns Array of enrolled students
- */
-export const getEnrolledStudents = async (classroomId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('enrollments')
-      .select('student_id, created_at, student_profiles(user_id, full_name, avatar_url)')
-      .eq('classroom_id', classroomId)
-      .eq('active', true)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching enrolled students:', error);
-    return [];
-  }
-};
-
-/**
  * Check if a student is enrolled in a classroom
  *
  * @param classroomId - Classroom ID

@@ -1,5 +1,15 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +25,7 @@ interface RegenerateScoresButtonProps {
 export function RegenerateScoresButton({ classroomId, onComplete, compact = false }: RegenerateScoresButtonProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const regenerateAllScores = async () => {
     setLoading(true);
@@ -98,19 +109,41 @@ export function RegenerateScoresButton({ classroomId, onComplete, compact = fals
   };
 
   return (
-    <Button
-      variant="outline"
-      size={compact ? 'sm' : 'default'}
-      className={compact ? 'shrink-0 gap-1.5' : undefined}
-      onClick={regenerateAllScores}
-      disabled={loading}
-    >
-      <RefreshCw className={`${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} ${loading ? 'animate-spin' : ''}`} />
-      {loading
-        ? t('analytics.regeneratingScores')
-        : compact
-          ? t('analytics.refresh5D')
-          : t('analytics.regenerateAll5DScores')}
-    </Button>
+    <>
+      <Button
+        variant="outline"
+        size={compact ? 'sm' : 'default'}
+        className={compact ? 'shrink-0 gap-1.5' : undefined}
+        onClick={() => setConfirmOpen(true)}
+        disabled={loading}
+      >
+        <RefreshCw className={`${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} ${loading ? 'animate-spin' : ''}`} />
+        {loading
+          ? t('analytics.regeneratingScores')
+          : compact
+            ? t('analytics.refresh5D')
+            : t('analytics.regenerateAll5DScores')}
+      </Button>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('analytics.regenerateScoresConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('analytics.regenerateScoresConfirmDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false);
+                void regenerateAllScores();
+              }}
+            >
+              {t('analytics.regenerateScoresConfirmAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

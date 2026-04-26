@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { USER_ROLES } from '@/config/constants';
+import { logAdminEvent } from '@/services/adminAuditService';
 import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -120,6 +122,7 @@ const ClassroomDetail = () => {
   const { id } = useParams();
   const location = useLocation();
   const { user } = useAuth();
+  const isAppAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -195,19 +198,29 @@ const ClassroomDetail = () => {
     setIsDeleting(true);
     try {
       const deletedAt = new Date().toISOString();
-      const { data: deletedRows, error } = await supabase
+      let delQ = supabase
         .from('classrooms')
         .update({ active: false, deleted_at: deletedAt })
         .eq('id', id)
-        .eq('teacher_id', user?.id)
-        .eq('active', true)
-        .select('id');
+        .eq('active', true);
+      if (!isAppAdmin) {
+        delQ = delQ.eq('teacher_id', user?.id);
+      }
+      const { data: deletedRows, error } = await delQ.select('id');
 
       if (error) throw error;
 
       if (!deletedRows?.length) {
         toast.error(t('classroomDetail.errors.deleting'));
         return;
+      }
+
+      if (isAppAdmin && id) {
+        void logAdminEvent({
+          action: 'classroom_soft_delete',
+          entityType: 'classroom',
+          entityId: id,
+        });
       }
 
       await queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });

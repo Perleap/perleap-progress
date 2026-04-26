@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import type { Database, Json } from '@/integrations/supabase/types';
 import type {
   Classroom,
   Enrollment,
@@ -13,17 +14,22 @@ import type {
 } from '@/types';
 
 /**
- * Fetch all classrooms for a teacher with enrollment counts
+ * Fetch all classrooms for a teacher with enrollment counts.
+ * For app admins, omit `teacherId` filter so RLS returns all accessible classrooms.
  */
 export const getTeacherClassrooms = async (
-  teacherId: string
+  teacherId: string,
+  options?: { allClassroomsForAdmin?: boolean }
 ): Promise<{ data: any[] | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('classrooms')
       .select('*, enrollments(count)')
-      .eq('teacher_id', teacherId)
       .eq('active', true);
+    if (!options?.allClassroomsForAdmin) {
+      q = q.eq('teacher_id', teacherId);
+    }
+    const { data, error } = await q;
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -89,13 +95,20 @@ export const createClassroom = async (
   classroom: Omit<Classroom, 'id' | 'created_at' | 'invite_code'>
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase.from('classrooms').insert([classroom]).select().single();
+    const insert: Database['public']['Tables']['classrooms']['Insert'] = {
+      ...classroom,
+      domains: classroom.domains as unknown as Json | null,
+      learning_outcomes: classroom.learning_outcomes as unknown as Json | null,
+      key_challenges: classroom.key_challenges as unknown as Json | null,
+      materials: classroom.materials as unknown as Json | null,
+    };
+    const { data, error } = await supabase.from('classrooms').insert([insert]).select().single();
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as unknown as Classroom, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -109,9 +122,18 @@ export const updateClassroom = async (
   updates: Partial<Omit<Classroom, 'id' | 'created_at' | 'invite_code' | 'teacher_id'>>
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
+    const { domains, learning_outcomes, key_challenges, materials, _count, ...rest } = updates;
+    const payload: Database['public']['Tables']['classrooms']['Update'] = { ...rest };
+    if (domains !== undefined) payload.domains = domains as unknown as Json | null;
+    if (learning_outcomes !== undefined)
+      payload.learning_outcomes = learning_outcomes as unknown as Json | null;
+    if (key_challenges !== undefined)
+      payload.key_challenges = key_challenges as unknown as Json | null;
+    if (materials !== undefined) payload.materials = materials as unknown as Json | null;
+
     const { data, error } = await supabase
       .from('classrooms')
-      .update(updates)
+      .update(payload)
       .eq('id', classroomId)
       .select()
       .single();
@@ -120,7 +142,7 @@ export const updateClassroom = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as unknown as Classroom, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -194,7 +216,7 @@ export const findClassroomByInviteCode = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as unknown as Classroom, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -303,7 +325,7 @@ export const getStudentClassrooms = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as unknown as Classroom[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

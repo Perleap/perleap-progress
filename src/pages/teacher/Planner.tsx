@@ -58,6 +58,7 @@ import {
 } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/useAuth';
+import { USER_ROLES } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -132,6 +133,7 @@ const PlannerEvent = memo(({ event, title }: EventProps<CalendarEvent>) => {
 
 const Planner = () => {
   const { user } = useAuth();
+  const isAppAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   const { t } = useTranslation();
   const { language = 'en', isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -186,11 +188,11 @@ const Planner = () => {
 
   const fetchClassrooms = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('classrooms')
-        .select('id, name')
-        .eq('teacher_id', user?.id || '')
-        .eq('active', true);
+      let q = supabase.from('classrooms').select('id, name').eq('active', true);
+      if (!isAppAdmin) {
+        q = q.eq('teacher_id', user?.id || '');
+      }
+      const { data, error } = await q;
 
       if (error) throw error;
 
@@ -205,7 +207,7 @@ const Planner = () => {
     } catch (error) {
       console.error('Error fetching classrooms:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, isAppAdmin]);
 
   const fetchAssignments = useCallback(async () => {
     try {

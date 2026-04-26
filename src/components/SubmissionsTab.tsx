@@ -46,6 +46,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { useEnrichedClassroomSubmissions, useSyllabus } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
+import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import { DatePicker } from '@/components/ui/date-picker';
 
 interface SubmissionsTabProps {
@@ -324,7 +325,6 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                   <Select
                     value={viewMode}
                     onValueChange={(v) => setViewMode(v as SubmissionViewMode)}
-                    dir={isRTL ? 'rtl' : 'ltr'}
                   >
                     <SelectTrigger
                       className="rounded-xl h-10 min-h-10 w-full min-w-0 border-border bg-muted/30 text-sm text-foreground sm:w-auto sm:min-w-[160px] [&_svg:not([class*='size-'])]:size-4"
@@ -397,7 +397,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 <div className="pt-2 flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-4 md:gap-x-8 lg:gap-x-10">
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
-                    <Select value={selectedStudent} onValueChange={setSelectedStudent} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedStudent === 'all' ? t('submissionsTab.allStudents') : students.find(s => s.id === selectedStudent)?.name}
@@ -416,7 +416,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
 
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
-                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedAssignment === 'all' ? t('submissionsTab.allAssignments') : assignments.find(a => a.id === selectedAssignment)?.title}
@@ -435,7 +435,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
 
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.module')}</label>
-                    <Select value={selectedModule} onValueChange={setSelectedModule} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <Select value={selectedModule} onValueChange={setSelectedModule}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedModule === 'all' ? t('submissionsTab.allModules') : modules.find((m) => m.id === selectedModule)?.title}
@@ -454,7 +454,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
 
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
-                    <Select value={selectedStatus} onValueChange={setSelectedStatus} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                       <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
                         <SelectValue>
                           {selectedStatus === 'all' ? t('submissionsTab.allStatuses') : (selectedStatus === 'in_progress' ? t('submissionsTab.inProgress') : t('submissionCard.completed'))}
@@ -545,6 +545,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 <TableHead className="text-start">{t('submissionsTab.tableAssignment')}</TableHead>
                 <TableHead className="text-start">{t('submissionsTab.tableStudent')}</TableHead>
                 <TableHead className="text-start">{t('submissionsTab.tableStatus')}</TableHead>
+                <TableHead className="text-start">{t('submissionsTab.tableChatFlow')}</TableHead>
                 <TableHead className="text-start">{t('submissionsTab.tableSubmitted')}</TableHead>
                 <TableHead className="text-start">{t('submissionsTab.tableMessages')}</TableHead>
                 <TableHead className="text-start min-w-[140px]">{t('submissionsTab.tableFeedback')}</TableHead>
@@ -554,6 +555,16 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
               {filteredSubmissions.map((submission) => {
                 const pending = submission.id.startsWith('pending-');
                 const msgCount = submission.conversation_context?.length ?? 0;
+                const assignmentType = (submission as { assignment_type?: string | null }).assignment_type;
+                const chatFlowLabel = (() => {
+                  if (pending) return '—';
+                  if (!isChatLikeAssignmentType(assignmentType)) return '—';
+                  const v = (submission as { conversation_complete_at_submit?: boolean | null })
+                    .conversation_complete_at_submit;
+                  if (v === true) return t('submissionCard.conversationFlowComplete');
+                  if (v === false) return t('submissionCard.conversationFlowEarly');
+                  return '—';
+                })();
                 let feedbackText: string;
                 if (pending) {
                   feedbackText = '—';
@@ -600,6 +611,9 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                             ? t('submissionCard.completed')
                             : t('submissionCard.inProgress')}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="align-middle text-muted-foreground text-xs max-w-[10rem] whitespace-normal">
+                      {chatFlowLabel}
                     </TableCell>
                     <TableCell className="tabular-nums text-muted-foreground align-middle whitespace-nowrap">
                       {new Date(submission.submitted_at).toLocaleString(undefined, {

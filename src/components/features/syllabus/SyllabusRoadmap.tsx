@@ -1,9 +1,8 @@
-import { useMemo, useCallback, useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef, useLayoutEffect, type MouseEvent } from 'react';
 import {
   ReactFlow,
   type Node,
   type Edge,
-  type OnNodeClick,
   type ReactFlowInstance,
   Background,
   BackgroundVariant,
@@ -218,7 +217,7 @@ export const SyllabusRoadmap = ({
     }));
   }, [filteredSections, thenLabel]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<RoadmapNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   useEffect(() => {
@@ -246,8 +245,8 @@ export const SyllabusRoadmap = ({
     refit();
   }, [refit, nodeWidth, zigzag, filter, filteredSections.length]);
 
-  const handleNodeClick: OnNodeClick = useCallback(
-    (_event, node) => {
+  const handleNodeClick = useCallback(
+    (_event: MouseEvent, node: Node<RoadmapNodeData>) => {
       const section = sections.find((s) => s.id === node.id);
       if (!section) return;
       const locked =

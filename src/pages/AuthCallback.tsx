@@ -10,6 +10,7 @@ import {
   clearPendingRole,
 } from '@/utils/roleRecovery';
 import { isSignupInProgress } from '@/utils/sessionState';
+import { USER_ROLES } from '@/config/constants';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -92,6 +93,27 @@ const AuthCallback = () => {
         const hasTeacherProfile = !!teacherProfile;
         const hasStudentProfile = !!studentProfile;
 
+        const { data: appAdminRow } = await supabase
+          .from('app_admins')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (appAdminRow) {
+          if (user.user_metadata?.role !== USER_ROLES.ADMIN) {
+            await updateUserRole(USER_ROLES.ADMIN);
+          }
+          clearTimeout(timeout);
+          navigate('/teacher/dashboard', { replace: true });
+          return;
+        }
+
+        if (user.user_metadata?.role === USER_ROLES.ADMIN) {
+          clearTimeout(timeout);
+          navigate('/teacher/dashboard', { replace: true });
+          return;
+        }
+
         console.log('👨‍🏫 AuthCallback: Profile check results:', {
           hasTeacherProfile,
           hasStudentProfile,
@@ -171,7 +193,10 @@ const AuthCallback = () => {
         // Check if this is an active signup or a recovery situation
         const activelySigningUp = isSignupInProgress();
 
-        if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
+        if (
+          !userRole ||
+          (userRole !== 'teacher' && userRole !== 'student' && userRole !== USER_ROLES.ADMIN)
+        ) {
           // CRITICAL: Different behavior for active signup vs recovery
           if (activelySigningUp) {
             console.log('🔄 AuthCallback: Active signup - attempting quick recovery');
@@ -205,7 +230,10 @@ const AuthCallback = () => {
         console.log('🎭 AuthCallback: Final role for new user:', userRole);
 
         // If still no role, redirect to role selection page
-        if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
+        if (
+          !userRole ||
+          (userRole !== 'teacher' && userRole !== 'student' && userRole !== USER_ROLES.ADMIN)
+        ) {
           console.warn('⚠️ AuthCallback: Cannot determine role, redirecting to role selection');
           clearTimeout(timeout);
           navigate('/role-selection', { replace: true });
@@ -222,6 +250,12 @@ const AuthCallback = () => {
         }
 
         // Redirect based on role and profile completion
+        if (userRole === USER_ROLES.ADMIN) {
+          clearTimeout(timeout);
+          navigate('/teacher/dashboard', { replace: true });
+          return;
+        }
+
         if (userRole === 'teacher' || userRole === 'student') {
           console.log(`✅ AuthCallback: Role determined as ${userRole}, checking profile...`);
 

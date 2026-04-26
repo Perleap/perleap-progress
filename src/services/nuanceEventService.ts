@@ -21,7 +21,8 @@ export type NuanceEventType =
   | 'response_submitted'
   | 'page_blur'
   | 'page_focus'
-  | 'activity_opened';
+  | 'activity_opened'
+  | 'understanding_cue';
 
 export interface NuanceEvent {
   student_id: string;
@@ -95,6 +96,13 @@ async function flushQueue(): Promise<void> {
  * Events are flushed every 5s or when the session ends.
  */
 export function trackNuanceEvent(event: NuanceEvent): void {
+  if (import.meta.env.DEV && event.event_type === 'understanding_cue') {
+    // eslint-disable-next-line no-console -- dev-only: confirm event reached queue before batch insert
+    console.debug(
+      '[Nuance] understanding_cue in client queue (→ POST student_nuance_events on flush, ~5s or unload)',
+      { assignment_id: event.assignment_id, metadata: event.metadata },
+    );
+  }
   eventQueue.push({
     ...event,
     created_at: event.created_at ?? new Date().toISOString(),

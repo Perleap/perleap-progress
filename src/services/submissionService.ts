@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import type { Database } from '@/integrations/supabase/types';
 import type {
   Submission,
   SubmissionWithDetails,
@@ -18,6 +19,7 @@ import type {
 import { SUBMISSION_STATUS } from '@/config/constants';
 import { createNotification } from '@/lib/notificationService';
 import { rehydrateMessages } from '@/lib/conversationMessages';
+import { createChatStreamEmission } from '@/lib/chatDisplay';
 import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 
 export type StudentSubmissionContext = {
@@ -90,7 +92,7 @@ export const getStudentSubmissionContext = async (
       };
     }
 
-    const list = (rows ?? []) as Submission[];
+    const list = (rows ?? []) as unknown as Submission[];
     const now = new Date();
 
     const inProgress = list.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
@@ -181,7 +183,7 @@ export const startNewSubmissionAttempt = async (
       .order('attempt_number', { ascending: true });
 
     if (rowsErr) return { data: null, error: handleSupabaseError(rowsErr) };
-    const list = rows ?? [];
+    const list = (rows ?? []) as unknown as Submission[];
     if (list.some((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS)) {
       return {
         data: null,
@@ -195,8 +197,7 @@ export const startNewSubmissionAttempt = async (
       };
     }
 
-    const nextNum =
-      Math.max(...list.map((s) => (s as Submission & { attempt_number?: number }).attempt_number ?? 1)) + 1;
+    const nextNum = Math.max(...list.map((s) => s.attempt_number ?? 1)) + 1;
     return insertSubmissionRow(assignmentId, studentId, nextNum);
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
@@ -249,7 +250,7 @@ export const getFullSubmissionDetails = async (
         .order('created_at', { ascending: false })
     ]);
 
-    const studentProfile = (submission as any).student_profiles;
+    const studentProfile = submission.student_profiles;
     const studentName = Array.isArray(studentProfile)
       ? studentProfile[0]?.full_name
       : studentProfile?.full_name;
@@ -293,7 +294,7 @@ export const getAssignmentConversationMessages = async (
       return { data: null, error: null };
     }
 
-    const raw = data.messages as Message[];
+    const raw = data.messages as unknown as Message[];
     return { data: rehydrateMessages(raw), error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
@@ -311,7 +312,7 @@ export const getEnrichedClassroomSubmissions = async (
     const { data: assignments, error: assignError } = await supabase
       .from('assignments')
       .select(
-        'id, title, created_at, assigned_student_id, status, syllabus_section_id, student_profiles(user_id, full_name, avatar_url)',
+        'id, title, type, created_at, assigned_student_id, status, syllabus_section_id, student_profiles(user_id, full_name, avatar_url)',
       )
       .eq('classroom_id', classroomId);
 
@@ -330,6 +331,7 @@ export const getEnrichedClassroomSubmissions = async (
         assignment_id, 
         status,
         attempt_number,
+        conversation_complete_at_submit,
         student_profiles(user_id, full_name, avatar_url)
       `)
       .in('assignment_id', assignmentIds)
@@ -351,14 +353,16 @@ export const getEnrichedClassroomSubmissions = async (
 
     const enriched = (submissions || []).map((sub) => {
       const fb = feedbackMap.get(sub.id);
-      const studentProfile = (sub as any).student_profiles;
+      const studentProfile = sub.student_profiles;
       const assignment = assignments.find(a => a.id === sub.assignment_id);
-      
+      const assignmentType = (assignment as { type?: string } | undefined)?.type;
+
       return {
         ...sub,
         student_name: studentProfile?.full_name || 'Unknown',
         student_avatar_url: studentProfile?.avatar_url,
         assignment_title: assignment?.title || 'Unknown Assignment',
+        assignment_type: assignmentType ?? null,
         syllabus_section_id: assignment?.syllabus_section_id ?? null,
         has_feedback: !!fb,
         teacher_feedback: fb?.teacher_feedback,
@@ -369,7 +373,7 @@ export const getEnrichedClassroomSubmissions = async (
     // 5. Add pending assignments (assigned to specific students but not yet started)
     assignments.forEach(assign => {
       if (assign.status === 'published' && assign.assigned_student_id && !submissionMap.has(`${assign.id}-${assign.assigned_student_id}`)) {
-        const profile = (assign as any).student_profiles;
+        const profile = assign.student_profiles;
         const studentProfile = Array.isArray(profile) ? profile[0] : profile;
 
         if (studentProfile) {
@@ -382,6 +386,7 @@ export const getEnrichedClassroomSubmissions = async (
             student_name: studentProfile.full_name || 'Unknown',
             student_avatar_url: studentProfile.avatar_url,
             assignment_title: assign.title,
+            assignment_type: (assign as { type?: string }).type ?? null,
             syllabus_section_id: assign.syllabus_section_id ?? null,
             has_feedback: false,
             teacher_feedback: null,
@@ -565,7 +570,13 @@ export const streamChatMessage = async (
 
     const decoder = new TextDecoder();
     let fullContent = '';
-    let shouldEnd = false;
+    const emission = createChatStreamEmission();
+    let endSignal = false;
+
+    const track = (t: string) => {
+      fullContent += t;
+      onToken(t);
+    };
 
     while (true) {
       const { done, value } = await reader.read();
@@ -585,8 +596,7 @@ export const streamChatMessage = async (
             const parsed = JSON.parse(potentialJson);
             if (parsed.message) {
               const cleanMsg = String(parsed.message).replace(/\\n/g, '\n').replace(/\\"/g, '"');
-              fullContent += cleanMsg;
-              onToken(cleanMsg);
+              emission.feed(cleanMsg, track);
               continue;
             }
           }
@@ -595,8 +605,7 @@ export const streamChatMessage = async (
           const match = chunk.match(/"message"\s*:\s*"([^"]+)"/);
           if (match && match[1]) {
             const cleanMsg = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-            fullContent += cleanMsg;
-            onToken(cleanMsg);
+            emission.feed(cleanMsg, track);
             continue;
           }
         } catch (e) {
@@ -604,60 +613,52 @@ export const streamChatMessage = async (
         }
       }
       
-      // Filter out the end-of-conversation signal from the visible stream
       if (chunk.includes('__CONVERSATION_END__')) {
-        shouldEnd = true;
+        endSignal = true;
         const cleanChunk = chunk.replace('__CONVERSATION_END__', '');
         if (cleanChunk) {
-          fullContent += cleanChunk;
-          onToken(cleanChunk);
+          emission.feed(cleanChunk, track);
         }
       } else {
-        fullContent += chunk;
-        onToken(chunk);
+        emission.feed(chunk, track);
       }
     }
 
-    // Check for conversation completion marker if hidden signal wasn't caught
-    if (!shouldEnd) {
-      const completionMarker = '[CONVERSATION_COMPLETE]';
-      const upperContent = fullContent.toUpperCase();
-      
-      // Technical marker check
-      shouldEnd = upperContent.includes(completionMarker);
+    emission.end(track);
 
-      // Semantic fallback check (case-insensitive)
-      if (!shouldEnd) {
-        const semanticPhrases = [
-          'WE ARE DONE',
-          'COMPLETED ALL THE TASKS',
-          'FINISHED ALL THE TASKS',
-          'COMPLETED THE ASSIGNMENT',
-          'FINISHED THE ASSIGNMENT',
-          'YOU HAVE COMPLETED ALL',
-          'YOU\'VE COMPLETED ALL',
-          'SUCCESSFULLY ANSWERED ALL',
-          'ACTIVITY IS COMPLETE',
-          'YES, WE ARE DONE',
-          'WE\'VE ACTUALLY COMPLETED ALL',
-          'JOB ON COMPLETING THE TASKS',
-          'COMPLETING THE TASKS',
-          'DONE WITH THE TASKS',
-          'FINISHED THE TASKS',
-          'FINISHED THE ACTIVITY',
-          'COMPLETED THE ACTIVITY',
-          'YOU HAVE FINISHED',
-          'YOU\'VE FINISHED',
-          'ALL TASKS ARE COMPLETE',
-          'סיימנו את המשימה',
-          'השלמת את כל המשימות',
-          'כל הכבוד על סיום המטלה',
-          'סיימת את המטלה',
-          'סיימת את הפעילות'
-        ];
-        
-        shouldEnd = semanticPhrases.some(phrase => upperContent.includes(phrase));
-      }
+    const upperContent = fullContent.toUpperCase();
+    const completionMarker = '[CONVERSATION_COMPLETE]';
+    let shouldEnd = endSignal || emission.getShouldEnd() || upperContent.includes(completionMarker);
+
+    if (!shouldEnd) {
+      const semanticPhrases = [
+        'WE ARE DONE',
+        'COMPLETED ALL THE TASKS',
+        'FINISHED ALL THE TASKS',
+        'COMPLETED THE ASSIGNMENT',
+        'FINISHED THE ASSIGNMENT',
+        'YOU HAVE COMPLETED ALL',
+        'YOU\'VE COMPLETED ALL',
+        'SUCCESSFULLY ANSWERED ALL',
+        'ACTIVITY IS COMPLETE',
+        'YES, WE ARE DONE',
+        'WE\'VE ACTUALLY COMPLETED ALL',
+        'JOB ON COMPLETING THE TASKS',
+        'COMPLETING THE TASKS',
+        'DONE WITH THE TASKS',
+        'FINISHED THE TASKS',
+        'FINISHED THE ACTIVITY',
+        'COMPLETED THE ACTIVITY',
+        'YOU HAVE FINISHED',
+        'YOU\'VE FINISHED',
+        'ALL TASKS ARE COMPLETE',
+        'סיימנו את המשימה',
+        'השלמת את כל המשימות',
+        'כל הכבוד על סיום המטלה',
+        'סיימת את המטלה',
+        'סיימת את הפעילות'
+      ];
+      shouldEnd = semanticPhrases.some(phrase => upperContent.includes(phrase));
     }
 
     return { data: { shouldEnd }, error: null };
@@ -692,15 +693,22 @@ export const generateFeedback = async (
  */
 export const completeSubmission = async (
   submissionId: string,
-  options?: { awaitingTeacherFeedbackRelease?: boolean }
+  options?: {
+    awaitingTeacherFeedbackRelease?: boolean;
+    /** Chat-primary: true if conversation had ended (green banner) at submit; false if early. Omit to leave column unchanged. */
+    conversationCompleteAtSubmit?: boolean | null;
+  },
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const update: Record<string, unknown> = {
+    const update: Database['public']['Tables']['submissions']['Update'] = {
       status: SUBMISSION_STATUS.COMPLETED,
       submitted_at: new Date().toISOString(),
     };
     if (options?.awaitingTeacherFeedbackRelease) {
       update.awaiting_teacher_feedback_release = true;
+    }
+    if (options && 'conversationCompleteAtSubmit' in options) {
+      update.conversation_complete_at_submit = options.conversationCompleteAtSubmit ?? null;
     }
 
     const { error } = await supabase.from('submissions').update(update).eq('id', submissionId);
@@ -715,6 +723,10 @@ export const completeSubmission = async (
   }
 };
 
+function normalizeFeedbackString(s: string | null | undefined): string {
+  return (s ?? '').trim();
+}
+
 /**
  * Teacher edits stored feedback text before publishing to the student.
  */
@@ -722,10 +734,25 @@ export const updateAssignmentFeedbackText = async (params: {
   submissionId: string;
   teacher_feedback?: string | null;
   student_feedback?: string | null;
+  /** When feedback was already published to the student and text changes, insert a student notification. */
+  editNotification?: {
+    studentId: string;
+    assignmentId: string;
+    assignmentTitle: string;
+    teacherId: string | null;
+    title: string;
+    message: string;
+    previousTeacher: string | null;
+    previousStudent: string | null;
+    shouldNotify: boolean;
+  };
 }): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { submissionId, teacher_feedback, student_feedback } = params;
-    const payload: Record<string, string | null> = {};
+    const { submissionId, teacher_feedback, student_feedback, editNotification } = params;
+    const payload: Pick<
+      Database['public']['Tables']['assignment_feedback']['Update'],
+      'teacher_feedback' | 'student_feedback'
+    > = {};
     if (teacher_feedback !== undefined) payload.teacher_feedback = teacher_feedback;
     if (student_feedback !== undefined) payload.student_feedback = student_feedback;
     if (Object.keys(payload).length === 0) {
@@ -739,6 +766,39 @@ export const updateAssignmentFeedbackText = async (params: {
 
     if (error) {
       return { success: false, error: handleSupabaseError(error) };
+    }
+
+    if (editNotification?.shouldNotify) {
+      const n = editNotification;
+      const tf = teacher_feedback;
+      const sf = student_feedback;
+      let textChanged = false;
+      if (tf !== undefined && normalizeFeedbackString(tf) !== normalizeFeedbackString(n.previousTeacher)) {
+        textChanged = true;
+      }
+      if (sf !== undefined && normalizeFeedbackString(sf) !== normalizeFeedbackString(n.previousStudent)) {
+        textChanged = true;
+      }
+      if (textChanged) {
+        try {
+          await createNotification(
+            n.studentId,
+            'feedback_updated',
+            n.title,
+            n.message,
+            `/student/assignment/${n.assignmentId}`,
+            {
+              assignment_id: n.assignmentId,
+              assignment_title: n.assignmentTitle,
+              submission_id: submissionId,
+              feedback_updated: true,
+            },
+            n.teacherId ?? undefined,
+          );
+        } catch (notifErr) {
+          return { success: false, error: handleSupabaseError(notifErr) };
+        }
+      }
     }
 
     return { success: true, error: null };
@@ -758,7 +818,7 @@ export const releaseAiFeedbackToStudent = async (params: {
   teacherId: string | null;
 }): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { submissionId, studentId, assignmentId, assignmentTitle, teacherId } = params;
+    const { submissionId } = params;
 
     const { error: fbErr } = await supabase
       .from('assignment_feedback')
@@ -776,20 +836,6 @@ export const releaseAiFeedbackToStudent = async (params: {
 
     if (subErr) {
       return { success: false, error: handleSupabaseError(subErr) };
-    }
-
-    try {
-      await createNotification(
-        studentId,
-        'feedback_received',
-        'Feedback Received',
-        `Your feedback for "${assignmentTitle}" is ready`,
-        `/student/assignment/${assignmentId}`,
-        { assignment_id: assignmentId, assignment_title: assignmentTitle, submission_id: submissionId },
-        teacherId ?? undefined,
-      );
-    } catch (notifErr) {
-      return { success: false, error: handleSupabaseError(notifErr) };
     }
 
     return { success: true, error: null };

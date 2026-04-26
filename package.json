@@ -12,7 +12,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "gen:types": "node scripts/gen-supabase-types.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

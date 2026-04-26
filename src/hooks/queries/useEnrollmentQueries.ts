@@ -5,12 +5,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/useAuth';
-import {
-  enrollInClassroom,
-  unenrollFromClassroom,
-  getEnrolledStudents,
-  isEnrolled,
-} from '@/services/enrollmentService';
+import { enrollInClassroom, unenrollFromClassroom, isEnrolled } from '@/services/enrollmentService';
+import { getEnrolledStudents } from '@/services/classroomService';
 import { classroomKeys } from './useClassroomQueries';
 
 // Query Keys
@@ -30,7 +26,9 @@ export const useEnrolledStudents = (classroomId: string | undefined) => {
     queryKey: enrollmentKeys.listByClassroom(classroomId || ''),
     queryFn: async () => {
       if (!classroomId) throw new Error('Missing classroom ID');
-      return await getEnrolledStudents(classroomId);
+      const { data, error } = await getEnrolledStudents(classroomId);
+      if (error) throw error;
+      return data ?? [];
     },
     enabled: !!classroomId,
   });

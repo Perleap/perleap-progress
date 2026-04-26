@@ -66,6 +66,10 @@ export {
   analyticsKeys,
   useClassroomAnalytics,
 } from './useAnalyticsQueries';
+export {
+  analytics5dNarrativeKeys,
+  useAnalytics5dNarrative,
+} from './useAnalytics5dNarrative';
 
 // Activity Queries
 export {
@@ -101,12 +105,14 @@ export {
 export {
   nuanceKeys,
   useNuanceInsights,
+  useNuanceUnderstandingCueEvents,
 } from './useNuanceQueries';
 
 export type {
   NuanceMetric,
   NuanceRecommendation,
   NuanceInsightsResponse,
+  NuanceUnderstandingCueEventRow,
 } from './useNuanceQueries';
 
 // Syllabus Queries

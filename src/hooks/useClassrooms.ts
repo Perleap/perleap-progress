@@ -36,7 +36,9 @@ export const useClassrooms = (role: 'teacher' | 'student'): UseClassroomsResult 
 
     const { data, error: fetchError } =
       role === USER_ROLES.TEACHER
-        ? await getTeacherClassrooms(user.id)
+        ? await getTeacherClassrooms(user.id, {
+            allClassroomsForAdmin: user.user_metadata?.role === USER_ROLES.ADMIN,
+          })
         : await getStudentClassrooms(user.id);
 
     if (fetchError) {

@@ -5,20 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { generateFeedback, completeSubmission, startNewSubmissionAttempt } from '@/services/submissionService';
+import { ensureStudentFacingTask } from '@/services/assignmentService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   assignmentFlowCompleteKeys,
   assignmentKeys,
@@ -62,13 +54,27 @@ const AssignmentDetail = () => {
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
-  const [completionModal, setCompletionModal] = useState<{
-    open: boolean;
-    tone: AssignmentCompletionTone;
-  }>({ open: false, tone: 'activityCompleted' });
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(id);
-
+  const needsAutoStudentTask = Boolean(
+    !loading && id && user && assignmentData && !String(assignmentData.student_facing_task ?? '').trim(),
+  );
+  const { isPending: isAutoFillingTaskCard } = useQuery({
+    queryKey: ['autoStudentFacingTask', id, user?.id, uiLanguage],
+    enabled: needsAutoStudentTask,
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async () => {
+      if (!id || !user) return null;
+      const lang: 'en' | 'he' = uiLanguage === 'he' ? 'he' : 'en';
+      const { data } = await ensureStudentFacingTask(id, lang);
+      const text = data?.studentFacingTask?.trim() ?? '';
+      if (text) {
+        await queryClient.invalidateQueries({ queryKey: [...assignmentKeys.detail(id), 'student', user.id] });
+      }
+      return data;
+    },
+  });
   const classroomId = assignmentData?.classroom_id;
   const { data: classroomForNav } = useClassroom(classroomId);
   const { data: syllabusForNav } = useSyllabus(classroomId);
@@ -217,31 +223,14 @@ const AssignmentDetail = () => {
   });
 
   const handleAssignmentCompleted = useCallback(
-    async (tone: AssignmentCompletionTone = 'activityCompleted') => {
+    async (_tone?: AssignmentCompletionTone) => {
       queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
       await refetch();
-      setCompletionModal({ open: true, tone });
     },
     [queryClient, refetch],
   );
-
-  const completionModalDescription = (tone: AssignmentCompletionTone): string => {
-    switch (tone) {
-      case 'activityCompleted':
-        return t('assignmentDetail.success.completed');
-      case 'awaitingTeacher':
-        return t('assignmentDetail.success.submittedAwaitingTeacher');
-      case 'awaitingReview':
-        if (!assignment) return '';
-        return t(`assignmentDetail.${assignment.type}.awaitingReview`);
-      case 'testSubmitted':
-        return t('assignmentDetail.testTaking.submitSuccess');
-      default:
-        return t('assignmentDetail.success.completed');
-    }
-  };
 
   const handleStartNewAttempt = async () => {
     if (!user?.id || !assignment?.id) return;
@@ -260,14 +249,19 @@ const AssignmentDetail = () => {
     }
   };
 
-  const handleActivityComplete = async () => {
+  const handleActivityComplete = async (args?: { conversationComplete?: boolean }) => {
     try {
       if (assignment && submission && user) {
         const autoPublish = assignment.auto_publish_ai_feedback !== false;
+        const flowFlag =
+          args?.conversationComplete !== undefined
+            ? { conversationCompleteAtSubmit: args.conversationComplete }
+            : {};
 
         if (!autoPublish) {
           const { error: completeError } = await completeSubmission(submission.id, {
             awaitingTeacherFeedbackRelease: true,
+            ...flowFlag,
           });
           if (completeError) {
             console.error('Error completing submission:', completeError);
@@ -290,7 +284,7 @@ const AssignmentDetail = () => {
           console.error('Error generating feedback:', feedbackError);
           toast.error(t('assignmentDetail.errors.generatingFeedback'));
         } else {
-          const { error: completeError } = await completeSubmission(submission.id);
+          const { error: completeError } = await completeSubmission(submission.id, flowFlag);
 
           if (completeError) {
             console.error('Error completing submission:', completeError);
@@ -329,6 +323,7 @@ const AssignmentDetail = () => {
         activeSection={activeClassroomNavSection}
         onSectionChange={handleClassroomNav}
         customSections={studentNavSections}
+        hideGlobalNav
       >
         <div
           className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center"
@@ -359,6 +354,7 @@ const AssignmentDetail = () => {
       activeSection={activeClassroomNavSection}
       onSectionChange={handleClassroomNav}
       customSections={studentNavSections}
+      hideGlobalNav
     >
       <div className="container py-4 px-0 max-w-4xl">
         <div className="space-y-6">
@@ -405,6 +401,28 @@ const AssignmentDetail = () => {
                 <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
               </div>
             </CardHeader>
+          </Card>
+
+          <Card className="border-border/80 bg-muted/20">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm font-medium">{t('assignmentDetail.studentTaskTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 text-sm">
+              {assignment.student_facing_task?.trim() ? (
+                <p className="whitespace-pre-wrap text-foreground leading-relaxed" dir="auto">
+                  {assignment.student_facing_task.trim()}
+                </p>
+              ) : isAutoFillingTaskCard ? (
+                <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                  {t('assignmentDetail.loadingStudentTask')}
+                </p>
+              ) : (
+                <p className="text-muted-foreground leading-relaxed" dir="auto">
+                  {t('assignmentDetail.studentTaskNotSetYet')}
+                </p>
+              )}
+            </CardContent>
           </Card>
 
           {!feedback && submission && (() => {
@@ -678,80 +696,6 @@ const AssignmentDetail = () => {
           ) : null}
         </div>
       </div>
-
-      <AlertDialog
-        open={completionModal.open}
-        onOpenChange={(open) => setCompletionModal((prev) => ({ ...prev, open }))}
-      >
-        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
-          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
-            <AlertDialogTitle>{t('assignmentDetail.completionModal.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {completionModalDescription(completionModal.tone)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter
-            className={`flex-col gap-3 sm:flex-col ${isRTL ? 'flex-row-reverse sm:flex-row-reverse' : ''}`}
-          >
-            {submission?.status === 'completed' &&
-            assignmentFlowContinue &&
-            assignment.syllabus_section_id ? (
-              <div className="flex w-full flex-wrap justify-center gap-2">
-                {assignmentFlowContinue.nextIn ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-1 bg-background"
-                    onClick={() => {
-                      navigateToFlowTarget(assignmentFlowContinue.nextIn!);
-                      setCompletionModal((prev) => ({ ...prev, open: false }));
-                    }}
-                  >
-                    {assignmentFlowContinue.nextIn.kind === 'assignment'
-                      ? t('assignmentDetail.continue')
-                      : t('activityPage.continueNext')}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : null}
-                {!assignmentFlowContinue.nextIn && assignmentFlowContinue.firstNext ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-1 bg-background"
-                    onClick={() => {
-                      navigateToFlowTarget(assignmentFlowContinue.firstNext!);
-                      setCompletionModal((prev) => ({ ...prev, open: false }));
-                    }}
-                  >
-                    {t('assignmentDetail.continueNextModule')}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : null}
-                {!assignmentFlowContinue.nextIn && !assignmentFlowContinue.firstNext ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-1 bg-background"
-                    onClick={() => {
-                      goCurriculum();
-                      setCompletionModal((prev) => ({ ...prev, open: false }));
-                    }}
-                  >
-                    {t('assignmentDetail.openCurriculum')}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
-            <AlertDialogAction
-              className="w-full sm:w-full"
-              onClick={() => setCompletionModal((prev) => ({ ...prev, open: false }))}
-            >
-              {t('assignmentDetail.completionModal.dismiss')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </ClassroomLayout>
   );
 };

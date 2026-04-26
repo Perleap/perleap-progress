@@ -6,6 +6,7 @@ import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { isAppAdmin } from '../shared/supabase.ts';
 import type { HardSkillPair } from '../_shared/hardSkillsFormat.ts';
 
 const corsHeaders = {
@@ -106,10 +107,13 @@ serve(async (req) => {
     }
 
     if ((classroom as { teacher_id: string }).teacher_id !== user.id) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const admin = await isAppAdmin(user.id);
+      if (!admin) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     const rawDomains: DomainRow[] =

@@ -24,6 +24,7 @@ import { SkeletonCardGrid } from '@/components/ui/GsapSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { copyToClipboard } from '@/lib/utils';
 import { useClassrooms } from '@/hooks/queries';
+import { USER_ROLES } from '@/config/constants';
 
 interface Classroom {
   id: string;
@@ -47,6 +48,7 @@ const TeacherDashboard = () => {
   const { t } = useTranslation();
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isAppAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   
   const { 
     data: rawClassrooms = [], 
@@ -148,14 +150,16 @@ const TeacherDashboard = () => {
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{t('teacherDashboard.myClassrooms')}</h2>
                 <p className="text-sm md:text-base text-muted-foreground mt-2">Manage and track your classes</p>
               </div>
-              <Button
-                onClick={() => setDialogOpen(true)}
-                size="lg"
-                className="gap-2 w-full sm:w-auto flex-shrink-0"
-              >
-                <Plus className="h-5 w-5" />
-                <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
-              </Button>
+              {!isAppAdmin && (
+                <Button
+                  onClick={() => setDialogOpen(true)}
+                  size="lg"
+                  className="gap-2 w-full sm:w-auto flex-shrink-0"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
+                </Button>
+              )}
             </div>
 
             {/* View Switcher */}
@@ -407,21 +411,19 @@ const TeacherDashboard = () => {
           {user && (
             <div className="lg:sticky lg:top-6 space-y-6">
               <RecentActivity />
-              <TeacherCalendar
-                teacherId={user.id}
-                classrooms={calendarClassrooms}
-                loading={classroomsLoading}
-              />
+              <TeacherCalendar teacherId={user.id} isAppAdmin={isAppAdmin} />
             </div>
           )}
         </aside>
       </div>
 
-      <CreateClassroomDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={handleClassroomCreated}
-      />
+      {!isAppAdmin && (
+        <CreateClassroomDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSuccess={handleClassroomCreated}
+        />
+      )}
     </DashboardLayout>
   );
 };

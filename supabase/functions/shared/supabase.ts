@@ -269,3 +269,14 @@ export const getTeacherIdFromAssignment = async (
   return (assignmentData?.classrooms as any)?.teacher_id || null;
 };
 
+/** True if user is in public.app_admins (service-role client; used from Edge Functions). */
+export const isAppAdmin = async (userId: string): Promise<boolean> => {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase.rpc('is_app_admin', { _user_id: userId });
+  if (error) {
+    console.error('is_app_admin rpc', error);
+    return false;
+  }
+  return data === true;
+};
+

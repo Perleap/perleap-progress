@@ -3,30 +3,65 @@
  * TypeScript interfaces for core application entities
  */
 
+import type { Database, Json } from '@/integrations/supabase/types';
+
+export type DbAssignmentType = Database['public']['Enums']['assignment_type'];
+export type DbAssignmentStatus = Database['public']['Enums']['assignment_status'];
+
 export interface User {
   id: string;
   email: string;
-  role: 'teacher' | 'student';
+  role: 'teacher' | 'student' | 'admin';
   created_at: string;
 }
 
+/** Aligns with `teacher_profiles` Row; optional split names for UI helpers only. */
 export interface TeacherProfile {
+  id: string;
   user_id: string;
-  first_name: string;
-  last_name: string;
-  full_name: string;
+  email: string;
+  full_name: string | null;
   avatar_url: string | null;
+  phone_number: string | null;
+  preferred_language: string | null;
+  sample_explanation: string | null;
+  student_education_level: string | null;
+  style_notes: string | null;
+  subjects: string[] | null;
+  teaching_examples: string | null;
+  teaching_goals: string | null;
+  years_experience: number | null;
   created_at: string;
+  updated_at: string;
+  first_name?: string;
+  last_name?: string;
 }
 
+/** Aligns with `student_profiles` Row; optional split names for UI helpers only. */
 export interface StudentProfile {
+  id: string;
   user_id: string;
-  first_name: string;
-  last_name: string;
-  full_name: string;
+  email: string;
+  full_name: string | null;
   avatar_url: string | null;
-  voice_preference: string;
   created_at: string;
+  updated_at: string;
+  additional_notes: string | null;
+  feedback_preferences: string | null;
+  help_preferences: string | null;
+  learning_goal: string | null;
+  learning_methods: string | null;
+  mentor_tone_ref: string | null;
+  motivation_factors: string | null;
+  preferences_quiz: Json | null;
+  preferred_language: string | null;
+  scheduled_vs_flexible: string | null;
+  solo_vs_group: string | null;
+  special_needs: string | null;
+  teacher_preferences: string | null;
+  voice_preference: string | null;
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface Domain {
@@ -69,8 +104,10 @@ export interface Assignment {
   classroom_id: string;
   title: string;
   instructions: string;
-  type: 'text_essay' | 'chatbot' | 'questions' | 'test' | 'project' | 'presentation' | 'langchain';
-  status: 'draft' | 'published';
+  /** Short learner-facing task copy; not the full AI/teacher instructions. */
+  student_facing_task?: string | null;
+  type: DbAssignmentType;
+  status: DbAssignmentStatus;
   due_at: string | null;
   /** Defaults to single for legacy rows. */
   attempt_mode?: AssignmentAttemptMode;

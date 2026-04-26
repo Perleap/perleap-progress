@@ -48,6 +48,7 @@ export interface CreateAssignmentInput {
 
 export interface UpdateAssignmentInput extends Partial<CreateAssignmentInput> {
   id: string;
+  materials?: Assignment['materials'];
 }
 
 // Submission API Types

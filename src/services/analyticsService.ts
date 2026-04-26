@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import type { Json } from '@/integrations/supabase/types';
 import type {
   FiveDSnapshot,
   FiveDScores,
@@ -29,7 +30,7 @@ export const saveFiveDSnapshot = async (
       .insert([
         {
           user_id: userId,
-          scores,
+          scores: scores as unknown as Json,
           source,
           submission_id: submissionId,
           classroom_id: classroomId,
@@ -42,7 +43,7 @@ export const saveFiveDSnapshot = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: data as unknown as FiveDSnapshot, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -78,7 +79,7 @@ export const getLatestScores = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data: (data?.scores as FiveDScores) || null, error: null };
+    return { data: (data?.scores as unknown as FiveDScores) || null, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -113,7 +114,7 @@ export const getUserSnapshots = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    return { data: (data ?? []) as unknown as FiveDSnapshot[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

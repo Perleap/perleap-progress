@@ -4,6 +4,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { analyticsKeys } from '@/hooks/queries/useAnalyticsQueries';
+import { nuanceKeys } from '@/hooks/queries/useNuanceQueries';
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { syncModuleFlowToResolvedDisplayForSection } from '@/hooks/queries/moduleFlowSync';
 import {
@@ -418,6 +420,8 @@ export const useLinkAssignment = () => {
     onSuccess: (_, { classroomId }) => {
       queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
       queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: analyticsKeys.classroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: nuanceKeys.insights(classroomId) });
     },
   });
 };
@@ -432,6 +436,8 @@ export const useUnlinkAssignment = () => {
     onSuccess: (_, { classroomId }) => {
       queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
       queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: analyticsKeys.classroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: nuanceKeys.insights(classroomId) });
     },
   });
 };

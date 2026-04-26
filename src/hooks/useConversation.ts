@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { rehydrateMessages } from '@/lib/conversationMessages';
+import { hasConversationCompleteMarker } from '@/lib/chatDisplay';
 
 interface UseConversationResult {
   messages: Message[];
@@ -69,46 +70,46 @@ export const useConversation = ({
       }
 
       if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-        const rawMessages = data.messages as Message[];
-        const loadedMessages = rehydrateMessages(rawMessages);
-        setMessages(loadedMessages);
-        
-        // Check if any existing assistant message indicates completion
-        const lastAssistantMessage = [...loadedMessages].reverse().find(m => m.role === 'assistant');
-        if (lastAssistantMessage) {
-          const upperContent = String(lastAssistantMessage.content).toUpperCase();
-        const semanticPhrases = [
-          'WE ARE DONE',
-          'COMPLETED ALL THE TASKS',
-          'FINISHED ALL THE TASKS',
-          'COMPLETED THE ASSIGNMENT',
-          'FINISHED THE ASSIGNMENT',
-          'YOU HAVE COMPLETED ALL',
-          'YOU\'VE COMPLETED ALL',
-          'SUCCESSFULLY ANSWERED ALL',
-          'ACTIVITY IS COMPLETE',
-          'YES, WE ARE DONE',
-          'WE\'VE ACTUALLY COMPLETED ALL',
-          'JOB ON COMPLETING THE TASKS',
-          'COMPLETING THE TASKS',
-          'DONE WITH THE TASKS',
-          'FINISHED THE TASKS',
-          'FINISHED THE ACTIVITY',
-          'COMPLETED THE ACTIVITY',
-          'YOU HAVE FINISHED',
-          'YOU\'VE FINISHED',
-          'ALL TASKS ARE COMPLETE',
-          'סיימנו את המשימה',
-          'השלמת את כל המשימות',
-          'כל הכבוד על סיום המטלה',
-          'סיימת את המטלה',
-          'סיימת את הפעילות'
-        ];
-          
-          if (!companionMode && semanticPhrases.some(phrase => upperContent.includes(phrase))) {
+        const rawMessages = data.messages as unknown as Message[];
+        const lastAssistantRaw = [...rawMessages].reverse().find(m => m.role === 'assistant');
+        if (lastAssistantRaw && !companionMode) {
+          const upperContent = String(lastAssistantRaw.content).toUpperCase();
+          const semanticPhrases = [
+            'WE ARE DONE',
+            'COMPLETED ALL THE TASKS',
+            'FINISHED ALL THE TASKS',
+            'COMPLETED THE ASSIGNMENT',
+            'FINISHED THE ASSIGNMENT',
+            'YOU HAVE COMPLETED ALL',
+            'YOU\'VE COMPLETED ALL',
+            'SUCCESSFULLY ANSWERED ALL',
+            'ACTIVITY IS COMPLETE',
+            'YES, WE ARE DONE',
+            'WE\'VE ACTUALLY COMPLETED ALL',
+            'JOB ON COMPLETING THE TASKS',
+            'COMPLETING THE TASKS',
+            'DONE WITH THE TASKS',
+            'FINISHED THE TASKS',
+            'FINISHED THE ACTIVITY',
+            'COMPLETED THE ACTIVITY',
+            'YOU HAVE FINISHED',
+            'YOU\'VE FINISHED',
+            'ALL TASKS ARE COMPLETE',
+            'סיימנו את המשימה',
+            'השלמת את כל המשימות',
+            'כל הכבוד על סיום המטלה',
+            'סיימת את המטלה',
+            'סיימת את הפעילות',
+          ];
+          if (
+            hasConversationCompleteMarker(String(lastAssistantRaw.content)) ||
+            semanticPhrases.some((phrase) => upperContent.includes(phrase))
+          ) {
             setConversationEnded(true);
           }
         }
+        const loadedMessages = rehydrateMessages(rawMessages);
+        setMessages(loadedMessages);
       } else {
         await initializeConversation();
       }
@@ -139,7 +140,7 @@ export const useConversation = ({
       const aiMessage: Message = { role: 'assistant', content: '' };
       setMessages([aiMessage]);
 
-      const { data, error: chatError } = await streamChatMessage(request, (token) => {
+      const { data: endData, error: chatError } = await streamChatMessage(request, (token) => {
         setMessages(prev => {
           const last = prev[prev.length - 1];
           if (last && last.role === 'assistant') {
@@ -154,6 +155,9 @@ export const useConversation = ({
         toast.error('Error starting conversation');
         setMessages([]); // Remove the empty assistant message
         return;
+      }
+      if (endData?.shouldEnd && !companionMode) {
+        setConversationEnded(true);
       }
     } catch (err) {
       toast.error('Error starting conversation');

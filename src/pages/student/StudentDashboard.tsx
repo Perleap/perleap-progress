@@ -63,27 +63,9 @@ interface Classroom {
   subject: string;
   start_date?: string | null;
   end_date?: string | null;
+  teacher_profiles?: { full_name: string; avatar_url?: string } | null;
   classrooms: {
     invite_code: string;
-  };
-}
-
-interface CalendarClassroom {
-  id: string;
-  name: string;
-  subject: string;
-  start_date: string | null;
-  end_date: string | null;
-}
-
-interface CalendarAssignment {
-  id: string;
-  title: string;
-  due_at: string;
-  type: string;
-  classrooms: {
-    name: string;
-    subject: string;
   };
 }
 
@@ -189,25 +171,6 @@ const StudentDashboard = () => {
   const finishedAssignments = useMemo(() => allAssignments.filter((a: any) => a.is_completed), [allAssignments]);
 
   // Memoize calendar data
-  const calendarClassrooms: CalendarClassroom[] = useMemo(() => classrooms.map((c) => ({
-    id: c.id,
-    name: c.name,
-    subject: c.subject,
-    start_date: c.start_date || null,
-    end_date: c.end_date || null,
-  })), [classrooms]);
-
-  const calendarAssignments: CalendarAssignment[] = useMemo(() => allAssignments.map((a) => ({
-    id: a.id,
-    title: a.title,
-    due_at: a.due_at,
-    type: 'assignment',
-    classrooms: {
-      name: a.classrooms.name,
-      subject: a.classrooms.subject,
-    }
-  })), [allAssignments]);
-
   const loading = classroomsLoading || assignmentsLoading;
 
   // GSAP stagger animation refs - only trigger on data changes
@@ -889,14 +852,7 @@ const StudentDashboard = () => {
         {/* Calendar Sidebar */}
         <div className="lg:col-span-1">
           <div className="sticky top-24">
-            {user && (
-              <StudentCalendar
-                studentId={user.id}
-                assignments={calendarAssignments}
-                classrooms={calendarClassrooms}
-                loading={loading}
-              />
-            )}
+            {user && <StudentCalendar studentId={user.id} />}
           </div>
         </div>
       </div>

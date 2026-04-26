@@ -10,7 +10,7 @@ export function parseLessonContent(raw: unknown): LessonContentV1 | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   if (o.version !== 1 || !Array.isArray(o.blocks)) return null;
-  return o as LessonContentV1;
+  return o as unknown as LessonContentV1;
 }
 
 /** Legacy single body + optional single video → block list for the editor */
@@ -41,16 +41,40 @@ export function legacyLessonToBlocks(r: SectionResource): LessonBlockV1[] {
 
 export function lessonBlocksHaveContent(blocks: LessonBlockV1[]): boolean {
   for (const b of blocks) {
-    if (b.type === 'text' && b.body.trim()) return true;
+    if (b.type === 'text') {
+      if (b.slides && b.slides.length > 0) {
+        if (b.slides.some((s) => s.trim())) return true;
+        continue;
+      }
+      if (b.body.trim()) return true;
+      continue;
+    }
     if (b.type === 'video' && (b.file_path || (b.url && b.url.trim()))) return true;
   }
   return false;
+}
+
+/**
+ * Plain HTML segments from a text block for AI context (all slides, or legacy body).
+ */
+export function getLessonTextBlockBodiesForContext(block: LessonTextBlockV1): string[] {
+  if (block.slides && block.slides.length > 0) {
+    return block.slides.map((s) => (typeof s === 'string' ? s : ''));
+  }
+  if (block.body?.trim()) return [block.body];
+  return [];
 }
 
 /** Persistable copy (no UI-only fields) */
 export function toPersistedLessonContent(blocks: LessonBlockV1[]): LessonContentV1 {
   const persisted: LessonBlockV1[] = blocks.map((b) => {
     if (b.type === 'text') {
+      if (b.slides && b.slides.length > 0) {
+        const first = b.slides[0] ?? '';
+        const t: LessonTextBlockV1 = { id: b.id, type: 'text', body: first };
+        if (b.slides.length > 1) t.slides = b.slides;
+        return t;
+      }
       const t: LessonTextBlockV1 = { id: b.id, type: 'text', body: b.body };
       return t;
     }

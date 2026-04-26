@@ -13,6 +13,8 @@ import {
   type Edge,
   type Node,
   type NodeTypes,
+  type NodeChange,
+  type EdgeChange,
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -65,8 +67,8 @@ function LangchainEditorInner({ initialNodes, initialEdges, onChange, readOnly }
     [setEdges, onChange]
   );
 
-  const handleNodesChange: typeof onNodesChange = useCallback(
-    (changes) => {
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
       setNodes((nds) => {
         const next = applyNodeChanges(changes, nds);
         queueMicrotask(() => onChange?.(next, edgesRef.current));
@@ -76,8 +78,8 @@ function LangchainEditorInner({ initialNodes, initialEdges, onChange, readOnly }
     [setNodes, onChange]
   );
 
-  const handleEdgesChange: typeof onEdgesChange = useCallback(
-    (changes) => {
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
       setEdges((eds) => {
         const next = applyEdgeChanges(changes, eds);
         queueMicrotask(() => onChange?.(nodesRef.current, next));
