@@ -253,7 +253,7 @@ export const shake = (element: Element | null) => {
     x: [-10, 10, -8, 8, -4, 4, 0],
     duration: 0.5,
     ease: 'power2.out',
-  });
+  } as unknown as gsap.TweenVars);
 };
 
 // ==========================================

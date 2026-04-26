@@ -9,3 +9,4 @@ export { ContentImageBlock } from './ContentImageBlock';
 export type { ContentImagePresentation } from './ContentImageBlock';
 export { ContentPlainTextBlock } from './ContentPlainTextBlock';
 export type { ContentPlainTextPresentation } from './ContentPlainTextBlock';
+export { LessonTextSlidesBlock } from './LessonTextSlidesBlock';

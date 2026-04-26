@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { NotificationDropdown } from '@/components/common/NotificationDropdown';
 import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
+import { USER_ROLES } from '@/config/constants';
 
 
 interface ClassroomLayoutProps {
@@ -32,6 +33,8 @@ interface ClassroomLayoutProps {
     icon: React.ComponentType<{ className?: string }>;
     disabled?: boolean;
   }>;
+  /** When true, hides Dashboard / Planner in the classroom sidebar (student shell). */
+  hideGlobalNav?: boolean;
 }
 
 export function ClassroomLayout({
@@ -41,13 +44,16 @@ export function ClassroomLayout({
   activeSection,
   onSectionChange,
   customSections,
+  hideGlobalNav = false,
 }: ClassroomLayoutProps) {
   const { t } = useTranslation();
   const { profile, user } = useAuth();
   const { isRTL } = useLanguage();
   const contentRef = usePageTransition([activeSection]);
 
-  const isTeacher = user?.user_metadata?.role === 'teacher';
+  const isTeacher =
+    user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
+  const isAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   const basePath = isTeacher ? '/teacher' : '/student';
 
   // Use custom sections if provided, otherwise use defaults based on role
@@ -73,6 +79,7 @@ export function ClassroomLayout({
         activeSection={activeSection}
         onSectionChange={onSectionChange}
         sections={sections}
+        hideGlobalNav={hideGlobalNav}
       />
       <SidebarInset>
         <header className="flex min-h-24 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 md:px-5 sticky top-0 z-30">
@@ -108,6 +115,14 @@ export function ClassroomLayout({
           ref={contentRef}
           className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-5 pt-3 sm:pt-4 bg-gradient-to-br from-background via-background to-muted/5 min-h-0"
         >
+          {isAdmin && (
+            <div
+              role="status"
+              className="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-900 dark:text-amber-100"
+            >
+              {t('admin.modeBanner')}
+            </div>
+          )}
           <div className="pt-4 sm:pt-6 md:pt-8">{children}</div>
         </div>
       </SidebarInset>

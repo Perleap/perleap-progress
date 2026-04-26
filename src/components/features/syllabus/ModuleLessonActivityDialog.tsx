@@ -117,7 +117,8 @@ export function ModuleLessonActivityDialog({
 
   const handleRephraseBlock = async (blockId: string) => {
     const block = lessonBlocks.find((b) => b.id === blockId);
-    const plain = block && block.type === 'text' ? lessonHtmlToPlainText(block.body) : '';
+    const sourceHtml = block && block.type === 'text' ? (block.slides?.[0] ?? block.body) : '';
+    const plain = block && block.type === 'text' ? lessonHtmlToPlainText(sourceHtml) : '';
     if (!block || block.type !== 'text' || !plain.trim()) {
       toast.error(t('createAssignment.rephraseError'));
       return;
@@ -132,12 +133,15 @@ export function ModuleLessonActivityDialog({
       });
       if (error) throw error;
       if (data?.rephrasedText) {
+        const newHtml = plainRephraseToLessonHtml(data.rephrasedText);
         setLessonBlocks((prev) =>
-          prev.map((b) =>
-            b.id === blockId && b.type === 'text'
-              ? { ...b, body: plainRephraseToLessonHtml(data.rephrasedText) }
-              : b
-          )
+          prev.map((b) => {
+            if (b.id !== blockId || b.type !== 'text') return b;
+            if (b.slides && b.slides.length) {
+              return { ...b, body: newHtml, slides: [newHtml, ...b.slides.slice(1)] };
+            }
+            return { ...b, body: newHtml };
+          })
         );
         toast.success(t('createAssignment.rephraseSuccess'));
       }
@@ -248,7 +252,7 @@ export function ModuleLessonActivityDialog({
             </DialogTitle>
           </DialogHeader>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-6 py-5 pb-12 [overflow-anchor:none]">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-6 py-5 pb-5 [overflow-anchor:none]">
           <div className="space-y-5">
             <div>
               <Label>{t('classroomDetail.activities.fieldTitle')}</Label>

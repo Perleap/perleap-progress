@@ -1,10 +1,18 @@
 import type { Message } from '@/types';
+import { stripConversationCompleteMarker } from '@/lib/chatDisplay';
 
 /**
  * Rehydrate fileContext from saved message content (matches student chat display).
+ * Strips technical completion tokens from assistant text for display.
  */
 export function rehydrateMessages(msgs: Message[]): Message[] {
   return msgs.map((msg) => {
+    if (msg.role === 'assistant') {
+      return {
+        ...msg,
+        content: stripConversationCompleteMarker(String(msg.content ?? '')),
+      };
+    }
     if (msg.role !== 'user' || msg.fileContext) return msg;
 
     const attachmentMatch = msg.content.match(/\n\n--- Attached File: (.+?) ---\n([\s\S]*)$/);

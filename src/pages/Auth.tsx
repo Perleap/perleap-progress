@@ -100,7 +100,7 @@ const Auth = () => {
         }
 
         // Otherwise, redirect to appropriate dashboard based on role
-        if (userRole === 'teacher') {
+        if (userRole === 'teacher' || userRole === 'admin') {
           navigate('/teacher/dashboard');
         } else if (userRole === 'student') {
           navigate('/student/dashboard');

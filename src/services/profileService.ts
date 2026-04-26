@@ -57,7 +57,7 @@ export const getStudentProfile = async (
  */
 export const updateTeacherProfile = async (
   userId: string,
-  updates: Partial<Omit<TeacherProfile, 'user_id' | 'created_at'>>
+  updates: Partial<Omit<TeacherProfile, 'user_id' | 'created_at' | 'first_name' | 'last_name'>>
 ): Promise<{ data: TeacherProfile | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -82,7 +82,7 @@ export const updateTeacherProfile = async (
  */
 export const updateStudentProfile = async (
   userId: string,
-  updates: Partial<Omit<StudentProfile, 'user_id' | 'created_at'>>
+  updates: Partial<Omit<StudentProfile, 'user_id' | 'created_at' | 'first_name' | 'last_name'>>
 ): Promise<{ data: StudentProfile | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase

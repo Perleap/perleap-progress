@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Clock, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 
 interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -46,6 +47,10 @@ interface SubmissionCardProps {
     submitted_at: string;
     student_name: string;
     assignment_title: string;
+    /** From enriched classroom submission query; used for chat-flow badge. */
+    assignment_type?: string | null;
+    /** Chat assignments: set at submit. */
+    conversation_complete_at_submit?: boolean | null;
     attempt_number?: number;
     status: 'in_progress' | 'completed';
     has_feedback: boolean;
@@ -177,10 +182,35 @@ export function SubmissionCard({
     </Badge>
   );
 
+  const showChatFlowBadge =
+    !pending &&
+    isChatLikeAssignmentType(submission.assignment_type) &&
+    (submission.conversation_complete_at_submit === true ||
+      submission.conversation_complete_at_submit === false);
+
+  const chatFlowBadge = showChatFlowBadge ? (
+    <Badge
+      variant="outline"
+      className={cn(
+        'shrink-0 rounded-full px-2.5 py-0.5 font-medium text-xs',
+        submission.conversation_complete_at_submit
+          ? 'border-success/40 bg-success/10 text-success'
+          : 'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+      )}
+    >
+      {submission.conversation_complete_at_submit
+        ? t('submissionCard.conversationFlowComplete')
+        : t('submissionCard.conversationFlowEarly')}
+    </Badge>
+  ) : null;
+
   const topRow = (
     <div className="flex items-start justify-between gap-3">
       <h3 className={titleClass}>{displayAssignmentTitle}</h3>
-      {statusBadge}
+      <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
+        {chatFlowBadge}
+        {statusBadge}
+      </div>
     </div>
   );
 
@@ -265,7 +295,10 @@ export function SubmissionCard({
           <h3 className="min-w-0 flex-1 text-start font-semibold leading-snug text-foreground line-clamp-2 text-base sm:text-[1.0625rem]">
             {displayAssignmentTitle}
           </h3>
-          <div className="shrink-0 pt-0.5">{statusBadge}</div>
+          <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:pt-0.5">
+            {chatFlowBadge}
+            {statusBadge}
+          </div>
         </div>
         <div className="flex items-center justify-between gap-3 min-w-0">
           <p className="text-start text-sm text-muted-foreground truncate min-w-0 flex-1 pe-2">

@@ -37,7 +37,12 @@ export const DashboardHeader = ({
         <div className="flex items-center gap-2">
           {additionalActions}
           <ThemeToggle />
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={signOut}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => void signOut()}
+          >
             <LogOut className="h-4 w-4" />
           </Button>
           <ProfileAvatar

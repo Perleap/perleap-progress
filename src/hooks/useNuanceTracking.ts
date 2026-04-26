@@ -5,6 +5,7 @@ import {
   flushNuanceEventsBeacon,
   type NuanceEventType,
 } from '@/services/nuanceEventService';
+import type { UnderstandingCueResult } from '@/lib/understandingCueDetection';
 
 interface UseNuanceTrackingParams {
   studentId: string | undefined;
@@ -18,6 +19,12 @@ interface UseNuanceTrackingReturn {
   trackResponseStarted: (messageIndex: number) => void;
   recordAiMessageArrival: () => void;
   getTimeSinceLastAiMessage: () => number | null;
+  trackUnderstandingCue: (
+    result: UnderstandingCueResult,
+    messageLength: number,
+    /** 0-based index in the full message list for the outgoing user message (matches response_submitted). */
+    messageIndex: number,
+  ) => void;
 }
 
 export function useNuanceTracking({
@@ -115,10 +122,45 @@ export function useNuanceTracking({
     return Date.now() - lastAiMessageTimestamp.current;
   }, []);
 
+  const trackUnderstandingCue = useCallback(
+    (result: UnderstandingCueResult, messageLength: number, messageIndex: number) => {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console -- dev-only visibility for understanding cue path
+        console.debug('[Nuance] understanding cue (on send)', {
+          hit: result.hit,
+          reasonCodes: result.reasonCodes,
+          localeHint: result.localeHint,
+          messageIndex,
+          messageLength,
+          willQueueToSupabase: result.hit && canTrack,
+        });
+      }
+      if (!result.hit) return;
+      if (!canTrack) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.debug(
+            '[Nuance] understanding_cue not emitted — tracking off (check: submission+no feedback, studentId, assignmentId, useNuanceTracking enabled)',
+            { enabled, hasStudentId: !!studentId, hasAssignmentId: !!assignmentId },
+          );
+        }
+        return;
+      }
+      emit('understanding_cue', {
+        reason_codes: result.reasonCodes,
+        locale_hint: result.localeHint,
+        length_bucket: messageLength < 50 ? 'short' : messageLength < 200 ? 'medium' : 'long',
+        message_index: messageIndex,
+      });
+    },
+    [canTrack, emit, enabled, studentId, assignmentId],
+  );
+
   return {
     trackResponseSubmitted,
     trackResponseStarted,
     recordAiMessageArrival,
     getTimeSinceLastAiMessage,
+    trackUnderstandingCue,
   };
 }

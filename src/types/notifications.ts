@@ -10,6 +10,7 @@ export type NotificationType =
   | 'enrolled_in_classroom'
   | 'wellbeing_alert'
   | 'feedback_received'
+  | 'feedback_updated'
   | 'student_completed_activity'
   | 'student_alert_critical'
   | 'student_alert_moderate'

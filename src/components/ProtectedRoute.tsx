@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/useAuth';
+import { USER_ROLES } from '@/config/constants';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -79,15 +80,28 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
       // Check role-based access
       if (requiredRole) {
         const userRole = user.user_metadata?.role;
+        const isAdmin = userRole === USER_ROLES.ADMIN;
 
-        if (userRole !== requiredRole) {
+        if (isAdmin && requiredRole === 'student') {
+          if (currentPath !== '/teacher/dashboard') {
+            hasNavigated.current = true;
+            navigate('/teacher/dashboard', { replace: true });
+          }
+          return;
+        }
+
+        const roleOk =
+          userRole === requiredRole ||
+          (requiredRole === 'teacher' && isAdmin);
+
+        if (!roleOk) {
           console.log('🔒 Protected route: Role mismatch', {
             required: requiredRole,
             actual: userRole,
           });
 
           const dashboardRoute =
-            userRole === 'teacher'
+            userRole === 'teacher' || isAdmin
               ? '/teacher/dashboard'
               : userRole === 'student'
                 ? '/student/dashboard'
@@ -102,7 +116,7 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
         }
 
         // Check if user has completed their profile (unless they're on onboarding page)
-        if (!currentPath.startsWith('/onboarding/')) {
+        if (!currentPath.startsWith('/onboarding/') && !isAdmin) {
           // Use cached profile check from AuthContext
           // Only redirect if we ARE NOT currently loading the profile and we know it's missing
           if (hasProfile === false && !isProfileLoading) {
@@ -155,12 +169,19 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     return null;
   }
 
-  if (requiredRole && user.user_metadata?.role !== requiredRole) {
+  if (requiredRole) {
     const actualRole = user.user_metadata?.role;
-    if (actualRole !== 'teacher' && actualRole !== 'student') {
-      return <Navigate to="/role-selection" replace />;
+    const isAdmin = actualRole === USER_ROLES.ADMIN;
+    if (isAdmin && requiredRole === 'student') {
+      return <Navigate to="/teacher/dashboard" replace />;
     }
-    return null;
+    const roleOk = actualRole === requiredRole || (requiredRole === 'teacher' && isAdmin);
+    if (!roleOk) {
+      if (actualRole !== 'teacher' && actualRole !== 'student' && !isAdmin) {
+        return <Navigate to="/role-selection" replace />;
+      }
+      return null;
+    }
   }
 
   return <>{children}</>;

@@ -24,6 +24,8 @@ export function assignmentWizardStepOrder(assignmentType: string): AssignmentWiz
 export type AssignmentWizardFormData = {
   title: string;
   instructions: string;
+  /** Short text shown to learners; can be AI-generated from instructions. */
+  student_facing_task: string;
   type: string;
   due_at: string;
   status: string;
@@ -46,6 +48,7 @@ export function getDefaultAssignmentWizardFormData(): AssignmentWizardFormData {
   return {
     title: '',
     instructions: '',
+    student_facing_task: '',
     type: 'chatbot',
     due_at: '',
     status: 'published',
@@ -86,6 +89,7 @@ export interface AssignmentForWizardEdit {
   id: string;
   title: string;
   instructions: string;
+  student_facing_task?: string | null;
   type: string;
   status: string;
   due_at: string | null;

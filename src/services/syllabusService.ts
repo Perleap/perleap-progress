@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import type { Database } from '@/integrations/supabase/types';
 import type { ApiError } from '@/types';
 import type {
   Syllabus,
@@ -499,14 +500,13 @@ export const linkAssignmentToSection = async (
     if (!assignmentId || !ASSIGNMENT_ID_UUID.test(assignmentId)) {
       return { error: handleSupabaseError(new Error('Invalid assignment id')) };
     }
-    const updates: Record<string, unknown> = { syllabus_section_id: sectionId };
+    const updates: Database['public']['Tables']['assignments']['Update'] = {
+      syllabus_section_id: sectionId,
+    };
     if (gradingCategoryId !== undefined) {
       updates.grading_category_id = gradingCategoryId;
     }
-    const { error } = await supabase
-      .from('assignments')
-      .update(updates)
-      .eq('id', assignmentId);
+    const { error } = await supabase.from('assignments').update(updates).eq('id', assignmentId);
 
     if (error) return { error: handleSupabaseError(error) };
     return { error: null };
@@ -558,7 +558,7 @@ export const getSectionAssignmentProgress = async (
 ): Promise<{ data: { total: number; submitted: number; graded: number; progressPercent: number } | null; error: ApiError | null }> => {
   try {
     const { data: flowRows, error: flowErr } = await supabase
-      .from('module_flow_steps' as any)
+      .from('module_flow_steps')
       .select('step_kind, assignment_id, order_index')
       .eq('section_id', sectionId)
       .order('order_index', { ascending: true });
@@ -569,7 +569,7 @@ export const getSectionAssignmentProgress = async (
     if (flowRows && flowRows.length > 0) {
       const seen = new Set<string>();
       assignmentIds = [];
-      for (const row of flowRows as { step_kind: string; assignment_id: string | null }[]) {
+      for (const row of flowRows as unknown as { step_kind: string; assignment_id: string | null }[]) {
         if (row.step_kind === 'assignment' && row.assignment_id && !seen.has(row.assignment_id)) {
           seen.add(row.assignment_id);
           assignmentIds.push(row.assignment_id);

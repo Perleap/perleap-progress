@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, ChevronRight, Lock } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ import { canAccessPersistedStep } from '@/lib/moduleFlowStudent';
 import type { SectionResource } from '@/types/syllabus';
 import type { ActivityLinkState } from '@/types/navigation';
 import { useCallback, useMemo } from 'react';
+import { isAppAdminRole } from '@/utils/role';
 
 type Role = 'teacher' | 'student';
 
@@ -103,29 +105,10 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
 
   const markComplete = useMarkFlowStepComplete();
 
-  const navSections = useMemo(() => {
-    if (role === 'teacher') return getTeacherClassroomNavSections(t);
-    return getStudentClassroomNavSections(t, syllabus?.status === 'published');
-  }, [role, syllabus?.status, t]);
-
-  const allowedNavIds = useMemo(() => new Set(navSections.map((s) => s.id)), [navSections]);
-
-  const activeClassroomNavSection = useMemo(() => {
-    const raw = returnClassroomSection ?? 'curriculum';
-    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
-    if (normalized && allowedNavIds.has(normalized)) return normalized;
-    return 'overview';
-  }, [returnClassroomSection, allowedNavIds]);
-
-  const handleClassroomNav = useCallback(
-    (section: string) => {
-      if (!classroomId) return;
-      const path =
-        role === 'teacher' ? `/teacher/classroom/${classroomId}` : `/student/classroom/${classroomId}`;
-      navigate(path, { state: { activeSection: section } });
-    },
-    [classroomId, navigate, role],
-  );
+  const isStepCompleted =
+    role === 'student' &&
+    !!flowStepForResource &&
+    !!progressByStep[flowStepForResource.id];
 
   const goToNextFlowStep = useCallback(() => {
     if (!nextFlowStep || !classroomId || role !== 'student') return;
@@ -157,6 +140,68 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
     }
   }, [classroomId, role, firstInNextSection, navigate]);
 
+  const proceedAfterStepDone = useCallback(() => {
+    if (nextFlowStep) {
+      goToNextFlowStep();
+    } else {
+      goToNextModuleOrCurriculum();
+    }
+  }, [nextFlowStep, goToNextFlowStep, goToNextModuleOrCurriculum]);
+
+  const handleStudentContinue = useCallback(() => {
+    if (role !== 'student' || !user?.id || !flowStepForResource || !classroomId || !resource) return;
+    if (isStepCompleted) {
+      proceedAfterStepDone();
+      return;
+    }
+    markComplete.mutate(
+      {
+        studentId: user.id,
+        moduleFlowStepId: flowStepForResource.id,
+        sectionId: resource.section_id,
+        classroomId,
+      },
+      {
+        onSuccess: () => proceedAfterStepDone(),
+        onError: () => toast.error(t('common.error')),
+      },
+    );
+  }, [
+    role,
+    user?.id,
+    flowStepForResource,
+    classroomId,
+    resource,
+    isStepCompleted,
+    proceedAfterStepDone,
+    markComplete,
+    t,
+  ]);
+
+  const navSections = useMemo(() => {
+    if (role === 'teacher') return getTeacherClassroomNavSections(t);
+    return getStudentClassroomNavSections(t, syllabus?.status === 'published');
+  }, [role, syllabus?.status, t]);
+
+  const allowedNavIds = useMemo(() => new Set(navSections.map((s) => s.id)), [navSections]);
+
+  const activeClassroomNavSection = useMemo(() => {
+    const raw = returnClassroomSection ?? 'curriculum';
+    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (normalized && allowedNavIds.has(normalized)) return normalized;
+    return 'overview';
+  }, [returnClassroomSection, allowedNavIds]);
+
+  const handleClassroomNav = useCallback(
+    (section: string) => {
+      if (!classroomId) return;
+      const path =
+        role === 'teacher' ? `/teacher/classroom/${classroomId}` : `/student/classroom/${classroomId}`;
+      navigate(path, { state: { activeSection: section } });
+    },
+    [classroomId, navigate, role],
+  );
+
   const goBackFromActivity = useCallback(() => {
     if (classroomId) {
       const path =
@@ -173,7 +218,10 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   }, [classroomId, navigate, returnClassroomSection, role]);
 
   const valid = resourceBelongsToSyllabus(resource ?? null, syllabus ?? null);
-  const isTeacherView = role === 'teacher' && user?.id && classroom?.teacher_id === user.id;
+  const isTeacherView =
+    role === 'teacher' &&
+    user?.id &&
+    (classroom?.teacher_id === user.id || isAppAdminRole(user.user_metadata?.role));
   const isStudentView = role === 'student';
 
   const canMarkComplete =
@@ -230,6 +278,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
         activeSection={activeClassroomNavSection}
         onSectionChange={handleClassroomNav}
         customSections={navSections}
+        hideGlobalNav={role === 'student'}
       >
         <div
           className="mx-auto max-w-lg space-y-4 px-4 py-16 text-center"
@@ -255,9 +304,6 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
 
   const showDraftBadge = resource.status === 'draft' && isTeacherView;
   const isLessonActivity = resource.resource_type === 'lesson';
-
-  const isStepCompleted =
-    isStudentView && !!flowStepForResource && !!progressByStep[flowStepForResource.id];
 
   const activityHeader = (
     <header className="shrink-0 space-y-2">
@@ -287,6 +333,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
       activeSection={activeClassroomNavSection}
       onSectionChange={handleClassroomNav}
       customSections={navSections}
+      hideGlobalNav={role === 'student'}
     >
       <div
         className="flex w-full min-h-0 flex-1 flex-col gap-6 pb-8"
@@ -310,7 +357,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             <div className={cn(lessonActivityColumnClass, 'flex min-h-0 flex-1 flex-col gap-8')}>
               {activityHeader}
               <div className="min-h-0 w-full flex-1">
-                <LessonResourceBody resource={resource} variant="reading" />
+                <LessonResourceBody resource={resource} variant="reading" isRTL={isRTL} />
               </div>
             </div>
           ) : (
@@ -324,51 +371,18 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
         </div>
 
         {canMarkComplete ? (
-          <div className="flex w-full shrink-0 flex-col gap-3">
-            {isStepCompleted && !nextFlowStep && !isStudentView ? (
-              <p
-                className={cn(
-                  'text-sm text-muted-foreground',
-                  isRTL ? 'text-start' : 'text-end',
-                )}
-              >
-                {t('activityPage.flowEnd')}
-              </p>
-            ) : null}
-            <div className={cn('flex flex-wrap items-center gap-2', isRTL ? 'justify-start' : 'justify-end')}>
-              {isStepCompleted && !nextFlowStep && isStudentView ? (
-                <Button type="button" variant="default" className="gap-1" onClick={goToNextModuleOrCurriculum}>
-                  {firstInNextSection ? t('activityPage.continueNextModule') : t('activityPage.openCurriculum')}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {isStepCompleted && nextFlowStep ? (
-                <Button type="button" variant="outline" className="gap-1" onClick={goToNextFlowStep}>
-                  {nextFlowStep.step_kind === 'assignment'
-                    ? t('activityPage.continueToAssignment')
-                    : t('activityPage.continueNext')}
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {!isStepCompleted ? (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (!user?.id || !flowStepForResource || !classroomId || !resource) return;
-                    markComplete.mutate({
-                      studentId: user.id,
-                      moduleFlowStepId: flowStepForResource.id,
-                      sectionId: resource.section_id,
-                      classroomId,
-                    });
-                  }}
-                  disabled={markComplete.isPending}
-                >
-                  {markComplete.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
-                  {t('activityPage.finish')}
-                </Button>
-              ) : null}
-            </div>
+          <div className={cn('flex flex-wrap items-center gap-2', isRTL ? 'justify-start' : 'justify-end')}>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1"
+              onClick={handleStudentContinue}
+              disabled={markComplete.isPending}
+            >
+              {markComplete.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
+              {t('activityPage.continue')}
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         ) : null}
       </div>

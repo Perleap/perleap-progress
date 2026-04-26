@@ -102,7 +102,7 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
     if (error) throw error;
     if (!notifications || notifications.length === 0) return [];
 
-    return await enrichNotificationsWithProfiles(notifications);
+    return await enrichNotificationsWithProfiles(notifications as unknown as Notification[]);
   } catch (error) {
     return [];
   }
@@ -126,7 +126,7 @@ export async function getAllNotifications(
     if (error) throw error;
     if (!notifications || notifications.length === 0) return [];
 
-    return await enrichNotificationsWithProfiles(notifications);
+    return await enrichNotificationsWithProfiles(notifications as unknown as Notification[]);
   } catch (error) {
     return [];
   }

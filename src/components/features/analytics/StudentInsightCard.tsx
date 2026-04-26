@@ -30,7 +30,18 @@ function formatMetricValue(key: string, value: unknown): string {
     if (num > 60000) return `${(num / 60000).toFixed(1)}m`;
     return `${(num / 1000).toFixed(1)}s`;
   }
+  if (key.includes('count') || key.includes('_count')) return String(Math.round(num));
+  if (key === 'scaffolding_signal') return num >= 1 ? '1' : '0';
   return num.toFixed(1);
+}
+
+function labelForMetricKey(t: (key: string, fallback: string) => string, key: string): string {
+  const human = key
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  return t(`nuance.metricLabels.${key}`, human);
 }
 
 export function StudentInsightCard({ recommendation }: StudentInsightCardProps) {
@@ -44,6 +55,11 @@ export function StudentInsightCard({ recommendation }: StudentInsightCardProps) 
 
   return (
     <div className="space-y-4 p-4 bg-muted/30 rounded-xl border border-border" dir={dir}>
+      <p
+        className={`text-xs text-muted-foreground leading-relaxed border-b border-border pb-3 ${isRTL ? 'text-right' : 'text-left'}`}
+      >
+        {t('nuance.insightScope')}
+      </p>
       {/* Recommendation */}
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-primary/10 shrink-0">
@@ -84,8 +100,11 @@ export function StudentInsightCard({ recommendation }: StudentInsightCardProps) 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {Object.entries(metrics).map(([key, value]) => (
               <div key={key} className="bg-card rounded-lg px-3 py-2 border border-border">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
-                  {key.replace(/_/g, ' ')}
+                <p
+                  className="text-[10px] text-muted-foreground leading-tight line-clamp-2"
+                  title={labelForMetricKey(t, key)}
+                >
+                  {labelForMetricKey(t, key)}
                 </p>
                 <p className="text-sm font-bold text-foreground">
                   {formatMetricValue(key, value)}

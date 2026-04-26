@@ -6,12 +6,7 @@ const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> & { autoDirection?: boolean }
 >(function Textarea(
-  {
-    className,
-    // @ts-expect-error Filter out autoDirection prop
-    autoDirection,
-    ...props
-  },
+  { className, autoDirection: _autoDirection, ...props },
   ref
 ) {
   return (

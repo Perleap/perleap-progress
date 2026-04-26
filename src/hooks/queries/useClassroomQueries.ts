@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/useAuth';
+import { isAppAdminRole } from '@/utils/role';
 import {
   getTeacherClassrooms,
   getStudentClassrooms,
@@ -40,7 +41,7 @@ export const useClassrooms = (role: 'teacher' | 'student') => {
       if (!user) throw new Error('User not authenticated');
       const { data, error } =
         role === 'teacher'
-          ? await getTeacherClassrooms(user.id)
+          ? await getTeacherClassrooms(user.id, { allClassroomsForAdmin: isAppAdminRole(user.user_metadata?.role) })
           : await getStudentClassrooms(user.id);
       if (error) throw error;
       return data || [];
@@ -60,8 +61,12 @@ export const useClassroom = (classroomId: string | undefined) => {
     queryKey: classroomKeys.detail(classroomId || ''),
     queryFn: async () => {
       if (!user || !classroomId) throw new Error('Missing user or classroom ID');
-      const isTeacher = user.user_metadata?.role === 'teacher';
-      const { data, error } = await getClassroomById(classroomId, isTeacher ? user.id : undefined);
+      const r = user.user_metadata?.role;
+      const restrictToOwnedTeacher = r === 'teacher';
+      const { data, error } = await getClassroomById(
+        classroomId,
+        restrictToOwnedTeacher ? user.id : undefined
+      );
       if (error) throw error;
       return data;
     },

@@ -206,23 +206,6 @@ Rules:
       throw feedbackSaveResult.error;
     }
 
-    try {
-      await supabase.from('notifications').insert({
-        user_id: studentId,
-        type: 'feedback_received',
-        title: language === 'he' ? 'התקבל משוב' : 'Feedback Received',
-        message: language === 'he'
-          ? `המשוב שלך עבור "${assignmentData?.title}" מוכן`
-          : `Your feedback for "${assignmentData?.title}" is ready`,
-        link: `/student/assignment/${assignmentId}`,
-        actor_id: teacherId || null,
-        metadata: { assignment_id: assignmentId, submission_id: submissionId },
-        is_read: false,
-      });
-    } catch (notifError) {
-      logError('Error creating notification (non-fatal)', notifError);
-    }
-
     logInfo(`Evaluate-from-feedback completed in ${Date.now() - startTime}ms`);
 
     return new Response(

@@ -26,9 +26,10 @@ interface CustomTooltipProps {
       dimension: string;
     };
   }>;
+  explanations?: Partial<Record<keyof FiveDScores, string>> | null;
 }
 
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload, explanations }: CustomTooltipProps) => {
   const { t } = useTranslation();
   if (!active || !payload?.length) return null;
 
@@ -37,6 +38,8 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     value: number;
   };
 
+  const blurb = explanations?.[dimension as keyof FiveDScores] || t(`dimensions.${dimension}.description`);
+
   return (
     <div className="bg-background border border-border rounded-lg shadow-lg p-3 max-w-xs z-50">
       <p className="font-semibold text-sm mb-1">{t(`dimensions.${dimension}.label`)}</p>
@@ -44,8 +47,8 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
         {t('dimensions.score')}:{' '}
         <span className="font-bold text-foreground">{value.toFixed(1)}/10</span>
       </p>
-      <p className="text-xs text-muted-foreground italic border-t pt-2 mt-2">
-        {t(`dimensions.${dimension}.description`)}
+      <p className="text-xs text-muted-foreground border-t pt-2 mt-2 leading-relaxed">
+        {blurb}
       </p>
     </div>
   );
@@ -124,6 +127,7 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
             domain={[0, 10]}
             tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
           />
+          {/* Path animation off so the polygon stays aligned with the grid on resize / DevTools */}
           <Radar
             name="Score"
             dataKey="value"
@@ -131,9 +135,13 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
             fill={getFillColor()}
             fillOpacity={0.6}
             strokeWidth={2}
-            isAnimationActive={true}
+            isAnimationActive={false}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip
+            content={({ active, payload }) => (
+              <CustomTooltip active={active} payload={payload as CustomTooltipProps['payload']} explanations={explanations} />
+            )}
+          />
         </RechartsRadarChart>
       </ResponsiveContainer>
 

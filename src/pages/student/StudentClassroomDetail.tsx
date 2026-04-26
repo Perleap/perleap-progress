@@ -13,7 +13,7 @@ import {
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import type { ClassroomLocationState } from '@/types/navigation';
 import type { StudentProgressStatus } from '@/types/syllabus';
 import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
@@ -35,11 +35,13 @@ import {
   useStudentProgress,
 } from '@/hooks/queries';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import { useModuleFlowStepsBulk, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { useModuleFlowStepsBulk, useStudentCurriculumFlowContext, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { linkedAssignmentsVisibleInModuleFlow } from '@/lib/moduleFlow';
 import { formatCourseDuration } from '@/lib/dateUtils';
 import { getStudyCtaTarget } from '@/lib/studyCtaTarget';
+import { resolveStudentResumeTarget } from '@/lib/resolveStudentResumeTarget';
+import type { AssignmentRow } from '@/lib/moduleFlow';
 import { cn } from '@/lib/utils';
 
 const STUDENT_SECTION_IDS = new Set(['overview', 'outline', 'curriculum']);
@@ -61,6 +63,7 @@ const StudentClassroomDetail = () => {
   const queryClient = useQueryClient();
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
   const { data: rawClassroom } = useClassroom(id);
@@ -69,6 +72,7 @@ const StudentClassroomDetail = () => {
   const teacherId = rawClassroom?.teacher_id;
   const { data: teacher, isLoading: teacherLoading, isError: teacherError } = useTeacherProfile(teacherId);
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(id);
+  const hasPublishedSyllabus = Boolean(syllabus && syllabus.status === 'published');
   const { data: studentProgressData } = useStudentProgress(syllabus?.id, user?.id);
 
   const syllabusSectionIds = useMemo(
@@ -76,6 +80,15 @@ const StudentClassroomDetail = () => {
     [syllabus?.sections],
   );
   const { data: moduleFlowBulk = {} } = useModuleFlowStepsBulk(syllabusSectionIds);
+
+  const { flowCtx } = useStudentCurriculumFlowContext({
+    userId: user?.id,
+    sectionIds: syllabusSectionIds,
+    flowBulk: moduleFlowBulk,
+    resourceMap: syllabus?.section_resources ?? {},
+    assignments: rawAssignments as AssignmentRow[],
+    enabled: Boolean(syllabus && syllabus.status === 'published' && user?.id),
+  });
 
   const studentProgressMap = useMemo(() => {
     const map: Record<string, StudentProgressStatus> = {};
@@ -200,10 +213,6 @@ const StudentClassroomDetail = () => {
     [syllabus, studentProgressMap, goToSection]
   );
 
-  const handleStudyCtaClick = useCallback(() => {
-    goToStudyOutlineFromAbout(activeSection);
-  }, [goToStudyOutlineFromAbout, activeSection]);
-
   const handleClassroomSectionChange = useCallback((section: string) => {
     if (section === 'outline') {
       sectionBackReturnsToOverviewRef.current = false;
@@ -218,12 +227,75 @@ const StudentClassroomDetail = () => {
 
   const classroom = rawClassroom as unknown as Classroom | null;
 
-  const hasPublishedSyllabus = syllabus && syllabus.status === 'published';
-
   const studyCtaLabelStart = t('studentClassroom.studyCta.start');
   const studyCtaLabelView = t('studentClassroom.studyCta.viewAssignments');
+  const studyCtaLabelContinueCourse = t('studentClassroom.studyCta.continueCourse');
+  const studyCtaLabelReview = t('studentClassroom.studyCta.review');
 
-  const aboutPrimaryButtonLabel = hasPublishedSyllabus ? studyCtaLabelStart : studyCtaLabelView;
+  const aboutPrimaryButtonLabel = useMemo(() => {
+    if (!hasPublishedSyllabus || !syllabus?.sections?.length) {
+      return studyCtaLabelView;
+    }
+    const { variant } = getStudyCtaTarget(
+      syllabus.sections,
+      syllabus.release_mode || 'all_at_once',
+      studentProgressMap
+    );
+    if (variant === 'start') return studyCtaLabelStart;
+    if (variant === 'continue') return studyCtaLabelContinueCourse;
+    return studyCtaLabelReview;
+  }, [
+    hasPublishedSyllabus,
+    syllabus,
+    studentProgressMap,
+    studyCtaLabelStart,
+    studyCtaLabelView,
+    studyCtaLabelContinueCourse,
+    studyCtaLabelReview,
+  ]);
+
+  const handleStudyCtaClick = useCallback(() => {
+    if (!syllabus || syllabus.status !== 'published') {
+      sectionBackReturnsToOverviewRef.current = false;
+      setActiveSection('overview');
+      return;
+    }
+    if (user?.id && syllabus.sections?.length) {
+      const target = resolveStudentResumeTarget({
+        sections: syllabus.sections,
+        releaseMode: syllabus.release_mode || 'all_at_once',
+        studentProgressMap,
+        flowBulk: moduleFlowBulk,
+        resourceMap: syllabus.section_resources ?? {},
+        assignments: rawAssignments as AssignmentRow[],
+        flowCtx,
+      });
+      if (target) {
+        if (target.kind === 'resource') {
+          navigate(`/student/classroom/${id}/activity/${target.id}`, {
+            state: { returnClassroomSection: 'curriculum' },
+          });
+        } else {
+          navigate(`/student/assignment/${target.id}`, {
+            state: { returnClassroomSection: 'curriculum' },
+          });
+        }
+        return;
+      }
+    }
+    goToStudyOutlineFromAbout(activeSection);
+  }, [
+    activeSection,
+    goToStudyOutlineFromAbout,
+    id,
+    moduleFlowBulk,
+    navigate,
+    rawAssignments,
+    studentProgressMap,
+    syllabus,
+    user?.id,
+    flowCtx,
+  ]);
 
   /** While syllabus is loading we keep 3 nav slots (outline/curriculum disabled) so the sidebar does not jump 1→3 when data arrives. */
   const showSyllabusNavSlots = syllabusLoading || hasPublishedSyllabus;
@@ -257,6 +329,7 @@ const StudentClassroomDetail = () => {
       activeSection={activeSection}
       onSectionChange={handleClassroomSectionChange}
       customSections={classroomSections}
+      hideGlobalNav
     >
       <div className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Overview Section */}
@@ -265,7 +338,7 @@ const StudentClassroomDetail = () => {
             <h2
               className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
             >
-              {t('studentClassroom.about')}
+              {classroom.name}
             </h2>
 
             <div className="grid md:grid-cols-3 gap-6 md:items-start">
@@ -274,11 +347,6 @@ const StudentClassroomDetail = () => {
                 className="md:col-span-2 flex min-h-0 flex-col border border-border shadow-sm rounded-xl bg-card overflow-hidden pt-2 pb-6 h-full"
                 dir={isRTL ? 'rtl' : 'ltr'}
               >
-                <CardHeader className="shrink-0 border-b border-border bg-transparent pt-0">
-                  <CardTitle className={`text-xl ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {classroom.name}
-                  </CardTitle>
-                </CardHeader>
                 <CardContent className="flex flex-1 flex-col pt-6">
                   {classroom.resources && (
                     <div className="min-w-0 shrink-0">
@@ -324,6 +392,18 @@ const StudentClassroomDetail = () => {
                             aria-hidden
                           >
                             {studyCtaLabelView}
+                          </span>
+                          <span
+                            className="col-start-1 row-start-1 invisible whitespace-nowrap pointer-events-none select-none"
+                            aria-hidden
+                          >
+                            {studyCtaLabelContinueCourse}
+                          </span>
+                          <span
+                            className="col-start-1 row-start-1 invisible whitespace-nowrap pointer-events-none select-none"
+                            aria-hidden
+                          >
+                            {studyCtaLabelReview}
                           </span>
                           <span className="col-start-1 row-start-1 whitespace-nowrap">
                             {aboutPrimaryButtonLabel}

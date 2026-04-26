@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Pencil } from 'lucide-react';
+import { Pencil, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { distinctDomains } from '@/lib/hardSkillsFormat';
 import type { AssignmentWizardFormData, AssignmentWizardStepId } from '../assignmentWizardTypes';
@@ -14,6 +16,9 @@ interface AssignmentReviewStepProps {
   testQuestions: TestQuestionDraft[];
   onJumpToStep: (id: AssignmentWizardStepId) => void;
   isRTL: boolean;
+  onStudentFacingTaskChange: (value: string) => void;
+  onGenerateForStudents: () => void;
+  generatingStudentTask: boolean;
 }
 
 function ReviewField({
@@ -57,6 +62,9 @@ export function AssignmentReviewStep({
   testQuestions,
   onJumpToStep,
   isRTL,
+  onStudentFacingTaskChange,
+  onGenerateForStudents,
+  generatingStudentTask,
 }: AssignmentReviewStepProps) {
   const { t } = useTranslation();
 
@@ -174,6 +182,54 @@ export function AssignmentReviewStep({
         <h3 className="text-lg font-semibold tracking-tight text-foreground">{t('createAssignment.wizard.reviewTitle')}</h3>
         <p className="text-sm text-muted-foreground">{t('createAssignment.wizard.reviewSubtitle')}</p>
       </div>
+
+      <section
+        className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+        id="review-student-facing-task"
+      >
+        <div
+          className={cn(
+            'flex flex-col gap-3 border-b border-border bg-muted/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between',
+            isRTL && 'sm:flex-row-reverse',
+          )}
+        >
+          <div className="space-y-0.5">
+            <h4 className="text-sm font-semibold text-foreground">
+              {t('createAssignment.wizard.studentFacingTitle')}
+            </h4>
+            <p className="text-xs text-muted-foreground">{t('createAssignment.wizard.studentFacingHint')}</p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={onGenerateForStudents}
+            disabled={!formData.instructions.trim() || generatingStudentTask}
+          >
+            {generatingStudentTask ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            {t('createAssignment.wizard.generateForStudents')}
+          </Button>
+        </div>
+        <div className="space-y-2 px-4 py-4">
+          <Label htmlFor="student-facing-task" className="sr-only">
+            {t('createAssignment.wizard.studentFacingTitle')}
+          </Label>
+          <Textarea
+            id="student-facing-task"
+            dir="auto"
+            rows={4}
+            className="min-h-[100px] resize-y text-sm"
+            placeholder={t('createAssignment.wizard.studentFacingPlaceholder')}
+            value={formData.student_facing_task}
+            onChange={(e) => onStudentFacingTaskChange(e.target.value)}
+          />
+        </div>
+      </section>
 
       <div className="space-y-4">
         {sections.map((section) => (

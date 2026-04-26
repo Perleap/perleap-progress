@@ -21,6 +21,7 @@ import {
   ContentPlainTextBlock,
   ContentRichTextBlock,
   ContentVideoBlock,
+  LessonTextSlidesBlock,
 } from '@/components/features/syllabus/content-blocks';
 import type { SectionResource } from '@/types/syllabus';
 
@@ -99,11 +100,13 @@ export function LessonResourceBody({
   resource,
   className,
   variant = 'embedded',
+  isRTL = false,
 }: {
   resource: SectionResource;
   className?: string;
   /** `reading`: single shell, plain prose, framed video (activity page). `embedded`: compact cards (syllabus preview). */
   variant?: LessonResourceBodyVariant;
+  isRTL?: boolean;
 }) {
   const { t } = useTranslation();
   const reading = variant === 'reading';
@@ -113,10 +116,33 @@ export function LessonResourceBody({
   const v1 = parseLessonContent(resource.lesson_content as unknown);
   if (v1?.blocks?.length) {
     const nodes = v1.blocks.map((block) => {
-      if (block.type === 'text' && block.body.trim()) {
+      if (block.type === 'text') {
+        const slideList = block.slides;
+        if (Array.isArray(slideList) && slideList.length > 1) {
+          const nonEmpty = slideList.filter((s) => s && s.trim());
+          if (nonEmpty.length > 1) {
+            return (
+              <div key={block.id} className="w-full min-w-0">
+                <LessonTextSlidesBlock
+                  slideBodies={nonEmpty}
+                  presentation={textPresentation}
+                  isRTL={isRTL}
+                />
+              </div>
+            );
+          }
+        }
+        const source =
+          Array.isArray(slideList) && slideList.length === 1
+            ? slideList[0]!
+            : block.body;
+        if (!source || !String(source).trim()) return null;
         return (
-          <div key={block.id}>
-            <ContentRichTextBlock html={lessonTextBodyToHtml(block.body)} presentation={textPresentation} />
+          <div key={block.id} className="w-full min-w-0">
+            <ContentRichTextBlock
+              html={lessonTextBodyToHtml(source)}
+              presentation={textPresentation}
+            />
           </div>
         );
       }

@@ -23,6 +23,8 @@ import { useConversation } from '@/hooks/useConversation';
 import { useStudentProfile } from '@/hooks/queries';
 import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
 import { validateChatAttachmentFile } from '@/lib/chatAttachment';
+import { formatInlineListsForChatMarkdown, splitChatDisplayText } from '@/lib/chatDisplay';
+import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
 import SafeMathMarkdown from './SafeMathMarkdown';
 
 interface Message {
@@ -41,7 +43,17 @@ interface NuanceTrackingCallbacks {
   trackResponseStarted: (messageIndex: number) => void;
   recordAiMessageArrival: () => void;
   getTimeSinceLastAiMessage: () => number | null;
+  trackUnderstandingCue: (
+    result: import('@/lib/understandingCueDetection').UnderstandingCueResult,
+    messageLength: number,
+    messageIndex: number,
+  ) => void;
 }
+
+export type AssignmentChatCompletePayload = {
+  /** True when the green "conversation complete" state was true at submit. */
+  conversationComplete: boolean;
+};
 
 interface AssignmentChatInterfaceProps {
   assignmentId: string;
@@ -49,7 +61,7 @@ interface AssignmentChatInterfaceProps {
   teacherName: string;
   assignmentInstructions: string;
   submissionId: string;
-  onComplete: () => void;
+  onComplete: (payload: AssignmentChatCompletePayload) => void | Promise<void>;
   nuanceTracking?: NuanceTrackingCallbacks;
   /** primary = chat completes the assignment; companion = Q&A only above another task UI */
   variant?: 'primary' | 'companion';
@@ -205,7 +217,7 @@ export function AssignmentChatInterface({
   const processAttachmentFile = useCallback(
     async (file: File) => {
       const validated = validateChatAttachmentFile(file);
-      if (!validated.ok) {
+      if (validated.ok === false) {
         toast.error(
           validated.reason === 'size'
             ? t('assignmentChat.errors.fileTooLarge')
@@ -298,6 +310,17 @@ export function AssignmentChatInterface({
     }
 
     const userMessage = input.trim();
+    if (userMessage) {
+      if (nuanceTracking) {
+        const cue = detectUnderstandingCue(userMessage);
+        nuanceTracking.trackUnderstandingCue(cue, userMessage.length, messages.length);
+      } else if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug(
+          '[Nuance] no tracking hook on chat — understanding cues are skipped (e.g. wrong route or tracking disabled)',
+        );
+      }
+    }
     setInput('');
     const fileCtx = attachedFile ?? undefined;
     setAttachedFile(null);
@@ -309,7 +332,7 @@ export function AssignmentChatInterface({
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      await onComplete();
+      await onComplete({ conversationComplete: conversationEnded });
     } catch (error) {
       toast.error(t('assignmentChat.errors.completing'));
     } finally {
@@ -357,7 +380,7 @@ export function AssignmentChatInterface({
       setLoadingAudioIndex(index);
       const voice = profile?.voice_preference || 'shimmer';
       
-      const cleanedText = cleanTextForTTS(text);
+      const cleanedText = cleanTextForTTS(formatInlineListsForChatMarkdown(text));
       if (!cleanedText) {
         throw new Error('No text to play after cleaning');
       }
@@ -391,15 +414,15 @@ export function AssignmentChatInterface({
         // (though current UI doesn't support resume, just toggle)
       };
 
-      audio.onerror = (e) => {
+      audio.onerror = () => {
         // If we just reset the source manually, don't show an error
         if (audio.src === '' || audio.src === window.location.href) return;
 
-        const error = (e.target as any).error;
+        const error = audio.error;
         console.error('Audio element error details:', {
           code: error?.code,
           message: error?.message,
-          src: audio.src
+          src: audio.src,
         });
         setLoadingAudioIndex(null);
         setPlayingMessageIndex(null);
@@ -544,6 +567,12 @@ export function AssignmentChatInterface({
                 <div className="space-y-4 pt-2 pb-4">
                   {messages.map((message, index) => {
                     const isUser = message.role === 'user';
+                    const displayParts =
+                      isUser || !message.content
+                        ? [String(message.content || '')]
+                        : splitChatDisplayText(
+                            formatInlineListsForChatMarkdown(String(message.content)),
+                          );
                     // User messages always on the right side of the chat (end)
                     // Assistant messages always on the left side of the chat (start)
                     // This is standard chat convention regardless of language direction
@@ -553,20 +582,27 @@ export function AssignmentChatInterface({
                         id={`message-${index}`}
                         className={`flex ${isUser ? 'justify-end' : 'justify-start'} transition-colors duration-500 rounded-lg`}
                       >
-                        <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                          <div
-                            className={`rounded-lg p-3 bg-muted`}
-                            dir="auto"
-                            style={{ unicodeBidi: 'plaintext' }}
-                          >
-                            <div className={`text-sm markdown-content`}>
-                              {message.content && <SafeMathMarkdown content={String(message.content || '')} />}
+                        <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                          {displayParts.map((part, partIdx) => (
+                            <div
+                              key={`${index}-p-${partIdx}`}
+                              className={`rounded-lg p-3 bg-muted`}
+                              dir="auto"
+                              style={{
+                                unicodeBidi: 'plaintext',
+                                animationDelay: !isUser && partIdx > 0 ? `${partIdx * 45}ms` : undefined,
+                              }}
+                            >
+                              <div className={`text-sm markdown-content`}>
+                                {part ? <SafeMathMarkdown content={part} /> : null}
+                              </div>
                             </div>
-                            
+                          ))}
+
                             {/* Render attachment underneath the message text */}
                             {message.fileContext && (
                               <div 
-                                className={`mt-2 p-2 rounded-md border bg-background/50 flex items-center gap-2 cursor-pointer hover:bg-background transition-colors ${!message.content ? 'mt-0' : ''}`}
+                                className={`p-2 rounded-md border bg-background/50 flex items-center gap-2 cursor-pointer hover:bg-background transition-colors max-w-full ${!message.content ? 'mt-0' : ''}`}
                                 onClick={() => setPreviewResource({ ...message.fileContext!, messageIndex: index })}
                               >
                                 {message.fileContext.type === 'image' ? (
@@ -579,7 +615,6 @@ export function AssignmentChatInterface({
                                 </span>
                               </div>
                             )}
-                          </div>
                           {!isUser && message.content && (
                             <Button
                               variant="ghost"

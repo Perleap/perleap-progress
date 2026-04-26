@@ -28,7 +28,7 @@ export function usePageTransition(dependencies: React.DependencyList = []) {
         pageEnter(containerRef.current);
       }
     },
-    { scope: containerRef, dependencies }
+    { scope: containerRef, dependencies: [...dependencies] }
   );
 
   return containerRef;
@@ -46,7 +46,7 @@ export function useFadeIn(delay = 0, dependencies: React.DependencyList = []) {
         fadeInUp(elementRef.current, delay);
       }
     },
-    { scope: elementRef, dependencies }
+    { scope: elementRef, dependencies: [...dependencies] }
   );
 
   return elementRef;
@@ -90,7 +90,7 @@ export function useStaggerAnimation(
         });
       }
     },
-    { scope: containerRef, dependencies }
+    { scope: containerRef, dependencies: [...dependencies] }
   );
 
   // Cleanup on unmount
@@ -295,7 +295,7 @@ export function useSlideIn(
         gsap.fromTo(elementRef.current, fromVars, toVars);
       }
     },
-    { scope: elementRef, dependencies }
+    { scope: elementRef, dependencies: [...dependencies] }
   );
 
   return elementRef;

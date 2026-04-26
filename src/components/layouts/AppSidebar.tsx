@@ -69,7 +69,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const [logoutOpen, setLogoutOpen] = React.useState(false);
 
-  const isTeacher = user?.user_metadata?.role === 'teacher';
+  const isTeacher =
+    user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
   const basePath = isTeacher ? '/teacher' : '/student';
   const isOnSettingsPage = location.pathname.includes('/settings');
 

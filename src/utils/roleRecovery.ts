@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { USER_ROLES } from '@/config/constants';
 
 const PENDING_ROLE_KEY = 'pending_role';
 const ROLE_RECOVERY_ATTEMPT_KEY = 'role_recovery_attempt';
@@ -48,10 +49,21 @@ export const clearPendingRole = (): void => {
 };
 
 /**
- * Update user's role metadata in Supabase Auth
+ * Update user's role metadata in Supabase Auth.
+ * 'admin' is only applied if a row exists in public.app_admins for the current user.
  */
-export const updateUserRole = async (role: 'teacher' | 'student'): Promise<boolean> => {
+export const updateUserRole = async (role: 'teacher' | 'student' | 'admin'): Promise<boolean> => {
   try {
+    if (role === USER_ROLES.ADMIN) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data: row } = await supabase.from('app_admins').select('user_id').eq('user_id', user.id).maybeSingle();
+      if (!row) {
+        console.error('❌ Refusing to set admin metadata without app_admins row');
+        return false;
+      }
+    }
+
     console.log('🔄 Attempting to update user role to:', role);
     
     const { data, error } = await supabase.auth.updateUser({
@@ -91,7 +103,8 @@ export const verifyUserRole = async (): Promise<{
     }
 
     const role = user.user_metadata?.role;
-    const hasRole = role === 'teacher' || role === 'student';
+    const hasRole =
+      role === 'teacher' || role === 'student' || role === USER_ROLES.ADMIN;
 
     console.log('🔍 Role verification:', { hasRole, role, userId: user.id });
 
@@ -128,6 +141,14 @@ export const attemptRoleRecovery = async (): Promise<{
   // 2. Try to recover from database (most reliable source of truth)
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
+    const { data: adminRow } = await supabase.from('app_admins').select('user_id').eq('user_id', user.id).maybeSingle();
+    if (adminRow) {
+      const ok = await updateUserRole(USER_ROLES.ADMIN);
+      if (ok) {
+        return { recovered: true, role: USER_ROLES.ADMIN, source: 'database' };
+      }
+    }
+
     console.log('🔍 Checking database for existing profile to recover role...');
     const { data: tp } = await supabase.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle();
     if (tp) {

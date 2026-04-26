@@ -27,7 +27,7 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
 }
 
 const TooltipTrigger = React.forwardRef<
-  React.ComponentRef<typeof TooltipPrimitive.Trigger>,
+  HTMLButtonElement,
   TooltipPrimitive.Trigger.Props
 >(function TooltipTrigger(props, ref) {
   return (

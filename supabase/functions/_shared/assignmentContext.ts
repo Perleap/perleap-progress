@@ -44,9 +44,17 @@ function bodyFromLessonRow(r: ModuleActivityRow): string {
     const blocks = (lc as { blocks: Array<Record<string, unknown>> }).blocks;
     const pieces: string[] = [];
     for (const b of blocks) {
-      if (b.type === 'text' && typeof b.body === 'string' && b.body.trim()) {
-        const plain = stripHtmlLite(b.body);
-        if (plain) pieces.push(truncate(plain, MAX_PER_ITEM_CHARS));
+      if (b.type === 'text' && typeof b.body === 'string') {
+        const slideList =
+          Array.isArray((b as { slides?: unknown }).slides) &&
+          ((b as { slides?: string[] }).slides?.length ?? 0) > 0
+            ? ((b as { slides: string[] }).slides)
+            : [b.body];
+        for (const seg of slideList) {
+          if (typeof seg !== 'string' || !seg.trim()) continue;
+          const plain = stripHtmlLite(seg);
+          if (plain) pieces.push(truncate(plain, MAX_PER_ITEM_CHARS));
+        }
       } else if (b.type === 'video') {
         const u = typeof b.url === 'string' ? b.url.trim() : '';
         const fp = typeof b.file_path === 'string' ? b.file_path : '';

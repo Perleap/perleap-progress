@@ -1,6 +1,8 @@
 /**
- * Submission and Feedback Type Definitions
+ * Submission and feedback helpers (domain types live in ./models and ./api.types).
  */
+
+import type { FiveDScores, Submission } from './models';
 
 /** Passed to parent after successful submit so the student sees the right completion modal copy. */
 export type AssignmentCompletionTone =
@@ -8,21 +10,6 @@ export type AssignmentCompletionTone =
   | 'awaitingTeacher'
   | 'awaitingReview'
   | 'testSubmitted';
-
-/**
- * Assignment submission
- */
-export interface Submission {
-  id: string;
-  assignment_id: string;
-  student_id: string;
-  attempt_number?: number;
-  text_body: string | null;
-  file_url: string | null;
-  status: SubmissionStatus;
-  submitted_at: string;
-  awaiting_teacher_feedback_release?: boolean;
-}
 
 /**
  * Submission with assignment details
@@ -54,17 +41,6 @@ export interface Feedback {
 }
 
 /**
- * Five-dimensional scores
- */
-export interface FiveDScores {
-  vision: number;
-  values: number;
-  thinking: number;
-  connection: number;
-  action: number;
-}
-
-/**
  * Complete feedback with scores
  */
 export interface FeedbackWithScores extends Feedback {
@@ -80,34 +56,6 @@ export interface HardSkillsAssessment {
   proficiency_level: number;
   feedback: string;
   [key: string]: string | number;
-}
-
-/**
- * Submission status
- */
-export type SubmissionStatus = 'in_progress' | 'completed';
-
-/**
- * Submission with student details
- */
-export interface SubmissionWithDetails extends Submission {
-  assignments?: {
-    title: string;
-    due_at?: string;
-    type?: string;
-    instructions?: string;
-  };
-  student_profiles?: {
-    full_name: string;
-    avatar_url?: string;
-    user_id?: string;
-    created_at?: string;
-  };
-  assignment_feedback?: {
-    student_feedback: string | null;
-    teacher_feedback: string | null;
-    created_at: string;
-  };
 }
 
 /**

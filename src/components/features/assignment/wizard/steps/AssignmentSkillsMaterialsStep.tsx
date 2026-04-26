@@ -84,7 +84,7 @@ export function AssignmentSkillsMaterialsStep({
           {isEditMode ? t('editAssignment.subjectAreasHelper') : t('createAssignment.subjectAreasHelper')}
         </p>
 
-        {!isEditMode && hardSkillsSuggestionStatus === 'loading' && (
+        {hardSkillsSuggestionStatus === 'loading' && (
           <div
             className={cn(
               'flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground',
@@ -95,7 +95,7 @@ export function AssignmentSkillsMaterialsStep({
             <span>{t('createAssignment.hardSkillsSuggestion.loading')}</span>
           </div>
         )}
-        {!isEditMode && hardSkillsSuggestionStatus === 'error' && (
+        {hardSkillsSuggestionStatus === 'error' && (
           <div
             className={cn(
               'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm',
@@ -117,7 +117,7 @@ export function AssignmentSkillsMaterialsStep({
             ) : null}
           </div>
         )}
-        {!isEditMode && hardSkillsSuggestionStatus === 'success' && (
+        {hardSkillsSuggestionStatus === 'success' && (
           <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('createAssignment.hardSkillsSuggestion.successHint')}
           </p>

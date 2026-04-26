@@ -50,6 +50,8 @@ export const useClassroomAssignments = (classroomId: string | undefined) => {
  * Hook to fetch a single assignment by ID
  */
 export const useAssignment = (assignmentId: string | undefined) => {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: assignmentKeys.detail(assignmentId || ''),
     queryFn: async () => {

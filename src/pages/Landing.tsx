@@ -82,7 +82,7 @@ const Landing = () => {
         }
 
         // Otherwise, redirect to appropriate dashboard based on role
-        if (userRole === 'teacher') {
+        if (userRole === 'teacher' || userRole === 'admin') {
           console.log('🚀 Landing: Redirecting authenticated teacher to dashboard');
           navigate('/teacher/dashboard');
         } else if (userRole === 'student') {

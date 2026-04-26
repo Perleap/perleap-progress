@@ -16,7 +16,7 @@ export async function getLinkedActivitiesForAssignment(
 ): Promise<{ data: AssignmentModuleActivity[] | null; error: ApiError | null }> {
   try {
     const { data, error } = await supabase
-      .from(TABLE as any)
+      .from(TABLE)
       .select('*')
       .eq('assignment_id', assignmentId)
       .order('order_index', { ascending: true });
@@ -33,14 +33,14 @@ export async function getSectionResourceIdsForSectionInOrder(
 ): Promise<{ data: string[] | null; error: ApiError | null }> {
   try {
     const { data, error } = await supabase
-      .from('activity_list' as any)
+      .from('activity_list')
       .select('id')
       .eq('section_id', sectionId)
       .eq('active', true)
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: (data as { id: string }[]).map((r) => r.id), error: null };
+    return { data: (data ?? []).map((r) => r.id), error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -56,14 +56,14 @@ async function validateLinksBelongToSection(
   if (items.length === 0) return { ok: true, error: null };
   const ids = items.map((i) => i.activity_list_id);
   const { data, error } = await supabase
-    .from('activity_list' as any)
+    .from('activity_list')
     .select('id')
     .eq('section_id', sectionId)
     .eq('active', true)
     .in('id', ids);
 
   if (error) return { ok: false, error: handleSupabaseError(error) };
-  const allowed = new Set((data as { id: string }[] | null)?.map((r) => r.id) ?? []);
+  const allowed = new Set((data ?? []).map((r) => r.id));
   for (const id of ids) {
     if (!allowed.has(id)) {
       return {
@@ -90,7 +90,7 @@ export async function setAssignmentLinkedActivities(
           error: { message: 'Pick a syllabus module before linking activities' } as ApiError,
         };
       }
-      const { error } = await supabase.from(TABLE as any).delete().eq('assignment_id', assignmentId);
+      const { error } = await supabase.from(TABLE).delete().eq('assignment_id', assignmentId);
       if (error) return { error: handleSupabaseError(error) };
       return { error: null };
     }
@@ -98,7 +98,7 @@ export async function setAssignmentLinkedActivities(
     const { ok, error: vErr } = await validateLinksBelongToSection(syllabusSectionId, items);
     if (!ok) return { error: vErr };
 
-    const { error: delErr } = await supabase.from(TABLE as any).delete().eq('assignment_id', assignmentId);
+    const { error: delErr } = await supabase.from(TABLE).delete().eq('assignment_id', assignmentId);
     if (delErr) return { error: handleSupabaseError(delErr) };
 
     if (items.length === 0) return { error: null };
@@ -110,7 +110,7 @@ export async function setAssignmentLinkedActivities(
       include_in_ai_context: item.include_in_ai_context,
     }));
 
-    const { error: insErr } = await supabase.from(TABLE as any).insert(rows as any);
+    const { error: insErr } = await supabase.from(TABLE).insert(rows);
     if (insErr) return { error: handleSupabaseError(insErr) };
     return { error: null };
   } catch (error) {

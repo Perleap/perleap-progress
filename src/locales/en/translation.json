@@ -17,6 +17,9 @@
     "logoutConfirmTitle": "Log out?",
     "logoutConfirmDescription": "You will need to sign in again to access your account."
   },
+  "admin": {
+    "modeBanner": "Admin mode: you can view and edit all teachers' classrooms. Actions may be logged."
+  },
   "planner": {
     "subtitle": "Manage your schedule and assignments",
     "classroomsTitle": "Classrooms",
@@ -507,7 +510,13 @@
       "questionCount": "{{count}} question(s)",
       "editSection": "Edit",
       "fixValidation": "Please complete the required fields in earlier steps.",
-      "testQuestionsLocked": "Test questions cannot be edited after students have submitted attempts."
+      "testQuestionsLocked": "Test questions cannot be edited after students have submitted attempts.",
+      "studentFacingTitle": "What students see",
+      "studentFacingHint": "A short, clear summary of the task. Generate from your full instructions, then edit if needed.",
+      "studentFacingPlaceholder": "Students will read this before they start. Use Generate to draft from your instructions.",
+      "generateForStudents": "Generate for students",
+      "studentFacingGenerated": "Student summary ready — review and save when you are done.",
+      "studentFacingGenerateFailed": "Could not generate a summary. Try again or write the short text yourself."
     },
     "testBuilder": {
       "title": "Test Questions",
@@ -676,6 +685,20 @@
       "addBlockAriaLabel": "Add block",
       "addBlockMenuText": "Text block",
       "addBlockMenuVideo": "Video",
+      "textSlides": {
+        "useSlides": "Use slides (multiple screens)",
+        "useSingle": "Use single text",
+        "modeSingle": "Single",
+        "modeSlides": "Slides",
+        "modeGroupAria": "Text display mode: single or multiple slides",
+        "addSlide": "Add slide",
+        "slideLabel": "Slide {{n}}",
+        "dragSlide": "Drag to reorder slide",
+        "removeSlide": "Remove slide",
+        "prev": "Previous slide",
+        "next": "Next slide",
+        "counter": "Slide {{current}} of {{count}}"
+      },
       "searchModulesPlaceholder": "Search modules, activities, assignments…",
       "manageOutline": "Course outline",
       "noModulesMatchSearch": "No results match your search.",
@@ -783,6 +806,7 @@
     "tableStatus": "Status",
     "tableSubmitted": "Submitted",
     "tableMessages": "Chat",
+    "tableChatFlow": "Chat flow",
     "tableFeedback": "Feedback"
   },
   "submissionCard": {
@@ -798,6 +822,8 @@
     "teacherFeedback": "Teacher Feedback",
     "ai": "Perleap AI",
     "notStarted": "Not Started",
+    "conversationFlowComplete": "Chat completed",
+    "conversationFlowEarly": "Ended early",
     "fullReport": "Full Report"
   },
   "submissionDetail": {
@@ -904,7 +930,9 @@
       "action": "Release to student",
       "success": "Feedback is now visible to the student.",
       "alreadyVisible": "This feedback is already published to the student. You can still edit the text above and save changes."
-    }
+    },
+    "conversationFlowEarlyTitle": "Finished before the chat was complete",
+    "conversationFlowEarlyDescription": "The student submitted while the in-chat “conversation complete” state had not been reached. Review the thread below for context."
   },
   "essaySubmission": {
     "title": "Your response",
@@ -915,6 +943,10 @@
   },
   "assignmentDetail": {
     "title": "Assignment Details",
+    "studentTaskTitle": "Your task",
+    "loadingStudentTask": "Summarizing what you need to do…",
+    "studentTaskNotSetYet": "We could not generate a short task summary. Your teacher can add or refine it in the assignment editor (Review → generate for students). For now, work through the activity in the chat below.",
+    "studentTaskFallback": "Follow the chat with the teaching assistant to complete \"{{title}}\". Your teacher will guide the steps there.",
     "instructions": "Instructions",
     "attemptBannerSingle": "You can submit this assignment once.",
     "attemptBannerUntil": "You may submit multiple times until {{date}}.",
@@ -1067,7 +1099,8 @@
     "notFound": "This activity could not be loaded.",
     "lessonEmpty": "No lesson content yet.",
     "markComplete": "Mark complete",
-    "finish": "Finish",
+    "finish": "Continue",
+    "continue": "Continue",
     "completed": "Completed",
     "continueNext": "Continue to next activity",
     "continueToAssignment": "Continue to assignment",
@@ -1110,6 +1143,7 @@
     "noFinishedAssignmentsDesc": "Completed assignments will move here once you finish them.",
     "studyCta": {
       "continue": "Continue learning",
+      "continueCourse": "Continue course",
       "start": "Start course",
       "review": "Review course",
       "viewAssignments": "View assignments"
@@ -1251,7 +1285,23 @@
     "students": "Students",
     "noData": "No data available yet",
     "filtersTitle": "Analytics Filters",
-    "filtersDescription": "Refine charts and class metrics by student or assignment.",
+    "filtersDescription": "Refine charts and class metrics by syllabus section, student, or assignment.",
+    "filterBySyllabusSection": "Filter by {{sectionType}}",
+    "allSyllabusSections": "All {{sectionType}}",
+    "unplacedAssignments": "Unplaced (not in syllabus)",
+    "allAssignmentsInScope": "All in this section",
+    "emptyModuleOrScope": "No assignments in this scope. Choose another section or link assignments in the curriculum.",
+    "regenerateClassWideNote": "Regenerating 5D scores always processes the whole class, not only the current filter.",
+    "coverageInScope": "{{covered}} / {{enrolled}} students have scored work in the current view",
+    "compareSections": "Compare two sections (5D)",
+    "compareModuleA": "Section A",
+    "compareModuleB": "Section B",
+    "compareSelectSection": "Select a section",
+    "compareHint": "Compare class-wide average 5D between two syllabus sections. Unplaced can be included if assignments are not linked.",
+    "compareSameSection": "Choose two different sections to compare.",
+    "compareDelta": "Difference (B − A)",
+    "exportCsv": "Export CSV",
+    "compareDimension": "Dimension",
     "filterByStudent": "Filter by Student",
     "filterByAssignment": "Filter by Assignment",
     "all": "All",
@@ -1278,22 +1328,85 @@
     "noAssignments": "No assignments found",
     "noCompletedSubmissions": "No completed submissions found",
     "regenerateAll5DScores": "Regenerate All 5D Scores",
+    "regenerateScoresConfirmTitle": "Regenerate all 5D scores?",
+    "regenerateScoresConfirmDescription": "This runs for the whole class (not only your current filter). 5D scores are recomputed by AI from each student’s assignment chat, only for submissions that already have feedback. This replaces the stored 5D snapshot for those submissions and may take a while if there are many students.",
+    "regenerateScoresConfirmAction": "Regenerate",
     "refresh5D": "Refresh 5D",
     "regeneratingScores": "Refreshing…",
     "regenerateError": "Error regenerating scores",
     "regenerateSuccess": "Regenerated {{count}} student 5D profiles",
-    "regenerateFail": "Failed to regenerate {{count}} profiles"
+    "regenerateFail": "Failed to regenerate {{count}} profiles",
+    "narrative": {
+      "loading": "Generating AI interpretation…",
+      "error": "Could not load AI interpretation. Default dimension descriptions are shown.",
+      "basedOnSources": "Synthesized from {{count}} evaluation excerpts in this view",
+      "scoresOnlyHint": "No evaluation text excerpts in this view. The interpretation uses aggregate scores and your filters only."
+    },
+    "compareNarrativeScope": "Comparing {{a}} vs {{b}}. Filters: {{filters}}"
   },
   "nuance": {
+    "baselinesClassWide": "The numbers in the table use your current module, student, and activity filters. Use them to compare students or focus on a single activity.",
+    "insightScope": "A Nuance flag is based on that student’s recent pattern across this class, not a single table row. The same insight appears in every view for that student.",
+    "classReferenceScope": "This line is for the whole class (all activities that have Nuance metrics). The table below uses only your current unit, student, and activity filters.",
+    "classReference": "Class reference (all activities in this class in Nuance’s data): average response {{latency}}, time away from tab {{idle}}, work completed {{completion}} ({{n}} data points).",
+    "classReferenceCompact": "Class: {{latency}} response · {{idle}} away from tab · {{completion}} done",
+    "howNuanceTitle": "How Nuance works",
+    "howNuanceBody": "Nuance uses signals from the assignment experience: time to reply after a coach message, time with the tab in the background, how often an activity is opened, and whether work is finished, plus optional cues when phrasing in chat suggests confusion. It is not a grade. Flags are simple checks compared to the student and class, then phrased as practical teaching ideas. When in doubt, combine Nuance with your read of submissions and in-class discussion.",
+    "statusRow": {
+      "typical": "Typical",
+      "insight": "Nuance insight"
+    },
+    "metricLabels": {
+      "idle_ratio": "Time away from tab (avg.)",
+      "baseline_idle_ratio": "Student’s usual time away from tab",
+      "focus_loss_count": "Switches to another window",
+      "high_idle_sessions": "Sessions with high time away from tab",
+      "avg_response_latency_ms": "Avg. time to reply after a coach message",
+      "baseline_latency_ms": "Student’s usual reply time",
+      "latency_ratio": "Vs. student’s usual speed",
+      "completion_rate": "Share finished (recent window)",
+      "baseline_completion_rate": "Student’s usual finish rate",
+      "incomplete_count": "Not finished in window",
+      "session_count_avg": "Avg. opens per activity",
+      "understanding_cue_count": "Clarification / confusion cues in chat",
+      "understanding_cue_count_recent": "Cues in recent window",
+      "scaffolding_note": "Many cues with completion on track can mean scaffolding in use, not a problem.",
+      "scaffolding_signal": "Re-explanation requests with progress on track (normal)"
+    },
     "title": "Student Behavioral Insights",
-    "description": "Nuance system recommendations based on activity patterns",
+    "description": "Nuance turns live activity patterns into short, actionable ideas for the classroom",
     "filterStudent": "Student",
     "filterActivity": "Activity",
     "refresh": "Refresh insights",
     "noData": "No behavioral data available yet. Data will appear as students complete activities.",
-    "noRecommendation": "No recommendations — activity patterns are within normal range.",
-    "whyTriggered": "Why this was triggered",
-    "supportingData": "Supporting data",
+    "emptyNoAssignmentsInFilter": "No activities match the current filters, so there is nothing to show in this table.",
+    "emptyNoDataInFilter": "No Nuance metrics for the activities in this filter yet. The class summary line still counts all activities in the class that have Nuance data—it is not limited to the section or student you selected.",
+    "emptyNoDataForStudentInFilter": "No Nuance rows for this student in the activities above. Other students may have data in this section. Broader class numbers are unchanged. Check that this student opened these assignments (with Nuance tracking on: active submission, no feedback yet) and refresh.",
+    "emptyNoDataForAssignmentInFilter": "No Nuance data for this activity in the current filter. Try a different section or “All in this section”.",
+    "emptyNoDataForPairInFilter": "No Nuance row for this student and activity. Confirm they used chat on this assignment after tracking was enabled, then refresh.",
+    "notAllEnrolledInTable": "Only students with at least one Nuance row for the activities in this filter are listed. Others on your roster can still have Nuance from assignments in a different unit or that are not linked to this section in the syllabus.",
+    "hintStudentNuanceInOtherScope": "This student has Nuance data elsewhere in the class. Widen the unit/activity filter (or use “all assignments in class”) to see it, and confirm the assignment is placed in the right syllabus section if you expect it under this unit.",
+    "noRecommendation": "No Nuance flag for this student — patterns look in range. Table numbers still reflect your current filters.",
+    "cueDetail": {
+      "title": "Understanding cues (detail)",
+      "privacy": "We never store the message text. Times and turn index help you place the cue in the activity chat.",
+      "loading": "Loading cue details…",
+      "error": "Could not load cue details.",
+      "noneInScope": "No understanding cues recorded in this filter yet.",
+      "headings": {
+        "time": "Time",
+        "activity": "Activity",
+        "turn": "Turn",
+        "kind": "Signal"
+      },
+      "kind": {
+        "strong": "Strong phrasing (clarify / confused)",
+        "weak": "Light phrasing (possible ask)",
+        "unknown": "—"
+      }
+    },
+    "whyTriggered": "What triggered this",
+    "supportingData": "Behind the numbers",
     "columns": {
       "student": "Student",
       "activity": "Activity",
@@ -1301,6 +1414,7 @@
       "idleRatio": "Idle Ratio",
       "completion": "Completion",
       "sessions": "Sessions",
+      "cuesInChat": "Cues in chat",
       "status": "Status"
     },
     "tooltips": {
@@ -1309,7 +1423,9 @@
       "idleRatio": "Percentage of session time the student spent inactive or tabbed away.",
       "completion": "Percentage of started assignments the student actually finished.",
       "sessions": "Average number of times the student opened each assignment.",
-      "status": "Green = normal patterns, Amber = recommendation generated."
+      "cuesInChat": "How often the student’s messages suggested confusion or a need to re-explain, in this activity’s chat.",
+      "cuesInChatColumn": "Per-activity: how often the student’s phrasing looked like a clarification request. In the all-students view, the number is the average of those per-activity counts in your current filter. Expand a row to see when each cue happened; the list total is not the same as the rounded average in the cell.",
+      "status": "Typical: patterns are in range. Nuance insight: a recommendation is available — expand the row to read it."
     },
     "types": {
       "engagement_support": "Engagement Support",
@@ -1437,6 +1553,27 @@
     "loading": "Loading...",
     "nextSteps": "Next Steps",
     "unknown": "Unknown",
+    "unknownAssignment": "Unknown assignment",
+    "unplacedSection": "Not linked to a syllabus section",
+    "scopeSummary": "{{skills}} CRA skills across {{assignments}} assignments, {{students}} students. Strongest domain on average: {{topDomain}}. Lowest: {{bottomDomain}}.",
+    "groupByModule": "Group by module (syllabus section)",
+    "groupByDomain": "Group by domain within assignment",
+    "table": {
+      "student": "Student",
+      "module": "Module",
+      "assignment": "Assignment",
+      "domain": "Domain",
+      "skill": "Skill",
+      "percent": "%",
+      "level": "Level",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details",
+      "detailsHeading": "Proficiency & next steps",
+      "detailsProficiencyPrefix": "Proficiency:",
+      "detailsNextStepsPrefix": "Next steps:",
+      "scrollHint": "Scroll horizontally to see all columns if the table is wider than the screen.",
+      "detailsDialogTitle": "{{domain}} — {{skill}}"
+    },
     "performance": {
       "advanced": "Advanced",
       "intermediate": "Intermediate",
@@ -1595,10 +1732,13 @@
   "classroomAnalytics": {
     "classOverview": "Class Overview",
     "averageScoresAcross": "Average 5D Scores Across All Submissions",
+    "averageScoresInSection": "Average 5D scores in {{section}}",
+    "averageScoresUnplaced": "Average 5D scores for assignments not placed in a syllabus section",
     "scoresFor": "Scores for {{assignment}}",
     "studentPerformanceOverview": "Student Performance Overview",
     "detailedBreakdown": "Detailed Breakdown by Student",
     "noStudentData": "No student data available yet",
+    "noStudentDataInScope": "No scored data in this scope yet",
     "submissions": "Submissions",
     "average5DProfile": "Average 5D Profile",
     "allHardSkills": "All Hard Skills Assessments Across All Assignments",
@@ -1693,8 +1833,12 @@
     "errors": {
       "markingRead": "Error marking notifications as read"
     },
+    "messages": {
+      "feedbackUpdated": "Your feedback for \"{{title}}\" was updated by your teacher."
+    },
     "titles": {
       "feedbackReceived": "Feedback Received",
+      "feedbackUpdated": "Feedback updated",
       "successfullyEnrolled": "Successfully Enrolled",
       "newAssignment": "New Personalized Assignment",
       "studentEnrolled": "New Student Enrolled"

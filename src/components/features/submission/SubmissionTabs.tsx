@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Clock, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/useAuth';
@@ -20,17 +21,13 @@ import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
+import type { StudentAlert } from '@/types/alerts';
 import { TestResultsView } from './TestResultsView';
 import { ProjectSubmissionView } from './ProjectSubmissionView';
 import { PresentationSubmissionView } from './PresentationSubmissionView';
 import { LangchainPipelineView } from './LangchainPipelineView';
+import { formatInlineListsForChatMarkdown } from '@/lib/chatDisplay';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
-
-interface Alert {
-  id: string;
-  triggered_messages: { message_index: number; reason: string }[];
-  [key: string]: any;
-}
 
 interface SubmissionTabsProps {
   submission: {
@@ -38,6 +35,8 @@ interface SubmissionTabsProps {
     student_id: string;
     submitted_at: string;
     status?: string;
+    /** True if chat had reached in-app "conversation complete" at submit; false if early. */
+    conversation_complete_at_submit?: boolean | null;
     /** When true, student is still waiting for teacher to publish feedback. */
     awaiting_teacher_feedback_release?: boolean;
     file_url?: string | null;
@@ -59,7 +58,7 @@ interface SubmissionTabsProps {
     visible_to_student?: boolean;
   } | null;
   studentName: string;
-  alerts: Alert[];
+  alerts: StudentAlert[];
   onAcknowledgeAlert: () => void;
   onEvaluationComplete?: () => void;
 }
@@ -74,7 +73,7 @@ export function SubmissionTabs({
 }: SubmissionTabsProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { language: uiLanguage = 'en' } = useLanguage();
+  const { language: uiLanguage = 'en', isRTL } = useLanguage();
   const queryClient = useQueryClient();
   const [releasing, setReleasing] = useState(false);
   const [generatingAi, setGeneratingAi] = useState(false);
@@ -175,6 +174,19 @@ export function SubmissionTabs({
         submissionId: submission.id,
         teacher_feedback: teacherDraft,
         student_feedback: studentDraft,
+        editNotification: {
+          studentId: submission.student_id,
+          assignmentId: submission.assignments.id,
+          assignmentTitle: submission.assignments.title,
+          teacherId: submission.assignments.classrooms?.teacher_id ?? user?.id ?? null,
+          title: t('notifications.titles.feedbackUpdated'),
+          message: t('notifications.messages.feedbackUpdated', {
+            title: submission.assignments.title,
+          }),
+          previousTeacher: feedback.teacher_feedback ?? null,
+          previousStudent: feedback.student_feedback ?? null,
+          shouldNotify: studentSeesPublishedFeedback,
+        },
       });
       if (error || !success) throw error ?? new Error('save failed');
       toast.success(t('submissionDetail.editFeedback.saved'));
@@ -210,6 +222,7 @@ export function SubmissionTabs({
 
         <HardSkillsAssessmentTable
           submissionId={submission.id}
+          layout="flat"
           title={t('cra.title')}
           description={t('classroomAnalytics.hardSkillsFor', { student: studentName })}
         />
@@ -420,6 +433,24 @@ export function SubmissionTabs({
 
               return (
                 <div className="space-y-6">
+                  {isChatLikeAssignment &&
+                    submission.conversation_complete_at_submit === false && (
+                      <Alert
+                        className="flex flex-row items-center gap-3 border-amber-500/40 bg-amber-500/5 text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-100 [&>svg]:translate-y-0"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
+                        <AlertTriangle className="shrink-0 text-amber-600 dark:text-amber-500" />
+                        <div className="min-w-0 flex flex-1 flex-col gap-0.5 text-start">
+                          <AlertTitle className="text-start">
+                            {t('submissionDetail.conversationFlowEarlyTitle')}
+                          </AlertTitle>
+                          <AlertDescription className="text-start text-pretty">
+                            {t('submissionDetail.conversationFlowEarlyDescription')}
+                          </AlertDescription>
+                        </div>
+                      </Alert>
+                    )}
+
                   <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                     <CardHeader>
                       <CardTitle className="text-base text-left">{submission.assignments.title}</CardTitle>
@@ -491,7 +522,7 @@ export function SubmissionTabs({
                                 )}
 
                                 <SafeMathMarkdown
-                                  content={msg.content}
+                                  content={isUser ? msg.content : formatInlineListsForChatMarkdown(msg.content)}
                                   className="text-sm leading-relaxed"
                                 />
 

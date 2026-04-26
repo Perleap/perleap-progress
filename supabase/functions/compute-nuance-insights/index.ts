@@ -34,6 +34,7 @@ interface StudentMetrics {
   session_count: number;
   total_session_duration_ms: number;
   first_interaction_latency_ms: number | null;
+  understanding_cue_count: number;
 }
 
 interface Recommendation {
@@ -70,6 +71,7 @@ function computeMetricsForAssignment(
   let sessionCount = 0;
   let totalSessionMs = 0;
   let firstInteractionMs: number | null = null;
+  let understandingCueCount = 0;
 
   let activityOpenedAt: number | null = null;
   let lastSessionStart: number | null = null;
@@ -122,6 +124,10 @@ function computeMetricsForAssignment(
         }
         break;
       }
+
+      case 'understanding_cue':
+        understandingCueCount += 1;
+        break;
     }
   }
 
@@ -151,6 +157,7 @@ function computeMetricsForAssignment(
     session_count: Math.max(sessionCount, 1),
     total_session_duration_ms: totalSessionMs,
     first_interaction_latency_ms: firstInteractionMs,
+    understanding_cue_count: understandingCueCount,
   };
 }
 
@@ -180,6 +187,9 @@ function computeStudentBaseline(allMetrics: StudentMetrics[]): StudentBaseline {
 }
 
 // ── Rule Engine ─────────────────────────────────────────────────────
+// Recommendations are one per (student, classroom): rules use the tail of the student’s
+// metrics in this class (e.g. last 5 activities). The teacher table may be filtered in the
+// UI to a subset of activities; the flag still describes this class-wide window.
 
 function applyRules(
   recentMetrics: StudentMetrics[],
@@ -196,6 +206,9 @@ function applyRules(
   }[] = [];
 
   const last5 = recentMetrics.slice(-5);
+  const totalUnderstandingCues = last5.reduce((s, m) => s + (m.understanding_cue_count ?? 0), 0);
+  const completedInLast5 = last5.filter((m) => m.completion_status === 'completed').length;
+  const completionRateLast5 = last5.length > 0 ? completedInLast5 / last5.length : 1;
 
   // Rule 1: Engagement Support
   const highIdleSessions = last5.filter((m) => m.idle_ratio > 0.35);
@@ -216,6 +229,7 @@ function applyRules(
         baseline_idle_ratio: +(baseline.avg_idle_ratio.toFixed(3)),
         focus_loss_count: last5.reduce((s, m) => s + m.focus_loss_count, 0),
         high_idle_sessions: highIdleSessions.length,
+        understanding_cue_count_recent: totalUnderstandingCues,
       },
     });
   }
@@ -242,6 +256,7 @@ function applyRules(
           baseline_latency_ms: Math.round(baseline.avg_latency),
           latency_ratio: +ratio.toFixed(2),
           completion_rate: +(completedRecent / last5.length).toFixed(2),
+          understanding_cue_count_recent: totalUnderstandingCues,
         },
       });
     }
@@ -251,27 +266,39 @@ function applyRules(
   const completedCount = last5.filter((m) => m.completion_status === 'completed').length;
   const completionRate = last5.length > 0 ? completedCount / last5.length : 1;
 
-  if (completionRate < 0.7 && last5.length >= 3) {
+  if (completionRate < 0.65 && last5.length >= 3) {
     const baselineDrop = baseline.avg_completion_rate - completionRate;
+    const cueBoost = totalUnderstandingCues >= 4 && completionRate < 0.5 ? 0.06 : 0;
 
     candidates.push({
       type: 'persistence_support',
       reason: `Completion rate ${(completionRate * 100).toFixed(0)}% across last ${last5.length} activities (baseline ${(baseline.avg_completion_rate * 100).toFixed(0)}%)`,
-      confidence: Math.min(0.5 + baselineDrop * 0.5, 0.95),
+      confidence: Math.min(0.5 + baselineDrop * 0.5 + cueBoost, 0.95),
       metrics: {
         completion_rate: +completionRate.toFixed(2),
         baseline_completion_rate: +baseline.avg_completion_rate.toFixed(2),
         incomplete_count: last5.length - completedCount,
         session_count_avg: +(last5.reduce((s, m) => s + m.session_count, 0) / last5.length).toFixed(1),
+        understanding_cue_count_recent: totalUnderstandingCues,
       },
     });
   }
 
   if (candidates.length === 0) return null;
 
-  // Return highest confidence
+  // Return highest confidence; drop borderline "weak amber" results
   candidates.sort((a, b) => b.confidence - a.confidence);
-  return candidates[0];
+  const best = candidates[0];
+  if (best.confidence < 0.5) return null;
+
+  if (totalUnderstandingCues >= 3 && completionRateLast5 >= 0.5) {
+    best.metrics = {
+      ...best.metrics,
+      scaffolding_signal: 1,
+    };
+  }
+
+  return best;
 }
 
 // ── LLM Phrasing ───────────────────────────────────────────────────
@@ -285,6 +312,8 @@ async function rephraseRecommendation(
 Rules:
 - Do NOT diagnose the student (no "the student is anxious" or "lacks motivation")
 - Be specific about what the teacher can do
+- When supporting data includes numbers, mention at least one concrete value (a percentage, ratio, count, or time) in natural language
+- If scaffolding_signal is present with understanding_cue_count_recent, you may note that the student may be asking for re-explanations in chat while still progressing — frame neutrally, not as a deficit
 - Keep it concise (1-2 sentences max)
 - Write in second person addressing the teacher
 
@@ -344,24 +373,6 @@ serve(async (req) => {
 
     const supabase = createSupabaseClient();
 
-    // Check cache unless force refresh
-    if (!force_refresh) {
-      const { data: cachedMetrics } = await supabase
-        .from('student_nuance_metrics')
-        .select('computed_at')
-        .eq('classroom_id', classroom_id)
-        .order('computed_at', { ascending: false })
-        .limit(1);
-
-      if (cachedMetrics && cachedMetrics.length > 0) {
-        const age = Date.now() - new Date(cachedMetrics[0].computed_at).getTime();
-        if (age < 2 * 60 * 1000) {
-          logInfo('Returning cached nuance data', { classroom_id, age_ms: age });
-          return await returnCachedData(supabase, classroom_id, student_id, assignment_id);
-        }
-      }
-    }
-
     // Fetch all assignments in this classroom
     const { data: assignments, error: assignErr } = await supabase
       .from('assignments')
@@ -375,6 +386,40 @@ serve(async (req) => {
     }
 
     const assignmentIds = assignments.map((a: { id: string }) => a.id);
+
+    // Short-circuit cache only if metrics are young AND no nuance event arrived *after* the last recompute
+    // (otherwise new chat activity would be missing from student_nuance_metrics until cache expires)
+    if (!force_refresh) {
+      const { data: cachedRow } = await supabase
+        .from('student_nuance_metrics')
+        .select('computed_at')
+        .eq('classroom_id', classroom_id)
+        .order('computed_at', { ascending: false })
+        .limit(1);
+
+      if (cachedRow?.[0]) {
+        const lastMetricAt = new Date(cachedRow[0].computed_at).getTime();
+        const { data: evRow } = await supabase
+          .from('student_nuance_events')
+          .select('created_at')
+          .in('assignment_id', assignmentIds)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        const lastEventAt = evRow?.[0]?.created_at
+          ? new Date(evRow[0].created_at).getTime()
+          : 0;
+        const age = Date.now() - lastMetricAt;
+        if (age < 2 * 60 * 1000 && lastEventAt <= lastMetricAt) {
+          logInfo('Returning cached nuance data', { classroom_id, age_ms: age, lastEventAt, lastMetricAt });
+          return await returnCachedData(supabase, classroom_id, student_id, assignment_id);
+        }
+        logInfo('Skipping nuance cache (stale or new events after last recompute)', {
+          classroom_id,
+          lastEventAt,
+          lastMetricAt,
+        });
+      }
+    }
 
     // Fetch all nuance events for these assignments
     let eventsQuery = supabase

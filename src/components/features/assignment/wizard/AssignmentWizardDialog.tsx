@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database, Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
@@ -17,6 +17,7 @@ import {
   getLinkedActivitiesForAssignment,
   getSectionResourceIdsForSectionInOrder,
 } from '@/services/assignmentModuleActivityService';
+import { prefillStudentFacingTaskForAssignment } from '@/services/assignmentService';
 import {
   useSyllabus,
   syllabusKeys,
@@ -103,7 +104,7 @@ function dbRowToTestDraft(row: {
 
 export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   const { t } = useTranslation();
-  const { isRTL } = useLanguage();
+  const { isRTL, language: uiLanguage } = useLanguage();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -123,6 +124,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   const [currentStepId, setCurrentStepId] = useState<AssignmentWizardStepId>(ASSIGNMENT_WIZARD_FIRST_STEP);
   const [formData, setFormData] = useState<AssignmentWizardFormData>(() => getDefaultAssignmentWizardFormData());
   const [loading, setLoading] = useState(false);
+  const [generatingStudentTask, setGeneratingStudentTask] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
@@ -150,6 +152,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   const [hardSkillsSuggestionStatus, setHardSkillsSuggestionStatus] =
     useState<HardSkillsSuggestionStatus>('idle');
   const suggestHardSkillsTokenRef = useRef(0);
+  const studentTaskBgRequestIdRef = useRef(0);
 
   const hasDueDateInDb = Boolean(assignment?.due_at?.trim());
   const policyFrozen = !isCreate && hasSubmissions && hasDueDateInDb;
@@ -182,7 +185,37 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     setLinkedModuleActivityIds([]);
     moduleLinkInitKeyRef.current = '';
     setHardSkillsSuggestionStatus('idle');
+    studentTaskBgRequestIdRef.current = 0;
   }, []);
+
+  /** After basics → run edge fn in background so Review/submit can save `student_facing_task` without waiting. */
+  const queueBackgroundStudentTaskPrefill = useCallback(
+    (snapshot: { title: string; instructions: string }) => {
+      if (!classroomId || !snapshot.instructions.trim()) return;
+      const myId = ++studentTaskBgRequestIdRef.current;
+      const lang = uiLanguage === 'he' ? 'he' : 'en';
+      void (async () => {
+        const { data, error } = await supabase.functions.invoke('generate-student-facing-task', {
+          body: {
+            classroomId,
+            title: snapshot.title,
+            instructions: snapshot.instructions,
+            language: lang,
+          },
+        });
+        if (myId !== studentTaskBgRequestIdRef.current) return;
+        if (error) return;
+        const task = (data as { studentFacingTask?: string })?.studentFacingTask?.trim();
+        if (!task) return;
+        setFormData((prev) => {
+          if (prev.instructions !== snapshot.instructions) return prev;
+          if (prev.student_facing_task?.trim()) return prev;
+          return { ...prev, student_facing_task: task };
+        });
+      })();
+    },
+    [classroomId, uiLanguage],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -465,6 +498,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       ...getDefaultAssignmentWizardFormData(),
       title: assignment.title,
       instructions: assignment.instructions,
+      student_facing_task: assignment.student_facing_task?.trim() || '',
       type: assignment.type,
       status: assignment.status,
       due_at: formatDueForForm(assignment.due_at),
@@ -475,7 +509,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       const { data } = await supabase
         .from('assignments')
         .select(
-          'hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, syllabus_section_id, grading_category_id',
+          'hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, syllabus_section_id, grading_category_id, student_facing_task',
         )
         .eq('id', assignment.id)
         .single();
@@ -483,6 +517,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       setFormData((prev) => ({
         ...prev,
         auto_publish_ai_feedback: data?.auto_publish_ai_feedback !== false,
+        student_facing_task: (data as { student_facing_task?: string | null })?.student_facing_task?.trim() || prev.student_facing_task,
       }));
       setSyllabusSectionId((data as { syllabus_section_id?: string | null })?.syllabus_section_id || '');
       setGradingCategoryId((data as { grading_category_id?: string | null })?.grading_category_id || '');
@@ -725,25 +760,33 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
   const runSuggestHardSkills = useCallback(
     async (snapshot: { instructions: string; type: string; title: string }) => {
-      if (!isCreate || !classroomId) {
-        console.info('[Perleap] suggest-assignment-hard-skills: skipped (not create mode or no classroomId)');
-        return;
+      if (!classroomId) return;
+
+      // State can still be [] if the user hits Next before the classroom `useEffect` fetch finishes — load domains now.
+      let domains = classroomDomains;
+      if (domains.length === 0) {
+        const { data: roomRow, error: roomErr } = await supabase
+          .from('classrooms')
+          .select('domains')
+          .eq('id', classroomId)
+          .single();
+        if (roomErr) {
+          setHardSkillsSuggestionStatus('error');
+          return;
+        }
+        const list = (roomRow as { domains?: Array<{ name: string; components: string[] }> } | null)?.domains;
+        domains = Array.isArray(list) ? list : [];
+        if (domains.length > 0) {
+          setClassroomDomains(domains);
+        }
       }
-      if (!classroomDomains.length) {
-        console.info('[Perleap] suggest-assignment-hard-skills: skipped — classroom has no domains in domains[]');
+
+      if (domains.length === 0) {
         setHardSkillsSuggestionStatus('idle');
         return;
       }
       const token = ++suggestHardSkillsTokenRef.current;
       setHardSkillsSuggestionStatus('loading');
-      console.info('[Perleap] suggest-assignment-hard-skills: invoking', {
-        token,
-        classroomId,
-        assignmentType: snapshot.type,
-        title: snapshot.title?.slice(0, 80),
-        instructionsPreview: snapshot.instructions?.trim().slice(0, 120),
-        domainCount: classroomDomains.length,
-      });
       try {
         const { data, error } = await supabase.functions.invoke<{
           suggestions?: HardSkillPair[];
@@ -754,32 +797,24 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
             instructions: snapshot.instructions,
             assignmentType: snapshot.type,
             title: snapshot.title,
-            domains: classroomDomains,
+            domains,
             language: isRTL ? 'he' : 'en',
           },
         });
         if (token !== suggestHardSkillsTokenRef.current) {
-          console.info('[Perleap] suggest-assignment-hard-skills: ignored stale response', { token, latest: suggestHardSkillsTokenRef.current });
           return;
         }
         if (error) throw error;
         const suggestions = Array.isArray(data?.suggestions) ? data!.suggestions! : [];
         const doms = distinctDomains(suggestions);
         const singleDomain = doms.length === 1 ? doms[0]! : '';
-        console.info('[Perleap] suggest-assignment-hard-skills: success', {
-          token,
-          count: suggestions.length,
-          skillsChosen: suggestions.map((p) => `${p.domain} → ${p.skill}`),
-          structured: suggestions,
-          singleDomainForForm: singleDomain || '(multiple or none)',
-        });
         setFormData((prev) => ({
           ...prev,
           hard_skills: suggestions,
           hard_skill_domain: singleDomain,
         }));
         if (singleDomain) {
-          const d = classroomDomains.find((x) => x.name === singleDomain);
+          const d = domains.find((x) => x.name === singleDomain);
           setSelectedDomain(singleDomain);
           if (d) setAvailableComponents(d.components);
         } else {
@@ -789,21 +824,23 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         setHardSkillsSuggestionStatus('success');
       } catch (e) {
         if (token !== suggestHardSkillsTokenRef.current) {
-          console.info('[Perleap] suggest-assignment-hard-skills: error ignored (stale)', { token });
           return;
         }
-        console.error('[Perleap] suggest-assignment-hard-skills: error', e);
+        console.error(e);
         setHardSkillsSuggestionStatus('error');
       }
     },
-    [isCreate, classroomId, classroomDomains, isRTL],
+    [classroomId, classroomDomains, isRTL],
   );
 
   const handleNext = () => {
     if (!canProceedForStep(currentStepId)) return;
     const i = stepOrder.indexOf(currentStepId);
     if (i < 0 || i >= stepOrder.length - 1) return;
-    if (currentStepId === 'format' && isCreate) {
+    if (currentStepId === 'basics') {
+      queueBackgroundStudentTaskPrefill({ title: formData.title, instructions: formData.instructions });
+    }
+    if (currentStepId === 'format') {
       void runSuggestHardSkills({
         instructions: formData.instructions,
         type: formData.type,
@@ -819,8 +856,45 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     setCurrentStepId(stepOrder[i - 1]!);
   };
 
+  const handleGenerateStudentFacingTask = useCallback(async () => {
+    if (!classroomId || !formData.instructions.trim()) return;
+    setGeneratingStudentTask(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-student-facing-task', {
+        body: {
+          classroomId,
+          title: formData.title,
+          instructions: formData.instructions,
+          language: uiLanguage,
+        },
+      });
+      if (error) {
+        toast.error(error.message || t('common.error'));
+        return;
+      }
+      const task = (data as { studentFacingTask?: string; error?: string })?.studentFacingTask;
+      const errMsg = (data as { error?: string })?.error;
+      if (errMsg) {
+        toast.error(errMsg);
+        return;
+      }
+      if (task?.trim()) {
+        setFormData((prev) => ({ ...prev, student_facing_task: task.trim() }));
+        toast.success(t('createAssignment.wizard.studentFacingGenerated'));
+      } else {
+        toast.error(t('createAssignment.wizard.studentFacingGenerateFailed'));
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error(t('common.error'));
+    } finally {
+      setGeneratingStudentTask(false);
+    }
+  }, [classroomId, formData.instructions, formData.title, t, uiLanguage]);
+
   const resetWizardUi = () => {
     setCurrentStepId(ASSIGNMENT_WIZARD_FIRST_STEP);
+    setHardSkillsSuggestionStatus('idle');
     if (isCreate) resetCreateDefaults();
   };
 
@@ -845,18 +919,19 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       }
 
       if (isCreate && classroomId) {
-        const insertRow = {
+        const insertRow: Database['public']['Tables']['assignments']['Insert'] = {
           classroom_id: classroomId,
           title: formData.title,
           instructions: formData.instructions,
+          student_facing_task: formData.student_facing_task.trim() || null,
           type: formData.type as Database['public']['Enums']['assignment_type'],
           due_at: formData.due_at || null,
           attempt_mode: formData.attempt_mode,
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
           hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
-          materials: formData.materials,
-          target_dimensions: formData.target_dimensions,
+          materials: (formData.materials ?? null) as unknown as Json | null,
+          target_dimensions: formData.target_dimensions as unknown as Json,
           personalization_flag: formData.personalization_flag,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
           assigned_student_id: assignedStudentId || null,
@@ -865,7 +940,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         };
         const { data: assignmentRow, error } = await supabase
           .from('assignments')
-          .insert([insertRow as never])
+          .insert([insertRow])
           .select()
           .single();
 
@@ -904,6 +979,13 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           }));
           const { error: questionsError } = await supabase.from('test_questions').insert(questionsToInsert);
           if (questionsError) console.error('Error inserting test questions:', questionsError);
+        }
+
+        if (assignmentRow?.id && !formData.student_facing_task?.trim() && formData.instructions?.trim()) {
+          void prefillStudentFacingTaskForAssignment(assignmentRow.id, {
+            instructions: formData.instructions,
+            uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
+          });
         }
 
         if (assignmentRow && formData.status === 'published') {
@@ -952,7 +1034,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         }
 
         try {
-          await supabase.from('activity_events' as never).insert([
+          await supabase.from('activity_events').insert([
             {
               teacher_id: user!.id,
               type: 'create',
@@ -992,14 +1074,15 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       if (!isCreate && assignment) {
         const wasPublished = assignment.status === 'draft' && formData.status === 'published';
 
-        const baseUpdate: Record<string, unknown> = {
+        const baseUpdate: Database['public']['Tables']['assignments']['Update'] = {
           title: formData.title,
           instructions: formData.instructions,
+          student_facing_task: formData.student_facing_task.trim() || null,
           type: formData.type as Database['public']['Enums']['assignment_type'],
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
           hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
-          materials: formData.materials,
+          materials: (formData.materials ?? null) as unknown as Json | null,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
           syllabus_section_id: syllabusSectionId || null,
           grading_category_id: gradingCategoryId || null,
@@ -1015,6 +1098,13 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
         const { error } = await supabase.from('assignments').update(baseUpdate).eq('id', assignment.id);
         if (error) throw error;
+
+        if (!formData.student_facing_task?.trim() && formData.instructions?.trim()) {
+          void prefillStudentFacingTaskForAssignment(assignment.id, {
+            instructions: formData.instructions,
+            uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
+          });
+        }
 
         const linkItems = linkedModuleActivityIds.map((id, i) => ({
           activity_list_id: id,
@@ -1206,16 +1296,13 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 onRemoveMaterial={handleRemoveMaterial}
                 uploadingMaterial={uploadingMaterial}
                 uploadProgress={uploadProgress}
-                hardSkillsSuggestionStatus={isCreate ? hardSkillsSuggestionStatus : 'idle'}
-                onRetrySuggestHardSkills={
-                  isCreate
-                    ? () =>
-                        void runSuggestHardSkills({
-                          instructions: formData.instructions,
-                          type: formData.type,
-                          title: formData.title,
-                        })
-                    : undefined
+                hardSkillsSuggestionStatus={hardSkillsSuggestionStatus}
+                onRetrySuggestHardSkills={() =>
+                  void runSuggestHardSkills({
+                    instructions: formData.instructions,
+                    type: formData.type,
+                    title: formData.title,
+                  })
                 }
               />
             )}
@@ -1235,6 +1322,11 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 testQuestions={testQuestions}
                 onJumpToStep={setCurrentStepId}
                 isRTL={isRTL}
+                onStudentFacingTaskChange={(value) =>
+                  setFormData((prev) => ({ ...prev, student_facing_task: value }))
+                }
+                onGenerateForStudents={() => void handleGenerateStudentFacingTask()}
+                generatingStudentTask={generatingStudentTask}
               />
             )}
           </div>

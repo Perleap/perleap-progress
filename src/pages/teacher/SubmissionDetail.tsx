@@ -1,9 +1,17 @@
-import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { DashboardLayout } from '@/components/layouts';
+import { ClassroomLayout } from '@/components/layouts';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Card, CardContent } from '@/components/ui/card';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,8 +20,10 @@ import { MessageSquare, Sparkles, Calendar, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useFullSubmissionDetails } from '@/hooks/queries';
+import { useFullSubmissionDetails, useClassroom } from '@/hooks/queries';
 import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
+import { isAppAdminRole } from '@/utils/role';
+import { getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 
 interface GeneratedAssignmentData {
   title: string;
@@ -33,6 +43,8 @@ const SubmissionDetail = () => {
   const navigate = useNavigate();
   
   const { data: submissionData, isLoading: loading, refetch } = useFullSubmissionDetails(id);
+  const classroomId = submissionData?.assignments?.classroom_id;
+  const { data: classroomRow } = useClassroom(classroomId);
 
   const [generatingAssignment, setGeneratingAssignment] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -48,17 +60,31 @@ const SubmissionDetail = () => {
   const studentAvatar = submissionData?.student_avatar_url;
   const alerts = submissionData?.alerts || [];
 
-  // Check ownership
-  useMemo(() => {
+  // Check ownership (app admins may view any class submission; teachers only their own)
+  useEffect(() => {
     if (submissionData && user?.id) {
       const teacherId = submissionData.assignments?.classrooms?.teacher_id;
-      if (teacherId && teacherId !== user.id) {
+      if (
+        teacherId &&
+        teacherId !== user.id &&
+        !isAppAdminRole(user.user_metadata?.role)
+      ) {
         console.error('Unauthorized access to submission');
         toast.error(t('submissionDetail.errors.loading'));
         navigateBackOrTo(navigate, '/teacher/dashboard');
       }
     }
-  }, [submissionData, user?.id, navigate, t]);
+  }, [submissionData, user?.id, navigate, t, user.user_metadata?.role]);
+
+  const customSections = useMemo(() => getTeacherClassroomNavSections(t), [t]);
+
+  const handleClassroomNav = useCallback(
+    (section: string) => {
+      if (!classroomId) return;
+      navigate(`/teacher/classroom/${classroomId}`, { replace: true, state: { activeSection: section } });
+    },
+    [classroomId, navigate],
+  );
 
   const handleGenerateFollowupAssignment = async () => {
     if (!feedback || !submission) return;
@@ -149,17 +175,40 @@ const SubmissionDetail = () => {
 
   if (!submissionData) return null;
 
+  const classroomName = submission.assignments.classrooms.name;
+  const classroomSubject = classroomRow?.subject;
+
   return (
-    <DashboardLayout
-      breadcrumbs={[
-        { label: t('nav.dashboard'), href: '/teacher/dashboard' },
-        { label: submission.assignments.classrooms.name, href: `/teacher/classroom/${submission.assignments.classroom_id}` },
-        { label: submission.assignments.title },
-        { label: studentName }
-      ]}
+    <ClassroomLayout
+      classroomName={classroomName}
+      classroomSubject={classroomSubject}
+      activeSection="submissions"
+      onSectionChange={handleClassroomNav}
+      customSections={customSections}
     >
-      <div className="container py-8 px-4 max-w-6xl mx-auto relative z-10">
-        <div className="space-y-8">
+      <div className="container py-0 px-4 max-w-6xl mx-auto relative z-10">
+        <Breadcrumb className="mb-6 flex-wrap">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink render={<Link to="/teacher/dashboard" />}>{t('nav.dashboard')}</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink render={<Link to={`/teacher/classroom/${submission.assignments.classroom_id}`} />}>
+                {classroomName}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="max-w-[12rem] truncate sm:max-w-none">{submission.assignments.title}</BreadcrumbPage>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="max-w-[10rem] truncate sm:max-w-none">{studentName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <div className="space-y-8 pb-8">
           {/* Student Info Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm">
             <div className="flex items-center gap-4">
@@ -255,7 +304,7 @@ const SubmissionDetail = () => {
           studentName={studentName}
         />
       )}
-    </DashboardLayout>
+    </ClassroomLayout>
   );
 };
 

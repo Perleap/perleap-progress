@@ -13,7 +13,7 @@ function section(id: string, order_index: number): SyllabusSection {
     start_date: null,
     end_date: null,
     objectives: [],
-    resources: [],
+    resources: null,
     notes: null,
     completion_status: 'auto',
     prerequisites: [],

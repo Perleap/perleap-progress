@@ -4,6 +4,8 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import type { Database, Json } from '@/integrations/supabase/types';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { removeAssignmentFromModuleFlows } from './moduleFlowService';
 import { getStudentSubmissionContext } from './submissionService';
 import type {
@@ -65,7 +67,7 @@ export const getClassroomAssignments = async (
       }
     }
 
-    return { data: finalAssignments as Assignment[], error: null };
+    return { data: finalAssignments as unknown as Assignment[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -110,8 +112,8 @@ export const getAssignmentById = async (
 
     const assignmentWithSubmission = {
       ...transformedAssignment,
-      submissions: submissions || []
-    } as AssignmentWithClassroom;
+      submissions: submissions || [],
+    } as unknown as AssignmentWithClassroom;
 
     return { data: assignmentWithSubmission, error: null };
   } catch (error) {
@@ -179,6 +181,41 @@ export const getStudentAssignmentDetails = async (
   }
 };
 
+type GenerateStudentFacingResponse = {
+  studentFacingTask?: string;
+  source?: string;
+  persisted?: boolean;
+  error?: string;
+};
+
+/**
+ * For students: generate (or return cached) the short cognitive task card via Edge Function, persisting to DB when generated.
+ */
+export const ensureStudentFacingTask = async (
+  assignmentId: string,
+  language: 'en' | 'he',
+) => {
+  return supabase.functions.invoke<GenerateStudentFacingResponse>('generate-student-facing-task', {
+    body: { assignmentId, language },
+  });
+};
+
+/**
+ * When `student_facing_task` is still empty, generate and persist the cognitive task card (edge function; no-op if already set).
+ * Call after create, or when saving an assignment without a hand-written student summary.
+ */
+export async function prefillStudentFacingTaskForAssignment(
+  assignmentId: string,
+  options: { instructions: string; uiLanguage: 'he' | 'en' },
+): Promise<void> {
+  if (!assignmentId || !options.instructions.trim()) return;
+  const lang = getAssignmentLanguage(options.instructions, options.uiLanguage);
+  const { error } = await ensureStudentFacingTask(assignmentId, lang);
+  if (error) {
+    console.warn('prefillStudentFacingTaskForAssignment', error);
+  }
+}
+
 /**
  * Get assignments for student's enrolled classrooms
  */
@@ -225,14 +262,14 @@ export const getStudentAssignments = async (
     if (subError) {
       console.error('Error fetching student submissions:', subError);
       // We still return assignments even if submissions fail
-      return { data: assignments as AssignmentWithClassroom[], error: null };
+      return { data: assignments as unknown as AssignmentWithClassroom[], error: null };
     }
 
     // Merge submissions into assignments
     const assignmentsWithSubmissions = assignments.map(a => ({
       ...a,
       submissions: submissions?.filter(s => s.assignment_id === a.id) || []
-    })) as AssignmentWithClassroom[];
+    })) as unknown as AssignmentWithClassroom[];
 
     return { data: assignmentsWithSubmissions, error: null };
   } catch (error) {
@@ -247,17 +284,37 @@ export const createAssignment = async (
   assignment: CreateAssignmentInput
 ): Promise<{ data: Assignment | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
-      .from('assignments')
-      .insert([assignment])
-      .select()
-      .single();
+    const row: Database['public']['Tables']['assignments']['Insert'] = {
+      classroom_id: assignment.classroom_id,
+      title: assignment.title,
+      instructions: assignment.instructions,
+      type: assignment.type,
+      due_at: assignment.due_at,
+      status: assignment.status,
+      target_dimensions: assignment.target_dimensions as unknown as Json,
+      personalization_flag: assignment.personalization_flag,
+      auto_publish_ai_feedback: assignment.auto_publish_ai_feedback,
+      attempt_mode: assignment.attempt_mode,
+    };
+    const { data, error } = await supabase.from('assignments').insert([row]).select().single();
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    if (data?.id) {
+      const row = data as unknown as Assignment;
+      const hasTask = Boolean(String(row.student_facing_task ?? '').trim());
+      const inst = String(row.instructions ?? assignment.instructions ?? '');
+      if (!hasTask && inst.trim()) {
+        void prefillStudentFacingTaskForAssignment(data.id, {
+          instructions: inst,
+          uiLanguage: 'en',
+        });
+      }
+    }
+
+    return { data: data as unknown as Assignment, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -271,9 +328,14 @@ export const updateAssignment = async (
   updates: Omit<UpdateAssignmentInput, 'id'>
 ): Promise<{ data: Assignment | null; error: ApiError | null }> => {
   try {
+    const { target_dimensions, materials, ...rest } = updates;
+    const payload: Database['public']['Tables']['assignments']['Update'] = { ...rest };
+    if (target_dimensions !== undefined)
+      payload.target_dimensions = target_dimensions as unknown as Json;
+    if (materials !== undefined) payload.materials = materials as unknown as Json | null;
     const { data, error } = await supabase
       .from('assignments')
-      .update(updates)
+      .update(payload)
       .eq('id', assignmentId)
       .select()
       .single();
@@ -282,7 +344,22 @@ export const updateAssignment = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data, error: null };
+    if (data?.id) {
+      const row = data as unknown as Assignment;
+      const hasTask = Boolean(String(row.student_facing_task ?? '').trim());
+      const inst =
+        updates.instructions !== undefined
+          ? String(updates.instructions ?? '')
+          : String(row.instructions ?? '');
+      if (!hasTask && inst.trim()) {
+        void prefillStudentFacingTaskForAssignment(data.id, {
+          instructions: inst,
+          uiLanguage: 'en',
+        });
+      }
+    }
+
+    return { data: data as unknown as Assignment, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

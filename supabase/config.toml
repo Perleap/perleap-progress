@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.suggest-assignment-hard-skills]
 verify_jwt = false
+
+[functions.generate-student-facing-task]
+verify_jwt = false
+
+[functions.explain-analytics-5d]
+verify_jwt = false

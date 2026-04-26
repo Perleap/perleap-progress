@@ -14,6 +14,7 @@ import {
 } from '@/utils/roleRecovery';
 import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
 import { ACCOUNT_JUST_DELETED_SESSION_KEY } from '@/utils/accountDeletionRedirect';
+import { USER_ROLES } from '@/config/constants';
 
 interface UserProfile {
   full_name: string;
@@ -63,13 +64,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refetch,
   } = useQuery({
     queryKey:
-      user?.user_metadata?.role === 'teacher'
-        ? profileKeys.teacher(user?.id || '')
-        : profileKeys.student(user?.id || ''),
+      user?.user_metadata?.role === USER_ROLES.ADMIN
+        ? (['auth', 'admin-profile', user?.id || ''] as const)
+        : user?.user_metadata?.role === 'teacher'
+          ? profileKeys.teacher(user?.id || '')
+          : profileKeys.student(user?.id || ''),
     queryFn: async () => {
       if (!user?.id) return null;
       const role = user.user_metadata?.role;
       if (!role) return null;
+
+      if (role === USER_ROLES.ADMIN) {
+        const { data: teacherRow } = await getTeacherProfile(user.id);
+        if (teacherRow?.full_name?.trim()) {
+          return { full_name: teacherRow.full_name, avatar_url: teacherRow.avatar_url ?? null };
+        }
+        const metaName =
+          typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name.trim() : '';
+        if (metaName) {
+          return { full_name: metaName, avatar_url: null as string | null };
+        }
+        const email = user.email || '';
+        const display = email ? email.split('@')[0] : 'Admin';
+        return { full_name: display, avatar_url: null as string | null };
+      }
 
       console.log(`🔄 AuthContext: Fetching fresh profile for ${role}...`);
       const { data, error } =
@@ -96,7 +114,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isProfileLoading = user ? isProfileQueryLoading && !isProfileFetched : false;
 
   // hasProfile: null if not yet determined, true if data exists, false if no profile found
-  const hasProfile = isProfileFetched ? !!profileData : null;
+  const isAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
+  const hasProfile = isProfileFetched ? (!!profileData || isAdmin) : null;
 
   // Token refresh failure recovery
   const handleTokenRefreshFailure = async () => {
@@ -177,10 +196,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           clearAllPersistedForms();
           clearAllSignupState();
           // Reset profile data in cache
+          const r = user?.user_metadata?.role;
           const signoutKey =
-            user?.user_metadata?.role === 'teacher'
-              ? profileKeys.teacher(user?.id || '')
-              : profileKeys.student(user?.id || '');
+            r === USER_ROLES.ADMIN
+              ? (['auth', 'admin-profile', user?.id || ''] as const)
+              : r === 'teacher'
+                ? profileKeys.teacher(user?.id || '')
+                : profileKeys.student(user?.id || '');
           queryClient.setQueryData(signoutKey, null);
           break;
 
@@ -199,7 +221,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userRole = session.user.user_metadata?.role;
 
             // Check if user has role metadata
-            if (!userRole || (userRole !== 'teacher' && userRole !== 'student')) {
+            if (
+              !userRole ||
+              (userRole !== 'teacher' && userRole !== 'student' && userRole !== USER_ROLES.ADMIN)
+            ) {
               // Check if signup is in progress
               const signupInProgress = isSignupInProgress();
 
@@ -395,10 +420,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshProfile = async (force: boolean = false) => {
+    const r = user?.user_metadata?.role;
     const key =
-      user?.user_metadata?.role === 'teacher'
-        ? profileKeys.teacher(user?.id || '')
-        : profileKeys.student(user?.id || '');
+      r === USER_ROLES.ADMIN
+        ? (['auth', 'admin-profile', user?.id || ''] as const)
+        : r === 'teacher'
+          ? profileKeys.teacher(user?.id || '')
+          : profileKeys.student(user?.id || '');
 
     if (force) {
       await queryClient.invalidateQueries({ queryKey: key });
