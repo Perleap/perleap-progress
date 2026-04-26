@@ -3,6 +3,11 @@
 -- ============================================================================
 
 -- 1. Extend section_resources: 'lesson' type + optional content check for lesson rows
+-- body_text is required for section_resources_lesson_has_content; 20260420000000 also
+-- adds this column for text activities — define early so this migration runs in order.
+ALTER TABLE public.section_resources
+  ADD COLUMN IF NOT EXISTS body_text text;
+
 ALTER TABLE public.section_resources
   DROP CONSTRAINT IF EXISTS section_resources_resource_type_check;
 
