@@ -288,12 +288,7 @@ export const SectionContentPage = ({
               <Calendar className="h-3.5 w-3.5" /> {dateRange}
             </span>
           )}
-          {useFlowList ? (
-            <Badge variant="secondary" className="rounded-full text-xs">
-              <BookOpen className="h-3 w-3 me-1" /> {orderedFlow.length}{' '}
-              {t('syllabus.detail.moduleSteps', 'module steps')}
-            </Badge>
-          ) : assignments.length > 0 ? (
+          {!useFlowList && assignments.length > 0 ? (
             <Badge variant="secondary" className="rounded-full text-xs">
               <BookOpen className="h-3 w-3 me-1" /> {assignments.length}{' '}
               {t('syllabus.sections.linkedAssignments', 'assignments')}
@@ -374,7 +369,7 @@ export const SectionContentPage = ({
                       <Link
                         key={step.id}
                         to={`/student/classroom/${classroomId}/activity/${step.activity_list_id}`}
-                        state={{ returnClassroomSection: 'outline' }}
+                        state={{ returnClassroomSection: 'curriculum' }}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
                           'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',

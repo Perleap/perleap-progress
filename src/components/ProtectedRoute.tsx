@@ -8,10 +8,17 @@ import { USER_ROLES } from '@/config/constants';
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: 'teacher' | 'student';
+  /** When true, only users with admin metadata may access; others redirect to teacher dashboard. */
+  requireAppAdmin?: boolean;
   redirectTo?: string;
 }
 
-const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: ProtectedRouteProps) => {
+const ProtectedRoute = ({
+  children,
+  requiredRole,
+  requireAppAdmin = false,
+  redirectTo = '/auth',
+}: ProtectedRouteProps) => {
   const { user, session, loading, hasProfile, isProfileLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,6 +82,18 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
         hasNavigated.current = true;
         navigate(redirectTo, { replace: true });
         return;
+      }
+
+      if (requireAppAdmin) {
+        const userRole = user.user_metadata?.role;
+        if (userRole !== USER_ROLES.ADMIN) {
+          if (currentPath.startsWith('/admin')) {
+            hasNavigated.current = true;
+            const dest = userRole === 'student' ? '/student/dashboard' : '/teacher/dashboard';
+            navigate(dest, { replace: true });
+          }
+          return;
+        }
       }
 
       // Check role-based access
@@ -141,6 +160,7 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
     session,
     loading,
     requiredRole,
+    requireAppAdmin,
     navigate,
     redirectTo,
     location.pathname,
@@ -167,6 +187,13 @@ const ProtectedRoute = ({ children, requiredRole, redirectTo = '/auth' }: Protec
 
   if (!user || !session) {
     return null;
+  }
+
+  if (requireAppAdmin) {
+    const r = user.user_metadata?.role;
+    if (r !== USER_ROLES.ADMIN) {
+      return <Navigate to={r === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />;
+    }
   }
 
   if (requiredRole) {

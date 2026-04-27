@@ -1,12 +1,9 @@
 export { CreateClassroomWizard } from './CreateClassroomWizard';
 export { WizardStepIndicator } from './WizardStepIndicator';
 export { CourseOutlineSection } from './CourseOutlineSection';
-export { TeacherCurriculumSection } from './TeacherCurriculumSection';
-export { TeacherCurriculumSection as ModuleActivitiesSection } from './TeacherCurriculumSection';
 export { StudentActivitiesSection } from './StudentActivitiesSection';
 export { ModuleFlowEditor } from './ModuleFlowEditor';
 export { SyllabusRoadmap } from './SyllabusRoadmap';
-export { ModuleSyllabusAccordion } from './ModuleSyllabusAccordion';
 export { RoadmapNode } from './RoadmapNode';
 export { SectionDetailPanel } from './SectionDetailPanel';
 export { SectionDetailModal } from './SectionDetailModal';

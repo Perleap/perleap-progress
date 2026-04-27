@@ -582,6 +582,7 @@ export const SyllabusEditor = ({
                   setLessonSectionId(selected.id);
                   setEditingLesson(null);
                 }}
+                onViewAssignment={onEditAssignment}
                 onEditAssignment={onEditAssignment}
                 onEditResource={(resourceId) => {
                   if (!selected) return;

@@ -130,6 +130,27 @@ export type Database = {
         }
         Relationships: []
       }
+      observability_metric_snapshots: {
+        Row: {
+          id: string
+          recorded_at: string
+          source: string
+          payload: Json
+        }
+        Insert: {
+          id?: string
+          recorded_at?: string
+          source: string
+          payload?: Json
+        }
+        Update: {
+          id?: string
+          recorded_at?: string
+          source?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       ai_evaluations: {
         Row: {
           created_at: string

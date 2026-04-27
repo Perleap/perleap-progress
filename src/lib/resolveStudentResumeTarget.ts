@@ -3,36 +3,89 @@
  */
 
 import {
-  computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  resolveDisplayedModuleFlow,
   type AssignmentRow,
-  type ComputedFlowItem,
+  type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
-import { getFirstNavigableInSection, type FlowStepTarget } from '@/lib/moduleFlowNavigation';
-import {
-  firstIncompleteComputedIndex,
-  firstIncompletePersistedIndex,
-  type StudentFlowProgressContext,
-} from '@/lib/moduleFlowStudent';
+import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
 import type { ReleaseMode, StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
-function persistedStepToTarget(step: ModuleFlowStep): FlowStepTarget | null {
-  if (step.step_kind === 'resource' && step.activity_list_id) {
-    return { kind: 'resource', id: step.activity_list_id };
+/** Mirrors persisted resource completion (step row or any later assignment in this list done). */
+function localResourceStepDone(
+  local: ModuleFlowLocalStep[],
+  index: number,
+  ctx: StudentFlowProgressContext,
+  orderedPersisted: ModuleFlowStep[],
+): boolean {
+  const step = local[index];
+  if (step.kind !== 'resource') return false;
+  const persistedRow = orderedPersisted.find(
+    (p) => p.step_kind === 'resource' && p.activity_list_id === step.resourceId,
+  );
+  if (persistedRow && ctx.progressByStep[persistedRow.id]) return true;
+  for (let k = index + 1; k < local.length; k++) {
+    const later = local[k];
+    if (later.kind === 'assignment' && (ctx.assignmentDoneMap[later.assignmentId] ?? false)) {
+      return true;
+    }
   }
-  if (step.step_kind === 'assignment' && step.assignment_id) {
-    return { kind: 'assignment', id: step.assignment_id };
-  }
-  return null;
+  return false;
 }
 
-function computedItemToTarget(c: ComputedFlowItem): FlowStepTarget {
-  if (c.kind === 'resource') {
-    return { kind: 'resource', id: c.activity_list_id };
+function localStepDone(
+  local: ModuleFlowLocalStep[],
+  index: number,
+  ctx: StudentFlowProgressContext,
+  persisted: ModuleFlowStep[],
+  sectionResources: SectionResource[],
+): boolean {
+  const step = local[index];
+  if (step.kind === 'assignment') {
+    return ctx.assignmentDoneMap[step.assignmentId] ?? false;
   }
-  return { kind: 'assignment', id: c.assignment_id };
+  const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, sectionResources);
+  return localResourceStepDone(local, index, ctx, orderedPersisted);
+}
+
+function localPreviousStepsComplete(
+  local: ModuleFlowLocalStep[],
+  index: number,
+  ctx: StudentFlowProgressContext,
+  persisted: ModuleFlowStep[],
+  sectionResources: SectionResource[],
+): boolean {
+  if (index === 0) return true;
+  for (let i = 0; i < index; i++) {
+    if (!localStepDone(local, i, ctx, persisted, sectionResources)) return false;
+  }
+  return true;
+}
+
+/**
+ * Same ordering as Curriculum / outline (resolveDisplayedModuleFlow), including assignments
+ * appended when the teacher flow omits them.
+ */
+function firstIncompleteInDisplayedFlow(
+  sectionId: string,
+  sectionResources: SectionResource[],
+  assignments: AssignmentRow[],
+  persisted: ModuleFlowStep[],
+  ctx: StudentFlowProgressContext,
+): FlowStepTarget | null {
+  const local = resolveDisplayedModuleFlow(sectionId, sectionResources, assignments, persisted);
+  for (let i = 0; i < local.length; i++) {
+    if (!localPreviousStepsComplete(local, i, ctx, persisted, sectionResources)) continue;
+    if (!localStepDone(local, i, ctx, persisted, sectionResources)) {
+      const s = local[i];
+      if (s.kind === 'resource') return { kind: 'resource', id: s.resourceId };
+      return { kind: 'assignment', id: s.assignmentId };
+    }
+  }
+  return null;
 }
 
 export function resolveStudentResumeTarget(params: {
@@ -53,35 +106,17 @@ export function resolveStudentResumeTarget(params: {
     }
     const persisted = flowBulk[section.id] ?? [];
     const sectionResources = resourceMap[section.id] ?? [];
-    const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, sectionResources);
 
-    if (orderedPersisted.length > 0) {
-      const idx = firstIncompletePersistedIndex(orderedPersisted, flowCtx);
-      if (idx >= 0) {
-        const target = persistedStepToTarget(orderedPersisted[idx]);
-        if (target) return target;
-      }
-      continue;
-    }
-
-    const computed = computeDefaultModuleFlow(section.id, sectionResources, assignments);
-    if (computed.length > 0) {
-      const cidx = firstIncompleteComputedIndex(computed, flowCtx);
-      if (cidx >= 0) {
-        return computedItemToTarget(computed[cidx]);
-      }
-    }
-  }
-
-  if (sorted.length > 0) {
-    const first = sorted[0];
-    return getFirstNavigableInSection({
-      sectionId: first.id,
-      sectionResources: resourceMap[first.id] ?? [],
+    const fromDisplayed = firstIncompleteInDisplayedFlow(
+      section.id,
+      sectionResources,
       assignments,
-      persistedSteps: flowBulk[first.id] ?? [],
-    });
+      persisted,
+      flowCtx,
+    );
+    if (fromDisplayed) return fromDisplayed;
   }
 
+  /** No incomplete step in any unlocked section — About CTA opens Curriculum. */
   return null;
 }

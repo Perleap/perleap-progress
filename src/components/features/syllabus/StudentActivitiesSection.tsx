@@ -8,7 +8,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Loader2, Lock, CheckCircle2, Circle, ClipboardList, FileText, PlayCircle, ChevronDown } from 'lucide-react';
+import {
+  Loader2,
+  Lock,
+  CheckCircle2,
+  Circle,
+  ClipboardList,
+  FileText,
+  PlayCircle,
+  ChevronDown,
+  Eye,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import {
   useSyllabus,
@@ -28,16 +38,24 @@ import {
   computedStepVisualState,
   firstIncompletePersistedIndex,
   firstIncompleteComputedIndex,
+  isSectionActivityFlowFullyComplete,
 } from '@/lib/moduleFlowStudent';
 import { cn } from '@/lib/utils';
 import type { ReleaseMode, StudentProgressStatus } from '@/types/syllabus';
+import { StudentModuleOutlineRail } from './StudentModuleOutlineRail';
 
 interface StudentActivitiesSectionProps {
   classroomId: string;
   isRTL: boolean;
+  /** Same as legacy Course Outline row: open full module study page (SectionContentPage). */
+  onOpenModuleFullPage?: (sectionId: string) => void;
 }
 
-export function StudentActivitiesSection({ classroomId, isRTL }: StudentActivitiesSectionProps) {
+export function StudentActivitiesSection({
+  classroomId,
+  isRTL,
+  onOpenModuleFullPage,
+}: StudentActivitiesSectionProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(classroomId);
@@ -136,10 +154,23 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
         </Button>
       </div>
 
-      {sections.map((section) => {
+      {sections.map((section, flowStepIndex) => {
         const unlocked = isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
+        const progressState = studentProgressMap[section.id];
         const persisted = flowBulk[section.id] ?? [];
         const sectionResources = resourceMap[section.id] ?? [];
+        const flowComplete = isSectionActivityFlowFullyComplete(
+          section.id,
+          persisted,
+          sectionResources,
+          assignRows,
+          flowCtx,
+        );
+        const showFlowCheck = unlocked && flowComplete;
+        const highlightInProgress =
+          (progressState === 'in_progress' || progressState === 'reviewed') &&
+          !showFlowCheck &&
+          unlocked;
         const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, sectionResources);
         const computed = computeDefaultModuleFlow(section.id, sectionResources, assignRows);
 
@@ -163,56 +194,84 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
             onOpenChange={(next) =>
               setModuleOpenById((prev) => ({ ...prev, [section.id]: next }))
             }
-            className="rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
+            className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
           >
-            <div
-              className={cn(
-                'flex min-w-0 items-start gap-2 border-b border-transparent px-3 py-3 sm:px-4',
-                open && 'border-border/60',
-              )}
-            >
-              <CollapsibleTrigger
-                className={cn(
-                  'flex min-w-0 flex-1 items-start gap-2 rounded-md py-1 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-                  isRTL && 'flex-row-reverse text-end',
-                )}
-              >
-                <ChevronDown
+            <div className={cn('flex min-w-0', isRTL ? 'flex-row-reverse' : 'flex-row')}>
+              <StudentModuleOutlineRail
+                flowStepIndex={flowStepIndex}
+                showFlowCheck={showFlowCheck}
+                highlightInProgress={highlightInProgress}
+                unlocked={unlocked}
+                isRTL={isRTL}
+              />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div
                   className={cn(
-                    'mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-                    open && 'rotate-180',
+                    'flex min-w-0 items-start gap-1 border-b border-transparent px-2 py-3 sm:px-3 sm:pe-2',
+                    open && 'border-border/60',
+                    isRTL && 'flex-row-reverse',
                   )}
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div
+                >
+                  <CollapsibleTrigger
                     className={cn(
-                      'flex flex-wrap items-center gap-2',
-                      isRTL && 'flex-row-reverse justify-end',
+                      'flex min-w-0 flex-1 items-start gap-2 rounded-md py-1 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+                      isRTL && 'flex-row-reverse text-end',
                     )}
                   >
-                    <h3 className="text-base font-semibold leading-snug text-foreground">{section.title}</h3>
-                    {!unlocked ? (
-                      <Badge variant="secondary" className="rounded-full gap-1">
-                        <Lock className="h-3 w-3" />
-                        {t('studentClassroom.activities.moduleLocked')}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  {desc ? (
-                    <p
+                    <ChevronDown
                       className={cn(
-                        'text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap',
-                        isRTL && 'text-right',
+                        'mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                        open && 'rotate-180',
                       )}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div
+                        className={cn(
+                          'flex flex-wrap items-center gap-2',
+                          isRTL && 'flex-row-reverse justify-end',
+                        )}
+                      >
+                        <h3 className="text-base font-semibold leading-snug text-foreground">{section.title}</h3>
+                        {!unlocked ? (
+                          <Badge variant="secondary" className="rounded-full gap-1">
+                            <Lock className="h-3 w-3" />
+                            {t('studentClassroom.activities.moduleLocked')}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {desc ? (
+                        <p
+                          className={cn(
+                            'text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap',
+                            isRTL && 'text-right',
+                          )}
+                        >
+                          {desc}
+                        </p>
+                      ) : null}
+                      <p className={cn('text-xs text-muted-foreground', isRTL && 'text-right')}>{stepSummary}</p>
+                    </div>
+                  </CollapsibleTrigger>
+                  {onOpenModuleFullPage && unlocked ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-0.5 h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                      aria-label={t('syllabus.moduleAccordion.openModulePage', {
+                        title: section.title,
+                      })}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onOpenModuleFullPage(section.id);
+                      }}
                     >
-                      {desc}
-                    </p>
+                      <Eye className="h-4 w-4" />
+                    </Button>
                   ) : null}
-                  <p className={cn('text-xs text-muted-foreground', isRTL && 'text-right')}>{stepSummary}</p>
                 </div>
-              </CollapsibleTrigger>
-            </div>
 
             <CollapsibleContent>
               <div className="space-y-2 px-3 pb-4 pt-1 sm:px-4">
@@ -453,6 +512,8 @@ export function StudentActivitiesSection({ classroomId, isRTL }: StudentActiviti
               )}
               </div>
             </CollapsibleContent>
+              </div>
+            </div>
           </Collapsible>
         );
       })}

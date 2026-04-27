@@ -2,7 +2,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -18,6 +18,11 @@ import ClassroomDetail from './pages/teacher/ClassroomDetail';
 import SubmissionDetail from './pages/teacher/SubmissionDetail';
 import TeacherSettings from './pages/teacher/TeacherSettings';
 import Planner from './pages/teacher/Planner';
+import AdminMonitoringLayout from './pages/admin/monitoring/AdminMonitoringLayout';
+import MonitoringOverviewPage from './pages/admin/monitoring/MonitoringOverviewPage';
+import MonitoringLogsPage from './pages/admin/monitoring/MonitoringLogsPage';
+import MonitoringHealthPage from './pages/admin/monitoring/MonitoringHealthPage';
+import MonitoringTrafficPage from './pages/admin/monitoring/MonitoringTrafficPage';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentClassroomDetail from './pages/student/StudentClassroomDetail';
 import AssignmentDetail from './pages/student/AssignmentDetail';
@@ -137,6 +142,21 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/teacher/monitoring" element={<Navigate to="/admin/monitoring" replace />} />
+
+                <Route
+                  path="/admin/monitoring"
+                  element={
+                    <ProtectedRoute requireAppAdmin>
+                      <AdminMonitoringLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<MonitoringOverviewPage />} />
+                  <Route path="logs" element={<MonitoringLogsPage />} />
+                  <Route path="health" element={<MonitoringHealthPage />} />
+                  <Route path="traffic" element={<MonitoringTrafficPage />} />
+                </Route>
 
                 {/* Protected student routes */}
                 <Route

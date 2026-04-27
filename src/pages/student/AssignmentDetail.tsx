@@ -374,7 +374,9 @@ const AssignmentDetail = () => {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle>{t('assignmentDetail.title')}</CardTitle>
+                  <CardTitle>
+                    {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
+                  </CardTitle>
                   <CardDescription className="flex flex-col gap-1 mt-2">
                     <span className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 shrink-0" />

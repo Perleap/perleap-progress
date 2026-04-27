@@ -1,17 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { Card, CardContent } from '@/components/ui/card';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -187,27 +179,6 @@ const SubmissionDetail = () => {
       customSections={customSections}
     >
       <div className="container py-0 px-4 max-w-6xl mx-auto relative z-10">
-        <Breadcrumb className="mb-6 flex-wrap">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink render={<Link to="/teacher/dashboard" />}>{t('nav.dashboard')}</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink render={<Link to={`/teacher/classroom/${submission.assignments.classroom_id}`} />}>
-                {classroomName}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="max-w-[12rem] truncate sm:max-w-none">{submission.assignments.title}</BreadcrumbPage>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="max-w-[10rem] truncate sm:max-w-none">{studentName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
         <div className="space-y-8 pb-8">
           {/* Student Info Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm">

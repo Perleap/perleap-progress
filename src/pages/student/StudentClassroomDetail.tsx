@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Info,
   Users,
-  Map,
   LayoutList,
   ArrowRight,
   Loader2,
@@ -17,14 +16,25 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import type { ClassroomLocationState } from '@/types/navigation';
 import type { StudentProgressStatus } from '@/types/syllabus';
 import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
-import { ModuleSyllabusAccordion } from '@/components/features/syllabus/ModuleSyllabusAccordion';
 import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
 import { StudentActivitiesSection } from '@/components/features/syllabus/StudentActivitiesSection';
 import { StudentPoliciesView } from '@/components/features/syllabus/StudentPoliciesView';
+import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { ClassroomLayout } from '@/components/layouts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -33,6 +43,7 @@ import {
   useTeacherProfile,
   useSyllabus,
   useStudentProgress,
+  useUnenrollFromClassroom,
 } from '@/hooks/queries';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import { useModuleFlowStepsBulk, useStudentCurriculumFlowContext, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
@@ -43,8 +54,9 @@ import { getStudyCtaTarget } from '@/lib/studyCtaTarget';
 import { resolveStudentResumeTarget } from '@/lib/resolveStudentResumeTarget';
 import type { AssignmentRow } from '@/lib/moduleFlow';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-const STUDENT_SECTION_IDS = new Set(['overview', 'outline', 'curriculum']);
+const STUDENT_SECTION_IDS = new Set(['overview', 'curriculum']);
 
 interface Classroom {
   id: string;
@@ -125,14 +137,17 @@ const StudentClassroomDetail = () => {
 
   const [activeSection, setActiveSection] = useState(() => {
     const raw = (location.state as ClassroomLocationState | null)?.activeSection;
-    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    let normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (normalized === 'outline') normalized = 'curriculum';
     return normalized && STUDENT_SECTION_IDS.has(normalized) ? normalized : 'overview';
   });
 
   /** When navigation provides activeSection (e.g. back from assignment), apply it — init only runs once. */
   useEffect(() => {
     const raw = (location.state as ClassroomLocationState | null)?.activeSection;
-    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (raw === undefined) return;
+    let normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    if (normalized === 'outline') normalized = 'curriculum';
     if (normalized && STUDENT_SECTION_IDS.has(normalized)) {
       setActiveSection(normalized);
     }
@@ -151,14 +166,15 @@ const StudentClassroomDetail = () => {
     return () => cancelAnimationFrame(frame);
   }, [activeSection]);
 
-  /** Course Outline uses embedded section_resources from getSyllabusByClassroom; refetch when tab activates so it matches Curriculum after teacher edits. */
+  /** Curriculum uses embedded section_resources; refetch when tab activates so it matches after teacher edits. */
   useEffect(() => {
-    if (!id || activeSection !== 'outline') return;
+    if (!id || activeSection !== 'curriculum') return;
     void queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(id) });
     void queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
     void queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(id) });
   }, [activeSection, id, queryClient]);
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
+  const [leaveCourseOpen, setLeaveCourseOpen] = useState(false);
   const [sectionVisitStack, setSectionVisitStack] = useState<string[]>([]);
   const openSectionIdRef = useRef<string | null>(null);
   /** When true, closing the module view (empty visit stack) returns to About instead of the outline list. */
@@ -192,40 +208,32 @@ const StudentClassroomDetail = () => {
     });
   }, []);
 
-  /** About CTA: open outline and deep-link to first module (syllabus start). */
-  const goToStudyOutlineFromAbout = useCallback(
-    (previousSection: string) => {
-      if (!syllabus || syllabus.status !== 'published') {
-        sectionBackReturnsToOverviewRef.current = false;
-        setActiveSection('overview');
-        return;
-      }
-      const { targetSectionId } = getStudyCtaTarget(
-        syllabus.sections,
-        syllabus.release_mode || 'all_at_once',
-        studentProgressMap,
-        { aboutPrimaryCta: true }
-      );
-      sectionBackReturnsToOverviewRef.current = previousSection === 'overview';
-      setActiveSection('outline');
-      if (targetSectionId) goToSection(targetSectionId);
-    },
-    [syllabus, studentProgressMap, goToSection]
-  );
-
   const handleClassroomSectionChange = useCallback((section: string) => {
-    if (section === 'outline') {
-      sectionBackReturnsToOverviewRef.current = false;
+    if (section !== 'curriculum') {
       openSectionIdRef.current = null;
       setOpenSectionId(null);
       setSectionVisitStack([]);
-      setActiveSection('outline');
-      return;
+    }
+    if (section === 'overview') {
+      sectionBackReturnsToOverviewRef.current = false;
     }
     setActiveSection(section);
   }, []);
 
   const classroom = rawClassroom as unknown as Classroom | null;
+
+  const unenrollMutation = useUnenrollFromClassroom();
+
+  const confirmLeaveCourse = useCallback(async () => {
+    if (!id) return;
+    try {
+      await unenrollMutation.mutateAsync(id);
+      setLeaveCourseOpen(false);
+      navigate(ROUTES.STUDENT_DASHBOARD);
+    } catch {
+      toast.error(t('studentClassroom.leaveCourse.error'));
+    }
+  }, [id, navigate, t, unenrollMutation]);
 
   const studyCtaLabelStart = t('studentClassroom.studyCta.start');
   const studyCtaLabelView = t('studentClassroom.studyCta.viewAssignments');
@@ -236,11 +244,18 @@ const StudentClassroomDetail = () => {
     if (!hasPublishedSyllabus || !syllabus?.sections?.length) {
       return studyCtaLabelView;
     }
-    const { variant } = getStudyCtaTarget(
+    const { variant: syllabusVariant } = getStudyCtaTarget(
       syllabus.sections,
       syllabus.release_mode || 'all_at_once',
       studentProgressMap
     );
+    const flowEngaged =
+      Object.values(flowCtx.assignmentDoneMap).some(Boolean) ||
+      Object.values(flowCtx.progressByStep).some(Boolean);
+    let variant = syllabusVariant;
+    if (variant === 'start' && flowEngaged) {
+      variant = 'continue';
+    }
     if (variant === 'start') return studyCtaLabelStart;
     if (variant === 'continue') return studyCtaLabelContinueCourse;
     return studyCtaLabelReview;
@@ -248,6 +263,7 @@ const StudentClassroomDetail = () => {
     hasPublishedSyllabus,
     syllabus,
     studentProgressMap,
+    flowCtx,
     studyCtaLabelStart,
     studyCtaLabelView,
     studyCtaLabelContinueCourse,
@@ -283,10 +299,12 @@ const StudentClassroomDetail = () => {
         return;
       }
     }
-    goToStudyOutlineFromAbout(activeSection);
+    sectionBackReturnsToOverviewRef.current = false;
+    openSectionIdRef.current = null;
+    setOpenSectionId(null);
+    setSectionVisitStack([]);
+    setActiveSection('curriculum');
   }, [
-    activeSection,
-    goToStudyOutlineFromAbout,
     id,
     moduleFlowBulk,
     navigate,
@@ -297,7 +315,7 @@ const StudentClassroomDetail = () => {
     flowCtx,
   ]);
 
-  /** While syllabus is loading we keep 3 nav slots (outline/curriculum disabled) so the sidebar does not jump 1→3 when data arrives. */
+  /** While syllabus is loading we keep 2 nav slots (curriculum disabled) so the sidebar does not jump. */
   const showSyllabusNavSlots = syllabusLoading || hasPublishedSyllabus;
 
   const classroomSections = useMemo(() => {
@@ -305,12 +323,6 @@ const StudentClassroomDetail = () => {
     if (!showSyllabusNavSlots) return [overview];
     return [
       overview,
-      {
-        id: 'outline' as const,
-        title: t('syllabus.courseOutline'),
-        icon: Map,
-        disabled: syllabusLoading,
-      },
       {
         id: 'curriculum' as const,
         title: t('classroomDetail.curriculum.tabTitle'),
@@ -335,11 +347,27 @@ const StudentClassroomDetail = () => {
         {/* Overview Section */}
         {activeSection === 'overview' && (
           <div className="space-y-6">
-            <h2
-              className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+            <div
+              className={cn(
+                'flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
+                isRTL && 'sm:flex-row-reverse'
+              )}
             >
-              {classroom.name}
-            </h2>
+              <h2
+                className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+              >
+                {classroom.name}
+              </h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
+                onClick={() => setLeaveCourseOpen(true)}
+              >
+                {t('studentClassroom.leaveCourse.button')}
+              </Button>
+            </div>
 
             <div className="grid md:grid-cols-3 gap-6 md:items-start">
               {/* Main Info Card */}
@@ -355,11 +383,10 @@ const StudentClassroomDetail = () => {
                       >
                         {t('classroomDetail.overview.about')}
                       </h3>
-                      <div
-                        className={`text-foreground/80 whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
-                      >
-                        {classroom.resources}
-                      </div>
+                      <SafeMathMarkdown
+                        content={classroom.resources}
+                        className={`min-w-0 text-foreground/80 [overflow-wrap:anywhere] ${isRTL ? 'text-right' : 'text-left'}`}
+                      />
                     </div>
                   )}
                   <div
@@ -599,58 +626,68 @@ const StudentClassroomDetail = () => {
           </div>
         )}
 
-        {/* Course Outline Section (Student — read-only) */}
-        {activeSection === 'outline' &&
-          hasPublishedSyllabus &&
-          (openSectionId ? (
-            <SectionContentPage
-              sectionId={openSectionId}
-              classroomId={id!}
-              moduleFlowSteps={moduleFlowBulk[openSectionId] ?? []}
-              sections={syllabus.sections}
-              sectionResources={syllabus.section_resources || {}}
-              linkedAssignmentsMap={linkedAssignmentsMap}
-              syllabusId={syllabus.id}
-              releaseMode={syllabus.release_mode || 'all_at_once'}
-              studentProgressMap={studentProgressMap}
-              isRTL={isRTL}
-              onBack={handleSectionBack}
-              onNavigateSection={goToSection}
-            />
-          ) : (
-            <div className="space-y-6">
-              <GradingBreakdownView categories={syllabus.grading_categories} isRTL={isRTL} />
-
-              {syllabusLoading ? (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <ModuleSyllabusAccordion
-                  sections={syllabus.sections}
-                  sectionResources={syllabus.section_resources}
-                  linkedAssignmentsMap={linkedAssignmentsMap}
+        {activeSection === 'curriculum' && hasPublishedSyllabus && (
+          <div className="space-y-6">
+            {openSectionId ? (
+              <SectionContentPage
+                sectionId={openSectionId}
+                classroomId={id!}
+                moduleFlowSteps={moduleFlowBulk[openSectionId] ?? []}
+                sections={syllabus.sections}
+                sectionResources={syllabus.section_resources || {}}
+                linkedAssignmentsMap={linkedAssignmentsMap}
+                syllabusId={syllabus.id}
+                releaseMode={syllabus.release_mode || 'all_at_once'}
+                studentProgressMap={studentProgressMap}
+                isRTL={isRTL}
+                onBack={handleSectionBack}
+                onNavigateSection={goToSection}
+              />
+            ) : (
+              <>
+                <GradingBreakdownView categories={syllabus.grading_categories} isRTL={isRTL} />
+                <StudentActivitiesSection
                   classroomId={id!}
-                  structureType={syllabus.structure_type}
-                  releaseMode={syllabus.release_mode || 'all_at_once'}
-                  mode="student"
                   isRTL={isRTL}
-                  studentProgressMap={studentProgressMap}
-                  onOpenModule={(sectionId) => {
+                  onOpenModuleFullPage={(sectionId) => {
                     sectionBackReturnsToOverviewRef.current = false;
                     goToSection(sectionId);
                   }}
                 />
-              )}
-
-              <StudentPoliciesView policies={syllabus.policies ?? []} isRTL={isRTL} />
-            </div>
-          ))}
-
-        {activeSection === 'curriculum' && hasPublishedSyllabus && (
-          <StudentActivitiesSection classroomId={id!} isRTL={isRTL} />
+                <StudentPoliciesView policies={syllabus.policies ?? []} isRTL={isRTL} />
+              </>
+            )}
+          </div>
         )}
       </div>
+
+      <AlertDialog open={leaveCourseOpen} onOpenChange={setLeaveCourseOpen}>
+        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('studentClassroom.leaveCourse.title')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('studentClassroom.leaveCourse.description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:space-x-reverse' : ''}>
+            <AlertDialogCancel className="mt-0" disabled={unenrollMutation.isPending}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmLeaveCourse();
+              }}
+              disabled={unenrollMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {unenrollMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                t('studentClassroom.leaveCourse.confirm')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ClassroomLayout>
   );
 };

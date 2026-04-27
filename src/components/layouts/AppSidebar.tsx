@@ -51,12 +51,13 @@ import { useAuth } from '@/contexts/useAuth';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PerleapLogo } from '@/components/PerleapLogo';
+import { isAppAdminRole } from '@/utils/role';
+import { MonitoringInlineNav } from '@/pages/admin/monitoring/MonitoringInlineNav';
 
 interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
-  isActive?: boolean;
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -71,28 +72,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const isTeacher =
     user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
+  const isAppAdmin = isAppAdminRole(user?.user_metadata?.role);
   const basePath = isTeacher ? '/teacher' : '/student';
   const isOnSettingsPage = location.pathname.includes('/settings');
-
-  const navItems: NavItem[] = React.useMemo(() => {
-    const items: NavItem[] = [
-      {
-        title: t('nav.dashboard'),
-        url: `${basePath}/dashboard`,
-        icon: LayoutDashboard,
-      },
-    ];
-
-    if (isTeacher) {
-      items.push({
-        title: t('nav.planner'),
-        url: '/teacher/planner',
-        icon: Calendar,
-      });
-    }
-
-    return items;
-  }, [t, basePath, isTeacher]);
 
   const accountItems: NavItem[] = React.useMemo(() => {
     const items: NavItem[] = [
@@ -130,14 +112,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return items;
   }, [t, basePath, isTeacher]);
 
-  const navItemsWithActive = navItems.map((item) => ({
-    ...item,
-    isActive:
-      location.pathname === item.url ||
-      (location.pathname !== '/' &&
-        location.pathname.startsWith(item.url) &&
-        item.url !== `${basePath}/dashboard`),
-  }));
+  const isDashboardActive = location.pathname === `${basePath}/dashboard`;
+  const isPlannerActive =
+    location.pathname === '/teacher/planner' || location.pathname.startsWith('/teacher/planner/');
 
   const accountItemsWithActive = accountItems.map((item) => {
     const currentTab = new URLSearchParams(location.search).get('tab') || 'profile';
@@ -197,19 +174,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {navItemsWithActive.map((item) => (
-                <SidebarMenuItem key={item.url}>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate(`${basePath}/dashboard`)}
+                  isActive={isDashboardActive}
+                  tooltip={t('nav.dashboard')}
+                  className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isDashboardActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                >
+                  <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
+                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {isTeacher ? (
+                <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => navigate(item.url)}
-                    isActive={item.isActive}
-                    tooltip={item.title}
-                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${item.isActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
+                    onClick={() => navigate('/teacher/planner')}
+                    isActive={isPlannerActive}
+                    tooltip={t('nav.planner')}
+                    className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isPlannerActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                   >
-                    <item.icon className="size-5 group-data-[collapsible=icon]:size-5" />
-                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{item.title}</span>
+                    <Calendar className="size-5 group-data-[collapsible=icon]:size-5" />
+                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.planner')}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              ) : null}
+              {isTeacher && isAppAdmin ? <MonitoringInlineNav /> : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
