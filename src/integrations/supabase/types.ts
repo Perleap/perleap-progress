@@ -1790,6 +1790,10 @@ export type Database = {
         Args: { p_section_id: string; p_steps: Json }
         Returns: undefined
       }
+      student_unenroll_from_classroom: {
+        Args: { p_classroom_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       activity_type: "create" | "update" | "delete" | "view"

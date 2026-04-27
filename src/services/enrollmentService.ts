@@ -139,23 +139,20 @@ export const enrollInClassroom = async (
  * Unenroll a student from a classroom
  *
  * @param classroomId - Classroom ID
- * @param studentId - Student user ID
+ * @param _studentId - Caller passes the current user id for API consistency; the RPC enforces `auth.uid()`.
  * @returns Success status
  */
 export const unenrollFromClassroom = async (
   classroomId: string,
-  studentId: string
+  _studentId: string
 ): Promise<boolean> => {
   try {
-    const deletedAt = new Date().toISOString();
-    const { error } = await supabase
-      .from('enrollments')
-      .update({ active: false, deleted_at: deletedAt })
-      .eq('classroom_id', classroomId)
-      .eq('student_id', studentId)
-      .eq('active', true);
+    const { data: rpcOk, error } = await supabase.rpc('student_unenroll_from_classroom', {
+      p_classroom_id: classroomId,
+    });
 
-    return !error;
+    if (error) return false;
+    return rpcOk === true;
   } catch (error) {
     console.error('Error unenrolling from classroom:', error);
     return false;
