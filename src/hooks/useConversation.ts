@@ -206,6 +206,26 @@ export const useConversation = ({
         return;
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fc4f11' },
+        body: JSON.stringify({
+          sessionId: 'fc4f11',
+          runId: 'post-fix',
+          location: 'useConversation.ts:sendMessage',
+          message: 'after streamChatMessage',
+          data: {
+            hypothesisId: 'B',
+            shouldEnd: data?.shouldEnd ?? null,
+            companionMode,
+            willSetEnded: Boolean(data?.shouldEnd && !companionMode),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
       if (data?.shouldEnd && !companionMode) {
         setConversationEnded(true);
       }

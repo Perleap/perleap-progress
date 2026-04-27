@@ -23,7 +23,11 @@ import { useConversation } from '@/hooks/useConversation';
 import { useStudentProfile } from '@/hooks/queries';
 import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
 import { validateChatAttachmentFile } from '@/lib/chatAttachment';
-import { formatInlineListsForChatMarkdown, splitChatDisplayText } from '@/lib/chatDisplay';
+import {
+  formatInlineListsForChatMarkdown,
+  splitChatDisplayText,
+  stripConversationCompleteMarker,
+} from '@/lib/chatDisplay';
 import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
 import SafeMathMarkdown from './SafeMathMarkdown';
 
@@ -80,8 +84,7 @@ const CHAT_INPUT_MAX_HEIGHT_PX = 200;
 
 // Helper to clean markdown for TTS
 const cleanTextForTTS = (text: string) => {
-  return text
-    .replace(/\[CONVERSATION_COMPLETE\]/gi, '') // Remove completion marker
+  return stripConversationCompleteMarker(text)
     .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold
     .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italic
     .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links
@@ -183,6 +186,20 @@ export function AssignmentChatInterface({
   // Update local state when hook reports conversation ended (primary assignments only)
   useEffect(() => {
     if (variant === 'primary' && hookConversationEnded && !conversationEnded) {
+      // #region agent log
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fc4f11' },
+        body: JSON.stringify({
+          sessionId: 'fc4f11',
+          runId: 'post-fix',
+          location: 'AssignmentChatInterface.tsx:syncConversationEnded',
+          message: 'local conversationEnded set from hook',
+          data: { hypothesisId: 'C', variant, hookConversationEnded, prevLocal: false },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       setConversationEnded(true);
       setDialogType('aiDetected');
     }

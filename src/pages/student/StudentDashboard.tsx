@@ -308,7 +308,7 @@ const StudentDashboard = () => {
     type ? t(`assignmentTypes.${type}`, { defaultValue: type }) : t('assignmentTypes.questions');
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: t('nav.dashboard') }]}>
+    <DashboardLayout>
       {/* Page Header */}
       <div className="flex flex-col gap-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('studentDashboard.title')}</h1>

@@ -253,13 +253,7 @@ const TeacherSettings = () => {
   };
 
   return (
-    <DashboardLayout
-      breadcrumbs={[
-        { label: t('nav.dashboard'), href: '/teacher/dashboard' },
-        { label: t('settings.title'), href: '/teacher/settings' },
-        { label: getTabLabel() }
-      ]}
-    >
+    <DashboardLayout>
       <div
         className={cn("container py-8 px-4 max-w-4xl", isRTL && "text-right")}
         dir={isRTL ? 'rtl' : 'ltr'}

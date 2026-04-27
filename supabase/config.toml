@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.explain-analytics-5d]
 verify_jwt = false
+
+[functions.admin-monitoring-probe]
+verify_jwt = false
+
+[functions.collect-metric-snapshot]
+verify_jwt = false
+
+[functions.admin-vercel-insights]
+verify_jwt = false

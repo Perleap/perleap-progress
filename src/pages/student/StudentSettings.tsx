@@ -265,13 +265,7 @@ const StudentSettings = () => {
   };
 
   return (
-    <DashboardLayout
-      breadcrumbs={[
-        { label: t('nav.dashboard'), href: '/student/dashboard' },
-        { label: t('settings.title'), href: '/student/settings' },
-        { label: getTabLabel() }
-      ]}
-    >
+    <DashboardLayout>
       <div className="container py-8 px-4 max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
         <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-6">
           {/* TabsList removed as navigation is now in the sidebar */}

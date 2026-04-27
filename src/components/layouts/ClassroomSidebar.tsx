@@ -48,8 +48,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/useAuth';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { USER_ROLES } from '@/config/constants';
 
 import { ClassroomSection } from '@/config/classroomSections';
+import { MonitoringInlineNav } from '@/pages/admin/monitoring/MonitoringInlineNav';
 
 interface ClassroomSidebarProps {
   classroomName?: string;
@@ -79,12 +81,14 @@ export function ClassroomSidebar({
 
   const isTeacher =
     user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
+  const isAppAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   const basePath = isTeacher ? '/teacher' : '/student';
 
   const navigateBackOrDashboard = useNavigateBack(`${basePath}/dashboard`);
 
   const isDashboardActive = location.pathname === `${basePath}/dashboard`;
-  const isPlannerActive = location.pathname === '/teacher/planner';
+  const isPlannerActive =
+    location.pathname === '/teacher/planner' || location.pathname.startsWith('/teacher/planner/');
   const isSettingsActive = location.pathname.startsWith(`${basePath}/settings`);
 
   const confirmLogout = async () => {
@@ -177,6 +181,7 @@ export function ClassroomSidebar({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+                  {isTeacher && isAppAdmin ? <MonitoringInlineNav /> : null}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

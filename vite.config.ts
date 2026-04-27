@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => ({
         "**/.git/**",
         "**/debug-*.log",
         "**/~$*",
+        // Office/OneDrive temp & sync noise (Windows)
+        "**/~$*.*",
+        "**/*.lnk",
+        "**/desktop.ini",
       ],
     },
     fs: {

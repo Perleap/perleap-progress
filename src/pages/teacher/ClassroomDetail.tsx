@@ -35,11 +35,9 @@ import {
   ChevronRight,
   Info,
   Map,
-  LayoutList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditClassroomDialog } from '@/components/EditClassroomDialog';
-import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
 import { SubmissionsTab } from '@/components/SubmissionsTab';
@@ -47,7 +45,7 @@ import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { StudentProfileModal } from '@/components/StudentProfileModal';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
-import { CourseOutlineSection, TeacherCurriculumSection } from '@/components/features/syllabus';
+import { CourseOutlineSection } from '@/components/features/syllabus';
 import {
   classroomKeys,
   useClassroom,
@@ -60,7 +58,6 @@ import type { ClassroomLocationState } from '@/types/navigation';
 const TEACHER_SECTION_IDS = new Set([
   'overview',
   'outline',
-  'curriculum',
   'students',
   'submissions',
   'analytics',
@@ -133,10 +130,6 @@ const ClassroomDetail = () => {
   const deleteAssignmentMutation = useDeleteAssignment();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-  const [curriculumAssignmentSectionId, setCurriculumAssignmentSectionId] = useState<string | null>(
-    null,
-  );
   const [editAssignmentDialogOpen, setEditAssignmentDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -145,7 +138,7 @@ const ClassroomDetail = () => {
   const [activeSection, setActiveSection] = useState(() => {
     const raw = (location.state as ClassroomLocationState | null)?.activeSection;
     const normalized =
-      raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+      raw === 'activities' || raw === 'assignments' || raw === 'curriculum' ? 'outline' : raw;
     return normalized && TEACHER_SECTION_IDS.has(normalized) ? normalized : 'overview';
   });
 
@@ -153,7 +146,7 @@ const ClassroomDetail = () => {
     const raw = (location.state as ClassroomLocationState | null)?.activeSection;
     if (raw === undefined) return;
     const normalized =
-      raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+      raw === 'activities' || raw === 'assignments' || raw === 'curriculum' ? 'outline' : raw;
     if (TEACHER_SECTION_IDS.has(normalized)) {
       setActiveSection(normalized);
     }
@@ -178,7 +171,6 @@ const ClassroomDetail = () => {
   } as unknown as Classroom : null, [rawClassroom]);
 
   // GSAP stagger animation refs - only trigger on section/tab change or data length changes
-  const curriculumRef = useStaggerAnimation(':scope > *', 0.05, [activeSection, assignments.length]);
   const studentsRef = useStaggerAnimation(':scope > div', 0.04, [activeSection, students.length]);
 
   const handleDeleteAssignment = async (assignmentId: string) => {
@@ -269,7 +261,6 @@ const ClassroomDetail = () => {
   const classroomSections = [
     { id: 'overview', title: t('studentClassroom.about'), icon: Info },
     { id: 'outline', title: 'Course Outline', icon: Map },
-    { id: 'curriculum', title: t('classroomDetail.curriculum.tabTitle'), icon: LayoutList },
     { id: 'students', title: t('classroomDetail.students'), icon: Users },
     { id: 'submissions', title: t('classroomDetail.submissionsTab'), icon: FileText },
     { id: 'analytics', title: t('classroomDetail.analytics'), icon: BarChart3 },
@@ -404,11 +395,10 @@ const ClassroomDetail = () => {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="min-w-0">
-                        <p
-                          className={`text-foreground/80 whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
-                        >
-                          {classroom.resources}
-                        </p>
+                        <SafeMathMarkdown
+                          content={classroom.resources}
+                          className={`min-w-0 text-foreground/80 [overflow-wrap:anywhere] ${isRTL ? 'text-right' : 'text-left'}`}
+                        />
                       </CardContent>
                     </Card>
                   )}
@@ -591,27 +581,6 @@ const ClassroomDetail = () => {
           />
         )}
 
-        {activeSection === 'curriculum' && (
-          <div ref={curriculumRef}>
-            <TeacherCurriculumSection
-              classroomId={id!}
-              isRTL={isRTL}
-              onCreateAssignmentForModule={(sectionId) => {
-                setCurriculumAssignmentSectionId(sectionId);
-                setAssignmentDialogOpen(true);
-              }}
-              onEditAssignment={(assignmentId) => {
-                const row = assignments.find((a) => a.id === assignmentId);
-                if (row) {
-                  setSelectedAssignment(row);
-                  setEditAssignmentDialogOpen(true);
-                }
-              }}
-              onDeleteAssignment={handleDeleteAssignment}
-            />
-          </div>
-        )}
-
         {/* Students Section */}
         {activeSection === 'students' && (
           <div className="space-y-6">
@@ -742,22 +711,6 @@ const ClassroomDetail = () => {
         onOpenChange={setEditDialogOpen}
         classroom={classroom!}
         onSuccess={refetchClassroom}
-      />
-
-      <CreateAssignmentDialog
-        open={assignmentDialogOpen}
-        onOpenChange={(open) => {
-          setAssignmentDialogOpen(open);
-          if (!open) setCurriculumAssignmentSectionId(null);
-        }}
-        classroomId={id!}
-        onSuccess={refetchAssignments}
-        initialData={
-          curriculumAssignmentSectionId
-            ? { syllabus_section_id: curriculumAssignmentSectionId }
-            : undefined
-        }
-        lockSyllabusSection={!!curriculumAssignmentSectionId}
       />
 
       {selectedAssignment && (

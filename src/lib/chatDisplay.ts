@@ -1,20 +1,41 @@
-const COMPLETION_MARKER = '[CONVERSATION_COMPLETE]';
-const MARKER_LEN = COMPLETION_MARKER.length;
-const MARKER_PREFIX_HOLD = MARKER_LEN - 1;
+/**
+ * All bracketed tokens we treat as conversation-complete (uppercase for indexOf on uppercased text).
+ * Primary: [CONVERSATION_COMPLETE]. Also [CONATION_COMPLETE] (common model typo: missing "VERS").
+ */
+const COMPLETION_MARKER_VARIANTS_UP = ['[CONVERSATION_COMPLETE]', '[CONATION_COMPLETE]'] as const;
+
+const MAX_COMPLETION_MARKER_LEN = Math.max(
+  ...COMPLETION_MARKER_VARIANTS_UP.map((m) => m.length),
+);
+const MARKER_PREFIX_HOLD = MAX_COMPLETION_MARKER_LEN - 1;
+
+function findEarliestCompletionMarker(upper: string): { index: number; len: number } | null {
+  let best: { index: number; len: number } | null = null;
+  for (const m of COMPLETION_MARKER_VARIANTS_UP) {
+    const i = upper.indexOf(m);
+    if (i >= 0 && (!best || i < best.index)) {
+      best = { index: i, len: m.length };
+    }
+  }
+  return best;
+}
 
 /**
  * Remove the technical completion token from visible assistant text (case-insensitive).
  */
 export function stripConversationCompleteMarker(text: string): string {
   if (!text) return text;
-  return text.replace(/\[CONVERSATION_COMPLETE\]/gi, '').trim();
+  return text
+    .replace(/\[(?:CONVERSATION_COMPLETE|CONATION_COMPLETE)\]/gi, '')
+    .trim();
 }
 
 /**
  * Return true if raw assistant content contains the completion marker (any casing).
  */
 export function hasConversationCompleteMarker(text: string): boolean {
-  return String(text).toUpperCase().includes(COMPLETION_MARKER);
+  const upper = String(text).toUpperCase();
+  return COMPLETION_MARKER_VARIANTS_UP.some((m) => upper.includes(m));
 }
 
 export interface SplitChatDisplayOptions {
@@ -166,12 +187,13 @@ export function createChatStreamEmission() {
     raw += newText;
     for (;;) {
       const upper = raw.toUpperCase();
-      const mi = upper.indexOf(COMPLETION_MARKER);
-      if (mi >= 0) {
+      const match = findEarliestCompletionMarker(upper);
+      if (match) {
+        const { index: mi, len: markerLen } = match;
         const part = raw.slice(emitted, mi);
         if (part) onToken(part);
         shouldEnd = true;
-        raw = raw.slice(mi + MARKER_LEN);
+        raw = raw.slice(mi + markerLen);
         emitted = 0;
         continue;
       }
@@ -187,9 +209,9 @@ export function createChatStreamEmission() {
 
   const end = (onToken: (s: string) => void) => {
     const upper = raw.toUpperCase();
-    const mi = upper.indexOf(COMPLETION_MARKER);
-    if (mi >= 0) {
-      const part = raw.slice(emitted, mi);
+    const found = findEarliestCompletionMarker(upper);
+    if (found) {
+      const part = raw.slice(emitted, found.index);
       if (part) onToken(part);
       shouldEnd = true;
     } else if (emitted < raw.length) {

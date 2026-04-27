@@ -19,7 +19,7 @@ import type {
 import { SUBMISSION_STATUS } from '@/config/constants';
 import { createNotification } from '@/lib/notificationService';
 import { rehydrateMessages } from '@/lib/conversationMessages';
-import { createChatStreamEmission } from '@/lib/chatDisplay';
+import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
 import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 
 export type StudentSubmissionContext = {
@@ -627,8 +627,7 @@ export const streamChatMessage = async (
     emission.end(track);
 
     const upperContent = fullContent.toUpperCase();
-    const completionMarker = '[CONVERSATION_COMPLETE]';
-    let shouldEnd = endSignal || emission.getShouldEnd() || upperContent.includes(completionMarker);
+    let shouldEnd = endSignal || emission.getShouldEnd() || hasConversationCompleteMarker(fullContent);
 
     if (!shouldEnd) {
       const semanticPhrases = [
@@ -660,6 +659,34 @@ export const streamChatMessage = async (
       ];
       shouldEnd = semanticPhrases.some(phrase => upperContent.includes(phrase));
     }
+
+    // #region agent log
+    {
+      const tail = fullContent.slice(-200);
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fc4f11' },
+        body: JSON.stringify({
+          sessionId: 'fc4f11',
+          runId: 'post-fix',
+          location: 'submissionService.ts:streamChatMessage',
+          message: 'stream end shouldEnd computed',
+          data: {
+            hypothesisId: 'A',
+            shouldEnd,
+            endSignal,
+            emissionShouldEnd: emission.getShouldEnd(),
+            hasAnyCompletionMarker: hasConversationCompleteMarker(fullContent),
+            hasConationTypo: /\[CONATION_COMPLETE\]/i.test(fullContent),
+            hasConversationTypo: /CONVERSATION_COMPLETE/.test(upperContent),
+            fullContentLen: fullContent.length,
+            tail,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
 
     return { data: { shouldEnd }, error: null };
   } catch (error) {

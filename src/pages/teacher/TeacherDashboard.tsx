@@ -113,7 +113,7 @@ const TeacherDashboard = () => {
   // Show loading screen while auth is initializing
   if (authLoading) {
     return (
-      <DashboardLayout breadcrumbs={[{ label: t('nav.dashboard') }]}>
+      <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">{t('common.loading')}</div>
         </div>
@@ -122,11 +122,7 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <DashboardLayout
-      breadcrumbs={[
-        { label: 'Dashboard' }
-      ]}
-    >
+    <DashboardLayout>
       {/* Enhanced Page Header */}
       <div className="relative -mx-6 md:-mx-8 lg:-mx-10 -mt-6 md:-mt-8 lg:-mt-10 px-6 md:px-8 lg:px-10 pt-8 md:pt-10 lg:pt-12 pb-8 md:pb-10 mb-8 md:mb-10 overflow-hidden bg-muted/30">
         <div className="relative flex flex-col gap-4">

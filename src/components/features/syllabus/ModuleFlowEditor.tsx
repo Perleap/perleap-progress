@@ -37,7 +37,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { GripVertical, Trash2, Plus, Pencil } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { GripVertical, Trash2, Plus, Pencil, Eye } from 'lucide-react';
+import { buttonVariants } from '@/components/ui/button';
+import type { ClassroomLocationState } from '@/types/navigation';
 import { toast } from 'sonner';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
@@ -110,30 +113,24 @@ interface ModuleFlowEditorProps {
   assignments: AssignmentLite[];
   isRTL: boolean;
   onRequestNewActivity?: () => void;
-  /** When set, assignment rows show an edit control that opens the teacher assignment editor. */
+  /** Opens the assignment editor (e.g. wizard) to view the task. */
+  onViewAssignment?: (assignmentId: string) => void;
+  /** Opens the assignment editor for editing (e.g. wizard). */
   onEditAssignment?: (assignmentId: string) => void;
   /** When set, activity/resource rows show an edit control that opens the lesson/activity editor. */
   onEditResource?: (resourceId: string) => void;
 }
 
-/** Vertical spine + node per step; non-interactive so drag handles keep hit targets. */
-function ModuleFlowTimelineRail({
-  index,
-  total,
-}: {
-  index: number;
-  total: number;
-}) {
-  const isFirst = index === 0;
-  const isLast = index === total - 1;
+/** Step index label in a circle; no connector lines (visual parity with student curriculum rail). */
+function ModuleFlowTimelineRail({ stepNumber }: { stepNumber: number }) {
   return (
     <div
-      className="pointer-events-none flex w-5 shrink-0 flex-col items-center self-stretch"
+      className="pointer-events-none flex w-9 shrink-0 flex-col items-center justify-center self-center"
       aria-hidden
     >
-      {!isFirst ? <div className="min-h-[8px] w-px flex-1 bg-border" /> : <div className="h-3 shrink-0" />}
-      <div className="z-[1] h-2.5 w-2.5 shrink-0 rounded-full border-2 border-primary bg-card shadow-sm" />
-      {!isLast ? <div className="min-h-[8px] w-px flex-1 bg-border" /> : <div className="h-3 shrink-0" />}
+      <div className="z-[1] flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-card text-xs font-semibold tabular-nums text-foreground shadow-sm">
+        {stepNumber}
+      </div>
     </div>
   );
 }
@@ -173,12 +170,17 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       assignments,
       isRTL,
       onRequestNewActivity,
+      onViewAssignment,
       onEditAssignment,
       onEditResource,
     },
     ref,
   ) {
     const { t } = useTranslation();
+    const activityLinkState: Pick<ClassroomLocationState, 'returnClassroomSection'> = {
+      returnClassroomSection: 'outline',
+    };
+
     const { data: persisted = [], isLoading, isFetching } = useModuleFlowSteps(sectionId);
     const replaceMutation = useReplaceModuleFlow();
     const deleteAssignmentMutation = useDeleteAssignment();
@@ -370,6 +372,8 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       activeDragId != null
         ? localSteps.find((s) => stepSortId(s) === activeDragId)
         : null;
+    const activeDragIndex =
+      activeDragId != null ? localSteps.findIndex((s) => stepSortId(s) === activeDragId) : -1;
 
     return (
       <div className="space-y-3">
@@ -440,11 +444,11 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                     {({ dragAttributes, dragListeners }) => (
                       <div
                         className={cn(
-                          'flex min-w-0 items-stretch gap-3',
+                          'flex min-w-0 items-center gap-3',
                           isRTL && 'flex-row-reverse',
                         )}
                       >
-                        <ModuleFlowTimelineRail index={index} total={localSteps.length} />
+                        <ModuleFlowTimelineRail stepNumber={index + 1} />
                         <div
                           className={cn(
                             'flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-card p-3',
@@ -478,6 +482,30 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                             </span>
                           </div>
                           <div className="flex shrink-0 items-center gap-0.5">
+                            {step.kind === 'resource' ? (
+                              <Link
+                                to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
+                                state={activityLinkState}
+                                className={cn(
+                                  buttonVariants({ variant: 'ghost', size: 'icon' }),
+                                  'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
+                                )}
+                                aria-label={t('classroomDetail.activitiesFlow.viewActivity')}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            ) : onViewAssignment ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                                aria-label={t('classroomDetail.activitiesFlow.viewAssignment')}
+                                onClick={() => onViewAssignment(step.assignmentId)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            ) : null}
                             {step.kind === 'assignment' && onEditAssignment ? (
                               <Button
                                 type="button"
@@ -528,11 +556,13 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
             {activeStep ? (
               <div
                 className={cn(
-                  'flex min-w-0 items-stretch gap-3 shadow-xl will-change-transform [backface-visibility:hidden]',
+                  'flex min-w-0 items-center gap-3 shadow-xl will-change-transform [backface-visibility:hidden]',
                   isRTL && 'flex-row-reverse',
                 )}
               >
-                <ModuleFlowTimelineRail index={0} total={1} />
+                <ModuleFlowTimelineRail
+                  stepNumber={activeDragIndex >= 0 ? activeDragIndex + 1 : 1}
+                />
                 <div
                   className={cn(
                     'flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-card p-3',

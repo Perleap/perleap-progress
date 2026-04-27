@@ -186,11 +186,19 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   const allowedNavIds = useMemo(() => new Set(navSections.map((s) => s.id)), [navSections]);
 
   const activeClassroomNavSection = useMemo(() => {
-    const raw = returnClassroomSection ?? 'curriculum';
-    const normalized = raw === 'activities' || raw === 'assignments' ? 'curriculum' : raw;
+    const fallback = role === 'teacher' ? 'outline' : 'curriculum';
+    const raw = returnClassroomSection ?? fallback;
+    let normalized =
+      raw === 'activities' || raw === 'assignments'
+        ? role === 'teacher'
+          ? 'outline'
+          : 'curriculum'
+        : raw;
+    if (role === 'teacher' && normalized === 'curriculum') normalized = 'outline';
+    if (role === 'student' && normalized === 'outline') normalized = 'curriculum';
     if (normalized && allowedNavIds.has(normalized)) return normalized;
     return 'overview';
-  }, [returnClassroomSection, allowedNavIds]);
+  }, [returnClassroomSection, allowedNavIds, role]);
 
   const handleClassroomNav = useCallback(
     (section: string) => {
@@ -206,8 +214,13 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
     if (classroomId) {
       const path =
         role === 'teacher' ? `/teacher/classroom/${classroomId}` : `/student/classroom/${classroomId}`;
-      const section =
-        returnClassroomSection ?? 'curriculum';
+      const fallback = role === 'teacher' ? 'outline' : 'curriculum';
+      let section = returnClassroomSection ?? fallback;
+      if (role === 'teacher' && section === 'curriculum') section = 'outline';
+      if (role === 'student' && section === 'outline') section = 'curriculum';
+      if (section === 'activities' || section === 'assignments') {
+        section = role === 'teacher' ? 'outline' : 'curriculum';
+      }
       navigate(path, { state: { activeSection: section } });
       return;
     }

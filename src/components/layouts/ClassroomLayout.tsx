@@ -1,17 +1,8 @@
 import * as React from 'react';
-import { Link } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { ClassroomSidebar } from './ClassroomSidebar';
 import { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from '@/config/classroomSections';
 import { Separator } from '@/components/ui/separator';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/useAuth';
@@ -54,7 +45,6 @@ export function ClassroomLayout({
   const isTeacher =
     user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
   const isAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
-  const basePath = isTeacher ? '/teacher' : '/student';
 
   // Use custom sections if provided, otherwise use defaults based on role
   const sections = React.useMemo(() => {
@@ -68,8 +58,6 @@ export function ClassroomLayout({
       title: t(`classroomSections.${section.id}`, section.title),
     }));
   }, [customSections, isTeacher, t]);
-
-  const currentSection = sections.find((s) => s.id === activeSection);
 
   return (
     <SidebarProvider className={isRTL ? 'rtl-sidebar' : ''}>
@@ -86,23 +74,7 @@ export function ClassroomLayout({
           <div className="flex flex-1 items-center gap-4">
             <SidebarTrigger className="rounded-lg border border-transparent p-2.5 shadow-sm transition-all duration-200 hover:scale-110 hover:border-accent-foreground/10 hover:bg-accent hover:shadow-md" />
             <Separator orientation="vertical" className="h-8 bg-border/60" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink render={<Link to={`${basePath}/dashboard`} />}>
-                    {t('nav.dashboard')}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                {currentSection && (
-                  <>
-                    <BreadcrumbSeparator className="hidden md:block" />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>{currentSection.title}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </>
-                )}
-              </BreadcrumbList>
-            </Breadcrumb>
+            <div className="min-w-0 flex-1" aria-hidden />
           </div>
           {user && (
             <div className="flex items-center gap-2">

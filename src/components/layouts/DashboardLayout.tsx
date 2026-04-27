@@ -1,17 +1,7 @@
-import * as React from 'react';
-import { useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from '@/components/ui/separator';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -21,18 +11,11 @@ import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 import { useTranslation } from 'react-i18next';
 import { USER_ROLES } from '@/config/constants';
 
-interface BreadcrumbItem {
-  label: string;
-  href?: string;
-}
-
 interface DashboardLayoutProps {
-  children: React.ReactNode;
-  breadcrumbs?: BreadcrumbItem[];
-  title?: string;
+  children: ReactNode;
 }
 
-export function DashboardLayout({ children, breadcrumbs = [], title }: DashboardLayoutProps) {
+export function DashboardLayout({ children }: DashboardLayoutProps) {
   const contentRef = usePageTransition();
   const { isRTL } = useLanguage();
   const { t } = useTranslation();
@@ -49,28 +32,7 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
           <div className="flex flex-1 items-center gap-4">
             <SidebarTrigger className="rounded-lg border border-transparent p-2.5 shadow-sm transition-all duration-200 hover:scale-110 hover:border-accent-foreground/10 hover:bg-accent hover:shadow-md" />
             <Separator orientation="vertical" className="h-8 bg-border/60" />
-            {breadcrumbs.length > 0 && (
-              <Breadcrumb>
-                <BreadcrumbList>
-                  {breadcrumbs.map((item, index) => (
-                    <React.Fragment key={index}>
-                      <BreadcrumbItem className={index === breadcrumbs.length - 1 ? '' : 'hidden md:block'}>
-                        {item.href ? (
-                          <BreadcrumbLink render={<Link to={item.href} />} className="font-medium hover:text-primary transition-colors">
-                            {item.label}
-                          </BreadcrumbLink>
-                        ) : (
-                          <BreadcrumbPage className="font-semibold text-foreground">{item.label}</BreadcrumbPage>
-                        )}
-                      </BreadcrumbItem>
-                      {index < breadcrumbs.length - 1 && (
-                        <BreadcrumbSeparator className="hidden md:block" />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </BreadcrumbList>
-              </Breadcrumb>
-            )}
+            <div className="min-w-0 flex-1" aria-hidden />
           </div>
           {user && (
             <div className="flex items-center gap-2">
@@ -97,6 +59,5 @@ export function DashboardLayout({ children, breadcrumbs = [], title }: Dashboard
     </SidebarProvider>
   );
 }
-
 
 
