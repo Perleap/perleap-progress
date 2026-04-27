@@ -8,6 +8,7 @@ import {
   LayoutList,
   ArrowRight,
   Loader2,
+  LogOut,
 } from 'lucide-react';
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -241,8 +242,10 @@ const StudentClassroomDetail = () => {
   const studyCtaLabelReview = t('studentClassroom.studyCta.review');
 
   const aboutPrimaryButtonLabel = useMemo(() => {
-    if (!hasPublishedSyllabus || !syllabus?.sections?.length) {
-      return studyCtaLabelView;
+    const fallbackNoCta =
+      !hasPublishedSyllabus || !syllabus?.sections?.length;
+    if (fallbackNoCta) {
+      return studyCtaLabelStart;
     }
     const { variant: syllabusVariant } = getStudyCtaTarget(
       syllabus.sections,
@@ -265,15 +268,30 @@ const StudentClassroomDetail = () => {
     studentProgressMap,
     flowCtx,
     studyCtaLabelStart,
-    studyCtaLabelView,
     studyCtaLabelContinueCourse,
     studyCtaLabelReview,
   ]);
 
   const handleStudyCtaClick = useCallback(() => {
     if (!syllabus || syllabus.status !== 'published') {
-      sectionBackReturnsToOverviewRef.current = false;
-      setActiveSection('overview');
+      const list = [...(rawAssignments as { id: string; due_at?: string | null; submissions?: { status?: string }[] }[])];
+      list.sort((a, b) => {
+        const aDone = Array.isArray(a.submissions) && a.submissions.some((s) => s.status === 'completed');
+        const bDone = Array.isArray(b.submissions) && b.submissions.some((s) => s.status === 'completed');
+        if (aDone !== bDone) return aDone ? 1 : -1;
+        const at = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
+        const bt = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+        if (at !== bt) return at - bt;
+        return 0;
+      });
+      const nextId = list[0]?.id;
+      if (nextId) {
+        navigate(`/student/assignment/${nextId}`, {
+          state: { returnClassroomSection: 'overview' },
+        });
+        return;
+      }
+      toast.info(t('studentClassroom.noAssignmentsDesc'));
       return;
     }
     if (user?.id && syllabus.sections?.length) {
@@ -311,6 +329,7 @@ const StudentClassroomDetail = () => {
     rawAssignments,
     studentProgressMap,
     syllabus,
+    t,
     user?.id,
     flowCtx,
   ]);
@@ -347,27 +366,11 @@ const StudentClassroomDetail = () => {
         {/* Overview Section */}
         {activeSection === 'overview' && (
           <div className="space-y-6">
-            <div
-              className={cn(
-                'flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
-                isRTL && 'sm:flex-row-reverse'
-              )}
+            <h2
+              className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
             >
-              <h2
-                className={`text-2xl md:text-3xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
-              >
-                {classroom.name}
-              </h2>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
-                onClick={() => setLeaveCourseOpen(true)}
-              >
-                {t('studentClassroom.leaveCourse.button')}
-              </Button>
-            </div>
+              {classroom.name}
+            </h2>
 
             <div className="grid md:grid-cols-3 gap-6 md:items-start">
               {/* Main Info Card */}
@@ -622,6 +625,23 @@ const StudentClassroomDetail = () => {
                   </Card>
                 )}
               </div>
+            </div>
+
+            <div className="flex w-full justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                className={cn(
+                  'gap-2 rounded-full border-destructive/40 bg-background/95 text-destructive shadow-md backdrop-blur-sm',
+                  'hover:bg-destructive/10 focus-visible:ring-destructive/30'
+                )}
+                onClick={() => setLeaveCourseOpen(true)}
+                aria-label={t('studentClassroom.leaveCourse.button')}
+              >
+                <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+                {t('studentClassroom.leaveCourse.button')}
+              </Button>
             </div>
           </div>
         )}
