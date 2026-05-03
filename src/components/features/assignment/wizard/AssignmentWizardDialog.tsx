@@ -1056,7 +1056,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           });
         } else {
           await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
-          await queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });
+          await queryClient.invalidateQueries({
+            queryKey: assignmentKeys.classroomAssignmentLists(classroomId),
+            exact: false,
+          });
           await queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
         }
         try {
@@ -1189,7 +1192,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
             await syncModuleFlowToResolvedDisplayForSection(queryClient, cid, syllabusSectionId);
           } else {
             await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(cid) });
-            await queryClient.invalidateQueries({ queryKey: assignmentKeys.listByClassroom(cid) });
+            await queryClient.invalidateQueries({
+              queryKey: assignmentKeys.classroomAssignmentLists(cid),
+              exact: false,
+            });
             await queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
           }
         }

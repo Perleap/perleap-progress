@@ -288,7 +288,7 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
 }
 
 /** Header control: place next to notifications (teachers only). */
-export function TeacherAssistantTrigger() {
+export function TeacherAssistantTrigger({ className }: { className?: string }) {
   const ctx = useTeacherAssistantContext();
   if (!ctx) return null;
 
@@ -302,6 +302,7 @@ export function TeacherAssistantTrigger() {
       className={cn(
         'relative h-8 w-8 shrink-0 rounded-full border transition-colors',
         isOpen ? 'bg-muted text-muted-foreground border-border' : 'border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90',
+        className,
       )}
       onClick={toggle}
       aria-label="Toggle AI Assistant"

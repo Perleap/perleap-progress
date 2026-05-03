@@ -60,7 +60,7 @@ export function useSubmitTestResponses() {
 
       const { data, error } = await supabase
         .from('test_responses')
-        .insert(rows)
+        .upsert(rows, { onConflict: 'submission_id,question_id' })
         .select();
 
       if (error) throw error;

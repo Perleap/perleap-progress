@@ -126,7 +126,8 @@ export const getAssignmentById = async (
  */
 export const getStudentAssignmentDetails = async (
   assignmentId: string,
-  studentId: string
+  studentId: string,
+  opts?: { isTeacherTry?: boolean },
 ): Promise<{ data: any | null; error: ApiError | null }> => {
   try {
     // 1. Fetch assignment with classroom and teacher info in one join
@@ -148,7 +149,11 @@ export const getStudentAssignmentDetails = async (
     if (!assignment) return { data: null, error: null };
 
     // 2. Active submission + attempt policy
-    const { data: ctx, error: subError } = await getStudentSubmissionContext(assignmentId, studentId);
+    const { data: ctx, error: subError } = await getStudentSubmissionContext(
+      assignmentId,
+      studentId,
+      opts?.isTeacherTry ? { isTeacherTry: true } : undefined,
+    );
     if (subError) throw subError;
 
     const submission = ctx.submission;

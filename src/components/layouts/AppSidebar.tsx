@@ -14,6 +14,8 @@ import {
   Calendar,
   Globe,
   Volume2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -26,13 +28,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
-  SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -51,8 +56,10 @@ import { useAuth } from '@/contexts/useAuth';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PerleapLogo } from '@/components/PerleapLogo';
+import { cn } from '@/lib/utils';
 import { isAppAdminRole } from '@/utils/role';
 import { MonitoringInlineNav } from '@/pages/admin/monitoring/MonitoringInlineNav';
+import { AdminAiPromptsSidebarLink } from '@/pages/admin/AdminAiPromptsSidebarLink';
 
 interface NavItem {
   title: string;
@@ -67,6 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { language = 'en', setLanguage, isRTL } = useLanguage();
+  const { toggleSidebar, state } = useSidebar();
 
   const [logoutOpen, setLogoutOpen] = React.useState(false);
 
@@ -138,6 +146,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const collapseChevronIcon =
+    state === 'collapsed'
+      ? isRTL
+        ? ChevronLeft
+        : ChevronRight
+      : isRTL
+        ? ChevronRight
+        : ChevronLeft;
+
   const userInitials = React.useMemo(() => {
     if (profile?.full_name) {
       return profile.full_name
@@ -152,7 +169,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" side={isRTL ? 'right' : 'left'} {...props}>
-      <SidebarHeader className="flex min-h-24 items-center border-b border-sidebar-border px-4 py-2.5 sm:px-5 group-data-[collapsible=icon]:min-h-16 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
+      <SidebarHeader className="flex min-h-24 items-center px-4 py-2.5 sm:px-5 group-data-[collapsible=icon]:min-h-16 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-2">
         <SidebarMenu>
           <SidebarMenuItem className="list-none">
             <div className="flex min-w-0 items-center gap-3 group-data-[collapsible=icon]:justify-center sm:gap-3.5">
@@ -198,12 +215,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ) : null}
-              {isTeacher && isAppAdmin ? <MonitoringInlineNav /> : null}
+              {isTeacher && isAppAdmin ? (
+                  <>
+                    <AdminAiPromptsSidebarLink />
+                    <MonitoringInlineNav />
+                  </>
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator className="my-2" />
+        <div className="h-2 shrink-0" aria-hidden />
 
         {isOnSettingsPage && (
           <SidebarGroup>
@@ -230,142 +252,102 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border px-2 py-4">
-        <SidebarMenu className="space-y-1">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => navigate(`${basePath}/settings`)}
-              isActive={isOnSettingsPage}
-              tooltip={t('nav.settings')}
-              className={`min-h-[40px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isOnSettingsPage ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
-            >
-              <Settings className="size-5 group-data-[collapsible=icon]:size-5" />
-              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.settings')}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={toggleTheme}
-              tooltip={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
-              className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg"
-            >
-              {theme === 'dark' ? (
-                <Sun className="size-5 group-data-[collapsible=icon]:size-5" />
-              ) : (
-                <Moon className="size-5 group-data-[collapsible=icon]:size-5" />
+      <SidebarFooter className="gap-3 p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
+                isRTL && 'flex-row-reverse',
+                'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
               )}
-              <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
-                {theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  tooltip="Language"
-                  className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg cursor-pointer hover:bg-sidebar-accent/50 transition-colors"
-                >
-                  <Globe className="size-5 group-data-[collapsible=icon]:size-5 opacity-70" />
-                  <span
-                    className={`font-semibold text-sm group-data-[collapsible=icon]:hidden flex-1 ${isRTL ? 'text-right mr-1' : 'text-left ml-1'}`}
-                  >
-                    {language === 'en' ? 'English' : 'עברית'}
-                  </span>
-                  <ChevronDown
-                    className={`${isRTL ? 'mr-auto' : 'ml-auto'} size-4 opacity-50 group-data-[collapsible=icon]:hidden`}
-                  />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="right"
-                align="end"
-                dir={isRTL ? 'rtl' : 'ltr'}
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-[160px] rounded-xl p-1 shadow-lg border border-border/50"
-              >
-                <DropdownMenuItem
-                  onClick={() => setLanguage('en')}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    language === 'en' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent'
-                  }`}
-                >
-                  <span className="text-lg leading-none">🇺🇸</span>
-                  <span>English</span>
-                  {language === 'en' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setLanguage('he')}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    language === 'he' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent'
-                  }`}
-                >
-                  <span className="text-lg leading-none">🇮🇱</span>
-                  <span>עברית</span>
-                  {language === 'he' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-
-          <SidebarSeparator className="my-2" />
-
-          <SidebarMenuItem className="hidden group-data-[collapsible=icon]:block">
-            <SidebarMenuButton
-              onClick={() => setLogoutOpen(true)}
-              tooltip={t('nav.logout')}
-              className="min-h-[40px] group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg text-destructive hover:text-destructive"
             >
-              <LogOut className="size-5 group-data-[collapsible=icon]:size-5" />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem className="hidden group-data-[collapsible=icon]:block">
-            <div className="flex justify-center py-1">
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={profile?.avatar_url || undefined} alt="" />
+              <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
                 <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
-            </div>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-            <div
-              className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+              <span className="min-w-0 flex-1 truncate text-start font-semibold group-data-[collapsible=icon]:hidden">
+                {profile?.full_name || t('nav.user')}
+              </span>
+              <ChevronDown className="size-4 shrink-0 opacity-60 group-data-[collapsible=icon]:hidden" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side={isRTL ? 'left' : 'right'}
+            align="end"
+            dir={isRTL ? 'rtl' : 'ltr'}
+            className="w-56 rounded-xl"
+          >
+            <DropdownMenuItem onClick={() => navigate(`${basePath}/settings`)} className="gap-2">
+              <Settings className="size-4" />
+              {t('nav.settings')}
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2">
+                <Globe className="size-4 opacity-70" />
+                {t('nav.language')}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+                <DropdownMenuItem
+                  onClick={() => setLanguage('en')}
+                  className={language === 'en' ? 'bg-primary/10 font-medium' : ''}
+                >
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setLanguage('he')}
+                  className={language === 'he' ? 'bg-primary/10 font-medium' : ''}
+                >
+                  עברית
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setLogoutOpen(true)}
+              className="gap-2 text-destructive focus:text-destructive"
             >
-              <Avatar className="h-8 w-8 rounded-lg shrink-0">
-                <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
-                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div
-                className={`grid flex-1 min-w-0 text-sm leading-tight ${isRTL ? 'text-right' : 'text-left'}`}
-              >
-                <span className="truncate font-semibold">{profile?.full_name || t('nav.user')}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {isTeacher ? t('nav.teacher') : t('nav.student')}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                aria-label={t('nav.logout')}
-                onClick={() => setLogoutOpen(true)}
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+              <LogOut className="size-4" />
+              {t('nav.logout')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <SidebarRail />
+        <div
+          className={cn(
+            'flex items-center justify-between gap-2 px-1',
+            'group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center',
+          )}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-lg text-sidebar-foreground"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+          >
+            {theme === 'dark' ? (
+              <Sun className="size-5" />
+            ) : (
+              <Moon className="size-5" />
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-lg text-sidebar-foreground"
+            onClick={toggleSidebar}
+            aria-label={t('nav.toggleSidebar')}
+          >
+            {React.createElement(collapseChevronIcon, { className: 'size-5' })}
+          </Button>
+        </div>
+      </SidebarFooter>
 
       <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">

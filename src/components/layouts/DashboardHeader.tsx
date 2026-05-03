@@ -31,7 +31,7 @@ export const DashboardHeader = ({
   const { signOut } = useAuth();
 
   return (
-    <header className="border-b">
+    <header>
       <div className="container flex h-14 md:h-16 items-center justify-between px-4">
         <h1 className="text-lg md:text-2xl font-bold">{title}</h1>
         <div className="flex items-center gap-2">

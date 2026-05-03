@@ -18,6 +18,7 @@ export {
 // Assignment Queries
 export {
   assignmentKeys,
+  prefetchClassroomAssignments,
   useClassroomAssignments,
   useAssignment,
   useStudentAssignments,
@@ -40,11 +41,13 @@ export {
   useEnrichedClassroomSubmissions,
   useFullSubmissionDetails,
   useTeacherConversationMessages,
+  useTeacherChatSentenceFlags,
 } from './useSubmissionQueries';
 
 // Enrollment Queries
 export {
   enrollmentKeys,
+  prefetchEnrolledStudentsList,
   useEnrolledStudents,
   useIsEnrolled,
   useEnrollInClassroom,
@@ -119,7 +122,9 @@ export type {
 export {
   syllabusKeys,
   prefetchSyllabusByClassroom,
+  prefetchSyllabusOutlineByClassroom,
   useSyllabus,
+  useSyllabusOutlineForClassroom,
   useCreateSyllabus,
   useProvisionSyllabusBundle,
   useUpdateSyllabus,
@@ -171,6 +176,8 @@ export {
   useReplaceModuleFlow,
   useStudentCurriculumFlowContext,
   useStudentModuleFlowProgressMap,
+  useAssignmentFlowProgressMaps,
+  useAssignmentCompletedMap,
   useAssignmentSubmittedOrCompletedMap,
   useMarkFlowStepComplete,
   useAssignmentFlowCompletion,

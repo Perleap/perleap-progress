@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Plus, Trash2, GripVertical, CircleDot, AlignLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -145,32 +146,39 @@ export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuesti
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Label className="text-xs text-muted-foreground">
                       {t('createAssignment.testBuilder.questionType')}:
                     </Label>
-                    <div className="flex gap-1">
-                      <Button
-                        type="button"
-                        variant={question.question_type === 'multiple_choice' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => toggleQuestionType(qIndex, 'multiple_choice')}
-                        className="h-7 text-xs gap-1"
+                    <ToggleGroup
+                      variant="outline"
+                      size="sm"
+                      spacing={0}
+                      value={[question.question_type]}
+                      onValueChange={(vals) => {
+                        const v = vals[0];
+                        if (v === 'multiple_choice' || v === 'open_ended') {
+                          toggleQuestionType(qIndex, v);
+                        }
+                      }}
+                    >
+                      <ToggleGroupItem
+                        value="multiple_choice"
+                        aria-label={t('createAssignment.testBuilder.multipleChoice')}
+                        className="h-7 gap-1 px-2.5 text-xs min-h-7 [&_svg:not([class*='size-'])]:size-3"
                       >
-                        <CircleDot className="h-3 w-3" />
+                        <CircleDot className="h-3 w-3 shrink-0" />
                         {t('createAssignment.testBuilder.multipleChoice')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={question.question_type === 'open_ended' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => toggleQuestionType(qIndex, 'open_ended')}
-                        className="h-7 text-xs gap-1"
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="open_ended"
+                        aria-label={t('createAssignment.testBuilder.openEnded')}
+                        className="h-7 gap-1 px-2.5 text-xs min-h-7 [&_svg:not([class*='size-'])]:size-3"
                       >
-                        <AlignLeft className="h-3 w-3" />
+                        <AlignLeft className="h-3 w-3 shrink-0" />
                         {t('createAssignment.testBuilder.openEnded')}
-                      </Button>
-                    </div>
+                      </ToggleGroupItem>
+                    </ToggleGroup>
                   </div>
 
                   {question.question_type === 'multiple_choice' && (

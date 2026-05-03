@@ -4,6 +4,8 @@
     "dashboard": "Dashboard",
     "planner": "Planner",
     "settings": "Settings",
+    "home": "Home",
+    "classroom": "Classroom",
     "navigation": "Navigation",
     "classroomSections": "Classroom Sections",
     "teacherPortal": "Teacher Portal",
@@ -16,7 +18,18 @@
     "logout": "Logout",
     "logoutConfirmTitle": "Log out?",
     "logoutConfirmDescription": "You will need to sign in again to access your account.",
-    "monitoring": "Monitoring"
+    "monitoring": "Monitoring",
+    "aiPrompts": "AI prompts",
+    "language": "Language",
+    "toggleSidebar": "Toggle sidebar"
+  },
+  "teacherTry": {
+    "bannerTitle": "Teacher preview",
+    "bannerDescription": "Anything you submit here appears in Submissions as a teacher preview. It is not a student attempt.",
+    "classroomMismatch": "This assignment does not belong to this classroom.",
+    "activityPreviewTitle": "Teacher preview (activity)",
+    "activityPreviewDescription": "You are viewing this activity as a teacher. No student submission is created from this page.",
+    "previewMarkedComplete": "Preview marked complete. AI feedback is not generated in teacher preview."
   },
   "monitoring": {
     "title": "Monitoring",
@@ -113,7 +126,36 @@
     "trafficChartNoData": "Not enough data for a chart."
   },
   "admin": {
-    "modeBanner": "Admin mode: you can view and edit all teachers' classrooms. Actions may be logged."
+    "modeBanner": "Admin mode: you can view and edit all teachers' classrooms. Actions may be logged.",
+    "aiPrompts": {
+      "title": "Student chat AI prompts",
+      "subtitle": "Database templates for the Perleap student assistant (keys starting with \"chat\") plus completion rules applied inside the chat Edge Function.",
+      "sectionDb": "Database templates",
+      "sectionHardcoded": "Hardcoded in perleap-chat",
+      "hardcodedHint": "Keep in sync with supabase/functions/perleap-chat/index.ts (completionRules) and src/config/perleapChatCompletionRules.ts.",
+      "variables": "Variables",
+      "comparison": {
+        "title": "Model raw vs student display (student chat)",
+        "subtitle": "Compare OpenAI output captured by the chat edge function with the plain-text pipeline used before Markdown in the assignment chat.",
+        "course": "Course (classroom)",
+        "module": "Module",
+        "assignment": "Assignment",
+        "student": "Student",
+        "selectCourse": "Select a course",
+        "selectModule": "Select a module",
+        "selectAssignment": "Select an assignment",
+        "selectStudent": "Select a student",
+        "allModules": "All modules",
+        "pickFilters": "Select assignment and student to load conversation turns.",
+        "noConversation": "No submission or assistant messages found for this selection.",
+        "unnamedStudent": "Student",
+        "modelRawLabel": "Turn {{n}} — model (raw)",
+        "displayBaselineLabel": "Turn {{n}} — student UI baseline (plain)",
+        "rawNotStoredHint": "Raw model output was not stored for this turn (conversation from before this feature). Showing persisted content instead.",
+        "comparisonFooter": "The right column uses the same list and paragraph rules as the live chat (formatInlineListsForChatMarkdown → splitChatDisplayText). Bubbles still render Markdown/math (SafeMathMarkdown), which can look different without changing this plain text.",
+        "unknownItem": "Unknown item (refresh list or re-select)"
+      }
+    }
   },
   "planner": {
     "subtitle": "Manage your schedule and assignments",
@@ -360,6 +402,11 @@
   },
   "assignmentChat": {
     "placeholder": "Type your message here...",
+    "contextHelpTitle": "Context and help",
+    "companion": {
+      "collapsedHint": "Open for optional help while you work on the task above.",
+      "expandedHint": "Ask questions here; submit your assignment using the task above."
+    },
     "conversationComplete": "Conversation complete! You can now finish the activity. If you didn't understand something or want to continue asking questions, feel free to do so. Once you are done, click the 'Complete Activity' button.",
     "conversationEndedPlaceholder": "Conversation ended - please complete the activity",
     "completeActivity": "Complete Activity",
@@ -375,7 +422,8 @@
       "fileUpload": "Failed to attach file",
       "fileTooLarge": "File is too large (max 10 MB).",
       "fileTypeNotAllowed": "This file type is not supported. Use PDF, PNG, JPG, or text files.",
-      "completing": "Error completing activity"
+      "completing": "Error completing activity",
+      "flag": "Could not send your report. Please try again."
     },
     "success": {
       "activityCompleted": "Activity completed! Feedback generated.",
@@ -388,6 +436,29 @@
       "aiDetectedDescription": "It looks like we've covered the main points of the assignment. Would you like to complete this activity now?",
       "continueButton": "Continue Chatting",
       "completeButton": "Complete Activity"
+    },
+    "flag": {
+      "open": "Flag sentences for teacher review",
+      "title": "Flag assistant sentence",
+      "description": "Select one or more sentences your teacher should review.",
+      "privacyNotice": "Your teacher can see flagged sentences.",
+      "submit": "Submit",
+      "success": "Report submitted. Your teacher has been notified.",
+      "duplicateOnly": "Those sentences were already reported.",
+      "selectSentences": "Select at least one sentence."
+    },
+    "adminDebug": {
+      "title": "AI debug (admin)",
+      "warning": "Raw model output may include student or assignment content. Do not share outside trusted staff.",
+      "empty": "Send a message to see the latest turn debug payload.",
+      "copyJson": "Copy debug JSON",
+      "model": "Model",
+      "polish": "Polish pass",
+      "temperature": "Temperature",
+      "maxTokens": "Max tokens",
+      "rawModel": "Raw model output",
+      "afterPostprocess": "After normalize / polish",
+      "finalClient": "Final message to client (stored)"
     }
   },
   "calendar": {
@@ -715,7 +786,9 @@
       "openFlowToFixOrphans": "Open flow editor to add them to the sequence.",
       "moduleActionsMenu": "Module options",
       "expandAll": "Expand",
-      "collapseAll": "Collapse"
+      "collapseAll": "Collapse",
+      "showCompletedUnits": "Show completed units",
+      "showCompletedUnitsAria": "Show or hide units that are already completed"
     },
     "activities": {
       "title": "Activities",
@@ -830,6 +903,8 @@
       "editStep": "Edit step",
       "viewActivity": "View activity",
       "viewAssignment": "View assignment",
+      "tryAssignment": "Try assignment (preview)",
+      "tryActivity": "Try activity (preview)",
       "viewSubmissions": "View submissions for this assignment"
     },
     "errors": {
@@ -883,6 +958,7 @@
     "noSubmissionsYet": "No submissions yet",
     "noSubmissionsDesc": "Student submissions will appear here once they complete assignments",
     "allStatuses": "All Statuses",
+    "moreFilters": "More filters",
     "inProgress": "In Progress",
     "dateRange": "Date Range",
     "clearFilters": "Clear Filters",
@@ -924,6 +1000,7 @@
   },
   "submissionDetail": {
     "title": "Submission Details",
+    "teacherTryBadge": "Teacher preview",
     "student": "Student",
     "submittedAt": "Submitted at",
     "conversation": "Conversation",
@@ -952,6 +1029,8 @@
     "conversationHistory": "Conversation History",
     "conversationHistoryDesc": "Complete transcript between {{student}} and Perleap",
     "conversationEmpty": "No messages in this conversation yet.",
+    "flaggedSentencesTitle": "Flagged assistant sentences",
+    "noStudentFacingTask": "No short student-facing task summary was saved for this assignment. You can generate or edit it in the assignment editor (Review step).",
     "feedbackEmpty": {
       "chatPrompt": "No AI feedback yet. Open the Assignment tab to read the student’s chat and generate AI feedback."
     },
@@ -1048,6 +1127,8 @@
     "attemptBannerSingle": "You can submit this assignment once.",
     "attemptBannerUntil": "You may submit multiple times until {{date}}.",
     "attemptBannerUnlimited": "You may submit multiple times (no limit).",
+    "noSubmissionPastDue": "The due date has passed and a new submission cannot be started. If you still need access, contact your instructor.",
+    "noSubmissionUnexpected": "Your submission could not be loaded. Try refreshing the page. If it keeps happening, contact your instructor.",
     "startNewAttempt": "Start another attempt",
     "newAttemptStarted": "New attempt started.",
     "dueDate": "Due Date",
@@ -1069,6 +1150,7 @@
     "continue": "Continue",
     "continueNextModule": "Continue to next module",
     "openCurriculum": "Open curriculum",
+    "contextChatHint": "The assistant below is for questions and help only. What you submit in the task above (essay, file, pipeline, etc.) is your assignment.",
     "completionModal": {
       "title": "You're all set",
       "dismiss": "OK"
@@ -1189,6 +1271,35 @@
         "prompt": "Template for prompts",
         "chain": "Sequential processing chain",
         "memory": "Conversation memory"
+      },
+      "inspector": {
+        "title": "Node properties",
+        "selectNode": "Select a node on the canvas to view or edit its details.",
+        "fields": {
+          "label": "Title",
+          "description": "Description",
+          "model": "Model",
+          "systemOrRole": "System / role",
+          "temperature": "Temperature (optional)",
+          "template": "Prompt template",
+          "variablesHint": "Variables hint",
+          "orderingNote": "Ordering / sequence note",
+          "strategy": "Memory strategy"
+        },
+        "placeholders": {
+          "temperature": "e.g. 0.7"
+        },
+        "strategy": {
+          "buffer": "Buffer window",
+          "summary": "Summary memory",
+          "other": "Other"
+        }
+      },
+      "validation": {
+        "emptyGraph": "Add at least one node before submitting.",
+        "noInputToOutputPath": "Connect nodes so there is a path from Input to Output.",
+        "promptTemplateRequired": "Every Prompt node needs a filled-in prompt template.",
+        "llmModelRequired": "Every LLM node needs a model identifier."
       }
     }
   },
@@ -1263,10 +1374,12 @@
       "activity": "Activity",
       "assignment": "Assignment",
       "assignmentUnavailable": "This assignment is no longer available.",
+      "pastDueNoAttempt": "Due date has passed and you can’t start this task.",
       "stepA11y": {
         "locked": "Locked until previous steps are complete",
         "available": "Available now",
-        "done": "Completed"
+        "done": "Completed",
+        "missed_deadline": "Closed — due date passed with no attempt"
       }
     }
   },

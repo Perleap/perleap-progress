@@ -4,6 +4,8 @@
     "dashboard": "לוח בקרה",
     "planner": "מתכנן",
     "settings": "הגדרות",
+    "home": "בית",
+    "classroom": "כיתה",
     "navigation": "ניווט",
     "classroomSections": "חלקי הכיתה",
     "teacherPortal": "פורטל מורים",
@@ -16,7 +18,18 @@
     "logout": "התנתק",
     "logoutConfirmTitle": "להתנתק?",
     "logoutConfirmDescription": "תצטרך להתחבר שוב כדי לגשת לחשבון.",
-    "monitoring": "ניטור"
+    "monitoring": "ניטור",
+    "aiPrompts": "בינה מלאכותית - הנחיות",
+    "language": "שפה",
+    "toggleSidebar": "הרחבה או כיווץ תפריט צד"
+  },
+  "teacherTry": {
+    "bannerTitle": "תצוגה מקדימה למורה",
+    "bannerDescription": "הגשות מכאן מופיעות בהגשות כתצוגה מקדימה של המורה. זו אינה הגשת תלמיד.",
+    "classroomMismatch": "המשימה לא שייכת לכיתה זו.",
+    "activityPreviewTitle": "תצוגה מקדימה למורה (פעילות)",
+    "activityPreviewDescription": "אתם צופים בפעילות כמורים. דף זה לא יוצר הגשת תלמיד.",
+    "previewMarkedComplete": "התצוגה המקדימה סומנה כהושלמה. משוב בינה מלאכותית לא נוצר בתצוגת מורה."
   },
   "monitoring": {
     "title": "ניטור",
@@ -113,7 +126,36 @@
     "trafficChartNoData": "אין מספיק נתונים לתרשים."
   },
   "admin": {
-    "modeBanner": "מצב מנהל: ניתן לצפות ולערוך את כל כיתות המורים. פעולות עשויות להירשם."
+    "modeBanner": "מצב מנהל: ניתן לצפות ולערוך את כל כיתות המורים. פעולות עשויות להירשם.",
+    "aiPrompts": {
+      "title": "הנחיות צ'אט לתלמיד",
+      "subtitle": "תבניות ממסד הנתונים עבור עוזר Perleap לתלמיד (מפתחות שמתחילים ב־chat) בתוספת כללי השלמה בפונקציית הצ'אט.",
+      "sectionDb": "תבניות במסד הנתונים",
+      "sectionHardcoded": "מוטמע בקוד ב־perleap-chat",
+      "hardcodedHint": "יש לעדכן בהתאם ל־supabase/functions/perleap-chat/index.ts (completionRules) ול־src/config/perleapChatCompletionRules.ts.",
+      "variables": "משתנים",
+      "comparison": {
+        "title": "פלט מודל גולמי מול תצוגת תלמיד (צ'אט)",
+        "subtitle": "השוואה בין פלט OpenAI שנשמר בפונקציית הצ'אט לבין צינור הטקסט הפשוט לפני מרקדאון בצ'אט המטלה.",
+        "course": "קורס (כיתה)",
+        "module": "מודול",
+        "assignment": "מטלה",
+        "student": "תלמיד",
+        "selectCourse": "בחר קורס",
+        "selectModule": "בחר מודול",
+        "selectAssignment": "בחר מטלה",
+        "selectStudent": "בחר תלמיד",
+        "allModules": "כל המודולים",
+        "pickFilters": "בחר מטלה ותלמיד כדי לטעון את הודעות השיחה.",
+        "noConversation": "לא נמצאו הגשה או הודעות עוזר לבחירה זו.",
+        "unnamedStudent": "תלמיד",
+        "modelRawLabel": "תור {{n}} — מודל (גולמי)",
+        "displayBaselineLabel": "תור {{n}} — בסיס תצוגה בצ'אט (טקסט פשוט)",
+        "rawNotStoredHint": "פלט גולמי מהמודל לא נשמר לתור זה (שיחה מלפני התכונה). מוצג הטקסט השמור במסד.",
+        "comparisonFooter": "העמודה הימנית משתמשת באותם כללי רשימות ופסקאות כמו צ'אט חי (formatInlineListsForChatMarkdown → splitChatDisplayText). בועות עדיין מרנדרות Markdown/מתמטיקה (SafeMathMarkdown)—התצוגה עלולה להשתגה בלי שהטקסט הפשוט משתנה.",
+        "unknownItem": "פריט לא ידוע (רענן רשימה או בחר מחדש)"
+      }
+    }
   },
   "planner": {
     "subtitle": "נהל את לוח הזמנים והמטלות",
@@ -360,6 +402,11 @@
   },
   "assignmentChat": {
     "placeholder": "הקלד את ההודעה שלך כאן...",
+    "contextHelpTitle": "הקשר ועזרה",
+    "companion": {
+      "collapsedHint": "פתחו לעזרה אופציונלית בזמן העבודה על המטלה למעלה.",
+      "expandedHint": "שאלו כאן שאלות; הגישו את המטלה באמצעות האזור למעלה."
+    },
     "conversationComplete": "השיחה הסתיימה! כעת ניתן לסיים את הפעילות. אם לא הבנת משהו או שברצונך להמשיך לשאול שאלות, אתה מוזמן לעשות זאת. לאחר שתסיים, לחץ על הכפתור 'השלם פעילות'.",
     "conversationEndedPlaceholder": "השיחה הסתיימה - אנא השלם את הפעילות",
     "completeActivity": "השלם פעילות",
@@ -375,7 +422,8 @@
       "fileUpload": "נכשל בצירוף הקובץ",
       "fileTooLarge": "הקובץ גדול מדי (מקסימום 10 מ״ב).",
       "fileTypeNotAllowed": "סוג הקובץ לא נתמך. השתמש ב-PDF, PNG, JPG או קבצי טקסט.",
-      "completing": "שגיאה בהשלמת הפעילות"
+      "completing": "שגיאה בהשלמת הפעילות",
+      "flag": "לא ניתן לשלוח את הדיווח. נסה שוב."
     },
     "success": {
       "activityCompleted": "הפעילות הושלמה! משוב נוצר.",
@@ -388,6 +436,29 @@
       "aiDetectedDescription": "נראה שכיסינו את הנקודות העיקריות של המשימה. האם תרצה להשלים את הפעילות הזאת עכשיו?",
       "continueButton": "המשך לשוחח",
       "completeButton": "השלם פעילות"
+    },
+    "flag": {
+      "open": "סמן משפטים לבדיקת המורה",
+      "title": "סימון משפט מהעוזר",
+      "description": "בחר משפט אחד או יותר שהמורה שלך צריך לבדוק.",
+      "privacyNotice": "המורה יוכל לראות את המשפטים שסומנו.",
+      "submit": "שלח",
+      "success": "הדיווח נשלח. המורה קיבל התראה.",
+      "duplicateOnly": "המשפטים האלה כבר דווחו.",
+      "selectSentences": "בחר לפחות משפט אחד."
+    },
+    "adminDebug": {
+      "title": "ניפוי שגיאות AI (מנהל)",
+      "warning": "פלט גולמי מהמודל עשוי לכלול תוכן של תלמיד או מטלה. אל תשתף מחוץ לצוות מהימן.",
+      "empty": "שלח הודעה כדי לראות את נתוני הניפוי להודעת העוזר האחרונה.",
+      "copyJson": "העתק JSON לניפוי",
+      "model": "מודל",
+      "polish": "עיבוד Polish",
+      "temperature": "Temperature",
+      "maxTokens": "מקס׳ טוקנים",
+      "rawModel": "פלט מודל גולמי",
+      "afterPostprocess": "אחרי נרמול / Polish",
+      "finalClient": "הודעה סופית ללקוח (נשמרת)"
     }
   },
   "calendar": {
@@ -702,7 +773,9 @@
       "openFlowToFixOrphans": "פתחו את עורך הזרימה כדי להוסיף אותן לרצף.",
       "moduleActionsMenu": "אפשרויות מודול",
       "expandAll": "הרחבה",
-      "collapseAll": "כיווץ"
+      "collapseAll": "כיווץ",
+      "showCompletedUnits": "הצגת יחידות שהושלמו",
+      "showCompletedUnitsAria": "הצגה או הסתרה של יחידות שהושלמו"
     },
     "activities": {
       "title": "פעילויות",
@@ -817,6 +890,8 @@
       "editStep": "עריכת צעד",
       "viewActivity": "צפייה בפעילות",
       "viewAssignment": "צפייה במשימה",
+      "tryAssignment": "נסה משימה (תצוגה מקדימה)",
+      "tryActivity": "נסה פעילות (תצוגה מקדימה)",
       "viewSubmissions": "צפייה בהגשות למשימה זו"
     },
     "errors": {
@@ -870,6 +945,7 @@
     "noSubmissionsYet": "אין הגשות עדיין",
     "noSubmissionsDesc": "הגשות התלמידים יופיעו כאן כשהם ישלימו משימות",
     "allStatuses": "כל הסטטוסים",
+    "moreFilters": "סינון נוסף",
     "inProgress": "בתהליך",
     "dateRange": "טווח תאריכים",
     "clearFilters": "נקה מסננים",
@@ -911,6 +987,7 @@
   },
   "submissionDetail": {
     "title": "פרטי הגשה",
+    "teacherTryBadge": "תצוגה מקדימה – מורה",
     "student": "תלמיד",
     "submittedAt": "הוגש ב",
     "conversation": "שיחה",
@@ -939,6 +1016,8 @@
     "conversationHistory": "היסטוריית שיחה",
     "conversationHistoryDesc": "תמליל מלא בין {{student}} ל-Perleap",
     "conversationEmpty": "אין עדיין הודעות בשיחה זו.",
+    "flaggedSentencesTitle": "משפטים מסומנים מהעוזר",
+    "noStudentFacingTask": "לא נשמר תקציר קצר למשימה עבור התלמידים במטלה זו. ניתן ליצור או לערוך אותו בעורך המטלה (שלב סקירה).",
     "feedbackEmpty": {
       "chatPrompt": "עדיין אין משוב בינה מלאכותית. פתח את לשונית המשימה כדי לקרוא את הצ'אט של התלמיד וליצור משוב בינה מלאכותית."
     },
@@ -1035,6 +1114,8 @@
     "attemptBannerSingle": "ניתן להגיש משימה זו פעם אחת.",
     "attemptBannerUntil": "ניתן להגיש מספר פעמים עד {{date}}.",
     "attemptBannerUnlimited": "ניתן להגיש מספר פעמים ללא הגבלה.",
+    "noSubmissionPastDue": "תאריך היעד חלף ולא ניתן להתחיל הגשה חדשה. אם עדיין נדרשת גישה, צרו קשר עם המורה.",
+    "noSubmissionUnexpected": "לא הצלחנו לטעון את ההגשה. נסו לרענן את הדף. אם הבעיה נמשכת, צרו קשר עם המורה.",
     "startNewAttempt": "התחל ניסיון נוסף",
     "newAttemptStarted": "נפתח ניסיון חדש.",
     "dueDate": "תאריך יעד",
@@ -1056,6 +1137,7 @@
     "continue": "המשך",
     "continueNextModule": "המשך למודול הבא",
     "openCurriculum": "פתח את תוכנית הלימודים",
+    "contextChatHint": "העוזר למטה מיועד לשאלות ועזרה בלבד. מה שמוגש במטלה למעלה (חיבור, קובץ, צינור וכד׳) הוא המטלה שלך.",
     "completionModal": {
       "title": "ההגשה התקבלה",
       "dismiss": "אישור"
@@ -1176,6 +1258,35 @@
         "prompt": "תבנית לפרומפטים",
         "chain": "שרשרת עיבוד רציפה",
         "memory": "זיכרון שיחה"
+      },
+      "inspector": {
+        "title": "מאפייני הצומת",
+        "selectNode": "בחרו צומת בלוח כדי לצפות בפרטיו או לערוך אותם.",
+        "fields": {
+          "label": "כותרת",
+          "description": "תיאור",
+          "model": "מודל",
+          "systemOrRole": "מערכת / תפקיד",
+          "temperature": "טמפרטורה (אופציונלי)",
+          "template": "תבנית פרומפט",
+          "variablesHint": "רמז למשתנים",
+          "orderingNote": "סדר / רצף",
+          "strategy": "אסטרטגיית זיכרון"
+        },
+        "placeholders": {
+          "temperature": "למשל ‎0.7"
+        },
+        "strategy": {
+          "buffer": "חלון חוצץ",
+          "summary": "זיכרון סיכום",
+          "other": "אחר"
+        }
+      },
+      "validation": {
+        "emptyGraph": "הוסיפו צומת אחד לפחות לפני ההגשה.",
+        "noInputToOutputPath": "חברו צמתים כך שיש מסלול מקלט לפלט.",
+        "promptTemplateRequired": "כל צומת פרומפט זקוק לתבנית פרומפט מלאה.",
+        "llmModelRequired": "כל צומת LLM זקוק למזהה מודל."
       }
     }
   },
@@ -1225,10 +1336,12 @@
       "activity": "פעילות",
       "assignment": "משימה",
       "assignmentUnavailable": "המשימה אינה זמינה עוד.",
+      "pastDueNoAttempt": "מועד ההגשה עבר ולא ניתן להתחיל את המשימה.",
       "stepA11y": {
         "locked": "נעול עד להשלמת השלבים הקודמים",
         "available": "זמין כעת",
-        "done": "הושלם"
+        "done": "הושלם",
+        "missed_deadline": "סגור — מועד ההגשה עבר בלי ניסיון"
       }
     }
   },

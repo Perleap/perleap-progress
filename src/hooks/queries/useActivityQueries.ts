@@ -5,6 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
 
 export const activityKeys = {
   all: ['activity'] as const,
@@ -48,14 +49,19 @@ export const useRecentActivity = (
       if (submissionIds.length > 0) {
         const { data: submissions } = await supabase
           .from('submissions')
-          .select('id, student_id, student_profiles(user_id, full_name, avatar_url)')
+          .select('id, student_id')
           .in('id', submissionIds);
+
+        const profileMap = await resolveUserDisplayProfiles(
+          supabase,
+          submissions?.map((s) => s.student_id) ?? [],
+        );
 
         if (submissions && submissions.length > 0) {
           studentProfilesMap = submissions.reduce((acc, s) => {
-            const profile = (s as any).student_profiles;
+            const profile = profileMap.get(s.student_id);
             if (profile) {
-              acc[s.id] = { name: profile.full_name, avatar_url: profile.avatar_url };
+              acc[s.id] = { name: profile.full_name ?? 'Unknown', avatar_url: profile.avatar_url ?? '' };
             }
             return acc;
           }, {} as any);

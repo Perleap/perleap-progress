@@ -22,6 +22,8 @@ interface EssaySubmissionPageProps {
   assignmentInstructions: string;
   /** When false, student submit does not run AI; teacher runs evaluation later. */
   autoPublishAiFeedback?: boolean;
+  /** Teacher "Try assignment" — skip AI feedback (edge function writes assume student_profiles). */
+  isTeacherTry?: boolean;
   initialText?: string | null;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
@@ -31,6 +33,7 @@ export function EssaySubmissionPage({
   submissionId,
   assignmentInstructions,
   autoPublishAiFeedback = true,
+  isTeacherTry = false,
   initialText,
   onComplete,
 }: EssaySubmissionPageProps) {
@@ -100,6 +103,14 @@ export function EssaySubmissionPage({
         .update({ text_body: trimmed })
         .eq('id', submissionId);
       if (saveErr) throw saveErr;
+
+      if (isTeacherTry) {
+        const { error: completeError } = await completeSubmission(submissionId);
+        if (completeError) throw completeError;
+        toast.success(t('teacherTry.previewMarkedComplete'));
+        await onComplete('activityCompleted');
+        return;
+      }
 
       if (!autoPublishAiFeedback) {
         const { error: completeError } = await completeSubmission(submissionId, {

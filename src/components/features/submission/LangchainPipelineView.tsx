@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Workflow } from 'lucide-react';
 import { LangchainEditor } from '@/components/features/langchain/LangchainEditor';
+import { parsePipelineJson } from '@/components/features/langchain/langchainNodeData';
 import { TeacherEvaluationForm } from './TeacherEvaluationForm';
 
 interface LangchainPipelineViewProps {
@@ -24,18 +25,7 @@ export function LangchainPipelineView({
 }: LangchainPipelineViewProps) {
   const { t } = useTranslation();
 
-  const { nodes, edges } = useMemo(() => {
-    try {
-      if (!textBody) return { nodes: [], edges: [] };
-      const parsed = JSON.parse(textBody);
-      return {
-        nodes: parsed.nodes || [],
-        edges: parsed.edges || [],
-      };
-    } catch {
-      return { nodes: [], edges: [] };
-    }
-  }, [textBody]);
+  const { nodes, edges } = useMemo(() => parsePipelineJson(textBody), [textBody]);
 
   return (
     <div className="space-y-4">
@@ -45,7 +35,7 @@ export function LangchainPipelineView({
         </CardHeader>
         <CardContent className="p-0">
           {nodes.length > 0 ? (
-            <div className="h-[500px] border-t">
+            <div className="h-[560px] min-h-[440px] border-t">
               <LangchainEditor
                 initialNodes={nodes}
                 initialEdges={edges}

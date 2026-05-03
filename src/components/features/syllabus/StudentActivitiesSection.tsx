@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Collapsible,
   CollapsibleContent,
@@ -18,6 +20,7 @@ import {
   PlayCircle,
   ChevronDown,
   Eye,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import {
@@ -36,17 +39,22 @@ import {
 import {
   persistedStepVisualState,
   computedStepVisualState,
-  firstIncompletePersistedIndex,
-  firstIncompleteComputedIndex,
+  firstIncompleteActionablePersistedIndex,
+  firstIncompleteActionableComputedIndex,
+  isAssignmentMissedDeadline,
   isSectionActivityFlowFullyComplete,
 } from '@/lib/moduleFlowStudent';
 import { cn } from '@/lib/utils';
-import type { ReleaseMode, StudentProgressStatus } from '@/types/syllabus';
+import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
+import type { ReleaseMode, StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
 import { StudentModuleOutlineRail } from './StudentModuleOutlineRail';
 
 interface StudentActivitiesSectionProps {
   classroomId: string;
   isRTL: boolean;
+  /** Highlights the step matching the About page Continue target. */
+  resumeTarget?: FlowStepTarget | null;
+  resumeSectionId?: string | null;
   /** Same as legacy Course Outline row: open full module study page (SectionContentPage). */
   onOpenModuleFullPage?: (sectionId: string) => void;
 }
@@ -54,6 +62,8 @@ interface StudentActivitiesSectionProps {
 export function StudentActivitiesSection({
   classroomId,
   isRTL,
+  resumeTarget = null,
+  resumeSectionId = null,
   onOpenModuleFullPage,
 }: StudentActivitiesSectionProps) {
   const { t } = useTranslation();
@@ -75,6 +85,8 @@ export function StudentActivitiesSection({
     return [...list].sort((a, b) => a.order_index - b.order_index);
   }, [syllabus?.sections]);
 
+  const releaseMode: ReleaseMode = syllabus?.release_mode ?? 'all_at_once';
+
   const sectionIds = useMemo(() => sections.map((s) => s.id), [sections]);
   const { data: flowBulk = {}, isLoading: flowLoading } = useModuleFlowStepsBulk(sectionIds);
 
@@ -90,15 +102,62 @@ export function StudentActivitiesSection({
     assignments: assignRows,
   });
 
+  const flowNow = new Date();
+  const flowAccessMeta = { assignments: assignRows, now: flowNow };
+
   const [moduleOpenById, setModuleOpenById] = useState<Record<string, boolean>>({});
+  const [hideFinished, setHideFinished] = useState(false);
+  const prevClassroomIdRef = useRef(classroomId);
+
+  const isUnitFinished = useMemo(() => {
+    return (section: SyllabusSection) => {
+      const unlocked = isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
+      const progressState = studentProgressMap[section.id];
+      const persisted = flowBulk[section.id] ?? [];
+      const sectionResources = resourceMap[section.id] ?? [];
+      const flowComplete = isSectionActivityFlowFullyComplete(
+        section.id,
+        persisted,
+        sectionResources,
+        assignRows,
+        flowCtx,
+        new Date(),
+      );
+      const showFlowCheck = unlocked && flowComplete;
+      return progressState === 'completed' || showFlowCheck;
+    };
+  }, [sections, releaseMode, studentProgressMap, flowBulk, resourceMap, assignRows, flowCtx]);
+
+  const visibleSections = useMemo(() => {
+    if (!hideFinished) return sections;
+    return sections.filter((s) => {
+      if (!isUnitFinished(s)) return true;
+      return resumeSectionId === s.id;
+    });
+  }, [sections, hideFinished, resumeSectionId, isUnitFinished]);
+
+  useEffect(() => {
+    if (sections.length === 0) return;
+    const switchedClassroom = prevClassroomIdRef.current !== classroomId;
+    prevClassroomIdRef.current = classroomId;
+    setModuleOpenById((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const s of sections) {
+        next[s.id] = switchedClassroom ? true : (prev[s.id] ?? true);
+      }
+      const sameKeys =
+        Object.keys(next).length === Object.keys(prev).length &&
+        Object.keys(next).every((id) => prev[id] === next[id]);
+      return sameKeys && !switchedClassroom ? prev : next;
+    });
+  }, [classroomId, sections]);
 
   const allSectionsOpen = useMemo(
     () =>
-      sections.length > 0 && sections.every((s) => moduleOpenById[s.id] === true),
-    [sections, moduleOpenById],
+      visibleSections.length > 0 &&
+      visibleSections.every((s) => moduleOpenById[s.id] === true),
+    [visibleSections, moduleOpenById],
   );
-
-  const releaseMode: ReleaseMode = syllabus?.release_mode ?? 'all_at_once';
 
   if (syllabusLoading || flowLoading) {
     return (
@@ -126,35 +185,64 @@ export function StudentActivitiesSection({
             {t('classroomDetail.curriculum.subtitle')}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="shrink-0 whitespace-nowrap"
-          disabled={sections.length === 0}
-          onClick={() => {
-            if (allSectionsOpen) {
-              setModuleOpenById((prev) => {
-                const next = { ...prev };
-                for (const s of sections) next[s.id] = false;
-                return next;
-              });
-            } else {
-              setModuleOpenById((prev) => {
-                const next = { ...prev };
-                for (const s of sections) next[s.id] = true;
-                return next;
-              });
-            }
-          }}
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-3 sm:justify-end',
+            isRTL && 'sm:flex-row-reverse',
+            isRTL ? 'ps-14 md:ps-[5.75rem]' : 'pe-14 md:pe-[5.75rem]',
+          )}
         >
-          {allSectionsOpen
-            ? t('classroomDetail.curriculum.collapseAll')
-            : t('classroomDetail.curriculum.expandAll')}
-        </Button>
+          <div
+            className={cn(
+              'flex min-w-0 max-w-full items-center gap-3 py-1',
+              isRTL ? 'flex-row-reverse' : 'flex-row',
+            )}
+          >
+            <Label
+              htmlFor="curriculum-show-completed"
+              className="cursor-pointer flex-1 text-left text-sm font-medium text-foreground leading-snug sm:flex-none sm:whitespace-nowrap sm:pe-1 rtl:text-right"
+            >
+              {t('classroomDetail.curriculum.showCompletedUnits')}
+            </Label>
+            <Switch
+              id="curriculum-show-completed"
+              variant="ios"
+              checked={!hideFinished}
+              onCheckedChange={(v) => setHideFinished(!v)}
+              aria-label={t('classroomDetail.curriculum.showCompletedUnitsAria')}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="default"
+            className="shrink-0 whitespace-nowrap"
+            disabled={visibleSections.length === 0}
+            onClick={() => {
+              if (allSectionsOpen) {
+                setModuleOpenById((prev) => {
+                  const next = { ...prev };
+                  for (const s of visibleSections) next[s.id] = false;
+                  return next;
+                });
+              } else {
+                setModuleOpenById((prev) => {
+                  const next = { ...prev };
+                  for (const s of visibleSections) next[s.id] = true;
+                  return next;
+                });
+              }
+            }}
+          >
+            {allSectionsOpen
+              ? t('classroomDetail.curriculum.collapseAll')
+              : t('classroomDetail.curriculum.expandAll')}
+          </Button>
+        </div>
       </div>
 
-      {sections.map((section, flowStepIndex) => {
+      {visibleSections.map((section) => {
+        const flowStepIndex = sections.findIndex((s) => s.id === section.id);
         const unlocked = isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
         const progressState = studentProgressMap[section.id];
         const persisted = flowBulk[section.id] ?? [];
@@ -165,6 +253,7 @@ export function StudentActivitiesSection({
           sectionResources,
           assignRows,
           flowCtx,
+          flowNow,
         );
         const showFlowCheck = unlocked && flowComplete;
         const highlightInProgress =
@@ -280,17 +369,37 @@ export function StudentActivitiesSection({
               ) : usePersisted && steps ? (
                 <ol className="list-none space-y-2">
                   {(() => {
-                    const nextIdx = firstIncompletePersistedIndex(steps, flowCtx);
+                    const nextIdx = firstIncompleteActionablePersistedIndex(
+                      steps,
+                      flowCtx,
+                      assignRows,
+                      flowNow,
+                    );
                     return steps.map((step, index) => {
-                      const visual = persistedStepVisualState(step, steps, index, flowCtx);
-                      const locked = visual === 'locked';
+                      const baseVisual = persistedStepVisualState(step, steps, index, flowCtx, flowAccessMeta);
+                      const missedAssignment =
+                        step.step_kind === 'assignment' &&
+                        step.assignment_id &&
+                        isAssignmentMissedDeadline(step.assignment_id, assignRows, flowCtx, flowNow);
+                      const visual = missedAssignment ? 'missed_deadline' : baseVisual;
+                      const locked = visual === 'locked' || visual === 'missed_deadline';
                       const isNextUp = nextIdx === index && visual === 'available';
-                      const statusLabel = t(`studentClassroom.activities.stepA11y.${visual}`);
+                      const statusLabel =
+                        visual === 'missed_deadline'
+                          ? t('studentClassroom.activities.stepA11y.missed_deadline')
+                          : t(`studentClassroom.activities.stepA11y.${visual}`);
 
                       if (step.step_kind === 'resource' && step.activity_list_id) {
                         const label =
                           resourceMap[section.id]?.find((r) => r.id === step.activity_list_id)?.title ??
                           t('studentClassroom.activities.activity');
+                        const resumeHighlight =
+                          Boolean(
+                            resumeTarget &&
+                              resumeSectionId === section.id &&
+                              resumeTarget.kind === 'resource' &&
+                              resumeTarget.id === step.activity_list_id,
+                          );
                         return (
                           <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
                             <span
@@ -303,12 +412,15 @@ export function StudentActivitiesSection({
                             </span>
                             <div
                               className={cn(
-                                'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
                                 isRTL && 'flex-row-reverse',
+                                resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
                               )}
                               aria-label={`${label}. ${statusLabel}`}
                             >
-                              {visual === 'locked' ? (
+                              {visual === 'missed_deadline' ? (
+                                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
+                              ) : visual === 'locked' ? (
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               ) : visual === 'done' ? (
                                 <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" aria-hidden />
@@ -341,6 +453,13 @@ export function StudentActivitiesSection({
                         const displayLabel = assignmentUnavailable
                           ? t('studentClassroom.activities.assignmentUnavailable')
                           : label;
+                        const resumeHighlight =
+                          Boolean(
+                            resumeTarget &&
+                              resumeSectionId === section.id &&
+                              resumeTarget.kind === 'assignment' &&
+                              resumeTarget.id === step.assignment_id,
+                          ) && !missedAssignment;
                         return (
                           <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
                             <span
@@ -353,12 +472,17 @@ export function StudentActivitiesSection({
                             </span>
                             <div
                               className={cn(
-                                'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
                                 isRTL && 'flex-row-reverse',
+                                resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
+                                visual === 'missed_deadline' &&
+                                  'border border-amber-500/40 bg-amber-500/[0.06] px-1.5 py-0.5',
                               )}
                               aria-label={`${displayLabel}. ${statusLabel}`}
                             >
-                              {visual === 'locked' ? (
+                              {visual === 'missed_deadline' ? (
+                                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
+                              ) : visual === 'locked' ? (
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               ) : visual === 'done' ? (
                                 <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" aria-hidden />
@@ -368,7 +492,16 @@ export function StudentActivitiesSection({
                                 <Circle className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               )}
                               {locked || assignmentUnavailable ? (
-                                <span className="text-muted-foreground">{displayLabel}</span>
+                                visual === 'missed_deadline' ? (
+                                  <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                    <span className="text-muted-foreground">{displayLabel}</span>
+                                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                      {t('studentClassroom.activities.pastDueNoAttempt')}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">{displayLabel}</span>
+                                )
                               ) : (
                                 <Link
                                   to={`/student/assignment/${step.assignment_id}`}
@@ -395,16 +528,36 @@ export function StudentActivitiesSection({
                   <p className="text-xs text-muted-foreground">{t('studentClassroom.activities.fallbackFlowHint')}</p>
                   <ol className="list-none space-y-2">
                     {(() => {
-                      const nextIdx = firstIncompleteComputedIndex(computed, flowCtx);
+                      const nextIdx = firstIncompleteActionableComputedIndex(
+                        computed,
+                        flowCtx,
+                        assignRows,
+                        flowNow,
+                      );
                       return computed.map((c, idx) => {
-                        const visual = computedStepVisualState(c, computed, idx, flowCtx);
-                        const locked = visual === 'locked';
+                        const baseVisual = computedStepVisualState(c, computed, idx, flowCtx, flowAccessMeta);
+                        const missedAssignment =
+                          c.kind === 'assignment' &&
+                          isAssignmentMissedDeadline(c.assignment_id, assignRows, flowCtx, flowNow);
+                        const visual = missedAssignment ? 'missed_deadline' : baseVisual;
+                        const locked = visual === 'locked' || visual === 'missed_deadline';
                         const isNextUp = nextIdx === idx && visual === 'available';
-                        const statusLabel = t(`studentClassroom.activities.stepA11y.${visual}`);
+                        const statusLabel =
+                          visual === 'missed_deadline'
+                            ? t('studentClassroom.activities.stepA11y.missed_deadline')
+                            : t(`studentClassroom.activities.stepA11y.${visual}`);
 
                         if (c.kind === 'resource') {
                           const r = resourceMap[section.id]?.find((x) => x.id === c.activity_list_id);
                           const label = r?.title ?? t('studentClassroom.activities.activity');
+                          const resumeHighlight =
+                            Boolean(
+                              resumeTarget &&
+                                resumeSectionId === section.id &&
+                                resumeTarget.kind === 'resource' &&
+                                c.activity_list_id &&
+                                resumeTarget.id === c.activity_list_id,
+                            );
                           return (
                             <li
                               key={`r-${c.activity_list_id}-${idx}`}
@@ -420,12 +573,15 @@ export function StudentActivitiesSection({
                               </span>
                               <div
                                 className={cn(
-                                  'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                  'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
                                   isRTL && 'flex-row-reverse',
+                                  resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
                                 )}
                                 aria-label={`${label}. ${statusLabel}`}
                               >
-                                {visual === 'locked' ? (
+                                {visual === 'missed_deadline' ? (
+                                  <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
+                                ) : visual === 'locked' ? (
                                   <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                                 ) : visual === 'done' ? (
                                   <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" aria-hidden />
@@ -456,6 +612,14 @@ export function StudentActivitiesSection({
                         const displayLabel = assignmentUnavailable
                           ? t('studentClassroom.activities.assignmentUnavailable')
                           : label;
+                        const resumeHighlight =
+                          Boolean(
+                            resumeTarget &&
+                              resumeSectionId === section.id &&
+                              resumeTarget.kind === 'assignment' &&
+                              c.assignment_id &&
+                              resumeTarget.id === c.assignment_id,
+                          ) && !missedAssignment;
                         return (
                           <li
                             key={`a-${c.assignment_id}-${idx}`}
@@ -471,12 +635,17 @@ export function StudentActivitiesSection({
                             </span>
                             <div
                               className={cn(
-                                'flex min-w-0 flex-1 flex-wrap items-center gap-2',
+                                'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
                                 isRTL && 'flex-row-reverse',
+                                resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
+                                visual === 'missed_deadline' &&
+                                  'border border-amber-500/40 bg-amber-500/[0.06] px-1.5 py-0.5',
                               )}
                               aria-label={`${displayLabel}. ${statusLabel}`}
                             >
-                              {visual === 'locked' ? (
+                              {visual === 'missed_deadline' ? (
+                                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
+                              ) : visual === 'locked' ? (
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               ) : visual === 'done' ? (
                                 <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" aria-hidden />
@@ -486,7 +655,16 @@ export function StudentActivitiesSection({
                                 <Circle className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                               )}
                               {locked || assignmentUnavailable ? (
-                                <span className="text-muted-foreground">{displayLabel}</span>
+                                visual === 'missed_deadline' ? (
+                                  <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                    <span className="text-muted-foreground">{displayLabel}</span>
+                                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                      {t('studentClassroom.activities.pastDueNoAttempt')}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">{displayLabel}</span>
+                                )
                               ) : (
                                 <Link
                                   to={`/student/assignment/${c.assignment_id}`}

@@ -137,6 +137,8 @@ export interface Submission {
   id: string;
   assignment_id: string;
   student_id: string;
+  /** True when the classroom teacher used Try assignment / preview (student_id is the teacher). */
+  is_teacher_attempt?: boolean;
   /** 1-based index per student per assignment */
   attempt_number?: number;
   text_body: string | null;
@@ -163,6 +165,8 @@ export interface AssignmentFeedback {
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+  /** OpenAI output for this assistant turn only (before polish, dash normalize, greeting prefix, persistence marker strip). */
+  raw_model_text?: string;
   fileContext?: {
     name: string;
     content: string;

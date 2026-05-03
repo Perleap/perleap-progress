@@ -57,6 +57,7 @@ interface SubmissionCardProps {
     teacher_feedback?: string;
     conversation_context?: ConversationMessage[];
     student_avatar_url?: string;
+    is_teacher_attempt?: boolean | null;
   };
   /** Total submission rows for this student + assignment in the classroom (from the same query). */
   submissionAttemptCount?: number;
@@ -98,6 +99,7 @@ export function SubmissionCard({
     .slice(0, 2);
 
   const pending = submission.id.startsWith('pending-');
+  const isSubmitted = !pending && submission.status === 'completed';
 
   const displayAssignmentTitle = formatSubmissionAssignmentTitle(
     submission.assignment_title,
@@ -170,17 +172,27 @@ export function SubmissionCard({
 
   const statusBadge = (
     <Badge
-      variant={submission.has_feedback ? 'default' : 'secondary'}
+      variant={isSubmitted ? 'default' : 'secondary'}
       className={cn(
         'shrink-0 rounded-full px-2.5 py-0.5 font-medium text-xs',
-        submission.has_feedback
+        isSubmitted
           ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
           : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
       )}
     >
-      {pending ? t('submissionCard.notStarted') : submission.has_feedback ? t('submissionCard.completed') : t('submissionCard.inProgress')}
+      {pending ? t('submissionCard.notStarted') : isSubmitted ? t('submissionCard.completed') : t('submissionCard.inProgress')}
     </Badge>
   );
+
+  const showTeacherPreview = !pending && Boolean(submission.is_teacher_attempt);
+  const teacherPreviewBadge = showTeacherPreview ? (
+    <Badge
+      variant="outline"
+      className="shrink-0 rounded-full border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground"
+    >
+      {t('submissionDetail.teacherTryBadge')}
+    </Badge>
+  ) : null;
 
   const showChatFlowBadge =
     !pending &&
@@ -207,8 +219,9 @@ export function SubmissionCard({
   const topRow = (
     <div className="flex items-start justify-between gap-3">
       <h3 className={titleClass}>{displayAssignmentTitle}</h3>
-      <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
+      <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         {chatFlowBadge}
+        {teacherPreviewBadge}
         {statusBadge}
       </div>
     </div>
@@ -295,8 +308,9 @@ export function SubmissionCard({
           <h3 className="min-w-0 flex-1 text-start font-semibold leading-snug text-foreground line-clamp-2 text-base sm:text-[1.0625rem]">
             {displayAssignmentTitle}
           </h3>
-          <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:pt-0.5">
+          <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:pt-0.5">
             {chatFlowBadge}
+            {teacherPreviewBadge}
             {statusBadge}
           </div>
         </div>

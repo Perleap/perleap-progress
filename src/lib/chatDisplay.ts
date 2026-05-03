@@ -175,6 +175,71 @@ export function splitChatDisplayText(
   return out;
 }
 
+const SENTENCE_TERMINATORS = new Set(['.', '!', '?', '׃']);
+
+function charIsSentenceTerminator(ch: string): boolean {
+  return ch.length === 1 && SENTENCE_TERMINATORS.has(ch);
+}
+
+/** True when `ch` counts as newline or space (POSIX [[:space:]] semantics for single-char check). */
+function charIsAsciiWhitespaceLike(ch: string): boolean {
+  return ch !== '' && /\s/u.test(ch);
+}
+
+/**
+ * Split a **persisted** assistant message into sentences for student flagging / server validation.
+ * Must stay in sync with `split_assistant_message_into_sentences` in Supabase migrations.
+ *
+ * Rules: split after a run of terminators when the next character is whitespace or end-of-string.
+ * Terminators: `.` `!` `?` Hebrew sof pasuq U+05C3 (`׃`).
+ */
+export function splitAssistantMessageIntoSentences(text: string): string[] {
+  const raw = String(text ?? '').trim();
+  if (!raw) return [];
+
+  const sentences: string[] = [];
+  let i = 0;
+  const n = raw.length;
+
+  while (i < n) {
+    let boundary = -1;
+    for (let j = i; j < n; j++) {
+      const ch = raw[j];
+      if (!charIsSentenceTerminator(ch)) continue;
+
+      let k = j + 1;
+      while (k < n && charIsSentenceTerminator(raw[k])) {
+        k += 1;
+      }
+      if (k >= n) {
+        boundary = k - 1;
+        break;
+      }
+      if (charIsAsciiWhitespaceLike(raw[k])) {
+        boundary = k - 1;
+        break;
+      }
+    }
+
+    if (boundary < 0) {
+      const tail = raw.slice(i).trim();
+      if (tail.length > 0) sentences.push(tail);
+      break;
+    }
+
+    const sentence = raw.slice(i, boundary + 1).trim();
+    if (sentence.length > 0) sentences.push(sentence);
+
+    let nextIdx = boundary + 1;
+    while (nextIdx < n && charIsAsciiWhitespaceLike(raw[nextIdx])) {
+      nextIdx += 1;
+    }
+    i = nextIdx;
+  }
+
+  return sentences;
+}
+
 /**
  * State for incrementally emitting stream text while hiding a marker that may be split across chunks.
  */

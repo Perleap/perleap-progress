@@ -20,11 +20,14 @@ export async function syncModuleFlowToResolvedDisplayForSection(
   sectionId: string,
   options?: { ensureAssignmentIds?: string[] },
 ): Promise<void> {
-  await queryClient.refetchQueries({ queryKey: assignmentKeys.listByClassroom(classroomId) });
+  await queryClient.refetchQueries({
+    queryKey: assignmentKeys.classroomAssignmentLists(classroomId),
+    exact: false,
+  });
   await queryClient.refetchQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
   const assignments = queryClient.getQueryData<
     { id: string; syllabus_section_id?: string | null; due_at?: string | null }[]
-  >(assignmentKeys.listByClassroom(classroomId));
+  >(assignmentKeys.listByClassroom(classroomId, null));
   const syllabus = queryClient.getQueryData<SyllabusWithSections | null>(
     syllabusKeys.byClassroom(classroomId),
   );

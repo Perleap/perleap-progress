@@ -14,7 +14,8 @@ export function canStartFirstAttempt(
 ): boolean {
   const mode = assignment.attempt_mode ?? 'single';
   if (mode === 'multiple_until_due') {
-    if (!assignment.due_at) return false;
+    /** Without a due date, "until due" cannot apply — allow starting so students are not stuck with no submission row. */
+    if (!assignment.due_at) return true;
     return !isPastDueForNewAttempts(assignment.due_at, now);
   }
   return true;

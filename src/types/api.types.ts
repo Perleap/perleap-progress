@@ -65,6 +65,16 @@ export interface SubmissionWithDetails extends Submission {
 }
 
 // Chat API Types
+export interface ChatDebugPayload {
+  rawModelText: string;
+  afterPostprocess: string;
+  finalClientMessage: string;
+  polishEnabled: boolean;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+}
+
 export interface ChatRequest {
   message: string;
   assignmentInstructions: string;
@@ -74,6 +84,8 @@ export interface ChatRequest {
   isInitialGreeting?: boolean;
   language?: string;
   fileContext?: { name: string; content: string; url?: string; type?: string };
+  /** App admins only; Edge Function verifies `is_app_admin`. */
+  debugChat?: boolean;
 }
 
 export interface ChatResponse {
@@ -81,6 +93,7 @@ export interface ChatResponse {
   turnCount?: number;
   shouldEnd?: boolean;
   endReason?: string;
+  debug?: ChatDebugPayload;
 }
 
 // Feedback API Types

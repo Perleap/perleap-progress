@@ -1,82 +1,90 @@
-import { useState, useCallback, useLayoutEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, Send, Save } from 'lucide-react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { AssignmentCompletionTone } from '@/types/submission';
+import type { Edge, Node } from '@xyflow/react';
+import type { TFunction } from 'i18next';
+import {
+  LangchainEditor,
+  type LangchainEditorHandle,
+} from '@/components/features/langchain/LangchainEditor';
+import {
+  parsePipelineJson,
+  serializePipeline,
+  validateLangchainPipeline,
+  type LangchainPipelineValidationIssue,
+} from '@/components/features/langchain/langchainNodeData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Send, Save } from 'lucide-react';
-import { toast } from 'sonner';
+import { assignmentKeys } from '@/hooks/queries';
 import { supabase } from '@/integrations/supabase/client';
 import { completeSubmission } from '@/services/submissionService';
-import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries';
-import type { AssignmentCompletionTone } from '@/types/submission';
-import { LangchainEditor } from '@/components/features/langchain/LangchainEditor';
-import type { Node, Edge } from '@xyflow/react';
 
-function parsePipelineJson(text: string | null | undefined): { nodes: Node[]; edges: Edge[] } {
-  if (!text || !text.trim()) return { nodes: [], edges: [] };
-  try {
-    const parsed = JSON.parse(text) as { nodes?: unknown; edges?: unknown };
-    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.nodes)) {
-      return {
-        nodes: parsed.nodes as Node[],
-        edges: Array.isArray(parsed.edges) ? (parsed.edges as Edge[]) : [],
-      };
+function toastValidationIssues(t: TFunction, issues: LangchainPipelineValidationIssue[]) {
+  const order: LangchainPipelineValidationIssue[] = [
+    'emptyGraph',
+    'noInputToOutputPath',
+    'promptTemplateRequired',
+    'llmModelRequired',
+  ];
+  for (const key of order) {
+    if (issues.includes(key)) {
+      toast.error(t(`assignmentDetail.langchain.validation.${key}`));
+      return;
     }
-  } catch {
-    /* ignore invalid JSON (e.g. legacy essay text) */
   }
-  return { nodes: [], edges: [] };
 }
 
 interface LangchainBuilderPageProps {
   assignmentId: string;
   submissionId: string;
-  /** Saved pipeline JSON from `submissions.text_body` (same shape as Save writes). */
+  /** Saved pipeline JSON from `submissions.text_body` (legacy or v1 envelope). */
   initialPipelineText?: string | null;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
-export function LangchainBuilderPage({
+export const LangchainBuilderPage = ({
   assignmentId,
   submissionId,
   initialPipelineText,
   onComplete,
-}: LangchainBuilderPageProps) {
+}: LangchainBuilderPageProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const editorRef = useRef<LangchainEditorHandle | null>(null);
 
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+  const [initialNodes, setInitialNodes] = useState<Node[]>([]);
+  const [initialEdges, setInitialEdges] = useState<Edge[]>([]);
   /** Bumps after parsing `initialPipelineText` so React Flow remounts with hydrated nodes (useNodesState only reads initial on mount). */
   const [hydrationVersion, setHydrationVersion] = useState(0);
+  const [nodeCount, setNodeCount] = useState(0);
 
   useLayoutEffect(() => {
     const { nodes: n, edges: e } = parsePipelineJson(initialPipelineText);
-    setNodes(n);
-    setEdges(e);
+    setInitialNodes(n);
+    setInitialEdges(e);
+    setNodeCount(n.length);
     setHydrationVersion((v) => v + 1);
   }, [initialPipelineText]);
+
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  const handleChange = useCallback((newNodes: Node[], newEdges: Edge[]) => {
-    setNodes(newNodes);
-    setEdges(newEdges);
-    setSaved(false);
-  }, []);
+  const readPipeline = () => editorRef.current?.getPipeline() ?? { nodes: [], edges: [] };
 
   const savePipeline = async () => {
     setSaving(true);
     try {
-      const pipelineData = JSON.stringify({ nodes, edges });
+      const { nodes, edges } = readPipeline();
+      const pipelineData = serializePipeline(nodes, edges);
       const { error } = await supabase
         .from('submissions')
         .update({ text_body: pipelineData })
         .eq('id', submissionId);
 
       if (error) throw error;
-      setSaved(true);
       queryClient.invalidateQueries({ queryKey: assignmentKeys.detail(assignmentId) });
       toast.success(t('assignmentDetail.langchain.save'));
     } catch (error) {
@@ -88,18 +96,17 @@ export function LangchainBuilderPage({
   };
 
   const handleSubmit = async () => {
-    if (nodes.length === 0) {
-      toast.error('Please build a pipeline before submitting.');
+    const { nodes, edges } = readPipeline();
+    const { ok, issues } = validateLangchainPipeline(nodes, edges);
+    if (!ok) {
+      toastValidationIssues(t, issues);
       return;
     }
 
     setSubmitting(true);
     try {
-      const pipelineData = JSON.stringify({ nodes, edges });
-      await supabase
-        .from('submissions')
-        .update({ text_body: pipelineData })
-        .eq('id', submissionId);
+      const pipelineData = serializePipeline(nodes, edges);
+      await supabase.from('submissions').update({ text_body: pipelineData }).eq('id', submissionId);
 
       const { error } = await completeSubmission(submissionId);
       if (error) throw error;
@@ -113,6 +120,8 @@ export function LangchainBuilderPage({
     }
   };
 
+  const canPersist = nodeCount > 0;
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-2">
@@ -123,16 +132,20 @@ export function LangchainBuilderPage({
               variant="outline"
               size="sm"
               onClick={savePipeline}
-              disabled={saving || nodes.length === 0}
+              disabled={saving || !canPersist}
               className="gap-1.5"
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
               {t('assignmentDetail.langchain.save')}
             </Button>
             <Button
               size="sm"
               onClick={handleSubmit}
-              disabled={submitting || nodes.length === 0}
+              disabled={submitting || !canPersist}
               className="gap-1.5"
             >
               {submitting ? (
@@ -151,15 +164,16 @@ export function LangchainBuilderPage({
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-[600px] border-t">
+        <div className="h-[600px] border-t min-h-[480px]">
           <LangchainEditor
+            ref={editorRef}
             key={hydrationVersion}
-            initialNodes={nodes}
-            initialEdges={edges}
-            onChange={handleChange}
+            initialNodes={initialNodes}
+            initialEdges={initialEdges}
+            onNodeCountChange={setNodeCount}
           />
         </div>
       </CardContent>
     </Card>
   );
-}
+};

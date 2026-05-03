@@ -59,7 +59,12 @@ export type ComputedFlowItem =
   | { kind: 'assignment'; assignment_id: string; order_index: number };
 
 /** Assignment fields used for module flow ordering and merge. */
-export type AssignmentRow = { id: string; syllabus_section_id?: string | null; due_at?: string | null };
+export type AssignmentRow = {
+  id: string;
+  syllabus_section_id?: string | null;
+  due_at?: string | null;
+  attempt_mode?: string | null;
+};
 
 /** Same ordering as the assignment tail of `computeDefaultModuleFlow` (due_at, then id). */
 export function sortAssignmentsForSection(sectionAssignments: AssignmentRow[]): AssignmentRow[] {

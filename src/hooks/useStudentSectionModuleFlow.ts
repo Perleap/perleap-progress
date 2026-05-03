@@ -3,17 +3,15 @@
  */
 
 import { useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
 import {
   useSyllabus,
   useClassroomAssignments,
 } from '@/hooks/queries';
 import {
-  assignmentFlowCompleteKeys,
+  useAssignmentFlowProgressMaps,
   useModuleFlowSteps,
   useStudentModuleFlowProgressMap,
 } from '@/hooks/queries/useModuleFlowQueries';
-import { hasCompletedAssignmentSubmission } from '@/services/moduleFlowService';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
@@ -70,37 +68,23 @@ export function useStudentSectionModuleFlow(
     return [...set];
   }, [orderedPersisted, computed]);
 
-  const assignmentDoneQueries = useQueries({
-    queries: assignmentIdsInSection.map((aid) => ({
-      queryKey: assignmentFlowCompleteKeys.byAssignmentStudent(aid, studentId!),
-      queryFn: async () => {
-        const { completed, error } = await hasCompletedAssignmentSubmission(aid, studentId!);
-        if (error) throw error;
-        return { aid, completed };
-      },
-      enabled: !!studentId && !!aid && !!sectionId,
-    })),
-  });
-
-  const assignmentDoneMap = useMemo(() => {
-    const m: Record<string, boolean> = {};
-    assignmentDoneQueries.forEach((q, i) => {
-      const aid = assignmentIdsInSection[i];
-      if (aid && q.data) m[aid] = q.data.completed;
-    });
-    return m;
-  }, [assignmentDoneQueries, assignmentIdsInSection]);
+  const { data: flowMaps, isLoading: assignmentDoneLoading } = useAssignmentFlowProgressMaps(
+    assignmentIdsInSection,
+    studentId,
+    !!studentId && !!sectionId,
+  );
+  const assignmentDoneMap = flowMaps?.completedMap ?? {};
+  const assignmentHasSubmissionRowMap = flowMaps?.hasAnyRowMap ?? {};
 
   const ctx: StudentFlowProgressContext = useMemo(
-    () => ({ progressByStep, assignmentDoneMap }),
-    [progressByStep, assignmentDoneMap],
+    () => ({ progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap }),
+    [progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap],
   );
 
-  const queriesLoading = assignmentDoneQueries.some((q) => q.isLoading);
   const loading =
     !!classroomId &&
     !!sectionId &&
-    (syllabusLoading || flowLoading || queriesLoading);
+    (syllabusLoading || flowLoading || assignmentDoneLoading);
 
   return {
     loading,

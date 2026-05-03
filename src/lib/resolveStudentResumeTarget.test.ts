@@ -69,4 +69,63 @@ describe('resolveStudentResumeTarget', () => {
     });
     expect(target).toBeNull();
   });
+
+  it('returns null when the only incomplete assignment is past due with no attempt', () => {
+    const sections: SyllabusSection[] = [
+      { id: 'm1', title: 'M1', order_index: 0 } as SyllabusSection,
+    ];
+    const flowCtx: StudentFlowProgressContext = {
+      progressByStep: {},
+      assignmentDoneMap: {},
+      assignmentHasSubmissionRowMap: {},
+    };
+    const target = resolveStudentResumeTarget({
+      sections,
+      releaseMode: 'all_at_once',
+      studentProgressMap: {},
+      flowBulk: { m1: [] },
+      resourceMap: { m1: [] },
+      assignments: [
+        {
+          id: 'a1',
+          syllabus_section_id: 'm1',
+          attempt_mode: 'multiple_until_due',
+          due_at: '2020-01-01T00:00:00.000Z',
+        },
+      ],
+      flowCtx,
+      now: new Date('2026-05-03T12:00:00.000Z'),
+    });
+    expect(target).toBeNull();
+  });
+
+  it('returns the next assignment when the first is missed', () => {
+    const sections: SyllabusSection[] = [
+      { id: 'm1', title: 'M1', order_index: 0 } as SyllabusSection,
+    ];
+    const flowCtx: StudentFlowProgressContext = {
+      progressByStep: {},
+      assignmentDoneMap: {},
+      assignmentHasSubmissionRowMap: {},
+    };
+    const target = resolveStudentResumeTarget({
+      sections,
+      releaseMode: 'all_at_once',
+      studentProgressMap: {},
+      flowBulk: { m1: [] },
+      resourceMap: { m1: [] },
+      assignments: [
+        {
+          id: 'a1',
+          syllabus_section_id: 'm1',
+          attempt_mode: 'multiple_until_due',
+          due_at: '2020-01-01T00:00:00.000Z',
+        },
+        { id: 'a2', syllabus_section_id: 'm1', due_at: '2030-01-01T00:00:00.000Z' },
+      ],
+      flowCtx,
+      now: new Date('2026-05-03T12:00:00.000Z'),
+    });
+    expect(target).toEqual({ kind: 'assignment', id: 'a2' });
+  });
 });

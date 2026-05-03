@@ -41,6 +41,9 @@ import { ClassroomTableView } from '@/components/features/dashboard/ClassroomTab
 import { ClassroomTimelineView } from '@/components/features/dashboard/ClassroomTimelineView';
 import { copyToClipboard } from '@/lib/utils';
 
+/** Set to true to show calendar sidebar + My Assignments again on this page. */
+const STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS = false;
+
 interface Assignment {
   id: string;
   title: string;
@@ -76,7 +79,8 @@ const StudentDashboard = () => {
   const queryClient = useQueryClient();
 
   const { data: rawClassrooms = [], isLoading: classroomsLoading, refetch: refetchClassrooms } = useClassrooms('student');
-  const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useStudentAssignments();
+  const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } =
+    useStudentAssignments({ enabled: STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS });
   const joinClassroomMutation = useJoinClassroom();
 
   const [inviteCode, setInviteCode] = useState('');
@@ -170,8 +174,9 @@ const StudentDashboard = () => {
   const assignments = useMemo(() => allAssignments.filter((a: any) => !a.is_completed), [allAssignments]);
   const finishedAssignments = useMemo(() => allAssignments.filter((a: any) => a.is_completed), [allAssignments]);
 
-  // Memoize calendar data
-  const loading = classroomsLoading || assignmentsLoading;
+  const loading =
+    classroomsLoading ||
+    (STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS && assignmentsLoading);
 
   // GSAP stagger animation refs - only trigger on data changes
   const classroomsRef = useStaggerAnimation(':scope > div', 0.08, [classrooms.length, viewMode]);
@@ -315,7 +320,13 @@ const StudentDashboard = () => {
         <p className="text-muted-foreground">{t('studentDashboard.subtitle')}</p>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-8">
+      <div
+        className={
+          STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS
+            ? 'grid lg:grid-cols-[1fr_380px] gap-8'
+            : 'gap-8'
+        }
+      >
         <div className="space-y-8">
           {/* My Classes Section */}
           <section>
@@ -658,7 +669,12 @@ const StudentDashboard = () => {
             )}
           </section>
 
+          {!STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS && (
+            <div ref={assignmentsRef} className="hidden" aria-hidden />
+          )}
+
           {/* Assignments Section */}
+          {STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS && (
           <section>
             <div className="flex flex-col sm:flex-row justify-start items-start gap-4 flex-wrap mb-6">
               <h2 className="text-xl font-semibold text-foreground">{t('studentDashboard.myAssignments')}</h2>
@@ -847,14 +863,17 @@ const StudentDashboard = () => {
               )}
             </div>
           </section>
+          )}
         </div>
 
         {/* Calendar Sidebar */}
+        {STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS && (
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             {user && <StudentCalendar studentId={user.id} />}
           </div>
         </div>
+        )}
       </div>
     </DashboardLayout>
   );
