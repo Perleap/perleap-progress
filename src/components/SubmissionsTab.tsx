@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   FileText,
-  Filter,
   Download,
   Search,
   ChevronDown,
@@ -93,21 +92,17 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<SubmissionViewMode>('list');
 
   const { data: submissions = [], isLoading: loading } = useEnrichedClassroomSubmissions(classroomId);
   const { data: syllabus } = useSyllabus(classroomId);
 
   useEffect(() => {
-    if (initialAssignmentFilterId) {
-      setSelectedAssignment(initialAssignmentFilterId);
-    }
-  }, [initialAssignmentFilterId, classroomId]);
-
-  useEffect(() => {
     setSelectedModule('all');
-  }, [classroomId]);
+    setSelectedStudent('all');
+    setSelectedAssignment(initialAssignmentFilterId ?? 'all');
+  }, [classroomId, initialAssignmentFilterId]);
 
   const modules = useMemo(() => {
     const list = syllabus?.sections ?? [];
@@ -116,22 +111,60 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
       .map((s) => ({ id: s.id, title: s.title }));
   }, [syllabus?.sections]);
 
-  // Get unique students and assignments from submissions for filters
-  const students = useMemo(() => {
-    return Array.from(
-      new Map(
-        submissions.map((s) => [s.student_id, { id: s.student_id, name: s.student_name }])
-      ).values()
-    );
-  }, [submissions]);
+  /** Submissions matching module scope (cascade upstream). */
+  const submissionsAfterModule = useMemo(() => {
+    if (selectedModule === 'all') return submissions;
+    return submissions.filter((s) => s.syllabus_section_id === selectedModule);
+  }, [submissions, selectedModule]);
 
-  const assignments = useMemo(() => {
+  /** Assignment choices narrowed by selected module. */
+  const assignmentsForSelect = useMemo(() => {
     return Array.from(
       new Map(
-        submissions.map((s) => [s.assignment_id, { id: s.assignment_id, title: s.assignment_title }])
-      ).values()
+        submissionsAfterModule.map((s) => [s.assignment_id, { id: s.assignment_id, title: s.assignment_title }]),
+      ).values(),
     );
-  }, [submissions]);
+  }, [submissionsAfterModule]);
+
+  const assignmentIdsForSelect = useMemo(
+    () => new Set(assignmentsForSelect.map((a) => a.id)),
+    [assignmentsForSelect],
+  );
+
+  /** Submissions matching module + assignment scope. */
+  const submissionsAfterModuleAndAssignment = useMemo(() => {
+    if (selectedAssignment === 'all') return submissionsAfterModule;
+    return submissionsAfterModule.filter((s) => s.assignment_id === selectedAssignment);
+  }, [submissionsAfterModule, selectedAssignment]);
+
+  /** Student choices narrowed by module and assignment. */
+  const studentsForSelect = useMemo(() => {
+    return Array.from(
+      new Map(
+        submissionsAfterModuleAndAssignment.map((s) => [
+          s.student_id,
+          { id: s.student_id, name: s.student_name },
+        ]),
+      ).values(),
+    );
+  }, [submissionsAfterModuleAndAssignment]);
+
+  const studentIdsForSelect = useMemo(
+    () => new Set(studentsForSelect.map((s) => s.id)),
+    [studentsForSelect],
+  );
+
+  useEffect(() => {
+    if (selectedAssignment !== 'all' && !assignmentIdsForSelect.has(selectedAssignment)) {
+      setSelectedAssignment('all');
+    }
+  }, [selectedModule, assignmentIdsForSelect, selectedAssignment]);
+
+  useEffect(() => {
+    if (selectedStudent !== 'all' && !studentIdsForSelect.has(selectedStudent)) {
+      setSelectedStudent('all');
+    }
+  }, [selectedAssignment, selectedModule, studentIdsForSelect, selectedStudent]);
 
   /** Rows per (student, assignment) — used to hide #1 when only one attempt exists. */
   const attemptCountByStudentAssignment = useMemo(() => {
@@ -163,9 +196,9 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     }
 
     if (effectiveStatus === 'completed') {
-      filtered = filtered.filter((s) => s.has_feedback);
+      filtered = filtered.filter((s) => s.status === 'completed');
     } else if (effectiveStatus === 'in_progress') {
-      filtered = filtered.filter((s) => !s.has_feedback);
+      filtered = filtered.filter((s) => s.status === 'in_progress');
     }
 
     if (startDate) {
@@ -235,7 +268,14 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     selectedModule !== 'all',
     selectedStatus !== 'all',
     startDate !== '',
-    endDate !== ''
+    endDate !== '',
+  ].filter(Boolean).length;
+
+  /** Status + date only — drives "More filters" trigger badge/highlight (scope filters stay visible above). */
+  const secondaryFiltersCount = [
+    selectedStatus !== 'all',
+    startDate !== '',
+    endDate !== '',
   ].filter(Boolean).length;
 
   const clearFilters = () => {
@@ -304,11 +344,11 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   return (
     <div className="space-y-6">
       <Card className="rounded-xl border-none shadow-sm bg-card ring-1 ring-border overflow-hidden">
-        <CardContent className="p-6">
+        <CardContent className="relative p-4 pb-12">
           <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-            <div className="space-y-4">
-              {/* Top Row: Search, Filter Toggle, Export */}
-              <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+            <div className="space-y-3 pe-11">
+              {/* Top Row: Search, View, Export */}
+              <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
                 <div className="relative flex-1 w-full min-w-0">
                   <Search
                     className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground`}
@@ -321,13 +361,13 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                   />
                 </div>
 
-                <div className="flex gap-4 w-full md:w-auto flex-wrap items-center">
+                <div className="flex gap-3 w-full md:w-auto flex-wrap items-center">
                   <Select
                     value={viewMode}
                     onValueChange={(v) => setViewMode(v as SubmissionViewMode)}
                   >
                     <SelectTrigger
-                      className="rounded-xl h-10 min-h-10 w-full min-w-0 border-border bg-muted/30 text-sm text-foreground sm:w-auto sm:min-w-[160px] [&_svg:not([class*='size-'])]:size-4"
+                      className="rounded-xl h-12 min-h-12 w-full min-w-0 border-border bg-muted/30 text-sm text-foreground sm:w-auto sm:min-w-[160px] [&_svg:not([class*='size-'])]:size-4"
                       dir={isRTL ? 'rtl' : 'ltr'}
                     >
                       <SelectValue>
@@ -365,22 +405,6 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                     </SelectContent>
                   </Select>
 
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={`w-full md:w-auto rounded-full h-12 px-6 border-border ${isFiltersOpen || activeFiltersCount > 0 ? 'bg-primary/10 text-primary border-primary/20' : 'bg-card'}`}
-                    >
-                      <Filter className="h-4 w-4 me-2" />
-                      {t('common.advancedFilters')}
-                      {activeFiltersCount > 0 && (
-                        <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary hover:bg-primary/30 rounded-full w-5 h-5 p-0 flex items-center justify-center text-[10px]">
-                          {activeFiltersCount}
-                        </Badge>
-                      )}
-                      {isFiltersOpen ? <ChevronUp className="h-4 w-4 ms-2" /> : <ChevronDown className="h-4 w-4 ms-2" />}
-                    </Button>
-                  </CollapsibleTrigger>
-
                   <Button
                     onClick={handleBulkExport}
                     disabled={submissions.length === 0}
@@ -392,66 +416,72 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 </div>
               </div>
 
-              {/* Advanced Filters panel (same Collapsible root as trigger) */}
+              {/* Scope filters: module → assignment → student (always visible) */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-3 md:gap-x-8 lg:gap-x-10 pt-1 border-t border-border/60">
+                <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
+                  <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.module')}</label>
+                  <Select value={selectedModule} onValueChange={setSelectedModule}>
+                    <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {selectedModule === 'all' ? t('submissionsTab.allModules') : modules.find((m) => m.id === selectedModule)?.title}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="all">{t('submissionsTab.allModules')}</SelectItem>
+                      {modules.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
+                  <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
+                  <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                    <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {selectedAssignment === 'all'
+                          ? t('submissionsTab.allAssignments')
+                          : assignmentsForSelect.find((a) => a.id === selectedAssignment)?.title}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
+                      {assignmentsForSelect.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
+                  <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
+                  <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                    <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectValue>
+                        {selectedStudent === 'all'
+                          ? t('submissionsTab.allStudents')
+                          : studentsForSelect.find((s) => s.id === selectedStudent)?.name}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
+                      {studentsForSelect.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <CollapsibleContent className="overflow-hidden">
-                <div className="pt-2 flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-4 md:gap-x-8 lg:gap-x-10">
-                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
-                    <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue>
-                          {selectedStudent === 'all' ? t('submissionsTab.allStudents') : students.find(s => s.id === selectedStudent)?.name}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
-                        {students.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
-                    <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue>
-                          {selectedAssignment === 'all' ? t('submissionsTab.allAssignments') : assignments.find(a => a.id === selectedAssignment)?.title}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
-                        {assignments.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.module')}</label>
-                    <Select value={selectedModule} onValueChange={setSelectedModule}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectValue>
-                          {selectedModule === 'all' ? t('submissionsTab.allModules') : modules.find((m) => m.id === selectedModule)?.title}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
-                        <SelectItem value="all">{t('submissionsTab.allModules')}</SelectItem>
-                        {modules.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="pt-3 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-3 md:gap-x-8 lg:gap-x-10 border-t border-border/60 mt-1">
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
                     <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
                     <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -511,6 +541,31 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 </div>
               </CollapsibleContent>
             </div>
+
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-expanded={isFiltersOpen}
+                aria-label={
+                  secondaryFiltersCount > 0
+                    ? `${t('submissionsTab.moreFilters')} (${secondaryFiltersCount})`
+                    : t('submissionsTab.moreFilters')
+                }
+                className={cn(
+                  'absolute bottom-3 end-3 z-10 h-9 w-9 shrink-0 rounded-full border border-border bg-background text-foreground shadow-sm hover:bg-muted/80',
+                  (isFiltersOpen || secondaryFiltersCount > 0) &&
+                    'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15',
+                )}
+              >
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-5 w-5" aria-hidden />
+                ) : (
+                  <ChevronDown className="h-5 w-5" aria-hidden />
+                )}
+              </Button>
+            </CollapsibleTrigger>
           </Collapsible>
         </CardContent>
       </Card>
@@ -566,6 +621,8 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                   return '—';
                 })();
                 let feedbackText: string;
+                const submitted = !pending && submission.status === 'completed';
+                const teacherTry = !pending && Boolean((submission as { is_teacher_attempt?: boolean }).is_teacher_attempt);
                 if (pending) {
                   feedbackText = '—';
                 } else if (!submission.has_feedback) {
@@ -596,21 +653,31 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                     </TableCell>
                     <TableCell className="text-start align-middle">{submission.student_name}</TableCell>
                     <TableCell className="align-middle">
-                      <Badge
-                        variant={submission.has_feedback ? 'default' : 'secondary'}
-                        className={cn(
-                          'rounded-full px-2 py-0.5 font-medium text-[10px]',
-                          submission.has_feedback
-                            ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
-                            : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
-                        )}
-                      >
-                        {pending
-                          ? t('submissionCard.notStarted')
-                          : submission.has_feedback
-                            ? t('submissionCard.completed')
-                            : t('submissionCard.inProgress')}
-                      </Badge>
+                      <div className="flex flex-wrap items-center justify-end gap-1">
+                        {teacherTry ? (
+                          <Badge
+                            variant="outline"
+                            className="rounded-full border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-foreground"
+                          >
+                            {t('submissionDetail.teacherTryBadge')}
+                          </Badge>
+                        ) : null}
+                        <Badge
+                          variant={submitted ? 'default' : 'secondary'}
+                          className={cn(
+                            'rounded-full px-2 py-0.5 font-medium text-[10px]',
+                            submitted
+                              ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
+                              : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
+                          )}
+                        >
+                          {pending
+                            ? t('submissionCard.notStarted')
+                            : submitted
+                              ? t('submissionCard.completed')
+                              : t('submissionCard.inProgress')}
+                        </Badge>
+                      </div>
                     </TableCell>
                     <TableCell className="align-middle text-muted-foreground text-xs max-w-[10rem] whitespace-normal">
                       {chatFlowLabel}

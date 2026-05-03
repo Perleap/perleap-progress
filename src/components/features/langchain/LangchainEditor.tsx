@@ -1,4 +1,3 @@
-import { useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -15,11 +14,30 @@ import {
   type NodeTypes,
   type NodeChange,
   type EdgeChange,
+  type OnSelectionChangeParams,
+  type ReactFlowInstance,
   ReactFlowProvider,
 } from '@xyflow/react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
+import { useTranslation } from 'react-i18next';
 import '@xyflow/react/dist/style.css';
-import { InputNode, OutputNode, LLMNode, PromptNode, ChainNode, MemoryNode } from './nodes';
+import { LangchainInspector } from './LangchainInspector';
+import {
+  defaultDataForLangchainNodeType,
+  ensureLangchainNodeData,
+  isLangchainNodeType,
+} from './langchainNodeData';
 import { NodePalette } from './NodePalette';
+import { InputNode, OutputNode, LLMNode, PromptNode, ChainNode, MemoryNode } from './nodes';
+import { cn } from '@/lib/utils';
 
 const nodeTypes: NodeTypes = {
   inputNode: InputNode,
@@ -30,63 +48,103 @@ const nodeTypes: NodeTypes = {
   memoryNode: MemoryNode,
 };
 
-const DEFAULT_LABEL: Record<string, string> = {
-  inputNode: 'User Input',
-  outputNode: 'Output',
-  llmNode: 'LLM',
-  promptNode: 'Prompt Template',
-  chainNode: 'Chain',
-  memoryNode: 'Memory',
+export type LangchainEditorHandle = {
+  getPipeline: () => { nodes: Node[]; edges: Edge[] };
 };
 
-interface LangchainEditorProps {
+export interface LangchainEditorProps {
   initialNodes?: Node[];
   initialEdges?: Edge[];
-  onChange?: (nodes: Node[], edges: Edge[]) => void;
+  /** When set, notifies when the graph node count changes (add/remove nodes). */
+  onNodeCountChange?: (count: number) => void;
   readOnly?: boolean;
 }
 
-function LangchainEditorInner({ initialNodes, initialEdges, onChange, readOnly }: LangchainEditorProps) {
+interface LangchainEditorInnerProps extends LangchainEditorProps {
+  editorRef?: Ref<LangchainEditorHandle>;
+}
+
+const LangchainEditorInner = ({
+  initialNodes,
+  initialEdges,
+  readOnly,
+  onNodeCountChange,
+  editorRef,
+}: LangchainEditorInnerProps) => {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language?.startsWith('he') ?? false;
+
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const nodesRef = useRef<Node[]>(initialNodes || []);
-  const edgesRef = useRef<Edge[]>(initialEdges || []);
   const [nodes, setNodes] = useNodesState(initialNodes || []);
   const [edges, setEdges] = useEdgesState(initialEdges || []);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  nodesRef.current = nodes;
-  edgesRef.current = edges;
+  const prevLenRef = useRef<number>(-1);
+  useEffect(() => {
+    const n = nodes.length;
+    if (prevLenRef.current !== n) {
+      prevLenRef.current = n;
+      onNodeCountChange?.(n);
+    }
+  }, [nodes.length, onNodeCountChange]);
+
+  useImperativeHandle(
+    editorRef,
+    (): LangchainEditorHandle => ({
+      getPipeline: () => ({ nodes, edges }),
+    }),
+    [nodes, edges]
+  );
+
+  const onFlowInit = useCallback((rf: ReactFlowInstance) => {
+    rf.fitView({ padding: 0.15, maxZoom: 1 });
+  }, []);
 
   const onConnect = useCallback(
     (params: Connection) => {
-      setEdges((eds) => {
-        const newEdges = addEdge({ ...params, animated: true }, eds);
-        onChange?.(nodesRef.current, newEdges);
-        return newEdges;
-      });
+      setEdges((eds) => addEdge({ ...params, animated: true }, eds));
     },
-    [setEdges, onChange]
+    [setEdges]
   );
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setNodes((nds) => {
-        const next = applyNodeChanges(changes, nds);
-        queueMicrotask(() => onChange?.(next, edgesRef.current));
-        return next;
-      });
+      const nextChanges = readOnly
+        ? changes.filter((c) => c.type === 'select' || c.type === 'dimensions')
+        : changes;
+      if (nextChanges.length === 0) return;
+      setNodes((nds) => applyNodeChanges(nextChanges, nds));
     },
-    [setNodes, onChange]
+    [readOnly, setNodes]
   );
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      setEdges((eds) => {
-        const next = applyEdgeChanges(changes, eds);
-        queueMicrotask(() => onChange?.(nodesRef.current, next));
-        return next;
-      });
+      if (changes.length === 0) return;
+      setEdges((eds) => applyEdgeChanges(changes, eds));
     },
-    [setEdges, onChange]
+    [setEdges]
+  );
+
+  const onSelectionChange = useCallback(({ nodes: sel }: OnSelectionChangeParams) => {
+    setSelectedNodeId(sel.length === 1 ? sel[0].id : null);
+  }, []);
+
+  const patchNodeData = useCallback(
+    (nodeId: string, partial: Record<string, unknown>) => {
+      if (readOnly) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? ensureLangchainNodeData({
+                ...n,
+                data: { ...n.data, ...partial },
+              })
+            : n
+        )
+      );
+    },
+    [readOnly, setNodes]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -99,7 +157,7 @@ function LangchainEditorInner({ initialNodes, initialEdges, onChange, readOnly }
       event.preventDefault();
 
       const type = event.dataTransfer.getData('application/reactflow');
-      if (!type || !reactFlowWrapper.current) return;
+      if (!type || !reactFlowWrapper.current || !isLangchainNodeType(type)) return;
 
       const wrapperBounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = {
@@ -107,63 +165,80 @@ function LangchainEditorInner({ initialNodes, initialEdges, onChange, readOnly }
         y: event.clientY - wrapperBounds.top - 20,
       };
 
+      const data = defaultDataForLangchainNodeType(type);
+
       const newNode: Node = {
         id: `${type}_${Date.now()}`,
         type,
         position,
-        data: { label: DEFAULT_LABEL[type] || type },
+        data,
       };
 
-      setNodes((nds) => {
-        const updated = [...nds, newNode];
-        onChange?.(updated, edgesRef.current);
-        return updated;
-      });
+      setNodes((nds) => [...nds, newNode]);
+      setSelectedNodeId(newNode.id);
     },
-    [setNodes, onChange]
+    [setNodes]
   );
 
+  const selectedNode =
+    selectedNodeId !== null ? (nodes.find((n) => n.id === selectedNodeId) ?? null) : null;
+
   return (
-    <div className="flex h-full">
+    <div className={cn('flex h-full min-h-0', isRTL && 'flex-row-reverse')}>
       {!readOnly && (
-        <div className="w-48 shrink-0 border-r bg-card p-3 overflow-y-auto">
+        <div className="w-48 shrink-0 border-e bg-card p-3 overflow-y-auto">
           <NodePalette />
         </div>
       )}
-      <div ref={reactFlowWrapper} className="flex-1">
+      <div ref={reactFlowWrapper} className="flex-1 min-w-0 min-h-0">
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={readOnly ? undefined : handleNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={readOnly ? undefined : handleEdgesChange}
+          onSelectionChange={onSelectionChange}
+          onInit={onFlowInit}
           onConnect={readOnly ? undefined : onConnect}
           onDragOver={readOnly ? undefined : onDragOver}
           onDrop={readOnly ? undefined : onDrop}
           nodeTypes={nodeTypes}
           nodesDraggable={!readOnly}
           nodesConnectable={!readOnly}
-          elementsSelectable={!readOnly}
-          fitView
+          autoPanOnNodeFocus={false}
+          nodesFocusable={false}
+          zoomOnDoubleClick={false}
+          elementsSelectable
           className="bg-muted/20"
         >
           <Background gap={16} size={1} />
           <Controls showInteractive={!readOnly} />
-          <MiniMap
-            nodeStrokeWidth={3}
-            zoomable
-            pannable
-            className="!bg-card"
-          />
+          <MiniMap nodeStrokeWidth={3} zoomable pannable className="!bg-card" />
         </ReactFlow>
       </div>
+      <LangchainInspector
+        node={selectedNode}
+        readOnly={!!readOnly}
+        isRTL={isRTL}
+        onPatchData={readOnly ? () => {} : patchNodeData}
+        className="w-72 shrink-0 min-w-0 border-s"
+      />
     </div>
   );
-}
+};
 
-export function LangchainEditor(props: LangchainEditorProps) {
-  return (
-    <ReactFlowProvider>
-      <LangchainEditorInner {...props} />
-    </ReactFlowProvider>
-  );
-}
+/** Must sit under ReactFlowProvider; receives ref forwarded from wrapper. */
+const LangchainEditorInnerForwarded = forwardRef<LangchainEditorHandle, LangchainEditorInnerProps>(
+  (props, ref) => {
+    return <LangchainEditorInner {...props} editorRef={ref} />;
+  }
+);
+
+export const LangchainEditor = forwardRef<LangchainEditorHandle, LangchainEditorProps>(
+  (props, ref) => {
+    return (
+      <ReactFlowProvider>
+        <LangchainEditorInnerForwarded {...props} ref={ref} />
+      </ReactFlowProvider>
+    );
+  }
+);

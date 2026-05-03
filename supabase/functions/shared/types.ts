@@ -6,6 +6,8 @@
 export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  /** OpenAI output for this assistant turn only (before polish, dash normalize, greeting prefix, persistence marker strip). */
+  raw_model_text?: string;
   fileContext?: {
     name: string;
     content: string;

@@ -310,6 +310,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      },
+      assignment_chat_sentence_flags: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          message_index: number
+          sentence_index: number
+          sentence_text: string
+          student_id: string
+          submission_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          message_index: number
+          sentence_index: number
+          sentence_text: string
+          student_id: string
+          submission_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          message_index?: number
+          sentence_index?: number
+          sentence_text?: string
+          student_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_chat_sentence_flags_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_chat_sentence_flags_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assignment_conversations: {
         Row: {
@@ -1352,6 +1400,7 @@ export type Database = {
           conversation_complete_at_submit: boolean | null
           file_url: string | null
           id: string
+          is_teacher_attempt: boolean
           status: Database["public"]["Enums"]["submission_status"]
           student_id: string
           submitted_at: string
@@ -1364,6 +1413,7 @@ export type Database = {
           conversation_complete_at_submit?: boolean | null
           file_url?: string | null
           id?: string
+          is_teacher_attempt?: boolean
           status?: Database["public"]["Enums"]["submission_status"]
           student_id: string
           submitted_at?: string
@@ -1376,6 +1426,7 @@ export type Database = {
           conversation_complete_at_submit?: boolean | null
           file_url?: string | null
           id?: string
+          is_teacher_attempt?: boolean
           status?: Database["public"]["Enums"]["submission_status"]
           student_id?: string
           submitted_at?: string
@@ -1789,6 +1840,14 @@ export type Database = {
       replace_module_flow_steps: {
         Args: { p_section_id: string; p_steps: Json }
         Returns: undefined
+      }
+      report_assignment_chat_sentence: {
+        Args: { args: Json }
+        Returns: Json
+      }
+      split_assistant_message_into_sentences: {
+        Args: { p_text: string }
+        Returns: string[]
       }
       student_unenroll_from_classroom: {
         Args: { p_classroom_id: string }

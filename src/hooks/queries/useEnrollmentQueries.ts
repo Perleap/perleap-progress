@@ -3,7 +3,7 @@
  * React Query hooks for enrollment operations
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/useAuth';
 import { enrollInClassroom, unenrollFromClassroom, isEnrolled } from '@/services/enrollmentService';
 import { getEnrolledStudents } from '@/services/classroomService';
@@ -19,9 +19,32 @@ export const enrollmentKeys = {
 };
 
 /**
+ * Warm enrolled-students list cache (same key as {@link useEnrolledStudents} from this module).
+ */
+export function prefetchEnrolledStudentsList(
+  queryClient: QueryClient,
+  classroomId: string | undefined,
+  staleTimeMs = 5 * 60 * 1000,
+) {
+  if (!classroomId) return;
+  return queryClient.prefetchQuery({
+    queryKey: enrollmentKeys.listByClassroom(classroomId),
+    queryFn: async () => {
+      const { data, error } = await getEnrolledStudents(classroomId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: staleTimeMs,
+  });
+}
+
+/**
  * Hook to fetch enrolled students for a classroom
  */
-export const useEnrolledStudents = (classroomId: string | undefined) => {
+export const useEnrolledStudents = (
+  classroomId: string | undefined,
+  options?: { staleTime?: number },
+) => {
   return useQuery({
     queryKey: enrollmentKeys.listByClassroom(classroomId || ''),
     queryFn: async () => {
@@ -31,6 +54,7 @@ export const useEnrolledStudents = (classroomId: string | undefined) => {
       return data ?? [];
     },
     enabled: !!classroomId,
+    staleTime: options?.staleTime ?? 0,
   });
 };
 

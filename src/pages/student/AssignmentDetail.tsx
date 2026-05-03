@@ -20,7 +20,7 @@ import {
   useSyllabus,
   useModuleFlowSteps,
 } from '@/hooks/queries';
-import { getStudentClassroomNavSections } from '@/lib/classroomNavSections';
+import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 import {
   getFirstNavigableInSection,
   getNextInSectionAfterAssignment,
@@ -43,11 +43,15 @@ import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
 import type { AssignmentLinkState } from '@/types/navigation';
 import type { AssignmentCompletionTone } from '@/types/submission';
 import { cn } from '@/lib/utils';
+import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
   const { language: uiLanguage = 'en', isRTL } = useLanguage();
-  const { id } = useParams();
+  const params = useParams<{ id?: string; classroomId?: string; assignmentId?: string }>();
+  const assignmentId = params.assignmentId ?? params.id ?? '';
+  const teacherRouteClassroomId = params.classroomId;
+  const isTeacherTry = Boolean(teacherRouteClassroomId && params.assignmentId);
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -55,22 +59,32 @@ const AssignmentDetail = () => {
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
 
-  const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(id);
+  const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(
+    assignmentId || undefined,
+    { isTeacherTry },
+  );
   const needsAutoStudentTask = Boolean(
-    !loading && id && user && assignmentData && !String(assignmentData.student_facing_task ?? '').trim(),
+    !isTeacherTry &&
+      !loading &&
+      assignmentId &&
+      user &&
+      assignmentData &&
+      !String(assignmentData.student_facing_task ?? '').trim(),
   );
   const { isPending: isAutoFillingTaskCard } = useQuery({
-    queryKey: ['autoStudentFacingTask', id, user?.id, uiLanguage],
+    queryKey: ['autoStudentFacingTask', assignmentId, user?.id, uiLanguage],
     enabled: needsAutoStudentTask,
     staleTime: Infinity,
     retry: false,
     queryFn: async () => {
-      if (!id || !user) return null;
+      if (!assignmentId || !user) return null;
       const lang: 'en' | 'he' = uiLanguage === 'he' ? 'he' : 'en';
-      const { data } = await ensureStudentFacingTask(id, lang);
+      const { data } = await ensureStudentFacingTask(assignmentId, lang);
       const text = data?.studentFacingTask?.trim() ?? '';
       if (text) {
-        await queryClient.invalidateQueries({ queryKey: [...assignmentKeys.detail(id), 'student', user.id] });
+        await queryClient.invalidateQueries({
+          queryKey: [...assignmentKeys.detail(assignmentId), 'student', user.id, isTeacherTry],
+        });
       }
       return data;
     },
@@ -82,6 +96,19 @@ const AssignmentDetail = () => {
   const studentNavSections = useMemo(
     () => getStudentClassroomNavSections(t, syllabusForNav?.status === 'published'),
     [syllabusForNav?.status, t],
+  );
+
+  const teacherNavSections = useMemo(() => getTeacherClassroomNavSections(t), [t]);
+
+  const handleTeacherClassroomNav = useCallback(
+    (section: string) => {
+      if (!teacherRouteClassroomId) return;
+      navigate(`/teacher/classroom/${teacherRouteClassroomId}`, {
+        replace: true,
+        state: { activeSection: section },
+      });
+    },
+    [teacherRouteClassroomId, navigate],
   );
 
   const allowedNavIds = useMemo(() => new Set(studentNavSections.map((s) => s.id)), [studentNavSections]);
@@ -146,6 +173,18 @@ const AssignmentDetail = () => {
   const navigateToFlowTarget = useCallback(
     (target: FlowStepTarget) => {
       if (!classroomId) return;
+      if (isTeacherTry && teacherRouteClassroomId) {
+        if (target.kind === 'resource') {
+          navigate(`/teacher/classroom/${teacherRouteClassroomId}/activity/${target.id}`, {
+            state: { returnClassroomSection: 'outline' },
+          });
+        } else {
+          navigate(
+            `/teacher/classroom/${teacherRouteClassroomId}/try/assignment/${target.id}`,
+          );
+        }
+        return;
+      }
       if (target.kind === 'resource') {
         navigate(`/student/classroom/${classroomId}/activity/${target.id}`, {
           state: { returnClassroomSection: 'curriculum' },
@@ -156,10 +195,17 @@ const AssignmentDetail = () => {
         });
       }
     },
-    [classroomId, navigate],
+    [classroomId, navigate, isTeacherTry, teacherRouteClassroomId],
   );
 
   const handleBackFromAssignment = useCallback(() => {
+    if (isTeacherTry && teacherRouteClassroomId) {
+      navigate(`/teacher/classroom/${teacherRouteClassroomId}`, {
+        state: { activeSection: 'outline' },
+        replace: true,
+      });
+      return;
+    }
     if (linkState?.fromStudentDashboard) {
       navigate('/student/dashboard');
       return;
@@ -177,31 +223,51 @@ const AssignmentDetail = () => {
       return;
     }
     navigateBackOrTo(navigate, '/student/dashboard');
-  }, [classroomId, linkState, navigate]);
+  }, [classroomId, linkState, navigate, isTeacherTry, teacherRouteClassroomId]);
 
   const goCurriculum = useCallback(() => {
     if (!classroomId) return;
+    if (isTeacherTry && teacherRouteClassroomId) {
+      navigate(`/teacher/classroom/${teacherRouteClassroomId}`, {
+        state: { activeSection: 'outline' },
+      });
+      return;
+    }
     navigate(`/student/classroom/${classroomId}`, { state: { activeSection: 'curriculum' } });
-  }, [classroomId, navigate]);
+  }, [classroomId, navigate, isTeacherTry, teacherRouteClassroomId]);
 
   const flowGuardLoading = !!assignmentData?.syllabus_section_id && sectionFlow.loading;
 
   const assignmentSequentialBlocked = useMemo(() => {
     if (!assignmentData?.syllabus_section_id) return false;
     const aid = assignmentData.id;
+    const accessMeta = {
+      assignments: sectionFlow.assignments as AssignmentRow[],
+      now: new Date(),
+    };
     if (sectionFlow.usePersistedFlow) {
       const idx = sectionFlow.orderedPersisted.findIndex(
         (s) => s.step_kind === 'assignment' && s.assignment_id === aid,
       );
       if (idx < 0) return false;
-      return !canAccessPersistedStep(sectionFlow.orderedPersisted, idx, sectionFlow.ctx);
+      return !canAccessPersistedStep(
+        sectionFlow.orderedPersisted,
+        idx,
+        sectionFlow.ctx,
+        accessMeta,
+      );
     }
     if (sectionFlow.computed.length > 0) {
       const idx = sectionFlow.computed.findIndex(
         (c) => c.kind === 'assignment' && c.assignment_id === aid,
       );
       if (idx < 0) return false;
-      return !canAccessComputedStep(sectionFlow.computed, idx, sectionFlow.ctx);
+      return !canAccessComputedStep(
+        sectionFlow.computed,
+        idx,
+        sectionFlow.ctx,
+        accessMeta,
+      );
     }
     return false;
   }, [assignmentData, sectionFlow]);
@@ -217,9 +283,9 @@ const AssignmentDetail = () => {
 
   const nuanceTracking = useNuanceTracking({
     studentId: user?.id,
-    assignmentId: id,
+    assignmentId: assignmentId || undefined,
     submissionId: submission?.id,
-    enabled: !!assignment && !!submission && !feedback,
+    enabled: !!assignment && !!submission && !feedback && !isTeacherTry,
   });
 
   const handleAssignmentCompleted = useCallback(
@@ -236,7 +302,9 @@ const AssignmentDetail = () => {
     if (!user?.id || !assignment?.id) return;
     setRetryLoading(true);
     try {
-      const { error } = await startNewSubmissionAttempt(assignment.id, user.id);
+      const { error } = await startNewSubmissionAttempt(assignment.id, user.id, {
+        isTeacherAttempt: isTeacherTry,
+      });
       if (error) {
         toast.error(error.message || t('common.error'));
         return;
@@ -252,11 +320,25 @@ const AssignmentDetail = () => {
   const handleActivityComplete = async (args?: { conversationComplete?: boolean }) => {
     try {
       if (assignment && submission && user) {
-        const autoPublish = assignment.auto_publish_ai_feedback !== false;
         const flowFlag =
           args?.conversationComplete !== undefined
             ? { conversationCompleteAtSubmit: args.conversationComplete }
             : {};
+
+        /** Teacher preview uses the teacher's auth uid as student_id; generate-feedback persists to rows that still FK to student_profiles only. */
+        if (isTeacherTry) {
+          const { error: completeError } = await completeSubmission(submission.id, flowFlag);
+          if (completeError) {
+            console.error('Error completing submission:', completeError);
+            toast.error(t('common.error'));
+          } else {
+            toast.success(t('teacherTry.previewMarkedComplete'));
+            await handleAssignmentCompleted('activityCompleted');
+          }
+          return;
+        }
+
+        const autoPublish = assignment.auto_publish_ai_feedback !== false;
 
         if (!autoPublish) {
           const { error: completeError } = await completeSubmission(submission.id, {
@@ -315,7 +397,21 @@ const AssignmentDetail = () => {
     );
   }
 
-  if (assignmentSequentialBlocked) {
+  if (
+    isTeacherTry &&
+    teacherRouteClassroomId &&
+    assignmentData.classroom_id !== teacherRouteClassroomId
+  ) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center text-muted-foreground">
+          {t('teacherTry.classroomMismatch')}
+        </div>
+      </div>
+    );
+  }
+
+  if (assignmentSequentialBlocked && !isTeacherTry) {
     return (
       <ClassroomLayout
         classroomName={classroomForNav?.name ?? assignment.classrooms?.name}
@@ -351,14 +447,14 @@ const AssignmentDetail = () => {
     <ClassroomLayout
       classroomName={classroomForNav?.name ?? assignment.classrooms?.name}
       classroomSubject={classroomForNav?.subject}
-      activeSection={activeClassroomNavSection}
-      onSectionChange={handleClassroomNav}
-      customSections={studentNavSections}
-      hideGlobalNav
+      activeSection={isTeacherTry ? 'outline' : activeClassroomNavSection}
+      onSectionChange={isTeacherTry ? handleTeacherClassroomNav : handleClassroomNav}
+      customSections={isTeacherTry ? teacherNavSections : studentNavSections}
+      hideGlobalNav={!isTeacherTry}
     >
       <div className="container py-4 px-0 max-w-4xl">
-        <div className="space-y-6">
-          <div className={cn('flex shrink-0 items-center gap-3', isRTL && 'flex-row-reverse')}>
+        <div className="space-y-6 pb-8">
+          <div className={cn('flex shrink-0 flex-wrap items-center gap-3', isRTL && 'flex-row-reverse')}>
             <Button
               type="button"
               variant="ghost"
@@ -369,6 +465,14 @@ const AssignmentDetail = () => {
               <ArrowLeft className="h-4 w-4" />
               {t('common.back')}
             </Button>
+            {isTeacherTry ? (
+              <Badge
+                variant="secondary"
+                className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-medium text-primary"
+              >
+                {t('teacherTry.bannerTitle')}
+              </Badge>
+            ) : null}
           </div>
           <Card>
             <CardHeader>
@@ -426,6 +530,33 @@ const AssignmentDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {!feedback && !submission && (
+            <Card className="border-dashed border-border/80 bg-muted/10">
+              <CardContent
+                className="py-8 text-center text-sm text-muted-foreground space-y-1"
+                dir={isRTL ? 'rtl' : 'ltr'}
+              >
+                <p>
+                  {(() => {
+                    const attemptsLen = submissionContext?.allAttempts?.length ?? 0;
+                    const policy = {
+                      attempt_mode: assignment.attempt_mode ?? 'single',
+                      due_at: assignment.due_at ?? null,
+                    };
+                    if (
+                      attemptsLen === 0 &&
+                      !isTeacherTry &&
+                      !canStartFirstAttempt(policy, new Date())
+                    ) {
+                      return t('assignmentDetail.noSubmissionPastDue');
+                    }
+                    return t('assignmentDetail.noSubmissionUnexpected');
+                  })()}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {!feedback && submission && (() => {
             const MANUAL_EVAL_TYPES = ['project', 'presentation', 'langchain'];
@@ -514,22 +645,32 @@ const AssignmentDetail = () => {
                 teacherName={assignment.classrooms.teacher_profiles?.full_name || 'Teacher'}
                 assignmentInstructions={assignment.instructions}
                 submissionId={submission.id}
+                studentUserId={submission.student_id}
                 onComplete={() => {}}
                 nuanceTracking={nuanceTracking}
                 variant="companion"
               />
             );
 
+            const companionBlock = (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground px-0.5" dir={isRTL ? 'rtl' : 'ltr'}>
+                  {t('assignmentDetail.contextChatHint')}
+                </p>
+                {companionChat}
+              </div>
+            );
+
             switch (assignment.type) {
               case 'test':
                 return (
                   <div className="space-y-6">
-                    {companionChat}
                     <TestTakingPage
                       assignmentId={assignment.id}
                       assignmentInstructions={assignment.instructions}
                       submissionId={submission.id}
                       autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
+                      isTeacherTry={isTeacherTry}
                       onComplete={handleAssignmentCompleted}
                     />
                   </div>
@@ -537,49 +678,50 @@ const AssignmentDetail = () => {
               case 'text_essay':
                 return (
                   <div className="space-y-6">
-                    {companionChat}
                     <EssaySubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
                       assignmentInstructions={assignment.instructions}
                       autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
+                      isTeacherTry={isTeacherTry}
                       initialText={submission.text_body}
                       onComplete={handleAssignmentCompleted}
                     />
+                    {companionBlock}
                   </div>
                 );
               case 'project':
                 return (
                   <div className="space-y-6">
-                    {companionChat}
                     <ProjectSubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
                       onComplete={handleAssignmentCompleted}
                     />
+                    {companionBlock}
                   </div>
                 );
               case 'presentation':
                 return (
                   <div className="space-y-6">
-                    {companionChat}
                     <PresentationSubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
                       onComplete={handleAssignmentCompleted}
                     />
+                    {companionBlock}
                   </div>
                 );
               case 'langchain':
                 return (
                   <div className="space-y-6">
-                    {companionChat}
                     <LangchainBuilderPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
                       initialPipelineText={submission.text_body}
                       onComplete={handleAssignmentCompleted}
                     />
+                    {companionBlock}
                   </div>
                 );
               default:
@@ -590,6 +732,7 @@ const AssignmentDetail = () => {
                     teacherName={assignment.classrooms.teacher_profiles?.full_name || 'Teacher'}
                     assignmentInstructions={assignment.instructions}
                     submissionId={submission.id}
+                    studentUserId={submission.student_id}
                     onComplete={handleActivityComplete}
                     nuanceTracking={nuanceTracking}
                     variant="primary"

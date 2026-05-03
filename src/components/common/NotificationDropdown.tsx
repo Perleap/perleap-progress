@@ -13,12 +13,15 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { NotificationWithProfile } from '@/types/notifications';
 import { useNotificationList, useMarkAsRead, useMarkAllAsRead } from '@/hooks/queries';
+import { cn } from '@/lib/utils';
 
 interface NotificationDropdownProps {
   userId: string;
+  /** Merged onto the bell trigger button (e.g. floating shell sizing). */
+  triggerClassName?: string;
 }
 
-export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
+export const NotificationDropdown = ({ userId, triggerClassName }: NotificationDropdownProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -72,6 +75,7 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
       case 'student_enrolled':
       case 'student_completed_activity':
       case 'wellbeing_alert':
+      case 'ai_chat_sentence_flagged':
         return 'S'; // Student
       case 'system':
         return 'SYS';
@@ -93,7 +97,11 @@ export const NotificationDropdown = ({ userId }: NotificationDropdownProps) => {
   return (
     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative h-8 w-8 rounded-full">
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn('relative h-8 w-8 rounded-full', triggerClassName)}
+        >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <Badge

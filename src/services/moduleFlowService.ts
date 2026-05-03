@@ -212,6 +212,9 @@ export const upsertStudentModuleFlowProgress = async (
   }
 };
 
+/** Chunk size for `.in('assignment_id', …)` to stay within PostgREST / URL limits. */
+const ASSIGNMENT_COMPLETED_MAP_CHUNK = 150;
+
 /** True if student has a completed submission for this assignment. */
 export const hasCompletedAssignmentSubmission = async (
   assignmentId: string,
@@ -229,5 +232,73 @@ export const hasCompletedAssignmentSubmission = async (
     return { completed: (data?.length ?? 0) > 0, error: null };
   } catch (error) {
     return { completed: false, error: handleSupabaseError(error) };
+  }
+};
+
+export type AssignmentFlowProgressMaps = {
+  /** At least one row with status completed (same as {@link hasCompletedAssignmentSubmission}). */
+  completedMap: Record<string, boolean>;
+  /** At least one submission row for this assignment (any status). */
+  hasAnyRowMap: Record<string, boolean>;
+};
+
+/**
+ * Bulk maps for curriculum flow: completed attempts + any submission presence (for due-date / access UI).
+ */
+export const getAssignmentFlowProgressMaps = async (
+  assignmentIds: string[],
+  studentId: string,
+): Promise<{ data: AssignmentFlowProgressMaps; error: ApiError | null }> => {
+  try {
+    const unique = [...new Set(assignmentIds.filter(Boolean))];
+    if (unique.length === 0) {
+      return { data: { completedMap: {}, hasAnyRowMap: {} }, error: null };
+    }
+
+    const completedMap: Record<string, boolean> = {};
+    const hasAnyRowMap: Record<string, boolean> = {};
+    unique.forEach((id) => {
+      completedMap[id] = false;
+      hasAnyRowMap[id] = false;
+    });
+
+    const chunks: string[][] = [];
+    for (let i = 0; i < unique.length; i += ASSIGNMENT_COMPLETED_MAP_CHUNK) {
+      chunks.push(unique.slice(i, i + ASSIGNMENT_COMPLETED_MAP_CHUNK));
+    }
+
+    const chunkResults = await Promise.all(
+      chunks.map((chunk) =>
+        supabase
+          .from('submissions')
+          .select('assignment_id, status')
+          .in('assignment_id', chunk)
+          .eq('student_id', studentId),
+      ),
+    );
+
+    for (const { data, error } of chunkResults) {
+      if (error) {
+        return {
+          data: { completedMap: {}, hasAnyRowMap: {} },
+          error: handleSupabaseError(error),
+        };
+      }
+      (data ?? []).forEach((row: { assignment_id?: string | null; status?: string | null }) => {
+        const aid = row.assignment_id;
+        if (!aid) return;
+        hasAnyRowMap[aid] = true;
+        if (row.status === SUBMISSION_STATUS.COMPLETED) {
+          completedMap[aid] = true;
+        }
+      });
+    }
+
+    return { data: { completedMap, hasAnyRowMap }, error: null };
+  } catch (error) {
+    return {
+      data: { completedMap: {}, hasAnyRowMap: {} },
+      error: handleSupabaseError(error),
+    };
   }
 };

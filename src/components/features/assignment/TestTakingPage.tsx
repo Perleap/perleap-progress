@@ -20,6 +20,8 @@ interface TestTakingPageProps {
   assignmentInstructions: string;
   submissionId: string;
   autoPublishAiFeedback?: boolean;
+  /** Teacher "Try assignment" — skip AI feedback (edge function writes assume student_profiles). */
+  isTeacherTry?: boolean;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
@@ -28,6 +30,7 @@ export function TestTakingPage({
   assignmentInstructions,
   submissionId,
   autoPublishAiFeedback = true,
+  isTeacherTry = false,
   onComplete,
 }: TestTakingPageProps) {
   const { t } = useTranslation();
@@ -71,6 +74,18 @@ export function TestTakingPage({
       }));
 
       await submitResponses.mutateAsync({ submissionId, responses });
+
+      if (isTeacherTry) {
+        const { error: completeError } = await completeSubmission(submissionId);
+        if (completeError) {
+          console.error('Error completing submission:', completeError);
+          toast.error(t('assignmentDetail.testTaking.submitError'));
+        } else {
+          toast.success(t('teacherTry.previewMarkedComplete'));
+          await onComplete('testSubmitted');
+        }
+        return;
+      }
 
       if (!autoPublishAiFeedback) {
         const { error: completeError } = await completeSubmission(submissionId, {

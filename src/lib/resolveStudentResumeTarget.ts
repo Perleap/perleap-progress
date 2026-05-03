@@ -10,9 +10,11 @@ import {
 } from '@/lib/moduleFlow';
 import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
+import { isAssignmentMissedDeadline } from '@/lib/moduleFlowStudent';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
-import type { ReleaseMode, StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
-import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
+import type { ReleaseMode, StudentProgressStatus, SyllabusSection, ModuleFlowStep, SectionResource } from '@/types/syllabus';
+
+export type StudentResumeTargetHit = { target: FlowStepTarget; sectionId: string };
 
 /** Mirrors persisted resource completion (step row or any later assignment in this list done). */
 function localResourceStepDone(
@@ -57,10 +59,17 @@ function localPreviousStepsComplete(
   ctx: StudentFlowProgressContext,
   persisted: ModuleFlowStep[],
   sectionResources: SectionResource[],
+  assignments: AssignmentRow[],
+  now: Date,
 ): boolean {
   if (index === 0) return true;
   for (let i = 0; i < index; i++) {
-    if (!localStepDone(local, i, ctx, persisted, sectionResources)) return false;
+    if (localStepDone(local, i, ctx, persisted, sectionResources)) continue;
+    const step = local[i];
+    if (step.kind === 'assignment' && isAssignmentMissedDeadline(step.assignmentId, assignments, ctx, now)) {
+      continue;
+    }
+    return false;
   }
   return true;
 }
@@ -75,12 +84,16 @@ function firstIncompleteInDisplayedFlow(
   assignments: AssignmentRow[],
   persisted: ModuleFlowStep[],
   ctx: StudentFlowProgressContext,
+  now: Date,
 ): FlowStepTarget | null {
   const local = resolveDisplayedModuleFlow(sectionId, sectionResources, assignments, persisted);
   for (let i = 0; i < local.length; i++) {
-    if (!localPreviousStepsComplete(local, i, ctx, persisted, sectionResources)) continue;
+    if (!localPreviousStepsComplete(local, i, ctx, persisted, sectionResources, assignments, now)) continue;
     if (!localStepDone(local, i, ctx, persisted, sectionResources)) {
       const s = local[i];
+      if (s.kind === 'assignment' && isAssignmentMissedDeadline(s.assignmentId, assignments, ctx, now)) {
+        continue;
+      }
       if (s.kind === 'resource') return { kind: 'resource', id: s.resourceId };
       return { kind: 'assignment', id: s.assignmentId };
     }
@@ -88,7 +101,7 @@ function firstIncompleteInDisplayedFlow(
   return null;
 }
 
-export function resolveStudentResumeTarget(params: {
+export function resolveStudentResumeTargetWithSection(params: {
   sections: SyllabusSection[];
   releaseMode: ReleaseMode;
   studentProgressMap: Record<string, StudentProgressStatus>;
@@ -96,8 +109,11 @@ export function resolveStudentResumeTarget(params: {
   resourceMap: Record<string, SectionResource[]>;
   assignments: AssignmentRow[];
   flowCtx: StudentFlowProgressContext;
-}): FlowStepTarget | null {
+  /** Clock for due-date checks (tests should pass a fixed instant). */
+  now?: Date;
+}): StudentResumeTargetHit | null {
   const { releaseMode, studentProgressMap, flowBulk, resourceMap, assignments, flowCtx } = params;
+  const now = params.now ?? new Date();
   const sorted = [...params.sections].sort((a, b) => a.order_index - b.order_index);
 
   for (const section of sorted) {
@@ -113,10 +129,25 @@ export function resolveStudentResumeTarget(params: {
       assignments,
       persisted,
       flowCtx,
+      now,
     );
-    if (fromDisplayed) return fromDisplayed;
+    if (fromDisplayed) {
+      return { target: fromDisplayed, sectionId: section.id };
+    }
   }
 
-  /** No incomplete step in any unlocked section — About CTA opens Curriculum. */
   return null;
+}
+
+export function resolveStudentResumeTarget(params: {
+  sections: SyllabusSection[];
+  releaseMode: ReleaseMode;
+  studentProgressMap: Record<string, StudentProgressStatus>;
+  flowBulk: Record<string, ModuleFlowStep[]>;
+  resourceMap: Record<string, SectionResource[]>;
+  assignments: AssignmentRow[];
+  flowCtx: StudentFlowProgressContext;
+  now?: Date;
+}): FlowStepTarget | null {
+  return resolveStudentResumeTargetWithSection(params)?.target ?? null;
 }

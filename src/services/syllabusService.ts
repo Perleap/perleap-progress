@@ -97,6 +97,51 @@ export const getSyllabusByClassroom = async (
   }
 };
 
+/**
+ * Syllabus + sections only (no grading categories, no activity_list).
+ * Use for admin filters / nav where full section payload is unnecessary — saves a round trip + heavy activity_list query.
+ */
+export const getSyllabusOutlineByClassroom = async (
+  classroomId: string,
+): Promise<{ data: SyllabusWithSections | null; error: ApiError | null }> => {
+  try {
+    const { data: syllabus, error: syllabusError } = await supabase
+      .from('syllabi' as any)
+      .select('*')
+      .eq('classroom_id', classroomId)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (syllabusError) return { data: null, error: handleSupabaseError(syllabusError) };
+    if (!syllabus) return { data: null, error: null };
+
+    const { data: sections, error: sectionsError } = await supabase
+      .from('syllabus_sections' as any)
+      .select('*')
+      .eq('syllabus_id', (syllabus as any).id)
+      .eq('active', true)
+      .order('order_index', { ascending: true });
+
+    if (sectionsError) return { data: null, error: handleSupabaseError(sectionsError) };
+
+    const s = syllabus as any;
+    return {
+      data: {
+        ...s,
+        release_mode: normalizeReleaseMode(s.release_mode),
+        sections: (sections as any[]) || [],
+        grading_categories: [],
+        section_resources: {},
+      } as SyllabusWithSections,
+      error: null,
+    };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
 const DEFAULT_SYLLABUS_INSERT = {
   release_mode: 'all_at_once' as const,
   published_at: null as string | null,

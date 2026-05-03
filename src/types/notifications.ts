@@ -14,7 +14,7 @@ export type NotificationType =
   | 'student_completed_activity'
   | 'student_alert_critical'
   | 'student_alert_moderate'
-  | 'student_alert_low'
+  | 'ai_chat_sentence_flagged'
   | 'syllabus_published'
   | 'syllabus_updated'
   | 'system';

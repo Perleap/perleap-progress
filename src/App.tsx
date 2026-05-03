@@ -23,6 +23,7 @@ import MonitoringOverviewPage from './pages/admin/monitoring/MonitoringOverviewP
 import MonitoringLogsPage from './pages/admin/monitoring/MonitoringLogsPage';
 import MonitoringHealthPage from './pages/admin/monitoring/MonitoringHealthPage';
 import MonitoringTrafficPage from './pages/admin/monitoring/MonitoringTrafficPage';
+import AdminAiPromptsPage from './pages/admin/AdminAiPromptsPage';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentClassroomDetail from './pages/student/StudentClassroomDetail';
 import AssignmentDetail from './pages/student/AssignmentDetail';
@@ -111,6 +112,22 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/teacher/classroom/:classroomId/try/assignment/:assignmentId"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <AssignmentDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/classroom/:classroomId/try/activity/:resourceId"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <ClassroomActivityPage role="teacher" />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/teacher/classroom/:id/activity/:resourceId"
                   element={
                     <ProtectedRoute requiredRole="teacher">
@@ -156,6 +173,17 @@ const App = () => (
                   <Route path="logs" element={<MonitoringLogsPage />} />
                   <Route path="health" element={<MonitoringHealthPage />} />
                   <Route path="traffic" element={<MonitoringTrafficPage />} />
+                </Route>
+
+                <Route
+                  path="/admin/ai-prompts"
+                  element={
+                    <ProtectedRoute requireAppAdmin>
+                      <AdminMonitoringLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AdminAiPromptsPage />} />
                 </Route>
 
                 {/* Protected student routes */}

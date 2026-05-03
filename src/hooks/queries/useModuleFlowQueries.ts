@@ -7,7 +7,6 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
-  useQueries,
   type QueryClient,
 } from '@tanstack/react-query';
 import {
@@ -23,6 +22,7 @@ import {
   getStudentModuleFlowProgress,
   upsertStudentModuleFlowProgress,
   hasCompletedAssignmentSubmission,
+  getAssignmentFlowProgressMaps,
   type FlowStepInput,
 } from '@/services/moduleFlowService';
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
@@ -87,7 +87,48 @@ export const assignmentFlowCompleteKeys = {
   all: ['assignment-flow-complete'] as const,
   byAssignmentStudent: (assignmentId: string, studentId: string) =>
     [...assignmentFlowCompleteKeys.all, assignmentId, studentId] as const,
+  bulkByStudentAssignments: (studentId: string, sortedIdsJoin: string) =>
+    [...assignmentFlowCompleteKeys.all, 'bulk', studentId, sortedIdsJoin] as const,
 };
+
+/** Bulk completed + any-row maps for curriculum / section flow (one query, chunked in service). */
+export function useAssignmentFlowProgressMaps(
+  assignmentIds: string[],
+  studentId: string | undefined,
+  enabled: boolean,
+) {
+  const sortedIdsJoin = useMemo(
+    () => [...new Set(assignmentIds.filter(Boolean))].sort().join(','),
+    [assignmentIds],
+  );
+
+  return useQuery({
+    queryKey: assignmentFlowCompleteKeys.bulkByStudentAssignments(studentId || '', sortedIdsJoin),
+    queryFn: async () => {
+      if (!studentId || sortedIdsJoin === '') {
+        return { completedMap: {} as Record<string, boolean>, hasAnyRowMap: {} as Record<string, boolean> };
+      }
+      const { data, error } = await getAssignmentFlowProgressMaps(sortedIdsJoin.split(','), studentId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: enabled && !!studentId && sortedIdsJoin.length > 0,
+    staleTime: 30 * 1000,
+  });
+}
+
+/** @deprecated Prefer useAssignmentFlowProgressMaps when you need draft/missed-deadline detection. */
+export function useAssignmentCompletedMap(
+  assignmentIds: string[],
+  studentId: string | undefined,
+  enabled: boolean,
+) {
+  const q = useAssignmentFlowProgressMaps(assignmentIds, studentId, enabled);
+  return {
+    ...q,
+    data: q.data?.completedMap ?? {},
+  };
+}
 
 export const useAssignmentSubmittedOrCompletedMap = (
   assignmentIds: string[],
@@ -199,7 +240,7 @@ export function useStudentCurriculumFlowContext(options: {
     return ids;
   }, [enabled, flowBulk, sectionIds, resourceMap]);
 
-  const { data: progressByStep = {}, isLoading: isLoadingProgress } = useStudentModuleFlowProgressMap(
+  const { data: progressByStep = {}, isLoading: isLoadingStepProgress } = useStudentModuleFlowProgressMap(
     enabled ? userId : undefined,
     allStepIds,
   );
@@ -220,33 +261,20 @@ export function useStudentCurriculumFlowContext(options: {
     return [...set];
   }, [enabled, flowBulk, sectionIds, resourceMap, assignments]);
 
-  const assignmentDoneQueries = useQueries({
-    queries: assignmentIdsInFlow.map((aid) => ({
-      queryKey: assignmentFlowCompleteKeys.byAssignmentStudent(aid, userId!),
-      queryFn: async () => {
-        const { completed, error } = await hasCompletedAssignmentSubmission(aid, userId!);
-        if (error) throw error;
-        return { aid, completed };
-      },
-      enabled: enabled && !!userId && !!aid,
-    })),
-  });
-
-  const assignmentDoneMap = useMemo(() => {
-    const m: Record<string, boolean> = {};
-    assignmentDoneQueries.forEach((q, i) => {
-      const aid = assignmentIdsInFlow[i];
-      if (aid && q.data) m[aid] = q.data.completed;
-    });
-    return m;
-  }, [assignmentDoneQueries, assignmentIdsInFlow]);
+  const { data: flowMaps, isLoading: isLoadingAssignmentDone } = useAssignmentFlowProgressMaps(
+    assignmentIdsInFlow,
+    userId,
+    enabled,
+  );
+  const assignmentDoneMap = flowMaps?.completedMap ?? {};
+  const assignmentHasSubmissionRowMap = flowMaps?.hasAnyRowMap ?? {};
 
   const flowCtx = useMemo(
-    () => ({ progressByStep, assignmentDoneMap }),
-    [progressByStep, assignmentDoneMap],
+    () => ({ progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap }),
+    [progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap],
   );
 
-  return { flowCtx, isLoadingProgress };
+  return { flowCtx, isLoadingProgress: isLoadingStepProgress || isLoadingAssignmentDone };
 }
 
 export const useStudentModuleFlowProgressMap = (

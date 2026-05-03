@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { formatInlineListsForChatMarkdown, splitChatDisplayText } from '@/lib/chatDisplay';
+import {
+  formatInlineListsForChatMarkdown,
+  splitAssistantMessageIntoSentences,
+  splitChatDisplayText,
+} from '@/lib/chatDisplay';
 
 const SCREENSHOT_LIKE =
   "Hey, I need your help with something. Don't overthink it, just answer 3 things: 1) What should it do? 2) What should it not do? 3) What's one thing you'd want to ask me before building anything?";
@@ -56,5 +60,33 @@ describe('formatInlineListsForChatMarkdown + splitChatDisplayText', () => {
     expect(parts.length).toBe(2);
     expect(parts[0]).toMatch(/things:\s*$/);
     expect(parts[1].trimStart()).toMatch(/^1\)/);
+  });
+});
+
+describe('splitAssistantMessageIntoSentences', () => {
+  it('returns empty for blank', () => {
+    expect(splitAssistantMessageIntoSentences('')).toEqual([]);
+    expect(splitAssistantMessageIntoSentences('   ')).toEqual([]);
+  });
+
+  it('splits English sentences on period / question / exclamation', () => {
+    expect(splitAssistantMessageIntoSentences('Hello. World! How?')).toEqual(['Hello.', 'World!', 'How?']);
+  });
+
+  it('consumes runs of terminators and trailing space', () => {
+    expect(splitAssistantMessageIntoSentences('Wait... Really.  Next')).toEqual(['Wait...', 'Really.', 'Next']);
+  });
+
+  it('keeps one segment when no terminator is followed by whitespace (e.g. compact !)', () => {
+    expect(splitAssistantMessageIntoSentences('Hi!Are you ok')).toEqual(['Hi!Are you ok']);
+  });
+
+  it('handles Hebrew sof pasuq as sentence end', () => {
+    const t = 'משפט אחד׃ משפט שני';
+    expect(splitAssistantMessageIntoSentences(t)).toEqual(['משפט אחד׃', 'משפט שני']);
+  });
+
+  it('splits after newline following terminator', () => {
+    expect(splitAssistantMessageIntoSentences('First.\nSecond sentence.')).toEqual(['First.', 'Second sentence.']);
   });
 });

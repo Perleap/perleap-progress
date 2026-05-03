@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Link } from 'react-router-dom';
-import { GripVertical, Trash2, Plus, Pencil, Eye } from 'lucide-react';
+import { GripVertical, Trash2, Plus, Pencil, Eye, PlayCircle } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import type { ClassroomLocationState } from '@/types/navigation';
 import { toast } from 'sonner';
@@ -451,7 +451,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                         <ModuleFlowTimelineRail stepNumber={index + 1} />
                         <div
                           className={cn(
-                            'flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-card p-3',
+                            'flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-card p-3',
                             isRTL && 'flex-row-reverse',
                             activeDragId === sid && 'ring-2 ring-primary/25 shadow-md',
                           )}
@@ -483,17 +483,30 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                           </div>
                           <div className="flex shrink-0 items-center gap-0.5">
                             {step.kind === 'resource' ? (
-                              <Link
-                                to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
-                                state={activityLinkState}
-                                className={cn(
-                                  buttonVariants({ variant: 'ghost', size: 'icon' }),
-                                  'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
-                                )}
-                                aria-label={t('classroomDetail.activitiesFlow.viewActivity')}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Link>
+                              <>
+                                <Link
+                                  to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
+                                  state={activityLinkState}
+                                  className={cn(
+                                    buttonVariants({ variant: 'ghost', size: 'icon' }),
+                                    'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
+                                  )}
+                                  aria-label={t('classroomDetail.activitiesFlow.viewActivity')}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                                <Link
+                                  to={`/teacher/classroom/${classroomId}/try/activity/${step.resourceId}`}
+                                  state={activityLinkState}
+                                  className={cn(
+                                    buttonVariants({ variant: 'ghost', size: 'icon' }),
+                                    'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
+                                  )}
+                                  aria-label={t('classroomDetail.activitiesFlow.tryActivity')}
+                                >
+                                  <PlayCircle className="h-4 w-4" />
+                                </Link>
+                              </>
                             ) : onViewAssignment ? (
                               <Button
                                 type="button"
@@ -505,6 +518,18 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
+                            ) : null}
+                            {step.kind === 'assignment' ? (
+                              <Link
+                                to={`/teacher/classroom/${classroomId}/try/assignment/${step.assignmentId}`}
+                                className={cn(
+                                  buttonVariants({ variant: 'ghost', size: 'icon' }),
+                                  'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
+                                )}
+                                aria-label={t('classroomDetail.activitiesFlow.tryAssignment')}
+                              >
+                                <PlayCircle className="h-4 w-4" />
+                              </Link>
                             ) : null}
                             {step.kind === 'assignment' && onEditAssignment ? (
                               <Button

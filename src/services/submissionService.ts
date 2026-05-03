@@ -21,6 +21,7 @@ import { createNotification } from '@/lib/notificationService';
 import { rehydrateMessages } from '@/lib/conversationMessages';
 import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
 import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
 
 export type StudentSubmissionContext = {
   submission: Submission | null;
@@ -32,6 +33,7 @@ async function insertSubmissionRow(
   assignmentId: string,
   studentId: string,
   attemptNumber: number,
+  opts?: { isTeacherAttempt?: boolean },
 ): Promise<{ data: Submission | null; error: ApiError | null }> {
   const { data: newSubmission, error: createError } = await supabase
     .from('submissions')
@@ -41,6 +43,7 @@ async function insertSubmissionRow(
         student_id: studentId,
         attempt_number: attemptNumber,
         status: SUBMISSION_STATUS.IN_PROGRESS as any,
+        ...(opts?.isTeacherAttempt ? { is_teacher_attempt: true } : {}),
       },
     ])
     .select()
@@ -60,6 +63,7 @@ async function insertSubmissionRow(
 export const getStudentSubmissionContext = async (
   assignmentId: string,
   studentId: string,
+  opts?: { isTeacherTry?: boolean },
 ): Promise<{ data: StudentSubmissionContext; error: ApiError | null }> => {
   try {
     const { data: assignment, error: assignErr } = await supabase
@@ -108,13 +112,20 @@ export const getStudentSubmissionContext = async (
     }
 
     if (list.length === 0) {
-      if (!canStartFirstAttempt(assignment as any, now)) {
+      const allowFirst =
+        opts?.isTeacherTry === true || canStartFirstAttempt(assignment as any, now);
+      if (!allowFirst) {
         return {
           data: { submission: null, allAttempts: [], canRetry: false },
           error: null,
         };
       }
-      const { data: created, error: insErr } = await insertSubmissionRow(assignmentId, studentId, 1);
+      const { data: created, error: insErr } = await insertSubmissionRow(
+        assignmentId,
+        studentId,
+        1,
+        opts?.isTeacherTry ? { isTeacherAttempt: true } : undefined,
+      );
       if (insErr || !created) {
         return { data: { submission: null, allAttempts: [], canRetry: false }, error: insErr };
       }
@@ -125,11 +136,18 @@ export const getStudentSubmissionContext = async (
     }
 
     const completed = list.filter((s) => s.status === SUBMISSION_STATUS.COMPLETED);
-    const latestCompleted = [...completed].sort((a, b) => {
+    let latestCompleted = [...completed].sort((a, b) => {
       const ta = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
       const tb = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
       return tb - ta;
     })[0];
+
+    /** If rows exist but none matched `completed` (e.g. legacy status), still surface the latest attempt. */
+    if (!latestCompleted && list.length > 0) {
+      latestCompleted = [...list].sort(
+        (a, b) => (b.attempt_number ?? 0) - (a.attempt_number ?? 0),
+      )[0];
+    }
 
     const retry = canRetryAfterCompleting(assignment as any, now);
     return {
@@ -151,6 +169,7 @@ export const getStudentSubmissionContext = async (
 export const startNewSubmissionAttempt = async (
   assignmentId: string,
   studentId: string,
+  opts?: { isTeacherAttempt?: boolean },
 ): Promise<{ data: Submission | null; error: ApiError | null }> => {
   try {
     const { data: assignment, error: assignErr } = await supabase
@@ -198,7 +217,9 @@ export const startNewSubmissionAttempt = async (
     }
 
     const nextNum = Math.max(...list.map((s) => s.attempt_number ?? 1)) + 1;
-    return insertSubmissionRow(assignmentId, studentId, nextNum);
+    return insertSubmissionRow(assignmentId, studentId, nextNum, {
+      isTeacherAttempt: opts?.isTeacherAttempt,
+    });
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -208,8 +229,9 @@ export const startNewSubmissionAttempt = async (
 export const getOrCreateSubmission = async (
   assignmentId: string,
   studentId: string,
+  opts?: { isTeacherTry?: boolean },
 ): Promise<{ data: Submission | null; error: ApiError | null }> => {
-  const { data, error } = await getStudentSubmissionContext(assignmentId, studentId);
+  const { data, error } = await getStudentSubmissionContext(assignmentId, studentId, opts);
   if (error) return { data: null, error };
   return { data: data.submission, error: null };
 };
@@ -225,8 +247,7 @@ export const getFullSubmissionDetails = async (
       .from('submissions')
       .select(`
         *,
-        assignments(id, title, instructions, classroom_id, due_at, type, auto_publish_ai_feedback, classrooms(name, teacher_id)),
-        student_profiles(full_name, avatar_url)
+        assignments(id, title, instructions, classroom_id, due_at, type, auto_publish_ai_feedback, student_facing_task, classrooms(name, teacher_id))
       `)
       .eq('id', submissionId)
       .single();
@@ -236,7 +257,8 @@ export const getFullSubmissionDetails = async (
 
     const [
       { data: feedback },
-      { data: alerts }
+      { data: alerts },
+      profileMap,
     ] = await Promise.all([
       supabase
         .from('assignment_feedback')
@@ -247,25 +269,24 @@ export const getFullSubmissionDetails = async (
         .from('student_alerts')
         .select('*')
         .eq('submission_id', submissionId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
+      resolveUserDisplayProfiles(supabase, [(submission as { student_id: string }).student_id]),
     ]);
 
-    const studentProfile = submission.student_profiles;
-    const studentName = Array.isArray(studentProfile)
-      ? studentProfile[0]?.full_name
-      : studentProfile?.full_name;
+    const prof = profileMap.get((submission as { student_id: string }).student_id);
 
     return {
       data: {
         ...submission,
-        student_name: studentName || '',
-        student_avatar_url: Array.isArray(studentProfile) 
-          ? studentProfile[0]?.avatar_url 
-          : studentProfile?.avatar_url,
+        student_profiles: prof
+          ? { full_name: prof.full_name, avatar_url: prof.avatar_url }
+          : null,
+        student_name: prof?.full_name || '',
+        student_avatar_url: prof?.avatar_url,
         feedback: feedback || null,
-        alerts: alerts || []
+        alerts: alerts || [],
       },
-      error: null
+      error: null,
     };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
@@ -296,6 +317,30 @@ export const getAssignmentConversationMessages = async (
 
     const raw = data.messages as unknown as Message[];
     return { data: rehydrateMessages(raw), error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+export type AssignmentChatSentenceFlag = Database['public']['Tables']['assignment_chat_sentence_flags']['Row'];
+
+/**
+ * Sentence flags reported by the student on assistant chat (teacher + student RLS).
+ */
+export const getAssignmentChatSentenceFlags = async (
+  submissionId: string
+): Promise<{ data: AssignmentChatSentenceFlag[] | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('assignment_chat_sentence_flags')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+    return { data: data ?? [], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -332,12 +377,17 @@ export const getEnrichedClassroomSubmissions = async (
         status,
         attempt_number,
         conversation_complete_at_submit,
-        student_profiles(user_id, full_name, avatar_url)
+        is_teacher_attempt
       `)
       .in('assignment_id', assignmentIds)
       .order('submitted_at', { ascending: false });
 
     if (subError) throw subError;
+
+    const profileByUserId = await resolveUserDisplayProfiles(
+      supabase,
+      (submissions || []).map((s) => s.student_id),
+    );
 
     const submissionIds = (submissions || []).map((s) => s.id);
 
@@ -353,7 +403,7 @@ export const getEnrichedClassroomSubmissions = async (
 
     const enriched = (submissions || []).map((sub) => {
       const fb = feedbackMap.get(sub.id);
-      const studentProfile = sub.student_profiles;
+      const studentProfile = profileByUserId.get(sub.student_id);
       const assignment = assignments.find(a => a.id === sub.assignment_id);
       const assignmentType = (assignment as { type?: string } | undefined)?.type;
 
@@ -390,7 +440,8 @@ export const getEnrichedClassroomSubmissions = async (
             syllabus_section_id: assign.syllabus_section_id ?? null,
             has_feedback: false,
             teacher_feedback: null,
-            conversation_context: []
+            conversation_context: [],
+            is_teacher_attempt: false,
           };
           enriched.push(pendingSub);
         }
@@ -419,7 +470,6 @@ export const getSubmissionById = async (
         `
         *,
         assignments(title),
-        student_profiles(full_name, avatar_url, user_id, created_at),
         assignment_feedback(student_feedback, teacher_feedback, created_at)
       `
       )
@@ -430,7 +480,27 @@ export const getSubmissionById = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data: data as any as SubmissionWithDetails, error: null };
+    if (!data) {
+      return { data: null, error: null };
+    }
+
+    const profileMap = await resolveUserDisplayProfiles(supabase, [
+      (data as { student_id: string }).student_id,
+    ]);
+    const prof = profileMap.get((data as { student_id: string }).student_id);
+    const merged = {
+      ...data,
+      student_profiles: prof
+        ? {
+            full_name: prof.full_name,
+            avatar_url: prof.avatar_url,
+            user_id: prof.user_id,
+            created_at: null as string | null,
+          }
+        : null,
+    };
+
+    return { data: merged as any as SubmissionWithDetails, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -460,7 +530,6 @@ export const getClassroomSubmissions = async (
         `
         *,
         assignments(title),
-        student_profiles(full_name, avatar_url, user_id, created_at),
         assignment_feedback(student_feedback, teacher_feedback, created_at)
       `
       )
@@ -472,7 +541,28 @@ export const getClassroomSubmissions = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data: data as any as SubmissionWithDetails[], error: null };
+    const rows = data || [];
+    const profileMap = await resolveUserDisplayProfiles(
+      supabase,
+      rows.map((r) => (r as { student_id: string }).student_id),
+    );
+    const merged = rows.map((r) => {
+      const sid = (r as { student_id: string }).student_id;
+      const prof = profileMap.get(sid);
+      return {
+        ...r,
+        student_profiles: prof
+          ? {
+              full_name: prof.full_name,
+              avatar_url: prof.avatar_url,
+              user_id: prof.user_id,
+              created_at: null as string | null,
+            }
+          : null,
+      };
+    });
+
+    return { data: merged as any as SubmissionWithDetails[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -528,7 +618,10 @@ export const sendChatMessage = async (
 export const streamChatMessage = async (
   request: ChatRequest,
   onToken: (token: string) => void
-): Promise<{ data: { shouldEnd: boolean } | null; error: ApiError | null }> => {
+): Promise<{
+  data: { shouldEnd: boolean; debug?: ChatResponse['debug'] } | null;
+  error: ApiError | null;
+}> => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('No active session');
@@ -539,7 +632,7 @@ export const streamChatMessage = async (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
+          'Accept': 'text/event-stream, application/json',
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
@@ -563,6 +656,50 @@ export const streamChatMessage = async (
           ? (errorPayload as { error: string }).error
           : errorText.slice(0, 500);
       throw new Error(errMsg || 'Failed to stream chat');
+    }
+
+    const contentType = response.headers.get('Content-Type') ?? '';
+    if (contentType.includes('application/json')) {
+      const parsed = (await response.json()) as ChatResponse;
+      const msg = String(parsed.message ?? '');
+      if (msg) {
+        onToken(msg);
+      }
+      let shouldEnd = parsed.shouldEnd === true;
+      if (!shouldEnd && msg) {
+        const upper = msg.toUpperCase();
+        const semanticPhrases = [
+          'WE ARE DONE',
+          'COMPLETED ALL THE TASKS',
+          'FINISHED ALL THE TASKS',
+          'COMPLETED THE ASSIGNMENT',
+          'FINISHED THE ASSIGNMENT',
+          'YOU HAVE COMPLETED ALL',
+          "YOU'VE COMPLETED ALL",
+          'SUCCESSFULLY ANSWERED ALL',
+          'ACTIVITY IS COMPLETE',
+          'YES, WE ARE DONE',
+          "WE'VE ACTUALLY COMPLETED ALL",
+          'JOB ON COMPLETING THE TASKS',
+          'COMPLETING THE TASKS',
+          'DONE WITH THE TASKS',
+          'FINISHED THE TASKS',
+          'FINISHED THE ACTIVITY',
+          'COMPLETED THE ACTIVITY',
+          'YOU HAVE FINISHED',
+          "YOU'VE FINISHED",
+          'ALL TASKS ARE COMPLETE',
+          'סיימנו את המשימה',
+          'השלמת את כל המשימות',
+          'כל הכבוד על סיום המטלה',
+          'סיימת את המטלה',
+          'סיימת את הפעילות',
+        ];
+        shouldEnd =
+          hasConversationCompleteMarker(msg) ||
+          semanticPhrases.some((phrase) => upper.includes(phrase));
+      }
+      return { data: { shouldEnd, debug: parsed.debug }, error: null };
     }
 
     const reader = response.body?.getReader();
@@ -660,7 +797,7 @@ export const streamChatMessage = async (
       shouldEnd = semanticPhrases.some(phrase => upperContent.includes(phrase));
     }
 
-    return { data: { shouldEnd }, error: null };
+    return { data: { shouldEnd, debug: undefined }, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

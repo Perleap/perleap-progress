@@ -10,6 +10,7 @@ import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { syncModuleFlowToResolvedDisplayForSection } from '@/hooks/queries/moduleFlowSync';
 import {
   getSyllabusByClassroom,
+  getSyllabusOutlineByClassroom,
   createSyllabus,
   provisionSyllabusBundle,
   updateSyllabus,
@@ -62,14 +63,18 @@ import { assignmentKeys } from './useAssignmentQueries';
 export const syllabusKeys = {
   all: ['syllabus'] as const,
   byClassroom: (classroomId: string) => [...syllabusKeys.all, 'classroom', classroomId] as const,
+  outlineByClassroom: (classroomId: string) => [...syllabusKeys.all, 'outline', classroomId] as const,
 };
 
 // ---------------------------------------------------------------------------
 // Syllabus
 // ---------------------------------------------------------------------------
 
-/** Keep low so students see teacher syllabus/release_mode changes without waiting minutes (separate browsers don't share invalidation). */
-const SYLLABUS_STALE_MS = 0;
+/**
+ * Align with QueryClient defaults (2m). Syllabus/link/module-flow mutations invalidate
+ * syllabusKeys.byClassroom so teacher/student edits refresh promptly.
+ */
+const SYLLABUS_STALE_MS = 2 * 60 * 1000;
 
 /** Warm cache before opening classroom detail (reduces nav + CTA layout jumps). */
 export function prefetchSyllabusByClassroom(queryClient: QueryClient, classroomId: string | undefined) {
@@ -96,6 +101,40 @@ export const useSyllabus = (classroomId: string | undefined) => {
     },
     enabled: !!classroomId,
     staleTime: SYLLABUS_STALE_MS,
+  });
+};
+
+export function prefetchSyllabusOutlineByClassroom(
+  queryClient: QueryClient,
+  classroomId: string | undefined,
+  staleTimeMs: number = SYLLABUS_STALE_MS,
+) {
+  if (!classroomId) return;
+  return queryClient.prefetchQuery({
+    queryKey: syllabusKeys.outlineByClassroom(classroomId),
+    queryFn: async () => {
+      const { data, error } = await getSyllabusOutlineByClassroom(classroomId);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: staleTimeMs,
+  });
+}
+
+export const useSyllabusOutlineForClassroom = (
+  classroomId: string | undefined,
+  options?: { staleTime?: number },
+) => {
+  return useQuery({
+    queryKey: syllabusKeys.outlineByClassroom(classroomId || ''),
+    queryFn: async () => {
+      if (!classroomId) throw new Error('Missing classroom ID');
+      const { data, error } = await getSyllabusOutlineByClassroom(classroomId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!classroomId,
+    staleTime: options?.staleTime ?? SYLLABUS_STALE_MS,
   });
 };
 

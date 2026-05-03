@@ -188,7 +188,9 @@ const SubmissionDetail = () => {
                 <AvatarFallback className="bg-primary/10 text-primary text-xl">{studentName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{studentName}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{studentName}</h1>
+                </div>
                 <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 mt-1">
                   <span className="flex items-center gap-1 text-sm">
                     <BookOpen className="h-3.5 w-3.5" />

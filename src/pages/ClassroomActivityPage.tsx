@@ -2,6 +2,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, ChevronRight, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/useAuth';
@@ -39,7 +40,12 @@ function resourceBelongsToSyllabus(resource: SectionResource | null | undefined,
 
 export default function ClassroomActivityPage({ role }: { role: Role }) {
   const { t } = useTranslation();
-  const { id: classroomId, resourceId } = useParams<{ id: string; resourceId: string }>();
+  const { id: idParam, classroomId: classroomIdParam, resourceId } = useParams<{
+    id?: string;
+    classroomId?: string;
+    resourceId: string;
+  }>();
+  const classroomId = classroomIdParam ?? idParam;
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -210,6 +216,9 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
     [classroomId, navigate, role],
   );
 
+  const isTeacherTryPreview =
+    role === 'teacher' && location.pathname.includes('/try/activity/');
+
   const goBackFromActivity = useCallback(() => {
     if (classroomId) {
       const path =
@@ -281,7 +290,10 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
     flowStepForResource &&
     orderedFlowSteps.length > 0 &&
     flowStepIndex >= 0 &&
-    !canAccessPersistedStep(orderedFlowSteps, flowStepIndex, sectionFlow.ctx);
+    !canAccessPersistedStep(orderedFlowSteps, flowStepIndex, sectionFlow.ctx, {
+      assignments: sectionFlow.assignments as AssignmentRow[],
+      now: new Date(),
+    });
 
   if (sequentialBlocked) {
     return (
@@ -358,6 +370,13 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             {t('common.back')}
           </Button>
         </div>
+
+        {isTeacherTryPreview ? (
+          <Alert className="border-primary/25 bg-primary/5 shrink-0">
+            <AlertTitle>{t('teacherTry.activityPreviewTitle')}</AlertTitle>
+            <AlertDescription>{t('teacherTry.activityPreviewDescription')}</AlertDescription>
+          </Alert>
+        ) : null}
 
         <div
           className={cn(

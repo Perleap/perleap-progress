@@ -10,6 +10,7 @@ import {
   getSubmissionById,
   getFullSubmissionDetails,
   getAssignmentConversationMessages,
+  getAssignmentChatSentenceFlags,
   getClassroomSubmissions,
   getEnrichedClassroomSubmissions,
   getSubmissionFeedback,
@@ -32,6 +33,8 @@ export const submissionKeys = {
   feedback: (submissionId: string) => [...submissionKeys.all, 'feedback', submissionId] as const,
   conversation: (submissionId: string) =>
     [...submissionKeys.all, 'conversation', submissionId] as const,
+  chatSentenceFlags: (submissionId: string) =>
+    [...submissionKeys.all, 'chat-sentence-flags', submissionId] as const,
 };
 
 /**
@@ -208,6 +211,26 @@ export const useTeacherConversationMessages = (
       const { data, error } = await getAssignmentConversationMessages(submissionId);
       if (error) throw error;
       return data;
+    },
+    enabled: !!submissionId && enabled,
+    staleTime: 30 * 1000,
+  });
+};
+
+/**
+ * Student-reported assistant sentence flags for a submission (teacher/student RLS).
+ */
+export const useTeacherChatSentenceFlags = (
+  submissionId: string | undefined,
+  enabled: boolean
+) => {
+  return useQuery({
+    queryKey: submissionKeys.chatSentenceFlags(submissionId || ''),
+    queryFn: async () => {
+      if (!submissionId) throw new Error('Missing submission ID');
+      const { data, error } = await getAssignmentChatSentenceFlags(submissionId);
+      if (error) throw error;
+      return data ?? [];
     },
     enabled: !!submissionId && enabled,
     staleTime: 30 * 1000,

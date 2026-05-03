@@ -1,6 +1,7 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { createChatCompletion, getOpenAIConfig, handleOpenAIError } from '../shared/openai.ts';
 import { 
   getTeacherNameByAssignment, 
   getOrCreateConversation, 
@@ -10,7 +11,8 @@ import {
   getAssignmentDetails,
   getAssignmentModuleActivityContextText,
   getClassroomResources,
-  getTeacherIdFromAssignment
+  getTeacherIdFromAssignment,
+  isAppAdmin,
 } from '../shared/supabase.ts';
 import type { Message } from '../shared/types.ts';
 import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
@@ -48,8 +50,27 @@ serve(async (req) => {
       fileContext,
     } = body;
 
-    // Check if streaming is requested (handle both boolean and string "true")
+    const debugChatRequested = body.debugChat === true || body.debugChat === 'true';
+    let allowAdminDebug = false;
+    if (debugChatRequested) {
+      const authHeader = req.headers.get('Authorization');
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+      if (authHeader?.startsWith('Bearer ') && supabaseUrl && serviceKey) {
+        const supabaseAuth = createClient(supabaseUrl, serviceKey);
+        const token = authHeader.replace(/^Bearer\s+/i, '');
+        const {
+          data: { user },
+          error: userError,
+        } = await supabaseAuth.auth.getUser(token);
+        if (!userError && user && (await isAppAdmin(user.id))) {
+          allowAdminDebug = true;
+        }
+      }
+    }
+
     const stream = body.stream === true || body.stream === 'true';
+    const effectiveStream = stream && !allowAdminDebug;
 
     // Fetch all context data in parallel for performance
     const [
@@ -171,7 +192,7 @@ CORRECT example:
           : `Hello! I am Perleap, ${teacherName}'s AI teaching assistant.\n\n`)
       : '';
 
-    if (!stream) {
+    if (!effectiveStream) {
       const { content: aiMessageRaw } = await createChatCompletion(
         systemPrompt,
         formattedOpenAIMessages,
@@ -204,7 +225,11 @@ CORRECT example:
         cleanedMessage = cleanedMessage.trim();
       }
 
-      messages.push({ role: 'assistant', content: cleanedMessage });
+      messages.push({
+        role: 'assistant',
+        content: cleanedMessage,
+        raw_model_text: aiMessageRaw,
+      });
 
       await saveConversation(
         conversation.id,
@@ -219,13 +244,35 @@ CORRECT example:
       const assistantMessageCount = messages.filter(m => m.role === 'assistant').length;
       const turnCount = Math.min(userMessageCount, assistantMessageCount);
 
-      return new Response(JSON.stringify({ 
+      const jsonBody: Record<string, unknown> = {
         message: cleanedMessage,
         turnCount,
         shouldEnd,
         endReason,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      };
+      if (allowAdminDebug) {
+        const smartModel = getOpenAIConfig().model;
+        jsonBody.debug = {
+          rawModelText: aiMessageRaw,
+          afterPostprocess: aiMessage,
+          finalClientMessage: cleanedMessage,
+          polishEnabled: isPolishEnabled(),
+          model: smartModel,
+          temperature: CHAT_TEMPERATURE,
+          maxTokens: CHAT_MAX_TOKENS,
+        };
+      }
+
+      const resHeaders: Record<string, string> = {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      };
+      if (allowAdminDebug) {
+        resHeaders['X-Perleap-Chat-Debug'] = '1';
+      }
+
+      return new Response(JSON.stringify(jsonBody), {
+        headers: resHeaders,
       });
     }
 
@@ -318,6 +365,7 @@ CORRECT example:
           sseDecoder.decode();
 
           if (polishOn) {
+            const rawModelAccum = modelAccum;
             const modelPolished = await polishAssistantDraft(modelAccum, language);
             fullContent = greetingPrefix + modelPolished;
             const markerIndex = fullContent.toUpperCase().indexOf(completionMarker);
@@ -342,7 +390,11 @@ CORRECT example:
               controller.enqueue(encoder.encode('__CONVERSATION_END__'));
             }
 
-            messages.push({ role: 'assistant', content: cleanedContent });
+            messages.push({
+              role: 'assistant',
+              content: cleanedContent,
+              raw_model_text: rawModelAccum,
+            });
             await saveConversation(
               conversation.id,
               submissionId,
@@ -369,7 +421,11 @@ CORRECT example:
             controller.enqueue(encoder.encode('__CONVERSATION_END__'));
           }
 
-          messages.push({ role: 'assistant', content: cleanedContent });
+          messages.push({
+            role: 'assistant',
+            content: cleanedContent,
+            raw_model_text: modelAccum,
+          });
           await saveConversation(
             conversation.id,
             submissionId,

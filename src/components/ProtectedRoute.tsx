@@ -100,8 +100,10 @@ const ProtectedRoute = ({
       if (requiredRole) {
         const userRole = user.user_metadata?.role;
         const isAdmin = userRole === USER_ROLES.ADMIN;
+        const adminOnStudentAssignment =
+          isAdmin && requiredRole === 'student' && currentPath.startsWith('/student/assignment/');
 
-        if (isAdmin && requiredRole === 'student') {
+        if (isAdmin && requiredRole === 'student' && !adminOnStudentAssignment) {
           if (currentPath !== '/teacher/dashboard') {
             hasNavigated.current = true;
             navigate('/teacher/dashboard', { replace: true });
@@ -111,7 +113,8 @@ const ProtectedRoute = ({
 
         const roleOk =
           userRole === requiredRole ||
-          (requiredRole === 'teacher' && isAdmin);
+          (requiredRole === 'teacher' && isAdmin) ||
+          adminOnStudentAssignment;
 
         if (!roleOk) {
           console.log('🔒 Protected route: Role mismatch', {
@@ -199,10 +202,17 @@ const ProtectedRoute = ({
   if (requiredRole) {
     const actualRole = user.user_metadata?.role;
     const isAdmin = actualRole === USER_ROLES.ADMIN;
-    if (isAdmin && requiredRole === 'student') {
+    const adminOnStudentAssignment =
+      isAdmin && requiredRole === 'student' && location.pathname.startsWith('/student/assignment/');
+
+    if (isAdmin && requiredRole === 'student' && !adminOnStudentAssignment) {
       return <Navigate to="/teacher/dashboard" replace />;
     }
-    const roleOk = actualRole === requiredRole || (requiredRole === 'teacher' && isAdmin);
+
+    const roleOk =
+      actualRole === requiredRole ||
+      (requiredRole === 'teacher' && isAdmin) ||
+      adminOnStudentAssignment;
     if (!roleOk) {
       if (actualRole !== 'teacher' && actualRole !== 'student' && !isAdmin) {
         return <Navigate to="/role-selection" replace />;

@@ -1,16 +1,13 @@
 import * as React from 'react';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClassroomSidebar } from './ClassroomSidebar';
 import { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from '@/config/classroomSections';
-import { Separator } from '@/components/ui/separator';
 import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { NotificationDropdown } from '@/components/common/NotificationDropdown';
-import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 import { USER_ROLES } from '@/config/constants';
-
+import { FloatingShellActions } from './FloatingShellActions';
 
 interface ClassroomLayoutProps {
   children: React.ReactNode;
@@ -38,7 +35,7 @@ export function ClassroomLayout({
   hideGlobalNav = false,
 }: ClassroomLayoutProps) {
   const { t } = useTranslation();
-  const { profile, user } = useAuth();
+  const { user } = useAuth();
   const { isRTL } = useLanguage();
   const contentRef = usePageTransition([activeSection]);
 
@@ -70,22 +67,10 @@ export function ClassroomLayout({
         hideGlobalNav={hideGlobalNav}
       />
       <SidebarInset>
-        <header className="flex min-h-24 shrink-0 items-center gap-4 border-b border-border/40 bg-gradient-to-r from-background via-background/95 to-background px-4 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 md:px-5 sticky top-0 z-30">
-          <div className="flex flex-1 items-center gap-4">
-            <SidebarTrigger className="rounded-lg border border-transparent p-2.5 shadow-sm transition-all duration-200 hover:scale-110 hover:border-accent-foreground/10 hover:bg-accent hover:shadow-md" />
-            <Separator orientation="vertical" className="h-8 bg-border/60" />
-            <div className="min-w-0 flex-1" aria-hidden />
-          </div>
-          {user && (
-            <div className="flex items-center gap-2">
-              {isTeacher && <TeacherAssistantTrigger />}
-              <NotificationDropdown userId={user.id} />
-            </div>
-          )}
-        </header>
+        <FloatingShellActions userId={user?.id} showTeacherAssistant={isTeacher} />
         <div
           ref={contentRef}
-          className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-5 pt-3 sm:pt-4 bg-gradient-to-br from-background via-background to-muted/5 min-h-0"
+          className="flex min-h-0 flex-1 flex-col gap-3 pt-12 sm:pt-14 bg-gradient-to-br from-background via-background to-muted/5 p-3 sm:p-4 md:p-5"
         >
           {isAdmin && (
             <div
@@ -95,14 +80,9 @@ export function ClassroomLayout({
               {t('admin.modeBanner')}
             </div>
           )}
-          <div className="pt-4 sm:pt-6 md:pt-8">{children}</div>
+          <div className="min-h-0 flex-1">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-
-// Sections moved to @/config/classroomSections
-
-
-

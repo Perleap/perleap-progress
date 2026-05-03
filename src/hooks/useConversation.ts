@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/api/client';
 import { sendChatMessage, streamChatMessage } from '@/services';
-import type { Message, ApiError, ChatRequest } from '@/types';
+import type { Message, ApiError, ChatRequest, ChatDebugPayload } from '@/types';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
@@ -20,6 +20,7 @@ interface UseConversationResult {
   error: ApiError | null;
   conversationEnded: boolean;
   language: string;
+  lastAssistantDebug: ChatDebugPayload | null;
   sendMessage: (content: string, fileContext?: { name: string; content: string; url?: string; type?: string }) => Promise<void>;
   initializeConversation: () => Promise<void>;
 }
@@ -31,6 +32,8 @@ interface UseConversationParams {
   assignmentId: string;
   /** When true, AI "conversation complete" does not lock the chat or drive assignment submission. */
   companionMode?: boolean;
+  /** App admins only; server verifies `is_app_admin` before returning debug payloads. */
+  debugChat?: boolean;
 }
 
 /**
@@ -42,12 +45,14 @@ export const useConversation = ({
   studentId,
   assignmentId,
   companionMode = false,
+  debugChat = false,
 }: UseConversationParams): UseConversationResult => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationEnded, setConversationEnded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
+  const [lastAssistantDebug, setLastAssistantDebug] = useState<ChatDebugPayload | null>(null);
   const hasInitialized = useRef(false);
   const { language: uiLanguage } = useLanguage();
   
@@ -135,10 +140,12 @@ export const useConversation = ({
         assignmentId,
         isInitialGreeting: true,
         language,
+        ...(debugChat ? { debugChat: true } : {}),
       };
 
       const aiMessage: Message = { role: 'assistant', content: '' };
       setMessages([aiMessage]);
+      setLastAssistantDebug(null);
 
       const { data: endData, error: chatError } = await streamChatMessage(request, (token) => {
         setMessages(prev => {
@@ -155,6 +162,9 @@ export const useConversation = ({
         toast.error('Error starting conversation');
         setMessages([]); // Remove the empty assistant message
         return;
+      }
+      if (endData?.debug) {
+        setLastAssistantDebug(endData.debug);
       }
       if (endData?.shouldEnd && !companionMode) {
         setConversationEnded(true);
@@ -176,6 +186,7 @@ export const useConversation = ({
     const userMessage: Message = { role: 'user', content, fileContext };
     setMessages((prev) => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setSending(true);
+    setLastAssistantDebug(null);
 
     try {
       const request: ChatRequest = {
@@ -186,6 +197,7 @@ export const useConversation = ({
         assignmentId,
         language,
         ...(fileContext ? { fileContext } : {}),
+        ...(debugChat ? { debugChat: true } : {}),
       };
 
       const { data, error: chatError } = await streamChatMessage(request, (token) => {
@@ -204,6 +216,10 @@ export const useConversation = ({
         // Remove the empty assistant message, keep user message for retry/copy
         setMessages(prev => prev.slice(0, -1));
         return;
+      }
+
+      if (data?.debug) {
+        setLastAssistantDebug(data.debug);
       }
 
       if (data?.shouldEnd && !companionMode) {
@@ -234,6 +250,7 @@ export const useConversation = ({
     error,
     conversationEnded,
     language,
+    lastAssistantDebug,
     sendMessage,
     initializeConversation,
   };
