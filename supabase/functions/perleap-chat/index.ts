@@ -18,6 +18,11 @@ import type { Message } from '../shared/types.ts';
 import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
 import { polishAssistantDraft } from './polish.ts';
 import { normalizeAssistantDashes } from './typography.ts';
+import {
+  persistEdgeFunctionLog,
+  errorToMessage,
+  errorToStack,
+} from '../shared/persistEdgeFunctionLog.ts';
 
 const CHAT_TEMPERATURE = 0.25;
 const CHAT_MAX_TOKENS = 2048;
@@ -436,6 +441,17 @@ CORRECT example:
 
           controller.close();
         } catch (error) {
+          await persistEdgeFunctionLog(
+            {
+              functionName: 'perleap-chat',
+              level: 'error',
+              httpStatus: 500,
+              message: errorToMessage(error),
+              stack: errorToStack(error),
+              context: { submissionId, assignmentId, studentId },
+            },
+            req,
+          );
           controller.error(error);
         }
       },
@@ -450,12 +466,23 @@ CORRECT example:
       },
     });
   } catch (error) {
+    const message = handleOpenAIError(error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'perleap-chat',
+        level: 'error',
+        httpStatus: 500,
+        message,
+        stack: errorToStack(error),
+      },
+      req,
+    );
     return new Response(
-      JSON.stringify({ error: handleOpenAIError(error) }), 
+      JSON.stringify({ error: message }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 });

@@ -97,6 +97,21 @@
     "logsColTeacher": "Teacher",
     "logsColTitle": "Title",
     "logsColRoute": "Route",
+    "logsSourceEdge": "Edge function errors",
+    "edgeFunctionsTitle": "Edge function errors",
+    "edgeFunctionsDescription": "Failures and exceptions recorded by Edge Functions (service role). Use for debugging when Supabase dashboard logs are hard to correlate.",
+    "edgeFunctionsEmpty": "No edge function errors recorded yet.",
+    "edgeFunctionNameFilter": "Filter by function name",
+    "edgeFunctionNameFilterPlaceholder": "e.g. generate-feedback",
+    "edgeColFunction": "Function",
+    "edgeColLevel": "Level",
+    "edgeColHttpStatus": "HTTP",
+    "edgeColMessage": "Message",
+    "edgeColRequestId": "Request ID",
+    "edgeColContext": "Context",
+    "edgeColEmailSent": "Email sent",
+    "edgeEmailSentYes": "Yes",
+    "edgeEmailSentNo": "—",
     "healthDescription": "Live probe plus stored DB latency history (snapshots from Edge Function).",
     "healthRange24h": "24 hours",
     "healthRange7d": "7 days",
@@ -773,7 +788,11 @@
       "subtitle": "View and manage your students",
       "joined": "Joined",
       "noStudents": "No students enrolled yet",
-      "studentIncomplete": "Student (Profile Incomplete)"
+      "studentIncomplete": "Student (Profile Incomplete)",
+      "detailDialogTitle": "Student: {{name}}",
+      "tabProfile": "Profile",
+      "tabCurriculum": "Curriculum",
+      "curriculumReadOnlyNote": "Read-only view of {{name}}'s progress through this course curriculum."
     },
     "curriculum": {
       "tabTitle": "Curriculum",
@@ -1157,7 +1176,8 @@
     },
     "errors": {
       "loading": "Error loading assignment",
-      "generatingFeedback": "Error generating feedback"
+      "generatingFeedback": "Error generating feedback",
+      "generatingFeedbackButCompleted": "We couldn't generate AI feedback right now, but your activity was marked complete so you can continue."
     },
     "awaitingTeacherFeedback": "Your teacher has not released the AI feedback yet. You will be notified when it is available.",
     "testTaking": {

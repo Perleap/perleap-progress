@@ -57,6 +57,10 @@ interface StudentActivitiesSectionProps {
   resumeSectionId?: string | null;
   /** Same as legacy Course Outline row: open full module study page (SectionContentPage). */
   onOpenModuleFullPage?: (sectionId: string) => void;
+  /** When set (e.g. teacher viewing a student), progress reflects this user instead of the signed-in student. */
+  progressUserId?: string;
+  /** No navigation into student routes; step labels are plain text. */
+  readOnly?: boolean;
 }
 
 export function StudentActivitiesSection({
@@ -65,12 +69,15 @@ export function StudentActivitiesSection({
   resumeTarget = null,
   resumeSectionId = null,
   onOpenModuleFullPage,
+  progressUserId: progressUserIdProp,
+  readOnly = false,
 }: StudentActivitiesSectionProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const effectiveProgressUserId = progressUserIdProp ?? user?.id;
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(classroomId);
   const { data: assignments = [] } = useClassroomAssignments(classroomId);
-  const { data: studentProgressData } = useStudentProgress(syllabus?.id, user?.id);
+  const { data: studentProgressData } = useStudentProgress(syllabus?.id, effectiveProgressUserId);
 
   const studentProgressMap = useMemo(() => {
     const map: Record<string, StudentProgressStatus> = {};
@@ -94,12 +101,17 @@ export function StudentActivitiesSection({
 
   const assignRows = assignments as AssignmentRow[];
 
-  const { flowCtx } = useStudentCurriculumFlowContext({
-    userId: user?.id,
+  const flowContextEnabled = Boolean(
+    effectiveProgressUserId && (progressUserIdProp ? !!syllabus : true),
+  );
+
+  const { flowCtx, isLoadingProgress: curriculumFlowProgressLoading } = useStudentCurriculumFlowContext({
+    userId: effectiveProgressUserId,
     sectionIds,
     flowBulk,
     resourceMap,
     assignments: assignRows,
+    enabled: flowContextEnabled,
   });
 
   const flowNow = new Date();
@@ -108,6 +120,7 @@ export function StudentActivitiesSection({
   const [moduleOpenById, setModuleOpenById] = useState<Record<string, boolean>>({});
   const [hideFinished, setHideFinished] = useState(false);
   const prevClassroomIdRef = useRef(classroomId);
+  const prevProgressUserKeyRef = useRef(progressUserIdProp ?? '');
 
   const isUnitFinished = useMemo(() => {
     return (section: SyllabusSection) => {
@@ -139,18 +152,22 @@ export function StudentActivitiesSection({
   useEffect(() => {
     if (sections.length === 0) return;
     const switchedClassroom = prevClassroomIdRef.current !== classroomId;
+    const progressKey = progressUserIdProp ?? '';
+    const switchedProgressSubject = prevProgressUserKeyRef.current !== progressKey;
     prevClassroomIdRef.current = classroomId;
+    prevProgressUserKeyRef.current = progressKey;
+    const resetOpen = switchedClassroom || switchedProgressSubject;
     setModuleOpenById((prev) => {
       const next: Record<string, boolean> = {};
       for (const s of sections) {
-        next[s.id] = switchedClassroom ? true : (prev[s.id] ?? true);
+        next[s.id] = resetOpen ? true : (prev[s.id] ?? true);
       }
       const sameKeys =
         Object.keys(next).length === Object.keys(prev).length &&
         Object.keys(next).every((id) => prev[id] === next[id]);
-      return sameKeys && !switchedClassroom ? prev : next;
+      return sameKeys && !resetOpen ? prev : next;
     });
-  }, [classroomId, sections]);
+  }, [classroomId, sections, progressUserIdProp]);
 
   const allSectionsOpen = useMemo(
     () =>
@@ -159,7 +176,7 @@ export function StudentActivitiesSection({
     [visibleSections, moduleOpenById],
   );
 
-  if (syllabusLoading || flowLoading) {
+  if (syllabusLoading || flowLoading || (flowContextEnabled && curriculumFlowProgressLoading)) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -342,7 +359,7 @@ export function StudentActivitiesSection({
                       <p className={cn('text-xs text-muted-foreground', isRTL && 'text-right')}>{stepSummary}</p>
                     </div>
                   </CollapsibleTrigger>
-                  {onOpenModuleFullPage && unlocked ? (
+                  {onOpenModuleFullPage && unlocked && !readOnly ? (
                     <Button
                       type="button"
                       variant="ghost"
@@ -431,6 +448,11 @@ export function StudentActivitiesSection({
                               )}
                               {locked ? (
                                 <span className="text-muted-foreground">{label}</span>
+                              ) : readOnly ? (
+                                <span className="inline-flex max-w-full items-center gap-1 font-medium text-foreground">
+                                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{label}</span>
+                                </span>
                               ) : (
                                 <Link
                                   to={`/student/classroom/${classroomId}/activity/${step.activity_list_id}`}
@@ -502,6 +524,11 @@ export function StudentActivitiesSection({
                                 ) : (
                                   <span className="text-muted-foreground">{displayLabel}</span>
                                 )
+                              ) : readOnly ? (
+                                <span className="inline-flex h-auto min-h-0 max-w-full items-center gap-1 text-base font-medium text-foreground">
+                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{label}</span>
+                                </span>
                               ) : (
                                 <Link
                                   to={`/student/assignment/${step.assignment_id}`}
@@ -592,6 +619,11 @@ export function StudentActivitiesSection({
                                 )}
                                 {locked ? (
                                   <span className="text-muted-foreground">{label}</span>
+                                ) : readOnly ? (
+                                  <span className="inline-flex max-w-full items-center gap-1 font-medium text-foreground">
+                                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">{label}</span>
+                                  </span>
                                 ) : (
                                   <Link
                                     to={`/student/classroom/${classroomId}/activity/${c.activity_list_id}`}
@@ -665,6 +697,11 @@ export function StudentActivitiesSection({
                                 ) : (
                                   <span className="text-muted-foreground">{displayLabel}</span>
                                 )
+                              ) : readOnly ? (
+                                <span className="inline-flex h-auto min-h-0 max-w-full items-center gap-1 text-base font-medium text-foreground">
+                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{label}</span>
+                                </span>
                               ) : (
                                 <Link
                                   to={`/student/assignment/${c.assignment_id}`}

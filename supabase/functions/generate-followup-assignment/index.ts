@@ -7,6 +7,7 @@ import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -203,6 +204,16 @@ Based on this information, design a personalized follow-up assignment that will 
   } catch (error) {
     const errorMessage = handleOpenAIError(error);
     logError('Error in generate-followup-assignment', error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'generate-followup-assignment',
+        level: 'error',
+        httpStatus: 500,
+        message: errorMessage,
+        stack: errorToStack(error),
+      },
+      req,
+    );
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

@@ -13,6 +13,7 @@ import {
   getTeacherNameByAssignment,
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import {
   domainForSkillComponent,
   formatHardSkillPairsForPrompt,
@@ -403,6 +404,16 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = handleOpenAIError(error);
     logError('Error in generate-feedback', error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'generate-feedback',
+        level: 'error',
+        httpStatus: 500,
+        message: errorMessage,
+        stack: errorToStack(error),
+      },
+      req,
+    );
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

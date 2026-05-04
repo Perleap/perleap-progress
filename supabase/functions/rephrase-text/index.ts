@@ -6,6 +6,7 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,6 +115,16 @@ ${text}
     console.error('Error in rephrase-text function:', error);
     
     const errorMessage = handleOpenAIError(error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'rephrase-text',
+        level: 'error',
+        httpStatus: 500,
+        message: errorMessage,
+        stack: errorToStack(error),
+      },
+      req,
+    );
     
     return new Response(
       JSON.stringify({ 
