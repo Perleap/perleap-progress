@@ -71,6 +71,7 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
       case 'feedback_updated':
       case 'assignment_created':
       case 'assignment_graded':
+      case 'assignment_new_attempt':
         return 'T'; // Teacher
       case 'student_enrolled':
       case 'student_completed_activity':

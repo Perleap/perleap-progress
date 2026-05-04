@@ -20,7 +20,7 @@ import {
 } from '@/services/assignmentService';
 
 /** Default matches App QueryClient staleness (mutations invalidate classroom assignment lists). */
-const CLASSROOM_ASSIGNMENTS_STALE_MS = 2 * 60 * 1000;
+export const CLASSROOM_ASSIGNMENTS_STALE_MS = 2 * 60 * 1000;
 
 // Query Keys
 export const assignmentKeys = {
@@ -44,17 +44,23 @@ export const assignmentKeys = {
 
 /**
  * Warm classroom assignments cache (e.g. admin course picker hover).
+ * Pass `submissionsForStudentId` when warming the student-embedded list (same key as student's useClassroomAssignments).
  */
 export function prefetchClassroomAssignments(
   queryClient: QueryClient,
   classroomId: string | undefined,
-  staleTimeMs = 5 * 60 * 1000
+  staleTimeMs = 5 * 60 * 1000,
+  submissionsForStudentId?: string | null,
 ) {
   if (!classroomId) return;
+  const submissionsKey = submissionsForStudentId ?? null;
   return queryClient.prefetchQuery({
-    queryKey: assignmentKeys.listByClassroom(classroomId, null),
+    queryKey: assignmentKeys.listByClassroom(classroomId, submissionsKey),
     queryFn: async () => {
-      const { data, error } = await getClassroomAssignments(classroomId);
+      const { data, error } = await getClassroomAssignments(
+        classroomId,
+        submissionsForStudentId ?? undefined,
+      );
       if (error) throw error;
       return data || [];
     },

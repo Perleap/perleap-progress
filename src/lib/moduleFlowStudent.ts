@@ -2,14 +2,14 @@
  * Student sequential access for module flow (persisted steps + fallback computed flow).
  */
 
+import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
+import { isPastDueForNewAttempts } from '@/lib/assignmentAttemptPolicy';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
   type AssignmentRow,
   type ComputedFlowItem,
 } from '@/lib/moduleFlow';
-import { isPastDueForNewAttempts } from '@/lib/assignmentAttemptPolicy';
-import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
 /** Maps: flow step id -> completed resource progress; assignment id -> submission complete */
 export type StudentFlowProgressContext = {
@@ -27,7 +27,7 @@ export function isAssignmentMissedDeadline(
   assignmentId: string,
   assignments: AssignmentRow[],
   ctx: StudentFlowProgressContext,
-  now: Date,
+  now: Date
 ): boolean {
   const a = assignments.find((x) => x.id === assignmentId);
   if (!a) return false;
@@ -48,7 +48,7 @@ export function persistedStepDone(
   step: ModuleFlowStep,
   steps: ModuleFlowStep[],
   stepIndex: number,
-  ctx: StudentFlowProgressContext,
+  ctx: StudentFlowProgressContext
 ): boolean {
   if (step.step_kind === 'assignment' && step.assignment_id) {
     return ctx.assignmentDoneMap[step.assignment_id] ?? false;
@@ -75,7 +75,7 @@ export function persistedPreviousStepsComplete(
   steps: ModuleFlowStep[],
   index: number,
   ctx: StudentFlowProgressContext,
-  accessMeta?: { assignments: AssignmentRow[]; now: Date },
+  accessMeta?: { assignments: AssignmentRow[]; now: Date }
 ): boolean {
   if (index === 0) return true;
   for (let i = 0; i < index; i++) {
@@ -98,7 +98,7 @@ export type StepVisualState = 'locked' | 'available' | 'done' | 'missed_deadline
 
 export function stepVisualStateFromFlags(
   done: boolean,
-  previousStepsComplete: boolean,
+  previousStepsComplete: boolean
 ): StepVisualState {
   if (done) return 'done';
   if (!previousStepsComplete) return 'locked';
@@ -110,7 +110,7 @@ export function persistedStepVisualState(
   steps: ModuleFlowStep[],
   index: number,
   ctx: StudentFlowProgressContext,
-  accessMeta?: { assignments: AssignmentRow[]; now: Date },
+  accessMeta?: { assignments: AssignmentRow[]; now: Date }
 ): StepVisualState {
   const prevOk = persistedPreviousStepsComplete(steps, index, ctx, accessMeta);
   const done = persistedStepDone(step, steps, index, ctx);
@@ -120,7 +120,7 @@ export function persistedStepVisualState(
 /** First index that is the “next up” step (all prior complete, this one not). -1 if all done. */
 export function firstIncompletePersistedIndex(
   steps: ModuleFlowStep[],
-  ctx: StudentFlowProgressContext,
+  ctx: StudentFlowProgressContext
 ): number {
   for (let i = 0; i < steps.length; i++) {
     if (!persistedPreviousStepsComplete(steps, i, ctx)) continue;
@@ -134,7 +134,7 @@ export function firstIncompleteActionablePersistedIndex(
   steps: ModuleFlowStep[],
   ctx: StudentFlowProgressContext,
   assignments: AssignmentRow[],
-  now: Date,
+  now: Date
 ): number {
   for (let i = 0; i < steps.length; i++) {
     if (!persistedPreviousStepsComplete(steps, i, ctx, { assignments, now })) continue;
@@ -158,11 +158,34 @@ export function computedStepDone(c: ComputedFlowItem, ctx: StudentFlowProgressCo
   return false;
 }
 
+/**
+ * For aggregate progress when the module has no activity-center persisted steps: walk
+ * `computeDefaultModuleFlow` order. Assignments use submission map; resources match
+ * `persistedStepDone` inference (later completed assignment implies earlier resource done).
+ */
+export function computedFlowItemDoneForProgress(
+  item: ComputedFlowItem,
+  items: ComputedFlowItem[],
+  index: number,
+  ctx: StudentFlowProgressContext
+): boolean {
+  if (item.kind === 'assignment') {
+    return ctx.assignmentDoneMap[item.assignment_id] ?? false;
+  }
+  for (let k = index + 1; k < items.length; k++) {
+    const c = items[k];
+    if (c.kind === 'assignment' && ctx.assignmentDoneMap[c.assignment_id]) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function computedPreviousStepsComplete(
   items: ComputedFlowItem[],
   index: number,
   ctx: StudentFlowProgressContext,
-  accessMeta?: { assignments: AssignmentRow[]; now: Date },
+  accessMeta?: { assignments: AssignmentRow[]; now: Date }
 ): boolean {
   if (index === 0) return true;
   for (let i = 0; i < index; i++) {
@@ -185,7 +208,7 @@ export function computedStepVisualState(
   items: ComputedFlowItem[],
   index: number,
   ctx: StudentFlowProgressContext,
-  accessMeta?: { assignments: AssignmentRow[]; now: Date },
+  accessMeta?: { assignments: AssignmentRow[]; now: Date }
 ): StepVisualState {
   const prevOk = computedPreviousStepsComplete(items, index, ctx, accessMeta);
   const done = computedStepDone(c, ctx);
@@ -194,7 +217,7 @@ export function computedStepVisualState(
 
 export function firstIncompleteComputedIndex(
   items: ComputedFlowItem[],
-  ctx: StudentFlowProgressContext,
+  ctx: StudentFlowProgressContext
 ): number {
   for (let i = 0; i < items.length; i++) {
     if (!computedPreviousStepsComplete(items, i, ctx)) continue;
@@ -207,7 +230,7 @@ export function firstIncompleteActionableComputedIndex(
   items: ComputedFlowItem[],
   ctx: StudentFlowProgressContext,
   assignments: AssignmentRow[],
-  now: Date,
+  now: Date
 ): number {
   for (let i = 0; i < items.length; i++) {
     if (!computedPreviousStepsComplete(items, i, ctx, { assignments, now })) continue;
@@ -229,7 +252,7 @@ export function canAccessPersistedStep(
   steps: ModuleFlowStep[],
   index: number,
   ctx: StudentFlowProgressContext,
-  accessMeta?: { assignments: AssignmentRow[]; now: Date },
+  accessMeta?: { assignments: AssignmentRow[]; now: Date }
 ): boolean {
   const step = steps[index];
   if (
@@ -248,7 +271,7 @@ export function canAccessComputedStep(
   items: ComputedFlowItem[],
   index: number,
   ctx: StudentFlowProgressContext,
-  accessMeta?: { assignments: AssignmentRow[]; now: Date },
+  accessMeta?: { assignments: AssignmentRow[]; now: Date }
 ): boolean {
   const c = items[index];
   if (c.kind === 'assignment' && accessMeta) {
@@ -266,14 +289,12 @@ export function isSectionActivityFlowFullyComplete(
   sectionResources: SectionResource[],
   assignments: AssignmentRow[],
   ctx: StudentFlowProgressContext,
-  now: Date,
+  now: Date
 ): boolean {
   const orderedPersisted = getOrderedActivityCenterFlowSteps(persistedSteps, sectionResources);
   const computed = computeDefaultModuleFlow(sectionId, sectionResources, assignments);
   if (orderedPersisted.length > 0) {
-    return (
-      firstIncompleteActionablePersistedIndex(orderedPersisted, ctx, assignments, now) === -1
-    );
+    return firstIncompleteActionablePersistedIndex(orderedPersisted, ctx, assignments, now) === -1;
   }
   if (computed.length > 0) {
     return firstIncompleteActionableComputedIndex(computed, ctx, assignments, now) === -1;

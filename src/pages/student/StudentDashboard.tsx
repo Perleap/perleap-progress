@@ -17,7 +17,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Sparkles, Clock, LayoutGrid, List, Grid2x2, LayoutList, Table2, CalendarDays, Calendar } from 'lucide-react';
+import { Plus, BookOpen, Sparkles, Clock, LayoutGrid, List, Grid2x2, LayoutList, Table2, CalendarDays, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -36,13 +36,21 @@ import { DashboardLayout } from '@/components/layouts';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { SkeletonCardGrid, SkeletonRowList } from '@/components/ui/GsapSkeleton';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useClassrooms, useStudentAssignments, useJoinClassroom, prefetchSyllabusByClassroom } from '@/hooks/queries';
+import {
+  prefetchSyllabusByClassroom,
+  useClassrooms,
+  useStudentAssignments,
+  useJoinClassroom,
+} from '@/hooks/queries';
+import { useStudentTimelineCurriculaProgress } from '@/hooks/useStudentTimelineCurriculaProgress';
 import { ClassroomTableView } from '@/components/features/dashboard/ClassroomTableView';
 import { ClassroomTimelineView } from '@/components/features/dashboard/ClassroomTimelineView';
-import { copyToClipboard } from '@/lib/utils';
 
 /** Set to true to show calendar sidebar + My Assignments again on this page. */
 const STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS = false;
+
+/** Stable empty list so effects don't re-fire every render when React Query has no `data` yet. */
+const EMPTY_QUERY_LIST: any[] = [];
 
 interface Assignment {
   id: string;
@@ -78,18 +86,30 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: rawClassrooms = [], isLoading: classroomsLoading, refetch: refetchClassrooms } = useClassrooms('student');
-  const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } =
+  const { data: classroomsData, isLoading: classroomsLoading, refetch: refetchClassrooms } = useClassrooms('student');
+  const rawClassrooms = classroomsData ?? EMPTY_QUERY_LIST;
+
+  const { data: assignmentsData, isLoading: assignmentsLoading, refetch: refetchAssignments } =
     useStudentAssignments({ enabled: STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS });
+  const rawAssignments = assignmentsData ?? EMPTY_QUERY_LIST;
+
+  const loading =
+    classroomsLoading ||
+    (STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS && assignmentsLoading);
+
   const joinClassroomMutation = useJoinClassroom();
 
   const [inviteCode, setInviteCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'compact' | 'detailed' | 'table' | 'timeline'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'compact' | 'detailed' | 'table' | 'timeline'>(
+    'timeline'
+  );
   const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'due-date'>('due-date');
   const [assignmentsTab, setAssignmentsTab] = useState<'active' | 'finished'>('active');
   const [teacherProfiles, setTeacherProfiles] = useState<Record<string, { full_name: string; avatar_url?: string }>>({});
+  /** Synced with last successful teacher profile fetch for `teacherIdsKey`. */
+  const [profilesLoadedForKey, setProfilesLoadedForKey] = useState<string | null>(null);
 
   const warmSyllabusForClassroom = useCallback(
     (classroomId: string) => {
@@ -98,53 +118,62 @@ const StudentDashboard = () => {
     [queryClient]
   );
 
-  const classroomIdsForPrefetch = useMemo(
-    () => rawClassrooms.map((c: { id: string }) => c.id),
-    [rawClassrooms]
-  );
-
-  useEffect(() => {
-    if (!classroomIdsForPrefetch.length) return;
-    for (const id of classroomIdsForPrefetch.slice(0, 16)) {
-      void prefetchSyllabusByClassroom(queryClient, id);
+  const teacherIdsKey = useMemo(() => {
+    const s = new Set<string>();
+    rawClassrooms.forEach((c: any) => {
+      if (c.teacher_id) s.add(c.teacher_id);
+    });
+    if (STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS) {
+      rawAssignments.forEach((a: any) => {
+        if (a.classrooms?.teacher_id) s.add(a.classrooms.teacher_id);
+      });
     }
-  }, [queryClient, classroomIdsForPrefetch]);
+    return [...s].sort().join('|');
+  }, [rawClassrooms, rawAssignments]);
 
   // Fetch teacher profiles when classrooms or assignments change
   useEffect(() => {
-    const fetchTeacherProfiles = async () => {
-      const teacherIds = new Set<string>();
-      rawClassrooms.forEach((c: any) => { if (c.teacher_id) teacherIds.add(c.teacher_id); });
-      rawAssignments.forEach((a: any) => { if (a.classrooms?.teacher_id) teacherIds.add(a.classrooms.teacher_id); });
+    if (classroomsLoading || assignmentsLoading) return;
 
-      if (teacherIds.size === 0) return;
+    if (teacherIdsKey === '') {
+      setProfilesLoadedForKey('');
+      return;
+    }
 
+    let cancelled = false;
+    const teacherIds = teacherIdsKey.split('|').filter(Boolean);
+
+    void (async () => {
       const { data, error } = await supabase
         .from('teacher_profiles')
         .select('user_id, full_name, avatar_url')
-        .in('user_id', Array.from(teacherIds));
+        .in('user_id', teacherIds);
+
+      if (cancelled) return;
 
       if (error) {
         console.error('Error fetching teacher profiles:', error);
+        setProfilesLoadedForKey(teacherIdsKey);
         return;
       }
 
       if (data) {
         const profilesMap: Record<string, { full_name: string; avatar_url?: string }> = {};
-        data.forEach(p => {
+        data.forEach((p) => {
           profilesMap[p.user_id] = {
             full_name: p.full_name || '',
-            avatar_url: p.avatar_url || undefined
+            avatar_url: p.avatar_url || undefined,
           };
         });
         setTeacherProfiles(profilesMap);
       }
-    };
+      setProfilesLoadedForKey(teacherIdsKey);
+    })();
 
-    if (!classroomsLoading && !assignmentsLoading) {
-      fetchTeacherProfiles();
-    }
-  }, [rawClassrooms, rawAssignments, classroomsLoading, assignmentsLoading]);
+    return () => {
+      cancelled = true;
+    };
+  }, [teacherIdsKey, classroomsLoading, assignmentsLoading]);
 
   // Transform and memoize classrooms data
   const classrooms: Classroom[] = useMemo(() => rawClassrooms.map((c: any) => ({
@@ -158,6 +187,34 @@ const StudentDashboard = () => {
     },
     teacher_profiles: teacherProfiles[c.teacher_id] || null
   })), [rawClassrooms, teacherProfiles]);
+
+  const timelineClassroomIds = useMemo(
+    () => rawClassrooms.map((c: any) => String(c.id)).filter(Boolean),
+    [rawClassrooms],
+  );
+
+  /** Warm curriculum cache on any dashboard view so Timeline opens with data already in RQ. */
+  const timelineBatchEnabled = Boolean(user?.id && timelineClassroomIds.length > 0);
+
+  const { data: timelineCurricula = {}, isPending: timelineCurriculaPending } =
+    useStudentTimelineCurriculaProgress(
+      user?.id,
+      timelineClassroomIds,
+      timelineBatchEnabled,
+    );
+
+  const curriculumBatchBlocking = Boolean(
+    user?.id && timelineClassroomIds.length > 0 && timelineCurriculaPending,
+  );
+
+  const teacherProfilesBlocking =
+    !classroomsLoading &&
+    !assignmentsLoading &&
+    teacherIdsKey !== '' &&
+    profilesLoadedForKey !== teacherIdsKey;
+
+  const dashboardShellBlocking =
+    loading || curriculumBatchBlocking || teacherProfilesBlocking;
 
   // Separate assignments and memoize
   const allAssignments = useMemo(() => (rawAssignments as any[]).map(a => ({
@@ -174,23 +231,9 @@ const StudentDashboard = () => {
   const assignments = useMemo(() => allAssignments.filter((a: any) => !a.is_completed), [allAssignments]);
   const finishedAssignments = useMemo(() => allAssignments.filter((a: any) => a.is_completed), [allAssignments]);
 
-  const loading =
-    classroomsLoading ||
-    (STUDENT_DASHBOARD_SHOW_CALENDAR_AND_ASSIGNMENTS && assignmentsLoading);
-
   // GSAP stagger animation refs - only trigger on data changes
   const classroomsRef = useStaggerAnimation(':scope > div', 0.08, [classrooms.length, viewMode]);
   const assignmentsRef = useStaggerAnimation(':scope > div', 0.06, [assignments.length, assignmentsTab]);
-
-  const handleCopyInviteCode = async (e: React.MouseEvent, inviteCode: string) => {
-    e.stopPropagation();
-    try {
-      await copyToClipboard(inviteCode);
-      toast.success(t('teacherDashboard.success.inviteCodeCopied'));
-    } catch (error) {
-      toast.error(t('common.error'));
-    }
-  };
 
   const formatDate = (dateString: string | null | undefined, format: 'short' | 'long' = 'short') => {
     if (!dateString) return 'N/A';
@@ -311,6 +354,21 @@ const StudentDashboard = () => {
 
   const assignmentTypeLabel = (type: string | undefined) =>
     type ? t(`assignmentTypes.${type}`, { defaultValue: type }) : t('assignmentTypes.questions');
+
+  if (dashboardShellBlocking) {
+    return (
+      <div
+        className="min-h-screen bg-background flex items-center justify-center"
+        aria-busy="true"
+        aria-label={t('common.loading')}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+          <p className="text-muted-foreground">{t('common.loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -446,12 +504,16 @@ const StudentDashboard = () => {
             ) : viewMode === 'table' ? (
               <ClassroomTableView
                 classrooms={classrooms.map(c => ({ ...c, invite_code: c.classrooms.invite_code }))}
-                onCopyInviteCode={(code) => console.log('Copied:', code)}
+                variant="student"
               />
             ) : viewMode === 'timeline' ? (
               <ClassroomTimelineView
                 classrooms={classrooms.map(c => ({ ...c, invite_code: c.classrooms.invite_code }))}
-                onCopyInviteCode={(code) => console.log('Copied:', code)}
+                variant="student"
+                studentUserId={user?.id}
+                studentCurriculumBatched
+                studentCurriculumProgress={timelineCurricula}
+                studentCurriculumLoading={false}
               />
             ) : (
               <div

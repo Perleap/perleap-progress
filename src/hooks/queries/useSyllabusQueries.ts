@@ -77,7 +77,11 @@ export const syllabusKeys = {
 const SYLLABUS_STALE_MS = 2 * 60 * 1000;
 
 /** Warm cache before opening classroom detail (reduces nav + CTA layout jumps). */
-export function prefetchSyllabusByClassroom(queryClient: QueryClient, classroomId: string | undefined) {
+export function prefetchSyllabusByClassroom(
+  queryClient: QueryClient,
+  classroomId: string | undefined,
+  staleTimeMs: number = SYLLABUS_STALE_MS,
+) {
   if (!classroomId) return;
   return queryClient.prefetchQuery({
     queryKey: syllabusKeys.byClassroom(classroomId),
@@ -86,11 +90,15 @@ export function prefetchSyllabusByClassroom(queryClient: QueryClient, classroomI
       if (error) throw error;
       return data;
     },
-    staleTime: SYLLABUS_STALE_MS,
+    staleTime: staleTimeMs,
   });
 }
 
-export const useSyllabus = (classroomId: string | undefined) => {
+export const useSyllabus = (
+  classroomId: string | undefined,
+  options?: { staleTime?: number },
+) => {
+  const staleTime = options?.staleTime ?? SYLLABUS_STALE_MS;
   return useQuery({
     queryKey: syllabusKeys.byClassroom(classroomId || ''),
     queryFn: async () => {
@@ -100,7 +108,7 @@ export const useSyllabus = (classroomId: string | undefined) => {
       return data;
     },
     enabled: !!classroomId,
-    staleTime: SYLLABUS_STALE_MS,
+    staleTime,
   });
 };
 

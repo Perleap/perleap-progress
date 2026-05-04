@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { AssignmentRow } from '@/lib/moduleFlow';
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
-import type { SyllabusSection } from '@/types/syllabus';
+import type { StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
 
 function section(id: string, order_index: number): SyllabusSection {
   return {
@@ -54,5 +56,26 @@ describe('isSectionUnlocked sequential', () => {
     };
     expect(isSectionUnlocked(b, sections, 'sequential', gap)).toBe(false);
     expect(isSectionUnlocked(c, sections, 'sequential', gap)).toBe(false);
+  });
+
+  it('with sequentialFlow, prior module flow complete unlocks next without completed row', () => {
+    const a = section('a', 0);
+    const b = section('b', 1);
+    const sections = [a, b];
+    const progress: Record<string, StudentProgressStatus> = {};
+    const flowCtx: StudentFlowProgressContext = {
+      progressByStep: {},
+      assignmentDoneMap: { a1: true },
+    };
+    const assignments: AssignmentRow[] = [{ id: 'a1', syllabus_section_id: 'a' }];
+    const sequentialFlow = {
+      flowBulk: { a: [], b: [] },
+      resourceMap: { a: [], b: [] },
+      assignments,
+      flowCtx,
+      now: new Date('2030-01-01T12:00:00.000Z'),
+    };
+    expect(isSectionUnlocked(b, sections, 'sequential', progress)).toBe(false);
+    expect(isSectionUnlocked(b, sections, 'sequential', progress, sequentialFlow)).toBe(true);
   });
 });

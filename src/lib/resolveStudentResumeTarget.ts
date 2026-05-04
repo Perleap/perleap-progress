@@ -101,6 +101,39 @@ function firstIncompleteInDisplayedFlow(
   return null;
 }
 
+/**
+ * Scans every section in course order for the first incomplete displayed-flow step,
+ * ignoring release-mode / manual locks. Used to tell “all reachable work done, more may be gated”
+ * from “no incomplete work anywhere.”
+ */
+export function findFirstIncompleteDisplayedFlowAcrossCourse(params: {
+  sections: SyllabusSection[];
+  flowBulk: Record<string, ModuleFlowStep[]>;
+  resourceMap: Record<string, SectionResource[]>;
+  assignments: AssignmentRow[];
+  flowCtx: StudentFlowProgressContext;
+  now?: Date;
+}): FlowStepTarget | null {
+  const { sections, flowBulk, resourceMap, assignments, flowCtx } = params;
+  const now = params.now ?? new Date();
+  const sorted = [...sections].sort((a, b) => a.order_index - b.order_index);
+
+  for (const section of sorted) {
+    const persisted = flowBulk[section.id] ?? [];
+    const sectionResources = resourceMap[section.id] ?? [];
+    const fromDisplayed = firstIncompleteInDisplayedFlow(
+      section.id,
+      sectionResources,
+      assignments,
+      persisted,
+      flowCtx,
+      now,
+    );
+    if (fromDisplayed) return fromDisplayed;
+  }
+  return null;
+}
+
 export function resolveStudentResumeTargetWithSection(params: {
   sections: SyllabusSection[];
   releaseMode: ReleaseMode;
@@ -115,9 +148,16 @@ export function resolveStudentResumeTargetWithSection(params: {
   const { releaseMode, studentProgressMap, flowBulk, resourceMap, assignments, flowCtx } = params;
   const now = params.now ?? new Date();
   const sorted = [...params.sections].sort((a, b) => a.order_index - b.order_index);
+  const sequentialFlow = {
+    flowBulk,
+    resourceMap,
+    assignments,
+    flowCtx,
+    now,
+  };
 
   for (const section of sorted) {
-    if (!isSectionUnlocked(section, sorted, releaseMode, studentProgressMap)) {
+    if (!isSectionUnlocked(section, sorted, releaseMode, studentProgressMap, sequentialFlow)) {
       continue;
     }
     const persisted = flowBulk[section.id] ?? [];

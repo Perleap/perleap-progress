@@ -4,7 +4,10 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/useAuth';
+import { createNotification } from '@/lib/notificationService';
+import i18n from 'i18next';
 import {
   getStudentSubmissionContext,
   getSubmissionById,
@@ -17,9 +20,14 @@ import {
   completeSubmission,
   sendChatMessage,
   generateFeedback,
+  listSubmissionTeacherPrivateNoteEntries,
+  createSubmissionTeacherPrivateNoteEntry,
+  teacherResetStudentAssignmentProgress,
 } from '@/services/submissionService';
 import type { ChatRequest, FeedbackRequest } from '@/types';
 import { assignmentFlowCompleteKeys, assignmentSubmittedFlagsKeys } from './useModuleFlowQueries';
+import { notificationKeys } from './useNotificationQueries';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 
 // Query Keys
 export const submissionKeys = {
@@ -35,6 +43,8 @@ export const submissionKeys = {
     [...submissionKeys.all, 'conversation', submissionId] as const,
   chatSentenceFlags: (submissionId: string) =>
     [...submissionKeys.all, 'chat-sentence-flags', submissionId] as const,
+  teacherPrivateNoteEntries: (submissionId: string) =>
+    [...submissionKeys.all, 'teacher-private-note-entries', submissionId] as const,
 };
 
 /**
@@ -123,6 +133,7 @@ export const useCompleteSubmission = () => {
       queryClient.invalidateQueries({ queryKey: submissionKeys.lists() });
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
+      invalidateStudentTimelineCurriculaQueries(queryClient);
     },
   });
 };
@@ -234,6 +245,102 @@ export const useTeacherChatSentenceFlags = (
     },
     enabled: !!submissionId && enabled,
     staleTime: 30 * 1000,
+  });
+};
+
+export const useSubmissionTeacherPrivateNoteEntries = (submissionId: string | undefined) => {
+  return useQuery({
+    queryKey: submissionKeys.teacherPrivateNoteEntries(submissionId || ''),
+    queryFn: async () => {
+      if (!submissionId) throw new Error('Missing submission ID');
+      const { data, error } = await listSubmissionTeacherPrivateNoteEntries(submissionId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!submissionId,
+    staleTime: 30 * 1000,
+  });
+};
+
+export const useCreateSubmissionTeacherPrivateNoteEntry = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (params: { submissionId: string; body: string }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      const { success, error } = await createSubmissionTeacherPrivateNoteEntry({
+        submissionId: params.submissionId,
+        body: params.body,
+        userId: user.id,
+      });
+      if (error || !success) throw error ?? new Error('save failed');
+    },
+    onSuccess: (_, params) => {
+      void queryClient.invalidateQueries({
+        queryKey: submissionKeys.teacherPrivateNoteEntries(params.submissionId),
+      });
+    },
+  });
+};
+
+export type TeacherResetStudentProgressInput = {
+  submissionId: string;
+  notify: {
+    studentId: string;
+    assignmentId: string;
+    assignmentTitle: string;
+    classroomId?: string;
+    teacherId?: string | null;
+  };
+  notificationCopy: { title: string; message: string };
+};
+
+export const useTeacherResetStudentAssignmentProgress = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (vars: TeacherResetStudentProgressInput) => {
+      const { data: newSubmissionId, error } = await teacherResetStudentAssignmentProgress(
+        vars.submissionId,
+      );
+      if (error) throw error;
+      if (!newSubmissionId) throw new Error('No submission returned');
+
+      try {
+        await createNotification(
+          vars.notify.studentId,
+          'assignment_new_attempt',
+          vars.notificationCopy.title,
+          vars.notificationCopy.message,
+          `/student/assignment/${vars.notify.assignmentId}`,
+          {
+            assignment_id: vars.notify.assignmentId,
+            submission_id: newSubmissionId,
+            classroom_id: vars.notify.classroomId,
+            assignment_title: vars.notify.assignmentTitle,
+          },
+          vars.notify.teacherId ?? undefined,
+        );
+      } catch (notifErr) {
+        console.error('Failed to notify student of new attempt', notifErr);
+        toast.warning(i18n.t('notifications.newAttempt.notifyFailed'));
+      }
+
+      return newSubmissionId;
+    },
+    onSuccess: (newSubmissionId) => {
+      queryClient.invalidateQueries({ queryKey: submissionKeys.all });
+      queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
+      queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
+      invalidateStudentTimelineCurriculaQueries(queryClient);
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      if (newSubmissionId) {
+        queryClient.invalidateQueries({
+          queryKey: submissionKeys.detail(newSubmissionId),
+        });
+      }
+    },
   });
 };
 

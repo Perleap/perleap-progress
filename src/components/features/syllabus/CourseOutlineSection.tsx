@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -36,6 +37,8 @@ import {
   usePublishSyllabus,
   useClassroomAssignments,
   useUpdateSyllabusSection,
+  useClassroom,
+  useUpdateClassroom,
 } from '@/hooks/queries';
 import { SyllabusEditor } from './SyllabusEditor';
 import { GradingCategoriesManager } from './GradingCategoriesManager';
@@ -43,6 +46,17 @@ import { AssignmentLinker } from './AssignmentLinker';
 import type { SyllabusStructureType, SyllabusPolicy, ReleaseMode } from '@/types/syllabus';
 import { useAuth } from '@/contexts/useAuth';
 import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
+
+function toDateInputValue(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  return dateStr.slice(0, 10);
+}
+
+function formatCourseDateLabel(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
+}
 
 interface CourseOutlineSectionProps {
   classroomId: string;
@@ -59,9 +73,11 @@ export const CourseOutlineSection = ({
   const { t } = useTranslation();
   const { user } = useAuth();
   const { data: syllabus, isLoading, isError, refetch } = useSyllabus(classroomId);
+  const { data: classroom } = useClassroom(classroomId);
   const { data: assignments = [] } = useClassroomAssignments(classroomId);
   const createMutation = useCreateSyllabus();
   const updateMutation = useUpdateSyllabus();
+  const updateClassroomMutation = useUpdateClassroom();
   const updateSectionMutation = useUpdateSyllabusSection();
   const publishMutation = usePublishSyllabus();
 
@@ -75,6 +91,8 @@ export const CourseOutlineSection = ({
   const [metaStructureType, setMetaStructureType] = useState<SyllabusStructureType>('weeks');
   const [metaPolicies, setMetaPolicies] = useState<SyllabusPolicy[]>([]);
   const [metaReleaseMode, setMetaReleaseMode] = useState<ReleaseMode>('all_at_once');
+  const [metaStartDate, setMetaStartDate] = useState('');
+  const [metaEndDate, setMetaEndDate] = useState('');
 
   const handleCreate = async () => {
     if (!createTitle.trim()) {
@@ -136,23 +154,38 @@ export const CourseOutlineSection = ({
     setMetaStructureType(syllabus.structure_type);
     setMetaPolicies(syllabus.policies ?? []);
     setMetaReleaseMode(syllabus.release_mode || 'all_at_once');
+    setMetaStartDate(toDateInputValue(classroom?.start_date));
+    setMetaEndDate(toDateInputValue(classroom?.end_date));
     setEditingMeta(true);
   };
 
   const handleSaveMeta = async () => {
     if (!syllabus) return;
+    if (metaStartDate && metaEndDate && metaEndDate < metaStartDate) {
+      toast.error(t('syllabus.settings.courseDatesInvalid'));
+      return;
+    }
     try {
-      await updateMutation.mutateAsync({
-        syllabusId: syllabus.id,
-        updates: {
-          title: metaTitle,
-          summary: null,
-          structure_type: metaStructureType,
-          policies: metaPolicies.map((p, i) => ({ ...p, order_index: i })),
-          release_mode: metaReleaseMode,
-        },
-        classroomId,
-      });
+      await Promise.all([
+        updateMutation.mutateAsync({
+          syllabusId: syllabus.id,
+          updates: {
+            title: metaTitle,
+            summary: null,
+            structure_type: metaStructureType,
+            policies: metaPolicies.map((p, i) => ({ ...p, order_index: i })),
+            release_mode: metaReleaseMode,
+          },
+          classroomId,
+        }),
+        updateClassroomMutation.mutateAsync({
+          classroomId,
+          updates: {
+            start_date: metaStartDate || null,
+            end_date: metaEndDate || null,
+          },
+        }),
+      ]);
       if (metaReleaseMode !== 'manual') {
         const locked = syllabus.sections.filter((s) => s.is_locked);
         if (locked.length > 0) {
@@ -362,15 +395,21 @@ export const CourseOutlineSection = ({
             onStartEdit={startEditMeta}
             onSave={handleSaveMeta}
             onCancel={() => setEditingMeta(false)}
-            saving={updateMutation.isPending}
+            saving={updateMutation.isPending || updateClassroomMutation.isPending}
+            courseStartDate={classroom?.start_date ?? null}
+            courseEndDate={classroom?.end_date ?? null}
             metaTitle={metaTitle}
             metaStructureType={metaStructureType}
             metaPolicies={metaPolicies}
             metaReleaseMode={metaReleaseMode}
+            metaStartDate={metaStartDate}
+            metaEndDate={metaEndDate}
             onChangeTitle={setMetaTitle}
             onChangeStructureType={setMetaStructureType}
             onChangePolicies={setMetaPolicies}
             onChangeReleaseMode={setMetaReleaseMode}
+            onChangeCourseStartDate={setMetaStartDate}
+            onChangeCourseEndDate={setMetaEndDate}
             isRTL={isRTL}
           />
         </TabsContent>
@@ -419,12 +458,20 @@ function SyllabusSettings({
   onSave,
   onCancel,
   saving,
-  metaTitle, metaStructureType,
+  courseStartDate,
+  courseEndDate,
+  metaTitle,
+  metaStructureType,
   metaPolicies,
   metaReleaseMode,
-  onChangeTitle, onChangeStructureType,
+  metaStartDate,
+  metaEndDate,
+  onChangeTitle,
+  onChangeStructureType,
   onChangePolicies,
   onChangeReleaseMode,
+  onChangeCourseStartDate,
+  onChangeCourseEndDate,
   isRTL,
 }: {
   syllabus: SyllabusWithSections;
@@ -433,12 +480,20 @@ function SyllabusSettings({
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
-  metaTitle: string; metaStructureType: SyllabusStructureType;
+  courseStartDate: string | null;
+  courseEndDate: string | null;
+  metaTitle: string;
+  metaStructureType: SyllabusStructureType;
   metaPolicies: SyllabusPolicy[];
   metaReleaseMode: ReleaseModeType;
-  onChangeTitle: (v: string) => void; onChangeStructureType: (v: SyllabusStructureType) => void;
+  metaStartDate: string;
+  metaEndDate: string;
+  onChangeTitle: (v: string) => void;
+  onChangeStructureType: (v: SyllabusStructureType) => void;
   onChangePolicies: (v: SyllabusPolicy[]) => void;
   onChangeReleaseMode: (v: ReleaseModeType) => void;
+  onChangeCourseStartDate: (v: string) => void;
+  onChangeCourseEndDate: (v: string) => void;
   isRTL: boolean;
 }) {
   const { t } = useTranslation();
@@ -461,6 +516,10 @@ function SyllabusSettings({
             <CardContent className="p-5 space-y-4">
               <SettingsField label={t('syllabus.title')} value={syllabus.title} isRTL={isRTL} />
               <SettingsField label={t('syllabus.settings.structure')} value={syllabus.structure_type} isRTL={isRTL} />
+              <div className={cn('grid gap-4 sm:grid-cols-2', isRTL ? 'text-right' : 'text-left')}>
+                <SettingsField label={t('createClassroom.startDate')} value={formatCourseDateLabel(courseStartDate)} isRTL={isRTL} />
+                <SettingsField label={t('createClassroom.endDate')} value={formatCourseDateLabel(courseEndDate)} isRTL={isRTL} />
+              </div>
               <SettingsField label={t('syllabus.releaseMode.label', 'Release Mode')} value={t(`syllabus.releaseMode.${syllabus.release_mode || 'all_at_once'}`, syllabus.release_mode || 'all_at_once')} isRTL={isRTL} />
               <SettingsField label={t('syllabus.settings.status')} value={syllabus.status} isRTL={isRTL} />
             </CardContent>
@@ -530,6 +589,26 @@ function SyllabusSettings({
                     {t(`syllabus.${sType}`)}
                   </button>
                 ))}
+              </div>
+            </div>
+            <div className={cn('grid gap-3 sm:grid-cols-2', isRTL ? 'text-right' : 'text-left')}>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{t('createClassroom.startDate')}</Label>
+                <DatePicker
+                  value={metaStartDate}
+                  onChange={onChangeCourseStartDate}
+                  placeholder={t('createClassroom.startDate')}
+                  className="rounded-lg h-10 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">{t('createClassroom.endDate')}</Label>
+                <DatePicker
+                  value={metaEndDate}
+                  onChange={onChangeCourseEndDate}
+                  placeholder={t('createClassroom.endDate')}
+                  className="rounded-lg h-10 text-sm"
+                />
               </div>
             </div>
             <ReleaseModeSelect

@@ -65,17 +65,37 @@ export type FlowStepInput = {
  */
 const __replaceModuleFlowTailBySection = new Map<string, Promise<unknown>>();
 
+/** Must look like a UUID so Postgres ::uuid cast and FK checks don't throw from junk strings. */
+function isUuidLike(value: unknown): value is string {
+  if (value == null || typeof value !== 'string') return false;
+  const t = value.trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t);
+}
+
 async function replaceModuleFlowStepsImpl(
   sectionId: string,
   steps: FlowStepInput[],
 ): Promise<{ error: ApiError | null }> {
   try {
-    const payload = steps.map((s) => ({
+    const mapped = steps.map((s) => ({
       order_index: s.order_index,
       step_kind: s.step_kind,
-      activity_list_id: s.step_kind === 'resource' ? s.activity_list_id : null,
-      assignment_id: s.step_kind === 'assignment' ? s.assignment_id : null,
+      activity_list_id: s.step_kind === 'resource' ? (s.activity_list_id ?? null) : null,
+      assignment_id: s.step_kind === 'assignment' ? (s.assignment_id ?? null) : null,
     }));
+
+    const payload = mapped
+      .filter((p) =>
+        p.step_kind === 'resource'
+          ? isUuidLike(p.activity_list_id)
+          : isUuidLike(p.assignment_id),
+      )
+      .map((p, order_index) => ({
+        order_index,
+        step_kind: p.step_kind,
+        activity_list_id: p.step_kind === 'resource' ? String(p.activity_list_id).trim() : null,
+        assignment_id: p.step_kind === 'assignment' ? String(p.assignment_id).trim() : null,
+      }));
 
     const { error: rpcErr } = await supabase.rpc('replace_module_flow_steps', {
       p_section_id: sectionId,

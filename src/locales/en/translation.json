@@ -390,7 +390,13 @@
       "joinedClassroom": "Successfully joined {{name}}!",
       "markedRead": "Notifications marked as read"
     },
-    "activeCourse": "Active Course"
+    "activeCourse": "Active Course",
+    "enterCourse": "Enter course",
+    "timeline": {
+      "teacherNameFallback": "Teacher",
+      "loadingProgress": "Loading course progress…",
+      "progressUnavailable": "Progress isn’t shown for this course yet."
+    }
   },
   "teacherDashboard": {
     "title": "Teacher Dashboard",
@@ -1057,7 +1063,8 @@
     "tabs": {
       "feedback": "Feedback",
       "assignment": "Assignment",
-      "evaluation": "Evaluation"
+      "evaluation": "Evaluation",
+      "notes": "Notes"
     },
     "testResults": {
       "title": "Test Results",
@@ -1124,6 +1131,25 @@
       "action": "Release to student",
       "success": "Feedback is now visible to the student.",
       "alreadyVisible": "This feedback is already published to the student. You can still edit the text above and save changes."
+    },
+    "interactionNotes": {
+      "placeholder": "e.g. Called student on March 3 to clarify extension…",
+      "recorded": "Recorded",
+      "add": "Add note",
+      "addTitle": "New interaction note",
+      "save": "Save note",
+      "added": "Note saved.",
+      "empty": "Write something before saving.",
+      "emptyState": "No interaction notes yet. Use + to add one."
+    },
+    "resetStudentProgress": {
+      "action": "Start new attempt",
+      "title": "Give the student a fresh attempt?",
+      "description": "This keeps all existing work and feedback on file and opens a new in-progress attempt for them. You will jump to that new submission.",
+      "confirm": "Start new attempt",
+      "success": "New attempt created.",
+      "blockedDraft": "The student already has a draft in progress. Finish or have them submit that attempt first.",
+      "blockedNotCompleted": "This is only available when the submission you are viewing is completed."
     },
     "conversationFlowEarlyTitle": "Finished before the chat was complete",
     "conversationFlowEarlyDescription": "The student submitted while the in-chat “conversation complete” state had not been reached. Review the thread below for context."
@@ -1360,6 +1386,7 @@
       "loading": "Error loading classroom"
     },
     "schedule": "Schedule",
+    "instructorAndSchedule": "Instructor & schedule",
     "duration": "Duration",
     "startDate": "Start Date",
     "endDate": "End Date",
@@ -1382,7 +1409,19 @@
       "continueCourse": "Continue",
       "start": "Start course",
       "review": "Review course",
-      "viewAssignments": "View assignments"
+      "viewAssignments": "View assignments",
+      "viewCurriculum": "View curriculum"
+    },
+    "resumeCard": {
+      "headline": {
+        "start": "Start:",
+        "continue": "Continue:",
+        "review": "Review:",
+        "viewCurriculum": "When you're ready:"
+      },
+      "aria": "{{percent}}% course progress. {{action}}. {{detail}}",
+      "detailFallback": "Open the curriculum when you are ready.",
+      "viewCurriculumSubtext": "See what’s unlocked and what’s coming next."
     },
     "activities": {
       "tabTitle": "Activities",
@@ -1396,6 +1435,11 @@
       "assignment": "Assignment",
       "assignmentUnavailable": "This assignment is no longer available.",
       "pastDueNoAttempt": "Due date has passed and you can’t start this task.",
+      "resumeStepBadge": "Continue here",
+      "stepRowAria": {
+        "next": "Next step in this module.",
+        "resume": "Where to continue from the course overview."
+      },
       "stepA11y": {
         "locked": "Locked until previous steps are complete",
         "available": "Available now",
@@ -2080,6 +2124,12 @@
       "successfullyEnrolled": "Successfully Enrolled",
       "newAssignment": "New Personalized Assignment",
       "studentEnrolled": "New Student Enrolled"
+    },
+    "newAttempt": {
+      "title": "New attempt: {{assignmentTitle}}",
+      "message": "Your teacher started a new attempt for this assignment. Open it when you're ready to continue.",
+      "badge": "New attempt",
+      "notifyFailed": "New attempt created, but the student may not have received a notification. They can still open the assignment."
     }
   },
   "assignmentTypes": {
@@ -2213,7 +2263,9 @@
       "attendancePolicy": "Attendance Policy",
       "communicationPolicy": "Communication Policy",
       "status": "Status",
-      "structure": "Structure"
+      "structure": "Structure",
+      "courseDates": "Course dates",
+      "courseDatesInvalid": "End date must be on or after the start date."
     },
     "roadmap": {
       "noSections": "No Sections Yet",

@@ -992,3 +992,64 @@ export const releaseAiFeedbackToStudent = async (params: {
     return { success: false, error: handleSupabaseError(error) };
   }
 };
+
+export type SubmissionTeacherPrivateNoteEntry = {
+  id: string;
+  submission_id: string;
+  body: string;
+  created_at: string;
+  created_by: string | null;
+};
+
+export const listSubmissionTeacherPrivateNoteEntries = async (
+  submissionId: string,
+): Promise<{
+  data: SubmissionTeacherPrivateNoteEntry[] | null;
+  error: ApiError | null;
+}> => {
+  try {
+    const { data, error } = await supabase
+      .from('submission_teacher_private_note_entries')
+      .select('id, submission_id, body, created_at, created_by')
+      .eq('submission_id', submissionId)
+      .order('created_at', { ascending: false });
+
+    if (error) return { data: null, error: handleSupabaseError(error) };
+    return { data: (data as SubmissionTeacherPrivateNoteEntry[]) ?? [], error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+export const createSubmissionTeacherPrivateNoteEntry = async (params: {
+  submissionId: string;
+  body: string;
+  userId: string;
+}): Promise<{ success: boolean; error: ApiError | null }> => {
+  try {
+    const { error } = await supabase.from('submission_teacher_private_note_entries').insert({
+      submission_id: params.submissionId,
+      body: params.body,
+      created_by: params.userId,
+    });
+    if (error) return { success: false, error: handleSupabaseError(error) };
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+/** Teacher or app admin: insert a new in_progress attempt; prior submission rows stay. */
+export const teacherResetStudentAssignmentProgress = async (
+  submissionId: string,
+): Promise<{ data: string | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase.rpc('teacher_reset_student_assignment_progress', {
+      _submission_id: submissionId,
+    });
+    if (error) return { data: null, error: handleSupabaseError(error) };
+    return { data: typeof data === 'string' ? data : null, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};

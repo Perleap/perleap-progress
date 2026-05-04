@@ -27,6 +27,8 @@ import {
 } from '@/services/moduleFlowService';
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 import { getAssignmentSubmittedOrCompletedMap } from '@/services/syllabusService';
+import { STUDENT_TIMELINE_CACHE_GC_MS, STUDENT_TIMELINE_CACHE_STALE_MS } from '@/lib/studentTimelineCache';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import { syllabusKeys } from './useSyllabusQueries';
 
 /** Client-only rows so the module-flow query matches the save payload before refetch (instant UI). */
@@ -113,7 +115,8 @@ export function useAssignmentFlowProgressMaps(
       return data;
     },
     enabled: enabled && !!studentId && sortedIdsJoin.length > 0,
-    staleTime: 30 * 1000,
+    staleTime: STUDENT_TIMELINE_CACHE_STALE_MS,
+    gcTime: STUDENT_TIMELINE_CACHE_GC_MS,
   });
 }
 
@@ -147,6 +150,37 @@ export const useAssignmentSubmittedOrCompletedMap = (
   });
 };
 
+const MODULE_FLOW_BULK_STALE_MS = STUDENT_TIMELINE_CACHE_STALE_MS;
+
+/** Warm bulk module-flow steps (matches useModuleFlowStepsBulk query key). */
+export function prefetchModuleFlowStepsBulk(
+  queryClient: QueryClient,
+  sectionIds: string[],
+  staleTimeMs = MODULE_FLOW_BULK_STALE_MS,
+  gcTimeMs: number = STUDENT_TIMELINE_CACHE_GC_MS,
+) {
+  if (sectionIds.length === 0) return Promise.resolve();
+  const sortedKey = [...sectionIds].sort().join(',');
+  return queryClient.prefetchQuery({
+    queryKey: [...moduleFlowKeys.all, 'bulk', sortedKey] as const,
+    queryFn: async () => {
+      const { data, error } = await getModuleFlowStepsBySections(sectionIds);
+      if (error) throw error;
+      const map: Record<string, ModuleFlowStep[]> = {};
+      sectionIds.forEach((id) => {
+        map[id] = [];
+      });
+      (data ?? []).forEach((row) => {
+        if (!map[row.section_id]) map[row.section_id] = [];
+        map[row.section_id].push(row);
+      });
+      return map;
+    },
+    staleTime: staleTimeMs,
+    gcTime: gcTimeMs,
+  });
+}
+
 export const useModuleFlowStepsBulk = (sectionIds: string[]) => {
   const sortedKey = [...sectionIds].sort().join(',');
   return useQuery({
@@ -166,7 +200,8 @@ export const useModuleFlowStepsBulk = (sectionIds: string[]) => {
       return map;
     },
     enabled: sectionIds.length > 0,
-    staleTime: 60 * 1000,
+    staleTime: MODULE_FLOW_BULK_STALE_MS,
+    gcTime: STUDENT_TIMELINE_CACHE_GC_MS,
   });
 };
 
@@ -296,7 +331,8 @@ export const useStudentModuleFlowProgressMap = (
       return map;
     },
     enabled: !!studentId && stepIds.length > 0,
-    staleTime: 30 * 1000,
+    staleTime: STUDENT_TIMELINE_CACHE_STALE_MS,
+    gcTime: STUDENT_TIMELINE_CACHE_GC_MS,
   });
 };
 
@@ -322,12 +358,13 @@ export const useMarkFlowStepComplete = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, { sectionId, classroomId, studentId }) => {
+    onSuccess: (_, { sectionId, classroomId }) => {
       queryClient.invalidateQueries({
         queryKey: studentFlowProgressKeys.all,
       });
       queryClient.invalidateQueries({ queryKey: moduleFlowKeys.bySection(sectionId) });
       queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      invalidateStudentTimelineCurriculaQueries(queryClient);
     },
   });
 };

@@ -26,7 +26,11 @@ import {
   useStudentModuleFlowProgressMap,
   useAssignmentSubmittedOrCompletedMap,
 } from '@/hooks/queries';
-import { isSectionUnlocked, sectionsInCourseOrder } from '@/lib/sectionUnlock';
+import {
+  isSectionUnlocked,
+  sectionsInCourseOrder,
+  type SectionSequentialUnlockFlow,
+} from '@/lib/sectionUnlock';
 import { getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
 import { persistedStepDone } from '@/lib/moduleFlowStudent';
 import type {
@@ -48,6 +52,8 @@ interface SectionContentPageProps {
   syllabusId: string;
   releaseMode: ReleaseMode;
   studentProgressMap: Record<string, StudentProgressStatus>;
+  /** Sequential unlock: treat prior units done when module flow is complete, not only `completed` rows. */
+  sequentialUnlockFlow?: SectionSequentialUnlockFlow | null;
   isRTL: boolean;
   onBack: () => void;
   onNavigateSection: (sectionId: string) => void;
@@ -70,6 +76,7 @@ export const SectionContentPage = ({
   syllabusId,
   releaseMode,
   studentProgressMap,
+  sequentialUnlockFlow = null,
   isRTL,
   onBack,
   onNavigateSection,
@@ -192,7 +199,13 @@ export const SectionContentPage = ({
 
   if (!section) return null;
 
-  const locked = !isSectionUnlocked(section, sortedSections, releaseMode, studentProgressMap);
+  const locked = !isSectionUnlocked(
+    section,
+    sortedSections,
+    releaseMode,
+    studentProgressMap,
+    sequentialUnlockFlow ?? undefined,
+  );
 
   const topNavRow = (
     <div className={cn('flex items-center justify-between', isRTL && 'flex-row-reverse')}>

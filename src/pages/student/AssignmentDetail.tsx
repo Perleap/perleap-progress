@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,8 @@ import {
   useSyllabus,
   useModuleFlowSteps,
 } from '@/hooks/queries';
+import { notificationKeys } from '@/hooks/queries/useNotificationQueries';
+import { getUnreadNotifications, markAsRead } from '@/lib/notificationService';
 import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 import {
   getFirstNavigableInSection,
@@ -42,6 +44,7 @@ import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowS
 import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
 import type { AssignmentLinkState } from '@/types/navigation';
 import type { AssignmentCompletionTone } from '@/types/submission';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import { cn } from '@/lib/utils';
 import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 
@@ -58,6 +61,34 @@ const AssignmentDetail = () => {
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
+
+  useEffect(() => {
+    if (isTeacherTry || !assignmentId || !user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const list = await queryClient.fetchQuery({
+        queryKey: notificationKeys.unread(user.id),
+        queryFn: () => getUnreadNotifications(user.id),
+        staleTime: 0,
+      });
+      const ids = list
+        .filter(
+          (n) =>
+            n.type === 'assignment_new_attempt' &&
+            n.metadata?.assignment_id === assignmentId,
+        )
+        .map((n) => n.id);
+      for (const id of ids) {
+        await markAsRead(id);
+      }
+      if (!cancelled && ids.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isTeacherTry, assignmentId, user?.id, queryClient]);
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(
     assignmentId || undefined,
@@ -293,6 +324,7 @@ const AssignmentDetail = () => {
       queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
+      invalidateStudentTimelineCurriculaQueries(queryClient);
       await refetch();
     },
     [queryClient, refetch],

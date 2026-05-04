@@ -3,6 +3,7 @@ import { AlertTriangle, Clock, Loader2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { SubmissionPrivateNotesTab } from './SubmissionPrivateNotesTab';
 import { LangchainPipelineView } from './LangchainPipelineView';
 import { PresentationSubmissionView } from './PresentationSubmissionView';
 import { ProjectSubmissionView } from './ProjectSubmissionView';
@@ -38,7 +39,7 @@ import {
 } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 
-type SubmissionTabValue = 'evaluation' | 'feedback' | 'assignment';
+type SubmissionTabValue = 'evaluation' | 'feedback' | 'assignment' | 'notes';
 
 interface SubmissionTabsProps {
   submission: {
@@ -260,15 +261,18 @@ export const SubmissionTabs = ({
       onValueChange={(value) => setActiveTab(value as SubmissionTabValue)}
       className="w-full"
     >
-      <TabsList className="grid w-full grid-cols-3 h-12 rounded-xl bg-muted/50 p-1">
-        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm">
+      <TabsList className="grid w-full grid-cols-2 min-[520px]:grid-cols-4 gap-1 h-auto min-h-12 rounded-xl bg-muted/50 p-1">
+        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
           {t('submissionDetail.tabs.evaluation')}
         </TabsTrigger>
-        <TabsTrigger value="feedback" className="rounded-lg data-[state=active]:shadow-sm">
+        <TabsTrigger value="feedback" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
           {t('submissionDetail.tabs.feedback')}
         </TabsTrigger>
-        <TabsTrigger value="assignment" className="rounded-lg data-[state=active]:shadow-sm">
+        <TabsTrigger value="assignment" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
           {t('submissionDetail.tabs.assignment')}
+        </TabsTrigger>
+        <TabsTrigger value="notes" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
+          {t('submissionDetail.tabs.notes')}
         </TabsTrigger>
       </TabsList>
 
@@ -735,6 +739,12 @@ export const SubmissionTabs = ({
             }
           }
         })()}
+      </TabsContent>
+
+      <TabsContent value="notes" className="mt-6">
+        {activeTab === 'notes' ? (
+          <SubmissionPrivateNotesTab submissionId={submission.id} isRTL={isRTL} />
+        ) : null}
       </TabsContent>
     </Tabs>
   );
