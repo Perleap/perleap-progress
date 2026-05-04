@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,8 @@ import {
   useSyllabus,
   useModuleFlowSteps,
 } from '@/hooks/queries';
+import { notificationKeys } from '@/hooks/queries/useNotificationQueries';
+import { getUnreadNotifications, markAsRead } from '@/lib/notificationService';
 import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 import {
   getFirstNavigableInSection,
@@ -28,7 +30,7 @@ import {
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
 import type { AssignmentRow } from '@/lib/moduleFlow';
-import { ArrowLeft, Calendar, Loader2, Clock, RefreshCw, Lock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -42,6 +44,7 @@ import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowS
 import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
 import type { AssignmentLinkState } from '@/types/navigation';
 import type { AssignmentCompletionTone } from '@/types/submission';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import { cn } from '@/lib/utils';
 import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 
@@ -58,6 +61,34 @@ const AssignmentDetail = () => {
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
+
+  useEffect(() => {
+    if (isTeacherTry || !assignmentId || !user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const list = await queryClient.fetchQuery({
+        queryKey: notificationKeys.unread(user.id),
+        queryFn: () => getUnreadNotifications(user.id),
+        staleTime: 0,
+      });
+      const ids = list
+        .filter(
+          (n) =>
+            n.type === 'assignment_new_attempt' &&
+            n.metadata?.assignment_id === assignmentId,
+        )
+        .map((n) => n.id);
+      for (const id of ids) {
+        await markAsRead(id);
+      }
+      if (!cancelled && ids.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isTeacherTry, assignmentId, user?.id, queryClient]);
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(
     assignmentId || undefined,
@@ -293,6 +324,7 @@ const AssignmentDetail = () => {
       queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
+      invalidateStudentTimelineCurriculaQueries(queryClient);
       await refetch();
     },
     [queryClient, refetch],
@@ -483,17 +515,16 @@ const AssignmentDetail = () => {
           </div>
           <Card>
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle>
-                    {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
-                  </CardTitle>
-                  <CardDescription className="flex flex-col gap-1 mt-2">
-                    <span className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 shrink-0" />
-                      {assignment.due_at &&
-                        `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
+              <div className="space-y-1">
+                <CardTitle>
+                  {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
+                </CardTitle>
+                <CardDescription className="flex flex-col gap-1 mt-2">
+                  {assignment.due_at && (
+                    <span>
+                      {`${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
                     </span>
+                  )}
                     {attemptMode === 'single' && (
                       <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerSingle')}</span>
                     )}
@@ -511,8 +542,6 @@ const AssignmentDetail = () => {
                     )}
                   </CardDescription>
                 </div>
-                <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
-              </div>
             </CardHeader>
           </Card>
 

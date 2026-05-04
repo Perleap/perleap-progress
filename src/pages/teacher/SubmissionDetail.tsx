@@ -8,14 +8,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
-import { MessageSquare, Sparkles, Calendar, BookOpen } from 'lucide-react';
+import { MessageSquare, Sparkles, Calendar, BookOpen, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useFullSubmissionDetails, useClassroom } from '@/hooks/queries';
+import { useFullSubmissionDetails, useClassroom, useTeacherResetStudentAssignmentProgress } from '@/hooks/queries';
 import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
 import { isAppAdminRole } from '@/utils/role';
 import { getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface GeneratedAssignmentData {
   title: string;
@@ -37,9 +48,11 @@ const SubmissionDetail = () => {
   const { data: submissionData, isLoading: loading, refetch } = useFullSubmissionDetails(id);
   const classroomId = submissionData?.assignments?.classroom_id;
   const { data: classroomRow } = useClassroom(classroomId);
+  const resetProgress = useTeacherResetStudentAssignmentProgress();
 
   const [generatingAssignment, setGeneratingAssignment] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [resetProgressOpen, setResetProgressOpen] = useState(false);
   const [generatedAssignmentData, setGeneratedAssignmentData] =
     useState<GeneratedAssignmentData | null>(null);
 
@@ -51,6 +64,11 @@ const SubmissionDetail = () => {
     : t('common.student');
   const studentAvatar = submissionData?.student_avatar_url;
   const alerts = submissionData?.alerts || [];
+
+  const canTeacherStartNewStudentAttempt =
+    submission &&
+    !submission.is_teacher_attempt &&
+    submission.status === 'completed';
 
   // Check ownership (app admins may view any class submission; teachers only their own)
   useEffect(() => {
@@ -157,6 +175,38 @@ const SubmissionDetail = () => {
     }
   };
 
+  const handleConfirmResetStudentProgress = async () => {
+    if (!submission?.id) return;
+    try {
+      const newId = await resetProgress.mutateAsync({
+        submissionId: submission.id,
+        notify: {
+          studentId: submission.student_id,
+          assignmentId: submission.assignments.id,
+          assignmentTitle: submission.assignments.title,
+          classroomId: submission.assignments.classroom_id,
+          teacherId: submission.assignments.classrooms?.teacher_id ?? user?.id ?? null,
+        },
+        notificationCopy: {
+          title: t('notifications.newAttempt.title', {
+            assignmentTitle: submission.assignments.title,
+          }),
+          message: t('notifications.newAttempt.message'),
+        },
+      });
+      setResetProgressOpen(false);
+      toast.success(t('submissionDetail.resetStudentProgress.success'));
+      navigate(`/teacher/submission/${newId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('student_already_has_draft')) {
+        toast.error(t('submissionDetail.resetStudentProgress.blockedDraft'));
+      } else {
+        toast.error(t('common.error'));
+      }
+    }
+  };
+
   if (loading && !submissionData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -204,7 +254,49 @@ const SubmissionDetail = () => {
               </div>
             </div>
 
-            {feedback && (
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 shrink-0">
+              {canTeacherStartNewStudentAttempt ? (
+                <AlertDialog open={resetProgressOpen} onOpenChange={setResetProgressOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full border-border shadow-sm hover:shadow-md transition-all text-sm h-9 px-4"
+                    >
+                      <RotateCcw className="me-2 h-3.5 w-3.5" />
+                      {t('submissionDetail.resetStudentProgress.action')}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent size="default" className="sm:max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {t('submissionDetail.resetStudentProgress.title')}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t('submissionDetail.resetStudentProgress.description')}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          void handleConfirmResetStudentProgress();
+                        }}
+                        disabled={resetProgress.isPending}
+                      >
+                        {resetProgress.isPending
+                          ? t('common.loading')
+                          : t('submissionDetail.resetStudentProgress.confirm')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
+
+              {feedback && (
               <Button
                 onClick={handleGenerateFollowupAssignment}
                 disabled={generatingAssignment}
@@ -224,6 +316,7 @@ const SubmissionDetail = () => {
                 )}
               </Button>
             )}
+            </div>
           </div>
 
           {(() => {

@@ -19,6 +19,7 @@ import {
   FileText,
   PlayCircle,
   ChevronDown,
+  ChevronRight,
   Eye,
   Clock,
 } from 'lucide-react';
@@ -29,8 +30,9 @@ import {
   useStudentProgress,
   useStudentCurriculumFlowContext,
 } from '@/hooks/queries';
+import { useNotifications } from '@/hooks/queries/useNotificationQueries';
 import { useModuleFlowStepsBulk } from '@/hooks/queries/useModuleFlowQueries';
-import { isSectionUnlocked } from '@/lib/sectionUnlock';
+import { isSectionUnlocked, type SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
@@ -48,6 +50,70 @@ import { cn } from '@/lib/utils';
 import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
 import type { ReleaseMode, StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
 import { StudentModuleOutlineRail } from './StudentModuleOutlineRail';
+
+type FlowStepVisual = 'locked' | 'available' | 'done' | 'missed_deadline';
+
+function flowStepRowIsActiveHighlight(
+  resumeHighlight: boolean,
+  isNextUp: boolean,
+  visual: FlowStepVisual,
+): boolean {
+  if (visual === 'missed_deadline') return false;
+  return resumeHighlight || isNextUp;
+}
+
+function flowStepRowInnerClass(
+  isRTL: boolean,
+  isActiveHighlight: boolean,
+  visual: FlowStepVisual,
+): string {
+  return cn(
+    'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
+    isRTL && 'flex-row-reverse',
+    isActiveHighlight && 'border-s-4 border-primary bg-primary/[0.07] py-1.5 ps-3 pe-2',
+    visual === 'missed_deadline' &&
+      'border border-amber-500/40 bg-amber-500/[0.06] px-1.5 py-0.5',
+  );
+}
+
+function flowStepRowAriaSuffix(
+  resumeHighlight: boolean,
+  isActiveHighlight: boolean,
+  translate: (key: string) => string,
+): string {
+  if (resumeHighlight) return translate('studentClassroom.activities.stepRowAria.resume');
+  if (isActiveHighlight) return translate('studentClassroom.activities.stepRowAria.next');
+  return '';
+}
+
+function FlowStepNumberCell({
+  stepNumber,
+  isRTL,
+  showPointer,
+}: {
+  stepNumber: number;
+  isRTL: boolean;
+  showPointer: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'flex min-w-[2.25rem] shrink-0 items-center gap-0.5 tabular-nums text-sm font-medium text-muted-foreground',
+        isRTL ? 'flex-row-reverse text-start' : 'flex-row text-end',
+      )}
+    >
+      {showPointer ? (
+        <ChevronRight
+          className={cn('h-3.5 w-3.5 shrink-0 text-primary', isRTL && 'rotate-180')}
+          aria-hidden
+        />
+      ) : (
+        <span className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      )}
+      <span>{stepNumber}.</span>
+    </span>
+  );
+}
 
 interface StudentActivitiesSectionProps {
   classroomId: string;
@@ -75,6 +141,10 @@ export function StudentActivitiesSection({
   const { t } = useTranslation();
   const { user } = useAuth();
   const effectiveProgressUserId = progressUserIdProp ?? user?.id;
+  const ownsProgressView = !readOnly && effectiveProgressUserId === user?.id;
+  const { data: unreadNotifications = [] } = useNotifications(
+    ownsProgressView ? user?.id : undefined,
+  );
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(classroomId);
   const { data: assignments = [] } = useClassroomAssignments(classroomId);
   const { data: studentProgressData } = useStudentProgress(syllabus?.id, effectiveProgressUserId);
@@ -101,6 +171,25 @@ export function StudentActivitiesSection({
 
   const assignRows = assignments as AssignmentRow[];
 
+  const classroomAssignmentIdSet = useMemo(
+    () => new Set(assignRows.map((a) => a.id)),
+    [assignRows],
+  );
+
+  const newAttemptAssignmentIdSet = useMemo(() => {
+    const set = new Set<string>();
+    if (!ownsProgressView) return set;
+    for (const n of unreadNotifications) {
+      if (n.type !== 'assignment_new_attempt') continue;
+      const aid = n.metadata?.assignment_id;
+      if (typeof aid !== 'string' || !classroomAssignmentIdSet.has(aid)) continue;
+      const metaClassroom = n.metadata?.classroom_id;
+      if (metaClassroom != null && metaClassroom !== classroomId) continue;
+      set.add(aid);
+    }
+    return set;
+  }, [ownsProgressView, unreadNotifications, classroomAssignmentIdSet, classroomId]);
+
   const flowContextEnabled = Boolean(
     effectiveProgressUserId && (progressUserIdProp ? !!syllabus : true),
   );
@@ -117,14 +206,31 @@ export function StudentActivitiesSection({
   const flowNow = new Date();
   const flowAccessMeta = { assignments: assignRows, now: flowNow };
 
+  const sequentialUnlockFlow = useMemo<SectionSequentialUnlockFlow | null>(() => {
+    if (!effectiveProgressUserId) return null;
+    return {
+      flowBulk,
+      resourceMap,
+      assignments: assignRows,
+      flowCtx,
+      now: new Date(),
+    };
+  }, [effectiveProgressUserId, flowBulk, resourceMap, assignRows, flowCtx]);
+
   const [moduleOpenById, setModuleOpenById] = useState<Record<string, boolean>>({});
-  const [hideFinished, setHideFinished] = useState(false);
+  const [hideFinished, setHideFinished] = useState(true);
   const prevClassroomIdRef = useRef(classroomId);
   const prevProgressUserKeyRef = useRef(progressUserIdProp ?? '');
 
   const isUnitFinished = useMemo(() => {
     return (section: SyllabusSection) => {
-      const unlocked = isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
+      const unlocked = isSectionUnlocked(
+        section,
+        sections,
+        releaseMode,
+        studentProgressMap,
+        sequentialUnlockFlow,
+      );
       const progressState = studentProgressMap[section.id];
       const persisted = flowBulk[section.id] ?? [];
       const sectionResources = resourceMap[section.id] ?? [];
@@ -139,7 +245,16 @@ export function StudentActivitiesSection({
       const showFlowCheck = unlocked && flowComplete;
       return progressState === 'completed' || showFlowCheck;
     };
-  }, [sections, releaseMode, studentProgressMap, flowBulk, resourceMap, assignRows, flowCtx]);
+  }, [
+    sections,
+    releaseMode,
+    studentProgressMap,
+    flowBulk,
+    resourceMap,
+    assignRows,
+    flowCtx,
+    sequentialUnlockFlow,
+  ]);
 
   const visibleSections = useMemo(() => {
     if (!hideFinished) return sections;
@@ -260,7 +375,13 @@ export function StudentActivitiesSection({
 
       {visibleSections.map((section) => {
         const flowStepIndex = sections.findIndex((s) => s.id === section.id);
-        const unlocked = isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
+        const unlocked = isSectionUnlocked(
+          section,
+          sections,
+          releaseMode,
+          studentProgressMap,
+          sequentialUnlockFlow,
+        );
         const progressState = studentProgressMap[section.id];
         const persisted = flowBulk[section.id] ?? [];
         const sectionResources = resourceMap[section.id] ?? [];
@@ -292,6 +413,11 @@ export function StudentActivitiesSection({
             : stepCount === 1
               ? t('classroomDetail.activities.stepCountOne')
               : t('classroomDetail.activities.stepCountMany', { count: stepCount });
+
+        const hasStepOutline = Boolean(
+          (usePersisted && steps && steps.length > 0) || (!usePersisted && computed.length > 0),
+        );
+        const showLockedStepPreview = !unlocked && hasStepOutline;
 
         return (
           <Collapsible
@@ -381,7 +507,114 @@ export function StudentActivitiesSection({
 
             <CollapsibleContent>
               <div className="space-y-2 px-3 pb-4 pt-1 sm:px-4">
-              {!unlocked ? (
+              {showLockedStepPreview ? (
+                <>
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    {t('studentClassroom.activities.unlockHint')}
+                  </p>
+                  {usePersisted && steps ? (
+                    <ol className="list-none space-y-2">
+                      {steps.map((step, index) => {
+                        if (step.step_kind === 'resource' && step.activity_list_id) {
+                          const label =
+                            resourceMap[section.id]?.find((r) => r.id === step.activity_list_id)?.title ??
+                            t('studentClassroom.activities.activity');
+                          const rowAria = `${label}. ${t('studentClassroom.activities.stepA11y.locked')}. ${t('studentClassroom.activities.moduleLocked')}`;
+                          return (
+                            <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
+                              <FlowStepNumberCell
+                                stepNumber={index + 1}
+                                isRTL={isRTL}
+                                showPointer={false}
+                              />
+                              <div
+                                className={flowStepRowInnerClass(isRTL, false, 'locked')}
+                                aria-label={rowAria}
+                              >
+                                <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                                <span className="text-muted-foreground">{label}</span>
+                              </div>
+                            </li>
+                          );
+                        }
+                        if (step.step_kind === 'assignment' && step.assignment_id) {
+                          const a = (assignments as { id: string; title: string }[]).find(
+                            (x) => x.id === step.assignment_id,
+                          );
+                          const label = a?.title ?? t('studentClassroom.activities.assignment');
+                          const rowAria = `${label}. ${t('studentClassroom.activities.stepA11y.locked')}. ${t('studentClassroom.activities.moduleLocked')}`;
+                          return (
+                            <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
+                              <FlowStepNumberCell
+                                stepNumber={index + 1}
+                                isRTL={isRTL}
+                                showPointer={false}
+                              />
+                              <div
+                                className={flowStepRowInnerClass(isRTL, false, 'locked')}
+                                aria-label={rowAria}
+                              >
+                                <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                                <ClipboardList className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                                <span className="text-muted-foreground">{label}</span>
+                              </div>
+                            </li>
+                          );
+                        }
+                        return null;
+                      })}
+                    </ol>
+                  ) : (
+                    <ol className="list-none space-y-2">
+                      {computed.map((c, idx) => {
+                        if (c.kind === 'resource') {
+                          const r = resourceMap[section.id]?.find((x) => x.id === c.activity_list_id);
+                          const label = r?.title ?? t('studentClassroom.activities.activity');
+                          const rowAria = `${label}. ${t('studentClassroom.activities.stepA11y.locked')}. ${t('studentClassroom.activities.moduleLocked')}`;
+                          return (
+                            <li
+                              key={`locked-r-${c.activity_list_id}-${idx}`}
+                              className="flex min-w-0 items-center gap-2 text-sm"
+                            >
+                              <FlowStepNumberCell stepNumber={idx + 1} isRTL={isRTL} showPointer={false} />
+                              <div
+                                className={flowStepRowInnerClass(isRTL, false, 'locked')}
+                                aria-label={rowAria}
+                              >
+                                <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                                <span className="text-muted-foreground">{label}</span>
+                              </div>
+                            </li>
+                          );
+                        }
+                        const a = (assignments as { id: string; title: string }[]).find(
+                          (x) => x.id === c.assignment_id,
+                        );
+                        const label = a?.title ?? t('studentClassroom.activities.assignment');
+                        const rowAria = `${label}. ${t('studentClassroom.activities.stepA11y.locked')}. ${t('studentClassroom.activities.moduleLocked')}`;
+                        return (
+                          <li
+                            key={`locked-a-${c.assignment_id}-${idx}`}
+                            className="flex min-w-0 items-center gap-2 text-sm"
+                          >
+                            <FlowStepNumberCell stepNumber={idx + 1} isRTL={isRTL} showPointer={false} />
+                            <div
+                              className={flowStepRowInnerClass(isRTL, false, 'locked')}
+                              aria-label={rowAria}
+                            >
+                              <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                              <ClipboardList className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                              <span className="text-muted-foreground">{label}</span>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                </>
+              ) : !unlocked ? (
                 <p className="text-sm text-muted-foreground">{t('studentClassroom.activities.unlockHint')}</p>
               ) : usePersisted && steps ? (
                 <ol className="list-none space-y-2">
@@ -417,23 +650,34 @@ export function StudentActivitiesSection({
                               resumeTarget.kind === 'resource' &&
                               resumeTarget.id === step.activity_list_id,
                           );
+                        const isActiveHighlight = flowStepRowIsActiveHighlight(
+                          resumeHighlight,
+                          isNextUp,
+                          visual,
+                        );
+                        const ariaSuffix = flowStepRowAriaSuffix(
+                          resumeHighlight,
+                          isActiveHighlight,
+                          t,
+                        );
+                        const rowAria = ariaSuffix
+                          ? `${label}. ${statusLabel} ${ariaSuffix}`
+                          : `${label}. ${statusLabel}`;
+                        const showResumeBadge = resumeHighlight && visual !== 'missed_deadline';
                         return (
-                          <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
-                            <span
-                              className={cn(
-                                'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
-                                isRTL ? 'text-start' : 'text-end',
-                              )}
-                            >
-                              {index + 1}.
-                            </span>
+                          <li
+                            key={step.id}
+                            className="flex min-w-0 items-center gap-2 text-sm"
+                            {...(isActiveHighlight ? { 'aria-current': 'step' as const } : {})}
+                          >
+                            <FlowStepNumberCell
+                              stepNumber={index + 1}
+                              isRTL={isRTL}
+                              showPointer={isActiveHighlight}
+                            />
                             <div
-                              className={cn(
-                                'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
-                                isRTL && 'flex-row-reverse',
-                                resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
-                              )}
-                              aria-label={`${label}. ${statusLabel}`}
+                              className={flowStepRowInnerClass(isRTL, isActiveHighlight, visual)}
+                              aria-label={rowAria}
                             >
                               {visual === 'missed_deadline' ? (
                                 <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
@@ -449,7 +693,12 @@ export function StudentActivitiesSection({
                               {locked ? (
                                 <span className="text-muted-foreground">{label}</span>
                               ) : readOnly ? (
-                                <span className="inline-flex max-w-full items-center gap-1 font-medium text-foreground">
+                                <span
+                                  className={cn(
+                                    'inline-flex max-w-full items-center gap-1 font-medium text-foreground',
+                                    isActiveHighlight && 'font-semibold',
+                                  )}
+                                >
                                   <FileText className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </span>
@@ -457,12 +706,23 @@ export function StudentActivitiesSection({
                                 <Link
                                   to={`/student/classroom/${classroomId}/activity/${step.activity_list_id}`}
                                   state={{ returnClassroomSection: 'curriculum' }}
-                                  className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline"
+                                  className={cn(
+                                    'inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline',
+                                    isActiveHighlight && 'font-semibold',
+                                  )}
                                 >
                                   <FileText className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}
+                              {showResumeBadge ? (
+                                <Badge
+                                  variant="outline"
+                                  className="shrink-0 rounded-full border-primary/35 bg-primary/[0.06] px-2 py-0 text-[10px] font-semibold text-primary"
+                                >
+                                  {t('studentClassroom.activities.resumeStepBadge')}
+                                </Badge>
+                              ) : null}
                             </div>
                           </li>
                         );
@@ -482,25 +742,35 @@ export function StudentActivitiesSection({
                               resumeTarget.kind === 'assignment' &&
                               resumeTarget.id === step.assignment_id,
                           ) && !missedAssignment;
+                        const isActiveHighlight = flowStepRowIsActiveHighlight(
+                          resumeHighlight,
+                          isNextUp,
+                          visual,
+                        );
+                        const ariaSuffix = flowStepRowAriaSuffix(
+                          resumeHighlight,
+                          isActiveHighlight,
+                          t,
+                        );
+                        const rowAria = ariaSuffix
+                          ? `${displayLabel}. ${statusLabel} ${ariaSuffix}`
+                          : `${displayLabel}. ${statusLabel}`;
+                        const showResumeBadge = resumeHighlight && visual !== 'missed_deadline';
+                        const showNewAttemptBadge = newAttemptAssignmentIdSet.has(step.assignment_id);
                         return (
-                          <li key={step.id} className="flex min-w-0 items-center gap-2 text-sm">
-                            <span
-                              className={cn(
-                                'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
-                                isRTL ? 'text-start' : 'text-end',
-                              )}
-                            >
-                              {index + 1}.
-                            </span>
+                          <li
+                            key={step.id}
+                            className="flex min-w-0 items-center gap-2 text-sm"
+                            {...(isActiveHighlight ? { 'aria-current': 'step' as const } : {})}
+                          >
+                            <FlowStepNumberCell
+                              stepNumber={index + 1}
+                              isRTL={isRTL}
+                              showPointer={isActiveHighlight}
+                            />
                             <div
-                              className={cn(
-                                'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
-                                isRTL && 'flex-row-reverse',
-                                resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
-                                visual === 'missed_deadline' &&
-                                  'border border-amber-500/40 bg-amber-500/[0.06] px-1.5 py-0.5',
-                              )}
-                              aria-label={`${displayLabel}. ${statusLabel}`}
+                              className={flowStepRowInnerClass(isRTL, isActiveHighlight, visual)}
+                              aria-label={rowAria}
                             >
                               {visual === 'missed_deadline' ? (
                                 <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
@@ -525,7 +795,12 @@ export function StudentActivitiesSection({
                                   <span className="text-muted-foreground">{displayLabel}</span>
                                 )
                               ) : readOnly ? (
-                                <span className="inline-flex h-auto min-h-0 max-w-full items-center gap-1 text-base font-medium text-foreground">
+                                <span
+                                  className={cn(
+                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 text-base font-medium text-foreground',
+                                    isActiveHighlight && 'font-semibold',
+                                  )}
+                                >
                                   <ClipboardList className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </span>
@@ -536,12 +811,29 @@ export function StudentActivitiesSection({
                                   className={cn(
                                     buttonVariants({ variant: 'link', size: 'default' }),
                                     'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
+                                    isActiveHighlight && 'font-semibold',
                                   )}
                                 >
                                   <ClipboardList className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}
+                              {showResumeBadge ? (
+                                <Badge
+                                  variant="outline"
+                                  className="shrink-0 rounded-full border-primary/35 bg-primary/[0.06] px-2 py-0 text-[10px] font-semibold text-primary"
+                                >
+                                  {t('studentClassroom.activities.resumeStepBadge')}
+                                </Badge>
+                              ) : null}
+                              {showNewAttemptBadge ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="shrink-0 rounded-full px-2 py-0 text-[10px] font-semibold"
+                                >
+                                  {t('notifications.newAttempt.badge')}
+                                </Badge>
+                              ) : null}
                             </div>
                           </li>
                         );
@@ -585,26 +877,34 @@ export function StudentActivitiesSection({
                                 c.activity_list_id &&
                                 resumeTarget.id === c.activity_list_id,
                             );
+                          const isActiveHighlight = flowStepRowIsActiveHighlight(
+                            resumeHighlight,
+                            isNextUp,
+                            visual,
+                          );
+                          const ariaSuffix = flowStepRowAriaSuffix(
+                            resumeHighlight,
+                            isActiveHighlight,
+                            t,
+                          );
+                          const rowAria = ariaSuffix
+                            ? `${label}. ${statusLabel} ${ariaSuffix}`
+                            : `${label}. ${statusLabel}`;
+                          const showResumeBadge = resumeHighlight && visual !== 'missed_deadline';
                           return (
                             <li
                               key={`r-${c.activity_list_id}-${idx}`}
                               className="flex min-w-0 items-center gap-2 text-sm"
+                              {...(isActiveHighlight ? { 'aria-current': 'step' as const } : {})}
                             >
-                              <span
-                                className={cn(
-                                  'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
-                                  isRTL ? 'text-start' : 'text-end',
-                                )}
-                              >
-                                {idx + 1}.
-                              </span>
+                              <FlowStepNumberCell
+                                stepNumber={idx + 1}
+                                isRTL={isRTL}
+                                showPointer={isActiveHighlight}
+                              />
                               <div
-                                className={cn(
-                                  'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
-                                  isRTL && 'flex-row-reverse',
-                                  resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
-                                )}
-                                aria-label={`${label}. ${statusLabel}`}
+                                className={flowStepRowInnerClass(isRTL, isActiveHighlight, visual)}
+                                aria-label={rowAria}
                               >
                                 {visual === 'missed_deadline' ? (
                                   <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
@@ -620,7 +920,12 @@ export function StudentActivitiesSection({
                                 {locked ? (
                                   <span className="text-muted-foreground">{label}</span>
                                 ) : readOnly ? (
-                                  <span className="inline-flex max-w-full items-center gap-1 font-medium text-foreground">
+                                  <span
+                                    className={cn(
+                                      'inline-flex max-w-full items-center gap-1 font-medium text-foreground',
+                                      isActiveHighlight && 'font-semibold',
+                                    )}
+                                  >
                                     <FileText className="h-3.5 w-3.5 shrink-0" />
                                     <span className="truncate">{label}</span>
                                   </span>
@@ -628,12 +933,23 @@ export function StudentActivitiesSection({
                                   <Link
                                     to={`/student/classroom/${classroomId}/activity/${c.activity_list_id}`}
                                     state={{ returnClassroomSection: 'curriculum' }}
-                                    className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline"
+                                    className={cn(
+                                      'inline-flex max-w-full items-center gap-1 font-medium text-primary hover:underline',
+                                      isActiveHighlight && 'font-semibold',
+                                    )}
                                   >
                                     <FileText className="h-3.5 w-3.5 shrink-0" />
                                     <span className="truncate">{label}</span>
                                   </Link>
                                 )}
+                                {showResumeBadge ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 rounded-full border-primary/35 bg-primary/[0.06] px-2 py-0 text-[10px] font-semibold text-primary"
+                                  >
+                                    {t('studentClassroom.activities.resumeStepBadge')}
+                                  </Badge>
+                                ) : null}
                               </div>
                             </li>
                           );
@@ -652,28 +968,37 @@ export function StudentActivitiesSection({
                               c.assignment_id &&
                               resumeTarget.id === c.assignment_id,
                           ) && !missedAssignment;
+                        const isActiveHighlight = flowStepRowIsActiveHighlight(
+                          resumeHighlight,
+                          isNextUp,
+                          visual,
+                        );
+                        const ariaSuffix = flowStepRowAriaSuffix(
+                          resumeHighlight,
+                          isActiveHighlight,
+                          t,
+                        );
+                        const rowAria = ariaSuffix
+                          ? `${displayLabel}. ${statusLabel} ${ariaSuffix}`
+                          : `${displayLabel}. ${statusLabel}`;
+                        const showResumeBadge = resumeHighlight && visual !== 'missed_deadline';
+                        const showNewAttemptBadge = Boolean(
+                          c.assignment_id && newAttemptAssignmentIdSet.has(c.assignment_id),
+                        );
                         return (
                           <li
                             key={`a-${c.assignment_id}-${idx}`}
                             className="flex min-w-0 items-center gap-2 text-sm"
+                            {...(isActiveHighlight ? { 'aria-current': 'step' as const } : {})}
                           >
-                            <span
-                              className={cn(
-                                'shrink-0 min-w-[1.75rem] tabular-nums font-medium text-muted-foreground',
-                                isRTL ? 'text-start' : 'text-end',
-                              )}
-                            >
-                              {idx + 1}.
-                            </span>
+                            <FlowStepNumberCell
+                              stepNumber={idx + 1}
+                              isRTL={isRTL}
+                              showPointer={isActiveHighlight}
+                            />
                             <div
-                              className={cn(
-                                'flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md',
-                                isRTL && 'flex-row-reverse',
-                                resumeHighlight && 'ring-2 ring-primary/55 px-1.5 py-0.5',
-                                visual === 'missed_deadline' &&
-                                  'border border-amber-500/40 bg-amber-500/[0.06] px-1.5 py-0.5',
-                              )}
-                              aria-label={`${displayLabel}. ${statusLabel}`}
+                              className={flowStepRowInnerClass(isRTL, isActiveHighlight, visual)}
+                              aria-label={rowAria}
                             >
                               {visual === 'missed_deadline' ? (
                                 <Clock className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
@@ -698,7 +1023,12 @@ export function StudentActivitiesSection({
                                   <span className="text-muted-foreground">{displayLabel}</span>
                                 )
                               ) : readOnly ? (
-                                <span className="inline-flex h-auto min-h-0 max-w-full items-center gap-1 text-base font-medium text-foreground">
+                                <span
+                                  className={cn(
+                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 text-base font-medium text-foreground',
+                                    isActiveHighlight && 'font-semibold',
+                                  )}
+                                >
                                   <ClipboardList className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </span>
@@ -709,12 +1039,29 @@ export function StudentActivitiesSection({
                                   className={cn(
                                     buttonVariants({ variant: 'link', size: 'default' }),
                                     'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
+                                    isActiveHighlight && 'font-semibold',
                                   )}
                                 >
                                   <ClipboardList className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}
+                              {showResumeBadge ? (
+                                <Badge
+                                  variant="outline"
+                                  className="shrink-0 rounded-full border-primary/35 bg-primary/[0.06] px-2 py-0 text-[10px] font-semibold text-primary"
+                                >
+                                  {t('studentClassroom.activities.resumeStepBadge')}
+                                </Badge>
+                              ) : null}
+                              {showNewAttemptBadge ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="shrink-0 rounded-full px-2 py-0 text-[10px] font-semibold"
+                                >
+                                  {t('notifications.newAttempt.badge')}
+                                </Badge>
+                              ) : null}
                             </div>
                           </li>
                         );

@@ -11,6 +11,7 @@ export type NotificationType =
   | 'wellbeing_alert'
   | 'feedback_received'
   | 'feedback_updated'
+  | 'assignment_new_attempt'
   | 'student_completed_activity'
   | 'student_alert_critical'
   | 'student_alert_moderate'

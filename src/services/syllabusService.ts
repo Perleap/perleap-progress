@@ -31,9 +31,18 @@ export const getSyllabusByClassroom = async (
   classroomId: string
 ): Promise<{ data: SyllabusWithSections | null; error: ApiError | null }> => {
   try {
-    const { data: syllabus, error: syllabusError } = await supabase
+    const { data: row, error: syllabusError } = await supabase
       .from('syllabi' as any)
-      .select('*')
+      .select(
+        `
+        *,
+        syllabus_sections (
+          *,
+          activity_list (*)
+        ),
+        grading_categories (*)
+      `,
+      )
       .eq('classroom_id', classroomId)
       .eq('active', true)
       .order('created_at', { ascending: false })
@@ -41,53 +50,40 @@ export const getSyllabusByClassroom = async (
       .maybeSingle();
 
     if (syllabusError) return { data: null, error: handleSupabaseError(syllabusError) };
-    if (!syllabus) return { data: null, error: null };
+    if (!row) return { data: null, error: null };
 
-    const [sectionsResult, gradingResult] = await Promise.all([
-      supabase
-        .from('syllabus_sections' as any)
-        .select('*')
-        .eq('syllabus_id', (syllabus as any).id)
-        .eq('active', true)
-        .order('order_index', { ascending: true }),
-      supabase
-        .from('grading_categories' as any)
-        .select('*')
-        .eq('syllabus_id', (syllabus as any).id)
-        .order('created_at', { ascending: true }),
-    ]);
+    const bundled = row as unknown as Record<string, unknown>;
+    const rawSections = (bundled.syllabus_sections ?? []) as any[];
+    let gradingCategories = (bundled.grading_categories ?? []) as any[];
+    gradingCategories = [...gradingCategories].sort((a: any, b: any) => {
+      const ta = new Date(a.created_at ?? 0).getTime();
+      const tb = new Date(b.created_at ?? 0).getTime();
+      return ta - tb;
+    });
 
-    const { data: sections, error: sectionsError } = sectionsResult;
-    const { data: gradingCategories, error: gradingError } = gradingResult;
+    const sections = [...rawSections]
+      .filter((sec: any) => sec.active)
+      .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
-    if (sectionsError) return { data: null, error: handleSupabaseError(sectionsError) };
-    if (gradingError) return { data: null, error: handleSupabaseError(gradingError) };
-
-    const sectionIds = (sections as any[])?.map((s: any) => s.id) || [];
-    let sectionResourcesMap: Record<string, any[]> = {};
-    if (sectionIds.length > 0) {
-      const { data: resources } = await supabase
-        .from('activity_list' as any)
-        .select('*')
-        .in('section_id', sectionIds)
-        .eq('active', true)
-        .order('order_index', { ascending: true });
-
-      if (resources) {
-        (resources as any[]).forEach((r: any) => {
-          if (!sectionResourcesMap[r.section_id]) sectionResourcesMap[r.section_id] = [];
-          sectionResourcesMap[r.section_id].push(r);
-        });
-      }
+    const sectionResourcesMap: Record<string, any[]> = {};
+    for (const sec of sections) {
+      const resources = ((sec.activity_list ?? []) as any[])
+        .filter((r: any) => r.active)
+        .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+      sectionResourcesMap[String(sec.id)] = resources;
     }
 
-    const s = syllabus as any;
+    const sectionsClean = sections.map(({ activity_list: _al, ...rest }) => rest);
+
+    const { syllabus_sections: _ss, grading_categories: _gc, ...syllabusBase } = bundled;
+
+    const s = syllabusBase as Record<string, any>;
     return {
       data: {
         ...s,
         release_mode: normalizeReleaseMode(s.release_mode),
-        sections: (sections as any[]) || [],
-        grading_categories: (gradingCategories as any[]) || [],
+        sections: sectionsClean,
+        grading_categories: gradingCategories,
         section_resources: sectionResourcesMap,
       } as SyllabusWithSections,
       error: null,

@@ -3,6 +3,7 @@ import { AlertTriangle, Clock, Loader2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { SubmissionPrivateNotesTab } from './SubmissionPrivateNotesTab';
 import { LangchainPipelineView } from './LangchainPipelineView';
 import { PresentationSubmissionView } from './PresentationSubmissionView';
 import { ProjectSubmissionView } from './ProjectSubmissionView';
@@ -11,6 +12,7 @@ import type { Message } from '@/types';
 import type { StudentAlert } from '@/types/alerts';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
+import { LessonReadingDetailsCollapsible } from '@/components/features/syllabus/content-blocks/LessonReadingDetailsCollapsible';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -37,7 +39,7 @@ import {
 } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 
-type SubmissionTabValue = 'evaluation' | 'feedback' | 'assignment';
+type SubmissionTabValue = 'evaluation' | 'feedback' | 'assignment' | 'notes';
 
 interface SubmissionTabsProps {
   submission: {
@@ -259,15 +261,18 @@ export const SubmissionTabs = ({
       onValueChange={(value) => setActiveTab(value as SubmissionTabValue)}
       className="w-full"
     >
-      <TabsList className="grid w-full grid-cols-3 h-12 rounded-xl bg-muted/50 p-1">
-        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm">
+      <TabsList className="grid w-full grid-cols-2 min-[520px]:grid-cols-4 gap-1 h-auto min-h-12 rounded-xl bg-muted/50 p-1">
+        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
           {t('submissionDetail.tabs.evaluation')}
         </TabsTrigger>
-        <TabsTrigger value="feedback" className="rounded-lg data-[state=active]:shadow-sm">
+        <TabsTrigger value="feedback" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
           {t('submissionDetail.tabs.feedback')}
         </TabsTrigger>
-        <TabsTrigger value="assignment" className="rounded-lg data-[state=active]:shadow-sm">
+        <TabsTrigger value="assignment" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
           {t('submissionDetail.tabs.assignment')}
+        </TabsTrigger>
+        <TabsTrigger value="notes" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
+          {t('submissionDetail.tabs.notes')}
         </TabsTrigger>
       </TabsList>
 
@@ -458,9 +463,17 @@ export const SubmissionTabs = ({
                       <CardTitle className="text-base text-left">
                         {submission.assignments.title}
                       </CardTitle>
-                      <CardDescription className="text-left text-sm whitespace-pre-wrap">
-                        {submission.assignments.instructions || ''}
-                      </CardDescription>
+                      {submission.assignments.instructions?.trim() ? (
+                        <LessonReadingDetailsCollapsible
+                          className="mt-3"
+                          triggerLabel={t('submissionDetail.fullAssignmentInstructions')}
+                        >
+                          <SafeMathMarkdown
+                            content={submission.assignments.instructions}
+                            className="text-left text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                          />
+                        </LessonReadingDetailsCollapsible>
+                      ) : null}
                     </CardHeader>
                   </Card>
                   <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
@@ -531,9 +544,17 @@ export const SubmissionTabs = ({
                       <CardTitle className="text-base text-left">
                         {submission.assignments.title}
                       </CardTitle>
-                      <CardDescription className="text-left text-sm whitespace-pre-wrap">
-                        {submission.assignments.instructions || ''}
-                      </CardDescription>
+                      {submission.assignments.instructions?.trim() ? (
+                        <LessonReadingDetailsCollapsible
+                          className="mt-3"
+                          triggerLabel={t('submissionDetail.fullAssignmentInstructions')}
+                        >
+                          <SafeMathMarkdown
+                            content={submission.assignments.instructions}
+                            className="text-left text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                          />
+                        </LessonReadingDetailsCollapsible>
+                      ) : null}
                     </CardHeader>
                   </Card>
 
@@ -718,6 +739,12 @@ export const SubmissionTabs = ({
             }
           }
         })()}
+      </TabsContent>
+
+      <TabsContent value="notes" className="mt-6">
+        {activeTab === 'notes' ? (
+          <SubmissionPrivateNotesTab submissionId={submission.id} isRTL={isRTL} />
+        ) : null}
       </TabsContent>
     </Tabs>
   );

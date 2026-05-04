@@ -1,27 +1,26 @@
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  Calendar,
-  Clock,
   CheckCircle2,
   AlertCircle,
   Info,
-  Users,
   LayoutList,
-  ArrowRight,
   Loader2,
   LogOut,
 } from 'lucide-react';
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import type { Assignment } from '@/types';
 import type { ClassroomLocationState } from '@/types/navigation';
 import type { StudentProgressStatus } from '@/types/syllabus';
+import { CourseResumeProgressCard } from '@/components/features/syllabus/CourseResumeProgressCard';
 import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
 import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
 import { StudentActivitiesSection } from '@/components/features/syllabus/StudentActivitiesSection';
 import { StudentPoliciesView } from '@/components/features/syllabus/StudentPoliciesView';
-import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { ClassroomLayout } from '@/components/layouts';
+import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,8 +35,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   useClassroom,
   useClassroomAssignments,
@@ -47,15 +46,22 @@ import {
   useUnenrollFromClassroom,
 } from '@/hooks/queries';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import { useModuleFlowStepsBulk, useStudentCurriculumFlowContext, moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import {
+  useModuleFlowStepsBulk,
+  useStudentCurriculumFlowContext,
+  moduleFlowKeys,
+} from '@/hooks/queries/useModuleFlowQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
-import { linkedAssignmentsVisibleInModuleFlow } from '@/lib/moduleFlow';
-import { formatCourseDuration } from '@/lib/dateUtils';
+import { aggregateCurriculumStepProgress } from '@/lib/curriculumStepProgress';
+import { linkedAssignmentsVisibleInModuleFlow, type AssignmentRow } from '@/lib/moduleFlow';
+import {
+  findFirstIncompleteDisplayedFlowAcrossCourse,
+  resolveStudentResumeTarget,
+  resolveStudentResumeTargetWithSection,
+} from '@/lib/resolveStudentResumeTarget';
+import type { SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
 import { getStudyCtaTarget } from '@/lib/studyCtaTarget';
-import { resolveStudentResumeTarget, resolveStudentResumeTargetWithSection } from '@/lib/resolveStudentResumeTarget';
-import type { AssignmentRow } from '@/lib/moduleFlow';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 const STUDENT_SECTION_IDS = new Set(['overview', 'curriculum']);
 
@@ -83,29 +89,45 @@ const StudentClassroomDetail = () => {
   const { data: rawAssignments = [] } = useClassroomAssignments(id);
 
   const teacherId = rawClassroom?.teacher_id;
-  const { data: teacher, isLoading: teacherLoading, isError: teacherError } = useTeacherProfile(teacherId);
+  const {
+    data: teacher,
+    isLoading: teacherLoading,
+    isError: teacherError,
+  } = useTeacherProfile(teacherId);
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(id);
   const hasPublishedSyllabus = Boolean(syllabus && syllabus.status === 'published');
-  const {
-    data: studentProgressData,
-    isPending: studentProgressPending,
-  } = useStudentProgress(syllabus?.id, user?.id);
+  const { data: studentProgressData, isPending: studentProgressPending } = useStudentProgress(
+    syllabus?.id,
+    user?.id
+  );
 
   const syllabusSectionIds = useMemo(
     () => (syllabus?.sections ? [...syllabus.sections].map((s) => s.id) : []),
-    [syllabus?.sections],
+    [syllabus?.sections]
   );
   const { data: moduleFlowBulk = {}, isPending: moduleFlowBulkPending } =
     useModuleFlowStepsBulk(syllabusSectionIds);
 
-  const { flowCtx, isLoadingProgress: curriculumFlowProgressLoading } = useStudentCurriculumFlowContext({
-    userId: user?.id,
-    sectionIds: syllabusSectionIds,
-    flowBulk: moduleFlowBulk,
-    resourceMap: syllabus?.section_resources ?? {},
-    assignments: rawAssignments as AssignmentRow[],
-    enabled: Boolean(syllabus && syllabus.status === 'published' && user?.id),
-  });
+  const { flowCtx, isLoadingProgress: curriculumFlowProgressLoading } =
+    useStudentCurriculumFlowContext({
+      userId: user?.id,
+      sectionIds: syllabusSectionIds,
+      flowBulk: moduleFlowBulk,
+      resourceMap: syllabus?.section_resources ?? {},
+      assignments: rawAssignments as AssignmentRow[],
+      enabled: Boolean(syllabus && syllabus.status === 'published' && user?.id),
+    });
+
+  const sequentialUnlockFlow = useMemo<SectionSequentialUnlockFlow | null>(() => {
+    if (!user?.id || !syllabus || syllabus.status !== 'published') return null;
+    return {
+      flowBulk: moduleFlowBulk,
+      resourceMap: syllabus.section_resources ?? {},
+      assignments: rawAssignments as AssignmentRow[],
+      flowCtx,
+      now: new Date(),
+    };
+  }, [user?.id, syllabus, moduleFlowBulk, rawAssignments, flowCtx]);
 
   /** Resume / About CTA depends on flow maps, module steps, and section progress; avoid stale resumeHit flash. */
   const aboutResumeTargetsReady =
@@ -130,10 +152,11 @@ const StudentClassroomDetail = () => {
       string,
       Array<{ id: string; title: string; type: string; due_at: string | null }>
     > = {};
-    (rawAssignments as any[]).forEach((a: any) => {
-      if (a.syllabus_section_id) {
-        if (!map[a.syllabus_section_id]) map[a.syllabus_section_id] = [];
-        map[a.syllabus_section_id].push({
+    (rawAssignments as Assignment[]).forEach((a) => {
+      const sectionId = a.syllabus_section_id;
+      if (sectionId) {
+        if (!map[sectionId]) map[sectionId] = [];
+        map[sectionId].push({
           id: a.id,
           title: a.title,
           type: a.type,
@@ -191,7 +214,7 @@ const StudentClassroomDetail = () => {
   }, [activeSection, id, queryClient]);
   const [openSectionId, setOpenSectionId] = useState<string | null>(null);
   const [leaveCourseOpen, setLeaveCourseOpen] = useState(false);
-  const [sectionVisitStack, setSectionVisitStack] = useState<string[]>([]);
+  const [, setSectionVisitStack] = useState<string[]>([]);
   const openSectionIdRef = useRef<string | null>(null);
   /** When true, closing the module view (empty visit stack) returns to About instead of the outline list. */
   const sectionBackReturnsToOverviewRef = useRef(false);
@@ -216,8 +239,8 @@ const StudentClassroomDetail = () => {
         }
         return stack;
       }
-      const next = [...stack];
-      const prevId = next.pop()!;
+      const prevId = stack[stack.length - 1];
+      const next = stack.slice(0, -1);
       openSectionIdRef.current = prevId;
       setOpenSectionId(prevId);
       return next;
@@ -252,7 +275,6 @@ const StudentClassroomDetail = () => {
   }, [id, navigate, t, unenrollMutation]);
 
   const studyCtaLabelStart = t('studentClassroom.studyCta.start');
-  const studyCtaLabelView = t('studentClassroom.studyCta.viewAssignments');
   const studyCtaLabelContinueCourse = t('studentClassroom.studyCta.continueCourse');
   const studyCtaLabelReview = t('studentClassroom.studyCta.review');
 
@@ -280,28 +302,66 @@ const StudentClassroomDetail = () => {
   const aboutCtaDisplay = useMemo(() => {
     const fallbackNoCta = !hasPublishedSyllabus || !syllabus?.sections?.length;
     if (fallbackNoCta) {
-      return { primary: studyCtaLabelStart, secondary: null as string | null };
+      return {
+        primary: studyCtaLabelStart,
+        secondary: null as string | null,
+        headlineVariant: 'start' as const,
+      };
+    }
+    if (!syllabus) {
+      return {
+        primary: studyCtaLabelStart,
+        secondary: null as string | null,
+        headlineVariant: 'start' as const,
+      };
     }
     if (resumeHit) {
-      const sec = syllabus!.sections.find((s) => s.id === resumeHit.sectionId);
+      const sec = syllabus.sections.find((s) => s.id === resumeHit.sectionId);
       const unitTitle = sec?.title?.trim() ?? '';
       if (resumeHit.target.kind === 'assignment') {
         const a = (rawAssignments as AssignmentRow[]).find((x) => x.id === resumeHit.target.id);
         const stepTitle = a?.title?.trim() || t('studentClassroom.activities.assignment');
         const secondary =
           unitTitle && stepTitle ? `${unitTitle} - ${stepTitle}` : unitTitle || stepTitle || null;
-        return { primary: studyCtaLabelContinueCourse, secondary };
+        return {
+          primary: studyCtaLabelContinueCourse,
+          secondary,
+          headlineVariant: 'continue' as const,
+        };
       }
-      const r = syllabus!.section_resources?.[resumeHit.sectionId]?.find((x) => x.id === resumeHit.target.id);
+      const r = syllabus.section_resources?.[resumeHit.sectionId]?.find(
+        (x) => x.id === resumeHit.target.id
+      );
       const stepTitle = r?.title?.trim() || t('studentClassroom.activities.activity');
       const secondary =
         unitTitle && stepTitle ? `${unitTitle} - ${stepTitle}` : unitTitle || stepTitle || null;
-      return { primary: studyCtaLabelContinueCourse, secondary };
+      return {
+        primary: studyCtaLabelContinueCourse,
+        secondary,
+        headlineVariant: 'continue' as const,
+      };
+    }
+    /** Unlock-aware resume exhausted, but syllabus still has incomplete steps (typically behind gates). */
+    if (
+      user?.id &&
+      findFirstIncompleteDisplayedFlowAcrossCourse({
+        sections: syllabus.sections,
+        flowBulk: moduleFlowBulk,
+        resourceMap: syllabus.section_resources ?? {},
+        assignments: rawAssignments as AssignmentRow[],
+        flowCtx,
+      })
+    ) {
+      return {
+        primary: t('studentClassroom.studyCta.viewCurriculum'),
+        secondary: t('studentClassroom.resumeCard.viewCurriculumSubtext'),
+        headlineVariant: 'viewCurriculum' as const,
+      };
     }
     const { variant: syllabusVariant } = getStudyCtaTarget(
-      syllabus!.sections,
-      syllabus!.release_mode || 'all_at_once',
-      studentProgressMap,
+      syllabus.sections,
+      syllabus.release_mode || 'all_at_once',
+      studentProgressMap
     );
     const flowEngaged =
       Object.values(flowCtx.assignmentDoneMap).some(Boolean) ||
@@ -316,7 +376,11 @@ const StudentClassroomDetail = () => {
         : variant === 'continue'
           ? studyCtaLabelContinueCourse
           : studyCtaLabelReview;
-    return { primary, secondary: t('classroomDetail.curriculum.tabTitle') };
+    return {
+      primary,
+      secondary: t('classroomDetail.curriculum.tabTitle'),
+      headlineVariant: variant,
+    };
   }, [
     hasPublishedSyllabus,
     syllabus,
@@ -328,14 +392,48 @@ const StudentClassroomDetail = () => {
     studyCtaLabelContinueCourse,
     studyCtaLabelReview,
     t,
+    user?.id,
+    moduleFlowBulk,
+    flowCtx,
+  ]);
+
+  /** About donut: aggregate all modules; unlock rules only affect Continue navigation, not this metric. */
+  const aboutCourseProgress = useMemo(() => {
+    if (!hasPublishedSyllabus || !syllabus?.sections?.length) {
+      return { done: 0, total: 0, percent: 0 };
+    }
+    return aggregateCurriculumStepProgress({
+      sections: syllabus.sections,
+      flowBulk: moduleFlowBulk,
+      sectionResources: syllabus.section_resources ?? {},
+      linkedAssignmentsMap,
+      assignments: rawAssignments as AssignmentRow[],
+      flowCtx,
+    });
+  }, [
+    hasPublishedSyllabus,
+    syllabus?.sections,
+    syllabus?.section_resources,
+    moduleFlowBulk,
+    linkedAssignmentsMap,
+    rawAssignments,
+    flowCtx,
   ]);
 
   const handleStudyCtaClick = useCallback(() => {
     if (!syllabus || syllabus.status !== 'published') {
-      const list = [...(rawAssignments as { id: string; due_at?: string | null; submissions?: { status?: string }[] }[])];
+      const list = [
+        ...(rawAssignments as {
+          id: string;
+          due_at?: string | null;
+          submissions?: { status?: string }[];
+        }[]),
+      ];
       list.sort((a, b) => {
-        const aDone = Array.isArray(a.submissions) && a.submissions.some((s) => s.status === 'completed');
-        const bDone = Array.isArray(b.submissions) && b.submissions.some((s) => s.status === 'completed');
+        const aDone =
+          Array.isArray(a.submissions) && a.submissions.some((s) => s.status === 'completed');
+        const bDone =
+          Array.isArray(b.submissions) && b.submissions.some((s) => s.status === 'completed');
         if (aDone !== bDone) return aDone ? 1 : -1;
         const at = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
         const bt = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
@@ -409,7 +507,7 @@ const StudentClassroomDetail = () => {
     ];
   }, [t, syllabusLoading, showSyllabusNavSlots]);
 
-  if (!classroom) return null;
+  if (!id || !classroom) return null;
 
   return (
     <ClassroomLayout
@@ -423,72 +521,19 @@ const StudentClassroomDetail = () => {
       <div className="space-y-6 md:space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Overview Section */}
         {activeSection === 'overview' && (
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-3 gap-6 md:items-center">
+          <div className="space-y-6 pt-6 md:pt-10">
+            <div className="grid md:grid-cols-3 gap-x-6 gap-y-6 md:items-start md:gap-x-6 md:gap-y-10">
               <h2
-                className={`text-2xl md:text-3xl font-bold text-foreground md:col-span-2 self-center ${isRTL ? 'text-right' : 'text-left'}`}
+                className={cn(
+                  'order-1 text-2xl md:text-3xl font-bold text-foreground md:col-span-3 self-start',
+                  isRTL ? 'text-right' : 'text-left',
+                )}
               >
                 {classroom.name}
               </h2>
 
-              <div
-                className={cn(
-                  'flex flex-col gap-1 order-2 md:order-none items-center self-center text-center w-full',
-                )}
-              >
-                {syllabusLoading || !aboutResumeTargetsReady ? (
-                  <div className="h-14 w-full max-w-[12rem] rounded-xl bg-muted/70 animate-pulse" aria-hidden />
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="h-auto min-h-12 gap-2 px-6 py-3 text-base sm:min-h-14 sm:px-8 sm:py-4 sm:text-lg [&_svg]:!size-5"
-                      onClick={handleStudyCtaClick}
-                    >
-                      <span className="inline-grid min-w-0 max-w-[min(100%,18rem)] place-items-center sm:max-w-[20rem]">
-                        <span
-                          className="col-start-1 row-start-1 invisible max-w-full truncate text-center pointer-events-none select-none"
-                          aria-hidden
-                        >
-                          {studyCtaLabelStart}
-                        </span>
-                        <span
-                          className="col-start-1 row-start-1 invisible max-w-full truncate text-center pointer-events-none select-none"
-                          aria-hidden
-                        >
-                          {studyCtaLabelView}
-                        </span>
-                        <span
-                          className="col-start-1 row-start-1 invisible max-w-full truncate text-center pointer-events-none select-none"
-                          aria-hidden
-                        >
-                          {studyCtaLabelContinueCourse}
-                        </span>
-                        <span
-                          className="col-start-1 row-start-1 invisible max-w-full truncate text-center pointer-events-none select-none"
-                          aria-hidden
-                        >
-                          {studyCtaLabelReview}
-                        </span>
-                        <span className="col-start-1 row-start-1 max-w-full truncate text-center font-semibold leading-snug">
-                          {aboutCtaDisplay.primary}
-                        </span>
-                      </span>
-                      <ArrowRight className={cn('shrink-0', isRTL && 'rotate-180')} />
-                    </Button>
-                    {aboutCtaDisplay.secondary ? (
-                      <p className="max-w-[min(100%,20rem)] text-xs text-muted-foreground leading-snug sm:text-sm text-center">
-                        {aboutCtaDisplay.secondary}
-                      </p>
-                    ) : null}
-                  </>
-                )}
-              </div>
-
-              {/* Main Info Card */}
               <Card
-                className="order-3 md:col-span-2 flex min-h-0 flex-col border border-border shadow-sm rounded-xl bg-card overflow-hidden pt-2 pb-6 h-full"
+                className="order-3 max-md:order-3 md:col-span-2 md:row-start-2 flex min-h-0 flex-col border border-border shadow-sm rounded-xl bg-card overflow-hidden pt-2 pb-6 h-full"
                 dir={isRTL ? 'rtl' : 'ltr'}
               >
                 <CardContent className="flex flex-1 flex-col pt-6">
@@ -508,123 +553,144 @@ const StudentClassroomDetail = () => {
                 </CardContent>
               </Card>
 
-              {/* Sidebar Info — always reserve teacher card height so async profile load does not reflow main-column text */}
-              <div className="order-4 space-y-6 md:col-span-1 md:col-start-3 md:row-start-2 md:row-end-auto md:self-start">
-                {teacherId && (
-                  <Card
-                    className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  >
-                    <CardHeader className="pb-3 border-b border-border bg-transparent">
-                      <CardTitle
-                        className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
-                      >
-                        <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center">
-                          <Users className="h-4 w-4 text-foreground" />
-                        </div>
-                        {t('common.teacher')}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      {teacherLoading ? (
-                        <div className="flex animate-pulse items-center gap-4" aria-hidden>
-                          <div className="h-12 w-12 shrink-0 rounded-full bg-muted border-2 border-background shadow-sm" />
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="h-4 w-36 max-w-full rounded bg-muted" />
-                            <div className="h-3 w-20 rounded bg-muted" />
-                          </div>
-                        </div>
-                      ) : teacher ? (
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-muted border-2 border-background shadow-sm overflow-hidden">
-                            {teacher.avatar_url ? (
-                              <img
-                                src={teacher.avatar_url}
-                                alt={teacher.full_name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center text-muted-foreground font-medium text-lg">
-                                {teacher.full_name?.charAt(0) || 'T'}
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-base text-foreground truncate">{teacher.full_name}</p>
-                            <p className="text-xs text-muted-foreground">{t('common.teacher')}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          {teacherError ? t('common.error') : '—'}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
+              <div
+                className={cn(
+                  'max-md:contents md:col-start-3 md:row-start-2 md:flex md:w-full md:min-w-0 md:flex-col md:gap-3',
                 )}
+              >
+                <div className="order-2 max-md:order-2 w-full">
+                  {syllabusLoading || !aboutResumeTargetsReady ? (
+                    <div
+                      className="w-full rounded-xl border border-border bg-card shadow-sm p-4 sm:p-5 animate-pulse"
+                      aria-hidden
+                    >
+                      <div
+                        className={cn(
+                          'flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5',
+                          isRTL && 'sm:flex-row-reverse',
+                        )}
+                      >
+                        <div className="h-[76px] w-[76px] shrink-0 rounded-full bg-muted" />
+                        <div className="flex-1 space-y-3 min-w-0">
+                          <div className="h-10 w-full rounded-md bg-muted" />
+                          <div className="h-11 w-full rounded-md bg-muted sm:max-w-[11rem]" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <CourseResumeProgressCard
+                      percent={aboutCourseProgress.percent}
+                      headlinePrefix={t(
+                        `studentClassroom.resumeCard.headline.${aboutCtaDisplay.headlineVariant}`,
+                      )}
+                      headlineHighlight={aboutCtaDisplay.secondary}
+                      buttonLabel={aboutCtaDisplay.primary}
+                      onContinue={handleStudyCtaClick}
+                      isRTL={isRTL}
+                      ariaLabel={t('studentClassroom.resumeCard.aria', {
+                        percent: aboutCourseProgress.percent,
+                        action: aboutCtaDisplay.primary,
+                        detail:
+                          aboutCtaDisplay.secondary?.trim() ||
+                          t('studentClassroom.resumeCard.detailFallback'),
+                      })}
+                      className="max-w-none"
+                      buttonClassName="w-full sm:w-full"
+                    />
+                  )}
+                </div>
 
                 <Card
-                  className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
+                  className="order-4 max-md:order-4 w-full border border-border shadow-sm rounded-xl bg-card overflow-hidden"
                   dir={isRTL ? 'rtl' : 'ltr'}
                 >
-                  <CardHeader className="pb-3 border-b border-border bg-transparent">
-                    <CardTitle
-                      className={`text-base flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
-                    >
-                      <div className="h-7 w-7 rounded-lg bg-background border border-border flex items-center justify-center">
-                        <Calendar className="h-4 w-4 text-foreground" />
-                      </div>
-                      {t('studentClassroom.schedule')}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pt-4">
-                    {formatCourseDuration(classroom.start_date, classroom.end_date) && (
-                      <div className="flex items-start gap-3">
-                        <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-tight">
-                            {t('studentClassroom.duration')}
+                  <CardContent className="flex flex-col p-3 sm:p-4">
+                    {teacherId ? (
+                      <div
+                        className={cn(
+                          'flex min-h-[2.5rem] items-center gap-3',
+                          (classroom.start_date || classroom.end_date) && 'pb-4',
+                          isRTL && 'flex-row-reverse',
+                        )}
+                      >
+                        {teacherLoading ? (
+                          <div
+                            className="flex w-full animate-pulse items-center gap-3"
+                            aria-hidden
+                          >
+                            <div className="h-11 w-11 shrink-0 rounded-full bg-muted border border-border/60" />
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div className="h-5 w-40 max-w-full rounded bg-muted" />
+                              <div className="h-2.5 w-14 rounded bg-muted" />
+                            </div>
+                          </div>
+                        ) : teacher ? (
+                          <>
+                            <div className="h-11 w-11 shrink-0 rounded-full bg-muted border border-border overflow-hidden">
+                              {teacher.avatar_url ? (
+                                <img
+                                  src={teacher.avatar_url}
+                                  alt={teacher.full_name ?? ''}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-muted-foreground font-semibold text-sm">
+                                  {teacher.full_name?.charAt(0) || 'T'}
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1 self-center">
+                              <p className="text-lg font-semibold leading-snug text-foreground [overflow-wrap:anywhere] sm:text-xl">
+                                {teacher.full_name}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {t('common.teacher')}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="flex-1 text-xs text-muted-foreground">
+                            {teacherError ? t('common.error') : '—'}
                           </p>
-                          <p className="text-sm font-medium text-foreground">
-                            {formatCourseDuration(classroom.start_date, classroom.end_date)}
-                          </p>
-                        </div>
+                        )}
                       </div>
-                    )}
+                    ) : null}
 
                     {(classroom.start_date || classroom.end_date) && (
-                      <div className="space-y-3 pt-2 border-t border-border/50">
-                        {classroom.start_date && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-muted-foreground font-medium">
-                              {t('studentClassroom.startDate')}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className="bg-muted/50 text-foreground border-border/50 font-mono text-[10px]"
-                            >
-                              {new Date(classroom.start_date).toLocaleDateString()}
-                            </Badge>
-                          </div>
-                        )}
-                        {classroom.end_date && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-muted-foreground font-medium">
-                              {t('studentClassroom.endDate')}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className="bg-muted/50 text-foreground border-border/50 font-mono text-[10px]"
-                            >
-                              {new Date(classroom.end_date).toLocaleDateString()}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
+                      <>
+                        {teacherId ? (
+                          <div
+                            className="-mx-3 border-t border-border sm:-mx-4"
+                            role="separator"
+                            aria-hidden
+                          />
+                        ) : null}
+                        <p
+                          className={cn(
+                            'text-sm font-medium leading-snug text-foreground sm:text-base tabular-nums [overflow-wrap:anywhere]',
+                            teacherId ? 'pt-4' : 'pt-0',
+                            isRTL ? 'text-right' : 'text-left',
+                          )}
+                        >
+                          <span className="text-muted-foreground">
+                            {t('studentClassroom.duration')}:{' '}
+                          </span>
+                          <span className="text-foreground">
+                            {classroom.start_date
+                              ? new Date(classroom.start_date).toLocaleDateString()
+                              : '\u2014'}
+                            {' - '}
+                            {classroom.end_date
+                              ? new Date(classroom.end_date).toLocaleDateString()
+                              : '\u2014'}
+                          </span>
+                        </p>
+                      </>
                     )}
                   </CardContent>
                 </Card>
 
+                <div className="order-5 max-md:order-5 flex w-full flex-col gap-3">
                 {classroom.learning_outcomes && classroom.learning_outcomes.length > 0 && (
                   <Card
                     className="border border-border shadow-sm rounded-xl bg-card overflow-hidden"
@@ -686,6 +752,7 @@ const StudentClassroomDetail = () => {
                     </CardContent>
                   </Card>
                 )}
+                </div>
               </div>
             </div>
 
@@ -713,7 +780,7 @@ const StudentClassroomDetail = () => {
             {openSectionId ? (
               <SectionContentPage
                 sectionId={openSectionId}
-                classroomId={id!}
+                classroomId={id}
                 moduleFlowSteps={moduleFlowBulk[openSectionId] ?? []}
                 sections={syllabus.sections}
                 sectionResources={syllabus.section_resources || {}}
@@ -721,6 +788,7 @@ const StudentClassroomDetail = () => {
                 syllabusId={syllabus.id}
                 releaseMode={syllabus.release_mode || 'all_at_once'}
                 studentProgressMap={studentProgressMap}
+                sequentialUnlockFlow={sequentialUnlockFlow}
                 isRTL={isRTL}
                 onBack={handleSectionBack}
                 onNavigateSection={goToSection}
@@ -729,7 +797,7 @@ const StudentClassroomDetail = () => {
               <>
                 <GradingBreakdownView categories={syllabus.grading_categories} isRTL={isRTL} />
                 <StudentActivitiesSection
-                  classroomId={id!}
+                  classroomId={id}
                   isRTL={isRTL}
                   resumeTarget={resumeHit?.target ?? null}
                   resumeSectionId={resumeHit?.sectionId ?? null}
@@ -749,7 +817,9 @@ const StudentClassroomDetail = () => {
         <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
           <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
             <AlertDialogTitle>{t('studentClassroom.leaveCourse.title')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('studentClassroom.leaveCourse.description')}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t('studentClassroom.leaveCourse.description')}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:space-x-reverse' : ''}>
             <AlertDialogCancel className="mt-0" disabled={unenrollMutation.isPending}>

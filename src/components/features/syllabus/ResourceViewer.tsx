@@ -114,6 +114,7 @@ export function LessonResourceBody({
   const videoPresentation = reading ? 'reading' : 'embedded';
 
   const v1 = parseLessonContent(resource.lesson_content as unknown);
+
   if (v1?.blocks?.length) {
     const nodes = v1.blocks.map((block) => {
       if (block.type === 'text') {

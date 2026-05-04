@@ -18,6 +18,7 @@ export {
 // Assignment Queries
 export {
   assignmentKeys,
+  CLASSROOM_ASSIGNMENTS_STALE_MS,
   prefetchClassroomAssignments,
   useClassroomAssignments,
   useAssignment,
@@ -42,6 +43,9 @@ export {
   useFullSubmissionDetails,
   useTeacherConversationMessages,
   useTeacherChatSentenceFlags,
+  useSubmissionTeacherPrivateNoteEntries,
+  useCreateSubmissionTeacherPrivateNoteEntry,
+  useTeacherResetStudentAssignmentProgress,
 } from './useSubmissionQueries';
 
 // Enrollment Queries
@@ -171,6 +175,7 @@ export {
   studentFlowProgressKeys,
   assignmentSubmittedFlagsKeys,
   assignmentFlowCompleteKeys,
+  prefetchModuleFlowStepsBulk,
   useModuleFlowSteps,
   useModuleFlowStepsBulk,
   useReplaceModuleFlow,

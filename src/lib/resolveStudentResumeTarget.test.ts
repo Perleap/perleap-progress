@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { resolveStudentResumeTarget } from './resolveStudentResumeTarget';
+import {
+  resolveStudentResumeTarget,
+  findFirstIncompleteDisplayedFlowAcrossCourse,
+} from './resolveStudentResumeTarget';
 import type { SyllabusSection } from '@/types/syllabus';
 import type { StudentFlowProgressContext } from './moduleFlowStudent';
 
@@ -127,5 +130,43 @@ describe('resolveStudentResumeTarget', () => {
       now: new Date('2026-05-03T12:00:00.000Z'),
     });
     expect(target).toEqual({ kind: 'assignment', id: 'a2' });
+  });
+
+  it('sequential resume unlocks next module when prior flow is complete without completed row', () => {
+    const sections: SyllabusSection[] = [
+      { id: 'm1', title: 'M1', order_index: 0 } as SyllabusSection,
+      { id: 'm2', title: 'M2', order_index: 1 } as SyllabusSection,
+    ];
+    const flowCtx: StudentFlowProgressContext = {
+      progressByStep: {},
+      assignmentDoneMap: { a1: true },
+    };
+    const flowBulk = { m1: [], m2: [] };
+    const resourceMap = { m1: [], m2: [] };
+    const assignments = [
+      { id: 'a1', syllabus_section_id: 'm1' },
+      { id: 'a2', syllabus_section_id: 'm2' },
+    ];
+    expect(
+      resolveStudentResumeTarget({
+        sections,
+        releaseMode: 'sequential',
+        studentProgressMap: {},
+        flowBulk,
+        resourceMap,
+        assignments,
+        flowCtx,
+      }),
+    ).toEqual({ kind: 'assignment', id: 'a2' });
+
+    expect(
+      findFirstIncompleteDisplayedFlowAcrossCourse({
+        sections,
+        flowBulk,
+        resourceMap,
+        assignments,
+        flowCtx,
+      }),
+    ).toEqual({ kind: 'assignment', id: 'a2' });
   });
 });

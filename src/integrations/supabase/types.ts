@@ -1431,6 +1431,38 @@ export type Database = {
           },
         ]
       }
+      submission_teacher_private_note_entries: {
+        Row: {
+          id: string
+          submission_id: string
+          body: string
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          submission_id: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          submission_id?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_teacher_private_note_entries_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           assignment_id: string
@@ -1891,6 +1923,10 @@ export type Database = {
       student_unenroll_from_classroom: {
         Args: { p_classroom_id: string }
         Returns: boolean
+      }
+      teacher_reset_student_assignment_progress: {
+        Args: { _submission_id: string }
+        Returns: string
       }
     }
     Enums: {

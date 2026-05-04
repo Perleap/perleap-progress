@@ -101,8 +101,7 @@
     "edgeFunctionsTitle": "שגיאות Edge Functions",
     "edgeFunctionsDescription": "כשלים וחריגות שנרשמו בפונקציות Edge (תפקיד שירות). לניפוי באגים כשקשה לקשר ליומני Supabase.",
     "edgeFunctionsEmpty": "עדיין לא נרשמו שגיאות מ-Edge Functions.",
-    "edgeFunctionNameFilter": "סינון לפי שם פונקציה",
-    "edgeFunctionNameFilterPlaceholder": "לדוגמה: generate-feedback",
+    "edgeFunctionNameFilter": "פונקציית Edge",
     "edgeColFunction": "פונקציה",
     "edgeColLevel": "רמה",
     "edgeColHttpStatus": "HTTP",
@@ -391,7 +390,13 @@
       "joinedClassroom": "הצטרפת בהצלחה ל-{{name}}!",
       "markedRead": "ההתראות סומנו כנקראו"
     },
-    "activeCourse": "קורס פעיל"
+    "activeCourse": "קורס פעיל",
+    "enterCourse": "כניסה לקורס",
+    "timeline": {
+      "teacherNameFallback": "מורה",
+      "loadingProgress": "טוען התקדמות בקורס…",
+      "progressUnavailable": "ההתקדמות בקורס זה אינה מוצגת בשלב זה."
+    }
   },
   "teacherDashboard": {
     "title": "לוח מורה",
@@ -1037,6 +1042,7 @@
     "conversationEmpty": "אין עדיין הודעות בשיחה זו.",
     "flaggedSentencesTitle": "משפטים מסומנים מהעוזר",
     "noStudentFacingTask": "לא נשמר תקציר קצר למשימה עבור התלמידים במטלה זו. ניתן ליצור או לערוך אותו בעורך המטלה (שלב סקירה).",
+    "fullAssignmentInstructions": "הנחיות מלאות",
     "feedbackEmpty": {
       "chatPrompt": "עדיין אין משוב בינה מלאכותית. פתח את לשונית המשימה כדי לקרוא את הצ'אט של התלמיד וליצור משוב בינה מלאכותית."
     },
@@ -1044,7 +1050,8 @@
     "tabs": {
       "feedback": "משוב",
       "assignment": "משימה",
-      "evaluation": "הערכה"
+      "evaluation": "הערכה",
+      "notes": "הערות"
     },
     "testResults": {
       "title": "תוצאות מבחן",
@@ -1111,6 +1118,16 @@
       "action": "שחרר לתלמיד",
       "success": "המשוב גלוי כעת לתלמיד.",
       "alreadyVisible": "המשוב כבר פורסם לתלמיד. ניתן עדיין לערוך את הטקסט למעלה ולשמור שינויים."
+    },
+    "interactionNotes": {
+      "placeholder": "למשל: התקשרות לתלמיד ב־3 במרץ להבהרת הארכה…",
+      "recorded": "נרשם",
+      "add": "הוסף הערה",
+      "addTitle": "הערת אינטראקציה חדשה",
+      "save": "שמור הערה",
+      "added": "ההערה נשמרה.",
+      "empty": "כתוב תוכן לפני השמירה.",
+      "emptyState": "אין עדיין הערות אינטראקציה. השתמש/י ב־+ כדי להוסיף."
     },
     "conversationFlowEarlyTitle": "הוגש לפני שהשיחה הושלמה",
     "conversationFlowEarlyDescription": "התלמיד הגיש בזמן שמצב ״השיחה הושלמה״ בצ'אט עדיין לא הופעל. עיין/י בשרשור למטה להקשר."
@@ -1343,7 +1360,19 @@
       "continueCourse": "המשך",
       "start": "התחל את הקורס",
       "review": "סקור את הקורס",
-      "viewAssignments": "עבור למשימות"
+      "viewAssignments": "עבור למשימות",
+      "viewCurriculum": "צפו בתוכנית הלימודים"
+    },
+    "resumeCard": {
+      "headline": {
+        "start": "התחלה:",
+        "continue": "המשך:",
+        "review": "סקירה:",
+        "viewCurriculum": "כשנתאים לכם:"
+      },
+      "aria": "התקדמות בקורס {{percent}} אחוז. {{action}}. {{detail}}",
+      "detailFallback": "פתחו את תוכנית הלימודים כשאתם מוכנים.",
+      "viewCurriculumSubtext": "ראו מה פתוח ומה נפתח בהמשך."
     },
     "activities": {
       "tabTitle": "פעילויות",
@@ -1357,6 +1386,11 @@
       "assignment": "משימה",
       "assignmentUnavailable": "המשימה אינה זמינה עוד.",
       "pastDueNoAttempt": "מועד ההגשה עבר ולא ניתן להתחיל את המשימה.",
+      "resumeStepBadge": "המשך כאן",
+      "stepRowAria": {
+        "next": "השלב הבא במודול זה.",
+        "resume": "המשך מהמסך הראשי של הקורס."
+      },
       "stepA11y": {
         "locked": "נעול עד להשלמת השלבים הקודמים",
         "available": "זמין כעת",
@@ -1368,6 +1402,7 @@
   "activityPage": {
     "notFound": "לא ניתן לטעון את הפעילות.",
     "lessonEmpty": "אין עדיין תוכן לשיעור.",
+    "lessonReadingDetails": "פרטי הפעילות",
     "markComplete": "סימון כהושלם",
     "finish": "המשך",
     "continue": "המשך",
@@ -2070,6 +2105,12 @@
       "successfullyEnrolled": "נרשמת בהצלחה",
       "newAssignment": "מטלה אישית חדשה",
       "studentEnrolled": "תלמיד חדש נרשם"
+    },
+    "newAttempt": {
+      "title": "ניסיון חדש: {{assignmentTitle}}",
+      "message": "המורה פתח עבורך ניסיון חדש במטלה זו. פתח/י אותה כשתהיו מוכנים להמשיך.",
+      "badge": "ניסיון חדש",
+      "notifyFailed": "הניסיון נוצר, אך ייתכן שהתלמיד לא קיבל התראה. עדיין ניתן לפתוח את המטלה."
     }
   },
   "assignmentTypes": {
@@ -2203,7 +2244,9 @@
       "attendancePolicy": "מדיניות נוכחות",
       "communicationPolicy": "מדיניות תקשורת",
       "status": "סטטוס",
-      "structure": "מבנה"
+      "structure": "מבנה",
+      "courseDates": "תאריכי הקורס",
+      "courseDatesInvalid": "תאריך הסיום חייב להיות באותו יום או אחרי תאריך ההתחלה."
     },
     "roadmap": {
       "noSections": "אין פרקים עדיין",

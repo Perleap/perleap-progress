@@ -45,11 +45,12 @@ export const useRecentActivity = (
         .map((e: any) => e.entity_id);
 
       let studentProfilesMap: Record<string, { name: string; avatar_url: string }> = {};
+      let submissionById: Record<string, { student_id: string; is_teacher_attempt: boolean }> = {};
 
       if (submissionIds.length > 0) {
         const { data: submissions } = await supabase
           .from('submissions')
-          .select('id, student_id')
+          .select('id, student_id, is_teacher_attempt')
           .in('id', submissionIds);
 
         const profileMap = await resolveUserDisplayProfiles(
@@ -65,6 +66,16 @@ export const useRecentActivity = (
             }
             return acc;
           }, {} as any);
+          submissionById = submissions.reduce(
+            (acc, s) => {
+              acc[s.id] = {
+                student_id: s.student_id,
+                is_teacher_attempt: Boolean(s.is_teacher_attempt),
+              };
+              return acc;
+            },
+            {} as Record<string, { student_id: string; is_teacher_attempt: boolean }>,
+          );
         }
       }
 
@@ -78,6 +89,23 @@ export const useRecentActivity = (
           performer = studentProfilesMap[event.entity_id];
         }
 
+        let title = event.title as string;
+        if (
+          event.entity_type === 'submission' &&
+          typeof title === 'string' &&
+          title.startsWith('Student submitted ')
+        ) {
+          const meta = submissionById[event.entity_id];
+          if (
+            meta &&
+            (meta.is_teacher_attempt || meta.student_id === event.teacher_id)
+          ) {
+            const suffix = title.slice('Student submitted '.length);
+            const who = (performer?.name ?? 'Teacher').trim() || 'Teacher';
+            title = `${who} submitted ${suffix}`;
+          }
+        }
+
         let route = event.route;
         if (event.entity_type === 'submission' && event.entity_id) {
           route = `/teacher/submission/${event.entity_id}`;
@@ -85,6 +113,7 @@ export const useRecentActivity = (
 
         return {
           ...event,
+          title,
           performer,
           route
         };

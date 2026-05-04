@@ -226,12 +226,12 @@ const TeacherDashboard = () => {
           ) : viewMode === 'table' ? (
             <ClassroomTableView
               classrooms={classrooms}
-              onCopyInviteCode={(code) => console.log('Copied:', code)}
+              variant="teacher"
             />
           ) : viewMode === 'timeline' ? (
             <ClassroomTimelineView
               classrooms={classrooms}
-              onCopyInviteCode={(code) => console.log('Copied:', code)}
+              variant="teacher"
             />
           ) : (
             <div

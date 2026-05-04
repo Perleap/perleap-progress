@@ -266,6 +266,33 @@ export function AssignmentChatInterface({
     prevSendingRef.current = sending;
   }, [sending, messages, nuanceTracking]);
 
+  const prevSendingForFocusRef = useRef(false);
+  useEffect(() => {
+    const wasSending = prevSendingForFocusRef.current;
+    prevSendingForFocusRef.current = sending;
+    if (!wasSending || sending || loading) return;
+    if (activeTab !== 'chat') return;
+    if (variant === 'companion' && !companionPanelOpen) return;
+    if (previewResource) return;
+    if (flagDialogMessageIndex !== null) return;
+    if (showCompletionDialog) return;
+    if (isRecording) return;
+
+    requestAnimationFrame(() => {
+      chatInputRef.current?.focus({ preventScroll: true });
+    });
+  }, [
+    sending,
+    loading,
+    activeTab,
+    variant,
+    companionPanelOpen,
+    previewResource,
+    flagDialogMessageIndex,
+    showCompletionDialog,
+    isRecording,
+  ]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldScrollRef = useRef(false);
 
