@@ -192,8 +192,35 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
 function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
   const ctx = useTeacherAssistantContext();
   const { t } = useTranslation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevIsLoadingRef = useRef(false);
+  const prevIsOpenRef = useRef(false);
+
+  const isOpen = ctx?.isOpen ?? false;
+  const isLoading = ctx?.isLoading ?? false;
+
+  useEffect(() => {
+    if (!isOpen) {
+      prevIsOpenRef.current = false;
+      prevIsLoadingRef.current = isLoading;
+      return;
+    }
+
+    const justOpened = !prevIsOpenRef.current;
+    const loadingEnded = prevIsLoadingRef.current && !isLoading;
+    prevIsOpenRef.current = true;
+    prevIsLoadingRef.current = isLoading;
+
+    const shouldFocus = (justOpened && !isLoading) || loadingEnded;
+    if (!shouldFocus) return;
+
+    requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true });
+    });
+  }, [isOpen, isLoading]);
+
   if (!ctx) return null;
-  const { isOpen, messages, input, setInput, isLoading, handleSend, clearChat, scrollEndRef } = ctx;
+  const { messages, input, setInput, handleSend, clearChat, scrollEndRef } = ctx;
 
   if (!isOpen) return null;
 
@@ -268,6 +295,7 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
           className="flex w-full items-end gap-2"
         >
           <Input
+            ref={inputRef}
             placeholder={t('teacherAssistant.placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}

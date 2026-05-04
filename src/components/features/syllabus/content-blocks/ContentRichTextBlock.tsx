@@ -2,7 +2,6 @@ import { RichTextViewer } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
-import { LessonReadingDetailsCollapsible } from './LessonReadingDetailsCollapsible';
 
 export type ContentRichTextPresentation = 'reading' | 'embedded';
 
@@ -17,18 +16,16 @@ export function ContentRichTextBlock({
 }) {
   if (presentation === 'reading') {
     return (
-      <LessonReadingDetailsCollapsible className={className}>
-        <ContentBlockShell
-          variant="reading"
-          className={cn(lessonActivityColumnClass, 'px-4 py-5 sm:px-5 sm:py-5')}
-        >
-          <RichTextViewer
-            content={html}
-            variant="plain"
-            className="!rounded-none !border-0 !bg-transparent !shadow-none"
-          />
-        </ContentBlockShell>
-      </LessonReadingDetailsCollapsible>
+      <ContentBlockShell
+        variant="reading"
+        className={cn(lessonActivityColumnClass, 'px-4 py-5 sm:px-5 sm:py-5', className)}
+      >
+        <RichTextViewer
+          content={html}
+          variant="plain"
+          className="!rounded-none !border-0 !bg-transparent !shadow-none"
+        />
+      </ContentBlockShell>
     );
   }
   return (

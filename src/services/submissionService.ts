@@ -101,6 +101,19 @@ export const getStudentSubmissionContext = async (
 
     const inProgress = list.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
     if (inProgress) {
+      /** Teacher try can reuse an existing draft row missing is_teacher_attempt; align flag for RLS, feeds, and triggers. */
+      if (
+        opts?.isTeacherTry === true &&
+        !(inProgress as { is_teacher_attempt?: boolean }).is_teacher_attempt
+      ) {
+        const { error: patchErr } = await supabase
+          .from('submissions')
+          .update({ is_teacher_attempt: true })
+          .eq('id', inProgress.id);
+        if (!patchErr) {
+          (inProgress as { is_teacher_attempt?: boolean }).is_teacher_attempt = true;
+        }
+      }
       return {
         data: {
           submission: inProgress,
