@@ -1,6 +1,7 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -49,12 +50,23 @@ serve(async (req: Request) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     } catch (error) {
+        const message = handleOpenAIError(error);
+        await persistEdgeFunctionLog(
+            {
+                functionName: 'teacher-assistant-chat',
+                level: 'error',
+                httpStatus: 500,
+                message,
+                stack: errorToStack(error),
+            },
+            req,
+        );
         return new Response(
-            JSON.stringify({ error: handleOpenAIError(error) }),
+            JSON.stringify({ error: message }),
             {
                 status: 500,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
+            },
         );
     }
 });

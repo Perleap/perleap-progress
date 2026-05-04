@@ -6,6 +6,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion } from '../shared/openai.ts';
 import { isAppAdmin } from '../shared/supabase.ts';
+import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -251,6 +252,16 @@ ${instructions.trim()}`;
         .update({ student_facing_task: studentFacingTask, updated_at: new Date().toISOString() })
         .eq('id', persistAssignmentId);
       if (upErr) {
+        await persistEdgeFunctionLog(
+          {
+            functionName: 'generate-student-facing-task',
+            level: 'error',
+            httpStatus: 500,
+            message: upErr.message ?? 'Failed to save student task summary',
+            context: { persistAssignmentId },
+          },
+          req,
+        );
         return new Response(JSON.stringify({ error: 'Failed to save student task summary' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -267,7 +278,17 @@ ${instructions.trim()}`;
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Server error';
+    const msg = errorToMessage(e);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'generate-student-facing-task',
+        level: 'error',
+        httpStatus: 500,
+        message: msg,
+        stack: errorToStack(e),
+      },
+      req,
+    );
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

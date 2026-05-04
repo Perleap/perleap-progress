@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createTranscription, handleOpenAIError } from '../shared/openai.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,12 +31,23 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('STT Error:', error);
+    const message = handleOpenAIError(error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'speech-to-text',
+        level: 'error',
+        httpStatus: 500,
+        message,
+        stack: errorToStack(error),
+      },
+      req,
+    );
     return new Response(
-      JSON.stringify({ error: handleOpenAIError(error) }), 
+      JSON.stringify({ error: message }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 });

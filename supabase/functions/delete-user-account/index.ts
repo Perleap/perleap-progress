@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -226,6 +227,16 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in delete-user-account function:', error);
     const errMsg = error instanceof Error ? error.message : 'An error occurred while deleting the account';
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'delete-user-account',
+        level: 'error',
+        httpStatus: 400,
+        message: errMsg,
+        stack: errorToStack(error),
+      },
+      req,
+    );
     return new Response(
       JSON.stringify({
         error: errMsg,

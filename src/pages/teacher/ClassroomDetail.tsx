@@ -43,7 +43,7 @@ import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
 import { SubmissionsTab } from '@/components/SubmissionsTab';
 import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
-import { StudentProfileModal } from '@/components/StudentProfileModal';
+import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { CourseOutlineSection } from '@/components/features/syllabus';
 import {
@@ -665,11 +665,13 @@ const ClassroomDetail = () => {
           </div>
         )}
 
-        <StudentProfileModal
+        <TeacherStudentDetailDialog
+          classroomId={id!}
           studentId={selectedStudentId}
           studentName={selectedStudentName}
           open={!!selectedStudentId}
           onClose={() => { setSelectedStudentId(null); setSelectedStudentName(undefined); }}
+          isRTL={isRTL}
         />
 
         {/* Submissions Section */}

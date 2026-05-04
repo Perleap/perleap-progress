@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
@@ -24,11 +24,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 25;
 
 type AuditRow = Database['public']['Tables']['admin_audit_log']['Row'];
 type ActivityRow = Database['public']['Tables']['activity_events']['Row'];
+type EdgeFnRow = Database['public']['Tables']['edge_function_error_log']['Row'];
+
+function edgeRowIsSevere(row: EdgeFnRow) {
+  return row.level === 'error' || (row.http_status != null && row.http_status >= 500);
+}
+
 const ACTIVITY_TYPES: Database['public']['Enums']['activity_type'][] = ['create', 'update', 'delete', 'view'];
 const ENTITY_TYPES: Database['public']['Enums']['entity_type'][] = ['classroom', 'assignment', 'submission', 'student'];
 
@@ -40,11 +48,20 @@ export default function MonitoringLogsPage() {
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all');
   const [auditPage, setAuditPage] = useState(0);
   const [activityPage, setActivityPage] = useState(0);
+  const [showEdgeFunctions, setShowEdgeFunctions] = useState(true);
+  const [edgePage, setEdgePage] = useState(0);
+  const [edgeFunctionNameFilter, setEdgeFunctionNameFilter] = useState('');
 
   const auditFrom = auditPage * PAGE_SIZE;
   const auditTo = auditFrom + PAGE_SIZE - 1;
   const actFrom = activityPage * PAGE_SIZE;
   const actTo = actFrom + PAGE_SIZE - 1;
+  const edgeFrom = edgePage * PAGE_SIZE;
+  const edgeTo = edgeFrom + PAGE_SIZE - 1;
+
+  useEffect(() => {
+    setEdgePage(0);
+  }, [edgeFunctionNameFilter]);
 
   const auditQuery = useQuery({
     queryKey: ['admin_audit_log', 'monitoring', auditPage],
@@ -81,10 +98,32 @@ export default function MonitoringLogsPage() {
     },
   });
 
+  const edgeFunctionFilterTrimmed = edgeFunctionNameFilter.trim();
+
+  const edgeQuery = useQuery({
+    queryKey: ['edge_function_error_log', 'monitoring', edgePage, edgeFunctionFilterTrimmed],
+    enabled: showEdgeFunctions,
+    queryFn: async () => {
+      let q = supabase
+        .from('edge_function_error_log')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(edgeFrom, edgeTo);
+      if (edgeFunctionFilterTrimmed) {
+        q = q.ilike('function_name', `%${edgeFunctionFilterTrimmed}%`);
+      }
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: (data ?? []) as EdgeFnRow[], count: count ?? 0 };
+    },
+  });
+
   const auditRows = auditQuery.data?.rows ?? [];
   const auditCount = auditQuery.data?.count ?? 0;
   const actRows = activityQuery.data?.rows ?? [];
   const actCount = activityQuery.data?.count ?? 0;
+  const edgeRows = edgeQuery.data?.rows ?? [];
+  const edgeCount = edgeQuery.data?.count ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -119,6 +158,30 @@ export default function MonitoringLogsPage() {
               {t('monitoring.logsSourceActivity')}
             </Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="show-edge-functions"
+              checked={showEdgeFunctions}
+              onCheckedChange={(v) => setShowEdgeFunctions(v === true)}
+            />
+            <Label htmlFor="show-edge-functions" className="font-mono text-xs">
+              {t('monitoring.logsSourceEdge')}
+            </Label>
+          </div>
+          {showEdgeFunctions ? (
+            <div className="space-y-1 sm:min-w-[200px]">
+              <Label className="font-mono text-[10px] uppercase text-muted-foreground" htmlFor="edge-fn-filter">
+                {t('monitoring.edgeFunctionNameFilter')}
+              </Label>
+              <Input
+                id="edge-fn-filter"
+                className="h-8 font-mono text-xs"
+                value={edgeFunctionNameFilter}
+                onChange={(e) => setEdgeFunctionNameFilter(e.target.value)}
+                placeholder={t('monitoring.edgeFunctionNameFilterPlaceholder')}
+              />
+            </div>
+          ) : null}
           {showActivity ? (
             <>
               <div className="space-y-1">
@@ -338,6 +401,191 @@ export default function MonitoringLogsPage() {
                     className="font-mono text-xs"
                     disabled={actTo + 1 >= actCount || activityQuery.isFetching}
                     onClick={() => setActivityPage((p) => p + 1)}
+                  >
+                    {t('monitoring.nextPage')}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {showEdgeFunctions ? (
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="font-mono text-sm">{t('monitoring.edgeFunctionsTitle')}</CardTitle>
+            <CardDescription>{t('monitoring.edgeFunctionsDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {edgeQuery.isError ? (
+              <p className="text-sm text-destructive">{t('common.error')}</p>
+            ) : edgeQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+            ) : edgeRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('monitoring.edgeFunctionsEmpty')}</p>
+            ) : (
+              <div className="overflow-x-auto rounded-md border border-border/60">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="w-[180px] font-mono text-xs">{t('monitoring.colCreatedAt')}</TableHead>
+                      <TableHead className="font-mono text-xs">{t('monitoring.edgeColFunction')}</TableHead>
+                      <TableHead className="w-[72px] font-mono text-xs">{t('monitoring.edgeColLevel')}</TableHead>
+                      <TableHead className="w-[64px] font-mono text-xs">{t('monitoring.edgeColHttpStatus')}</TableHead>
+                      <TableHead className="min-w-[200px] font-mono text-xs">{t('monitoring.edgeColMessage')}</TableHead>
+                      <TableHead className="max-w-[120px] font-mono text-xs">{t('monitoring.edgeColRequestId')}</TableHead>
+                      <TableHead className="w-[88px] font-mono text-xs">{t('monitoring.edgeColEmailSent')}</TableHead>
+                      <TableHead className="w-[100px] font-mono text-xs">{t('monitoring.edgeColContext')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {edgeRows.map((row, i) => {
+                      const severe = edgeRowIsSevere(row);
+                      return (
+                        <TableRow
+                          key={row.id}
+                          className={cn(
+                            i % 2 === 1 ? 'bg-muted/20' : '',
+                            severe && 'bg-destructive/5',
+                          )}
+                        >
+                          <TableCell
+                            className={cn(
+                              'whitespace-nowrap font-mono text-xs text-muted-foreground',
+                              severe && 'text-destructive',
+                            )}
+                          >
+                            {new Date(row.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell
+                            className={cn('font-mono text-xs', severe && 'text-destructive font-medium')}
+                          >
+                            {row.function_name}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'font-mono text-xs',
+                              severe ? 'text-destructive' : 'text-muted-foreground',
+                            )}
+                          >
+                            {row.level}
+                          </TableCell>
+                          <TableCell
+                            className={cn('font-mono text-xs', severe && 'text-destructive')}
+                          >
+                            {row.http_status ?? '—'}
+                          </TableCell>
+                          <TableCell className="max-w-[320px]">
+                            {row.error_message.length > 140 ? (
+                              <Collapsible>
+                                <CollapsibleTrigger
+                                  className={cn(
+                                    'flex items-center gap-1 text-left font-mono text-xs hover:underline',
+                                    severe ? 'text-destructive' : 'text-primary',
+                                  )}
+                                >
+                                  <ChevronDown className="size-3 shrink-0 opacity-70" />
+                                  <span className="line-clamp-2">{row.error_message}</span>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  {row.stack_snippet ? (
+                                    <pre className="mt-2 max-h-48 overflow-auto rounded-md border bg-muted/50 p-2 font-mono text-[10px] leading-relaxed text-destructive">
+                                      {row.stack_snippet}
+                                    </pre>
+                                  ) : null}
+                                  <pre
+                                    className={cn(
+                                      'mt-2 max-h-40 overflow-auto rounded-md border bg-muted/50 p-2 font-mono text-[10px] leading-relaxed',
+                                      severe && 'text-destructive',
+                                    )}
+                                  >
+                                    {row.error_message}
+                                  </pre>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            ) : (
+                              <span
+                                className={cn('font-mono text-xs', severe && 'text-destructive font-medium')}
+                              >
+                                {row.error_message}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'max-w-[120px] truncate font-mono text-[10px]',
+                              severe ? 'text-destructive' : 'text-muted-foreground',
+                            )}
+                            title={row.request_id ?? ''}
+                          >
+                            {row.request_id ?? '—'}
+                          </TableCell>
+                          <TableCell
+                            className={cn('font-mono text-xs', severe && 'text-destructive')}
+                          >
+                            {row.email_sent_at
+                              ? t('monitoring.edgeEmailSentYes')
+                              : t('monitoring.edgeEmailSentNo')}
+                          </TableCell>
+                          <TableCell>
+                            {row.context != null &&
+                            typeof row.context === 'object' &&
+                            Object.keys(row.context as object).length > 0 ? (
+                              <Collapsible>
+                                <CollapsibleTrigger
+                                  className={cn(
+                                    'flex items-center gap-1 font-mono text-xs hover:underline',
+                                    severe ? 'text-destructive' : 'text-primary',
+                                  )}
+                                >
+                                  <ChevronDown className="size-3 opacity-70" />
+                                  {t('monitoring.metadataToggle')}
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <pre className="mt-2 max-h-40 max-w-xs overflow-auto rounded-md border bg-muted/50 p-2 text-[10px] leading-relaxed">
+                                    {JSON.stringify(row.context, null, 2)}
+                                  </pre>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            {edgeCount > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 font-mono text-xs text-muted-foreground">
+                <span>
+                  {t('monitoring.paginationSummary', {
+                    from: edgeFrom + 1,
+                    to: Math.min(edgeTo + 1, edgeCount),
+                    total: edgeCount,
+                  })}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="font-mono text-xs"
+                    disabled={edgePage <= 0 || edgeQuery.isFetching}
+                    onClick={() => setEdgePage((p) => Math.max(0, p - 1))}
+                  >
+                    {t('monitoring.prevPage')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="font-mono text-xs"
+                    disabled={edgeTo + 1 >= edgeCount || edgeQuery.isFetching}
+                    onClick={() => setEdgePage((p) => p + 1)}
                   >
                     {t('monitoring.nextPage')}
                   </Button>

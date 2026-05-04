@@ -5,12 +5,15 @@
  * (or your CI equivalent). With code changes, run the manual checklist in the JSDoc at the
  * bottom of `src/lib/analytics5dEvidence.test.ts`.
  */
-const EVIDENCE_MAX_TOTAL_CHARS = 10_000;import 'https://deno.land/x/xhr@0.1.0/mod.ts';
+const EVIDENCE_MAX_TOTAL_CHARS = 10_000;
+
+import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { isAppAdmin } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -239,6 +242,16 @@ ${evidenceText}`
   } catch (e) {
     logError('explain-analytics-5d', e);
     const message = handleOpenAIError(e);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'explain-analytics-5d',
+        level: 'error',
+        httpStatus: 500,
+        message,
+        stack: errorToStack(e),
+      },
+      req,
+    );
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

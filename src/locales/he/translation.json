@@ -97,6 +97,21 @@
     "logsColTeacher": "מורה",
     "logsColTitle": "כותרת",
     "logsColRoute": "נתיב",
+    "logsSourceEdge": "שגיאות Edge Functions",
+    "edgeFunctionsTitle": "שגיאות Edge Functions",
+    "edgeFunctionsDescription": "כשלים וחריגות שנרשמו בפונקציות Edge (תפקיד שירות). לניפוי באגים כשקשה לקשר ליומני Supabase.",
+    "edgeFunctionsEmpty": "עדיין לא נרשמו שגיאות מ-Edge Functions.",
+    "edgeFunctionNameFilter": "סינון לפי שם פונקציה",
+    "edgeFunctionNameFilterPlaceholder": "לדוגמה: generate-feedback",
+    "edgeColFunction": "פונקציה",
+    "edgeColLevel": "רמה",
+    "edgeColHttpStatus": "HTTP",
+    "edgeColMessage": "הודעה",
+    "edgeColRequestId": "מזהה בקשה",
+    "edgeColContext": "הקשר",
+    "edgeColEmailSent": "מייל נשלח",
+    "edgeEmailSentYes": "כן",
+    "edgeEmailSentNo": "—",
     "healthDescription": "בדיקה חיה והיסטוריית זמן שאילתת DB (צילומים מ-Edge Function).",
     "healthRange24h": "24 שעות",
     "healthRange7d": "7 ימים",
@@ -760,7 +775,11 @@
       "subtitle": "צפה ונהל את התלמידים שלך",
       "joined": "הצטרף",
       "noStudents": "אין תלמידים רשומים עדיין",
-      "studentIncomplete": "תלמיד (פרופיל לא שלם)"
+      "studentIncomplete": "תלמיד (פרופיל לא שלם)",
+      "detailDialogTitle": "תלמיד/ה: {{name}}",
+      "tabProfile": "פרופיל",
+      "tabCurriculum": "תוכנית לימודים",
+      "curriculumReadOnlyNote": "תצוגת קריאה בלבד של התקדמות {{name}} בתוכנית הלימודים של הקורס."
     },
     "curriculum": {
       "tabTitle": "תוכנית לימודים",
@@ -1144,7 +1163,8 @@
     },
     "errors": {
       "loading": "שגיאה בטעינת משימה",
-      "generatingFeedback": "שגיאה ביצירת משוב"
+      "generatingFeedback": "שגיאה ביצירת משוב",
+      "generatingFeedbackButCompleted": "לא הצלחנו ליצור משוב AI כרגע, אבל הפעילות סומנה כהושלמה כדי שתוכל/י להמשיך."
     },
     "awaitingTeacherFeedback": "המורה עדיין לא שחרר את משוב הבינה המלאכותית. תקבל התראה כשיהיה זמין.",
     "testTaking": {

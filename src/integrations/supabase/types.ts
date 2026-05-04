@@ -685,6 +685,45 @@ export type Database = {
           },
         ]
       }
+      edge_function_error_log: {
+        Row: {
+          context: Json | null
+          created_at: string
+          email_sent_at: string | null
+          error_message: string
+          function_name: string
+          http_status: number | null
+          id: string
+          level: string
+          request_id: string | null
+          stack_snippet: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          email_sent_at?: string | null
+          error_message: string
+          function_name: string
+          http_status?: number | null
+          id?: string
+          level: string
+          request_id?: string | null
+          stack_snippet?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          email_sent_at?: string | null
+          error_message?: string
+          function_name?: string
+          http_status?: number | null
+          id?: string
+          level?: string
+          request_id?: string | null
+          stack_snippet?: string | null
+        }
+        Relationships: []
+      }
       enrollments: {
         Row: {
           active: boolean

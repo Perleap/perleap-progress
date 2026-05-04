@@ -364,7 +364,14 @@ const AssignmentDetail = () => {
 
         if (feedbackError) {
           console.error('Error generating feedback:', feedbackError);
-          toast.error(t('assignmentDetail.errors.generatingFeedback'));
+          const { error: completeError } = await completeSubmission(submission.id, flowFlag);
+          if (completeError) {
+            console.error('Error completing submission:', completeError);
+            toast.error(t('common.error'));
+          } else {
+            toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
+            await handleAssignmentCompleted('activityCompleted');
+          }
         } else {
           const { error: completeError } = await completeSubmission(submission.id, flowFlag);
 

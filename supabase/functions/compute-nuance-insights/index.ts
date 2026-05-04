@@ -3,6 +3,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createSupabaseClient } from '../shared/supabase.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -563,6 +564,16 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = handleOpenAIError(error);
     logError('Error in compute-nuance-insights', error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'compute-nuance-insights',
+        level: 'error',
+        httpStatus: 500,
+        message: errorMessage,
+        stack: errorToStack(error),
+      },
+      req,
+    );
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

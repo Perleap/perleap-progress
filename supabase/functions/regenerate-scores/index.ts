@@ -9,6 +9,7 @@ import { createSupabaseClient } from '../shared/supabase.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
 import { logInfo, logError } from '../shared/logger.ts';
+import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -170,6 +171,16 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = handleOpenAIError(error);
     logError('Error in regenerate-scores', error);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'regenerate-scores',
+        level: 'error',
+        httpStatus: 500,
+        message: errorMessage,
+        stack: errorToStack(error),
+      },
+      req,
+    );
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
