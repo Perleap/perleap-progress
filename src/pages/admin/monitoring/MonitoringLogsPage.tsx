@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input';
+import { EDGE_FUNCTION_NAMES } from '@/lib/edgeFunctionNames';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 25;
@@ -50,7 +50,7 @@ export default function MonitoringLogsPage() {
   const [activityPage, setActivityPage] = useState(0);
   const [showEdgeFunctions, setShowEdgeFunctions] = useState(true);
   const [edgePage, setEdgePage] = useState(0);
-  const [edgeFunctionNameFilter, setEdgeFunctionNameFilter] = useState('');
+  const [edgeFunctionName, setEdgeFunctionName] = useState<string>('all');
 
   const auditFrom = auditPage * PAGE_SIZE;
   const auditTo = auditFrom + PAGE_SIZE - 1;
@@ -61,7 +61,7 @@ export default function MonitoringLogsPage() {
 
   useEffect(() => {
     setEdgePage(0);
-  }, [edgeFunctionNameFilter]);
+  }, [edgeFunctionName]);
 
   const auditQuery = useQuery({
     queryKey: ['admin_audit_log', 'monitoring', auditPage],
@@ -98,10 +98,8 @@ export default function MonitoringLogsPage() {
     },
   });
 
-  const edgeFunctionFilterTrimmed = edgeFunctionNameFilter.trim();
-
   const edgeQuery = useQuery({
-    queryKey: ['edge_function_error_log', 'monitoring', edgePage, edgeFunctionFilterTrimmed],
+    queryKey: ['edge_function_error_log', 'monitoring', edgePage, edgeFunctionName],
     enabled: showEdgeFunctions,
     queryFn: async () => {
       let q = supabase
@@ -109,8 +107,8 @@ export default function MonitoringLogsPage() {
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(edgeFrom, edgeTo);
-      if (edgeFunctionFilterTrimmed) {
-        q = q.ilike('function_name', `%${edgeFunctionFilterTrimmed}%`);
+      if (edgeFunctionName !== 'all') {
+        q = q.eq('function_name', edgeFunctionName);
       }
       const { data, error, count } = await q;
       if (error) throw error;
@@ -169,17 +167,23 @@ export default function MonitoringLogsPage() {
             </Label>
           </div>
           {showEdgeFunctions ? (
-            <div className="space-y-1 sm:min-w-[200px]">
-              <Label className="font-mono text-[10px] uppercase text-muted-foreground" htmlFor="edge-fn-filter">
+            <div className="space-y-1 sm:min-w-[220px]">
+              <Label className="font-mono text-[10px] uppercase text-muted-foreground">
                 {t('monitoring.edgeFunctionNameFilter')}
               </Label>
-              <Input
-                id="edge-fn-filter"
-                className="h-8 font-mono text-xs"
-                value={edgeFunctionNameFilter}
-                onChange={(e) => setEdgeFunctionNameFilter(e.target.value)}
-                placeholder={t('monitoring.edgeFunctionNameFilterPlaceholder')}
-              />
+              <Select value={edgeFunctionName} onValueChange={setEdgeFunctionName}>
+                <SelectTrigger className="h-8 w-full min-w-[200px] max-w-[280px] font-mono text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('monitoring.logsFilterAll')}</SelectItem>
+                  {EDGE_FUNCTION_NAMES.map((name) => (
+                    <SelectItem key={name} value={name} className="font-mono text-xs">
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           ) : null}
           {showActivity ? (

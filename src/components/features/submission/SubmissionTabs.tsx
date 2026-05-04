@@ -11,6 +11,7 @@ import type { Message } from '@/types';
 import type { StudentAlert } from '@/types/alerts';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
+import { LessonReadingDetailsCollapsible } from '@/components/features/syllabus/content-blocks/LessonReadingDetailsCollapsible';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -458,9 +459,17 @@ export const SubmissionTabs = ({
                       <CardTitle className="text-base text-left">
                         {submission.assignments.title}
                       </CardTitle>
-                      <CardDescription className="text-left text-sm whitespace-pre-wrap">
-                        {submission.assignments.instructions || ''}
-                      </CardDescription>
+                      {submission.assignments.instructions?.trim() ? (
+                        <LessonReadingDetailsCollapsible
+                          className="mt-3"
+                          triggerLabel={t('submissionDetail.fullAssignmentInstructions')}
+                        >
+                          <SafeMathMarkdown
+                            content={submission.assignments.instructions}
+                            className="text-left text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                          />
+                        </LessonReadingDetailsCollapsible>
+                      ) : null}
                     </CardHeader>
                   </Card>
                   <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
@@ -531,9 +540,17 @@ export const SubmissionTabs = ({
                       <CardTitle className="text-base text-left">
                         {submission.assignments.title}
                       </CardTitle>
-                      <CardDescription className="text-left text-sm whitespace-pre-wrap">
-                        {submission.assignments.instructions || ''}
-                      </CardDescription>
+                      {submission.assignments.instructions?.trim() ? (
+                        <LessonReadingDetailsCollapsible
+                          className="mt-3"
+                          triggerLabel={t('submissionDetail.fullAssignmentInstructions')}
+                        >
+                          <SafeMathMarkdown
+                            content={submission.assignments.instructions}
+                            className="text-left text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                          />
+                        </LessonReadingDetailsCollapsible>
+                      ) : null}
                     </CardHeader>
                   </Card>
 

@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
+import { LessonReadingDetailsCollapsible } from './LessonReadingDetailsCollapsible';
 
 export type ContentPlainTextPresentation = 'reading' | 'embedded' | 'compact';
 
@@ -32,12 +33,14 @@ export function ContentPlainTextBlock({
 
   if (presentation === 'reading') {
     return (
-      <ContentBlockShell
-        variant="reading"
-        className={cn(lessonActivityColumnClass, 'px-4 py-5 sm:px-5 sm:py-5', className)}
-      >
-        {prose}
-      </ContentBlockShell>
+      <LessonReadingDetailsCollapsible className={className}>
+        <ContentBlockShell
+          variant="reading"
+          className={cn(lessonActivityColumnClass, 'px-4 py-5 sm:px-5 sm:py-5')}
+        >
+          {prose}
+        </ContentBlockShell>
+      </LessonReadingDetailsCollapsible>
     );
   }
 

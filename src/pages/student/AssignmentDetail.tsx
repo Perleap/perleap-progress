@@ -28,7 +28,7 @@ import {
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
 import type { AssignmentRow } from '@/lib/moduleFlow';
-import { ArrowLeft, Calendar, Loader2, Clock, RefreshCw, Lock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -483,17 +483,16 @@ const AssignmentDetail = () => {
           </div>
           <Card>
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle>
-                    {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
-                  </CardTitle>
-                  <CardDescription className="flex flex-col gap-1 mt-2">
-                    <span className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 shrink-0" />
-                      {assignment.due_at &&
-                        `${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
+              <div className="space-y-1">
+                <CardTitle>
+                  {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
+                </CardTitle>
+                <CardDescription className="flex flex-col gap-1 mt-2">
+                  {assignment.due_at && (
+                    <span>
+                      {`${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
                     </span>
+                  )}
                     {attemptMode === 'single' && (
                       <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerSingle')}</span>
                     )}
@@ -511,8 +510,6 @@ const AssignmentDetail = () => {
                     )}
                   </CardDescription>
                 </div>
-                <Badge variant="secondary">{t(`assignmentTypes.${assignment.type}`)}</Badge>
-              </div>
             </CardHeader>
           </Card>
 

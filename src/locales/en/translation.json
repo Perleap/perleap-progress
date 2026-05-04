@@ -101,8 +101,7 @@
     "edgeFunctionsTitle": "Edge function errors",
     "edgeFunctionsDescription": "Failures and exceptions recorded by Edge Functions (service role). Use for debugging when Supabase dashboard logs are hard to correlate.",
     "edgeFunctionsEmpty": "No edge function errors recorded yet.",
-    "edgeFunctionNameFilter": "Filter by function name",
-    "edgeFunctionNameFilterPlaceholder": "e.g. generate-feedback",
+    "edgeFunctionNameFilter": "Edge function",
     "edgeColFunction": "Function",
     "edgeColLevel": "Level",
     "edgeColHttpStatus": "HTTP",
@@ -1050,6 +1049,7 @@
     "conversationEmpty": "No messages in this conversation yet.",
     "flaggedSentencesTitle": "Flagged assistant sentences",
     "noStudentFacingTask": "No short student-facing task summary was saved for this assignment. You can generate or edit it in the assignment editor (Review step).",
+    "fullAssignmentInstructions": "Full instructions",
     "feedbackEmpty": {
       "chatPrompt": "No AI feedback yet. Open the Assignment tab to read the student’s chat and generate AI feedback."
     },
@@ -1326,6 +1326,7 @@
   "activityPage": {
     "notFound": "This activity could not be loaded.",
     "lessonEmpty": "No lesson content yet.",
+    "lessonReadingDetails": "Activity details",
     "markComplete": "Mark complete",
     "finish": "Continue",
     "continue": "Continue",

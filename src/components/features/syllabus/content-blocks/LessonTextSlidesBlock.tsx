@@ -13,6 +13,7 @@ import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
 import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
 import { cn } from '@/lib/utils';
+import { LessonReadingDetailsCollapsible } from './LessonReadingDetailsCollapsible';
 
 import type { ContentRichTextPresentation } from './ContentRichTextBlock';
 
@@ -58,8 +59,11 @@ export function LessonTextSlidesBlock({ slideBodies, presentation, isRTL, classN
     ? cn(lessonActivityColumnClass, 'px-4 py-5 sm:px-5 sm:py-5')
     : 'px-3 py-3 sm:px-4 sm:py-3.5';
 
-  return (
-    <div className={cn('w-full min-w-0', className)} dir={isRTL ? 'rtl' : 'ltr'}>
+  const carouselBody = (
+    <div
+      className={cn('w-full min-w-0', !isReading ? className : undefined)}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       <div className="flex w-full min-w-0 items-stretch gap-1 sm:gap-2">
         <div className="flex w-9 shrink-0 items-center justify-center self-stretch sm:w-10">
           <Button
@@ -131,4 +135,10 @@ export function LessonTextSlidesBlock({ slideBodies, presentation, isRTL, classN
       ) : null}
     </div>
   );
+
+  if (isReading) {
+    return <LessonReadingDetailsCollapsible className={className}>{carouselBody}</LessonReadingDetailsCollapsible>;
+  }
+
+  return carouselBody;
 }

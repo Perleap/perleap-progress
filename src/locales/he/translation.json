@@ -101,8 +101,7 @@
     "edgeFunctionsTitle": "שגיאות Edge Functions",
     "edgeFunctionsDescription": "כשלים וחריגות שנרשמו בפונקציות Edge (תפקיד שירות). לניפוי באגים כשקשה לקשר ליומני Supabase.",
     "edgeFunctionsEmpty": "עדיין לא נרשמו שגיאות מ-Edge Functions.",
-    "edgeFunctionNameFilter": "סינון לפי שם פונקציה",
-    "edgeFunctionNameFilterPlaceholder": "לדוגמה: generate-feedback",
+    "edgeFunctionNameFilter": "פונקציית Edge",
     "edgeColFunction": "פונקציה",
     "edgeColLevel": "רמה",
     "edgeColHttpStatus": "HTTP",
@@ -1037,6 +1036,7 @@
     "conversationEmpty": "אין עדיין הודעות בשיחה זו.",
     "flaggedSentencesTitle": "משפטים מסומנים מהעוזר",
     "noStudentFacingTask": "לא נשמר תקציר קצר למשימה עבור התלמידים במטלה זו. ניתן ליצור או לערוך אותו בעורך המטלה (שלב סקירה).",
+    "fullAssignmentInstructions": "הנחיות מלאות",
     "feedbackEmpty": {
       "chatPrompt": "עדיין אין משוב בינה מלאכותית. פתח את לשונית המשימה כדי לקרוא את הצ'אט של התלמיד וליצור משוב בינה מלאכותית."
     },
@@ -1368,6 +1368,7 @@
   "activityPage": {
     "notFound": "לא ניתן לטעון את הפעילות.",
     "lessonEmpty": "אין עדיין תוכן לשיעור.",
+    "lessonReadingDetails": "פרטי הפעילות",
     "markComplete": "סימון כהושלם",
     "finish": "המשך",
     "continue": "המשך",
