@@ -536,6 +536,9 @@
     "create": "Create Classroom",
     "cancel": "Cancel",
     "createButton": "Create Classroom",
+    "importFromFile": "Import",
+    "importFromFileBusy": "Importing…",
+    "importWizardHint": "Always creates a new empty class from the backup (supports v1 / v2).",
     "errors": {
       "creatingClassroom": "Error creating classroom",
       "uploadPdf": "Please upload a PDF file",
@@ -621,7 +624,9 @@
       "loading": "Finding the best skills for this assignment…",
       "error": "Could not suggest skills. You can still pick them manually.",
       "retry": "Retry",
-      "successHint": "Suggested skills were filled in. You can change them anytime."
+      "successHint": "Suggested skills were filled in. You can change them anytime.",
+      "successHintCatalog": "Skills were chosen from your classroom list. You can change them anytime.",
+      "successHintCustom": "We suggested new skills based on this assignment. You can edit them anytime."
     },
     "hardSkillsMax": "At most {{max}} skills.",
     "assignmentMaterials": "Assignment Materials",
@@ -752,6 +757,51 @@
     "titleLabel": "Assignment Title",
     "instructionsLabel": "Instructions",
     "titlePlaceholder": "Enter assignment title"
+  },
+  "coursePackage": {
+    "title": "Course backup",
+    "description": "Export or import a backup file. Choose to open a fresh class (no students) or update this class.",
+    "export": "Export",
+    "import": "Import",
+    "importing": "Importing…",
+    "importModeTitle": "Use this backup how?",
+    "importModeDescription": "Both options use curriculum from the file. Student submissions and chat are not restored.",
+    "importModeCreateLabel": "New classroom (recommended to try changes)",
+    "importModeCreateHint": "Opens a copy with new IDs. Safe for testing.",
+    "importModeCreateConfirm": "Create new class",
+    "importModeMergeLabel": "Update this classroom",
+    "importModeMergeHint": "Merge-safe JSON from Export on this class. Applies classroom name/subject/outline from the backup with curriculum.",
+    "importModeMergeConfirm": "Merge into this class",
+    "importNewClassSuccess": "New classroom created from your backup.",
+    "exportSuccess": "Course package downloaded.",
+    "importSuccessWizard": "Course imported. Opening the new classroom…",
+    "exportFailed": "Could not export the course.",
+    "importFailed": "Could not apply this file.",
+    "invalidFile": "This file is not a valid Perleap course package (perleap.course v1 or v2 JSON).",
+    "importRequiresSignIn": "You need to be signed in to create a classroom from a backup.",
+    "importMergeSuccess": "This classroom was merged from your file (assignments stayed on the same rows).",
+    "importMergeNeedsV2": "Use a backup JSON from Export for this class (v2 merge-safe format).",
+    "mergePartialApplyWarning": "Some earlier merge steps may have already saved before this error. To undo partial changes, export a fresh merge-safe snapshot here and import that file.",
+    "mergeRollbackHint": "This merge was rolled back inside the database: no changes were committed from this merge attempt.",
+    "mergeError": {
+      "location": "Where",
+      "step": "Step",
+      "entityIdLabel": "Entity id",
+      "phase": {
+        "exported_from_guard": "Wrong class for this backup",
+        "classroom_patch": "Stopped while updating classroom settings",
+        "syllabus_fetch": "Could not load the syllabus",
+        "syllabus_mismatch": "Snapshot syllabus does not match this class",
+        "syllabus_patch": "Stopped while updating the syllabus outline",
+        "grading_categories": "Stopped while updating grading categories",
+        "sections": "Stopped while updating modules (sections)",
+        "activities": "Stopped while updating module activities",
+        "section_prerequisites": "Stopped while updating prerequisites between modules",
+        "assignments": "Stopped while updating assignments",
+        "assignment_links": "Stopped while updating assignment ↔ activity links",
+        "module_flow": "Stopped while updating module flow order"
+      }
+    }
   },
   "classroomDetail": {
     "students": "Students",
@@ -1161,10 +1211,76 @@
     "saving": "Saving…",
     "empty": "Please write something before submitting."
   },
+  "assignmentTypeIntro": {
+    "continue": "Got it",
+    "howToUseHeading": "How to use this screen",
+    "fallback": {
+      "title": "Before you start",
+      "body": "Use “Your task” above for what to do. Complete the work in the area below, then submit when you’re ready.",
+      "tutorial": "Read “Your task” at the top of the page. Use the main workspace below it to do the work, then click the submit control when you are ready."
+    },
+    "text_essay": {
+      "title": "Written essay",
+      "body": "Write your response in the editor. You can edit until you submit; then it is sent for feedback.",
+      "tutorial": "Scroll to the essay editor under “Your task”. Type or paste there; you can edit until you submit. Use the submit button (e.g. “Submit for feedback”) when your answer is ready."
+    },
+    "quiz_mcq": {
+      "title": "Multiple choice",
+      "body": "Select the best option for each question in the guided flow, then submit when you are done.",
+      "tutorial": "Use Next / Back (or the step controls) to move between questions. Pick one option per question. On the last step, confirm and submit."
+    },
+    "creative_task": {
+      "title": "Creative task",
+      "body": "Work through the conversation step by step. The assistant guides you; submit when the activity is complete.",
+      "tutorial": "Read the chat thread, type in the message box at the bottom, and send. Scroll up to review earlier messages. When the flow is complete, use Submit (or the completion control shown in the activity)."
+    },
+    "discussion_prompt": {
+      "title": "Discussion",
+      "body": "Respond to the discussion in the chat. Submit when you have fully addressed the prompt.",
+      "tutorial": "Reply in the chat using the message box at the bottom. Quote or refer to the prompt if needed. Scroll to read the full thread, then submit when your response is complete."
+    },
+    "multimedia": {
+      "title": "Multimedia activity",
+      "body": "Follow the prompts in the chat. Complete any steps for images, audio, or video as instructed, then submit.",
+      "tutorial": "Follow messages in the chat. When asked, add an image, audio, or video using the attach or media controls in the composer. Submit when the activity tells you to."
+    },
+    "project": {
+      "title": "Project upload",
+      "body": "Upload your project file (or files, if allowed). Check formats in the instructions, then submit for review.",
+      "tutorial": "Use the upload area (“Upload Project File” or drag-and-drop). You can remove and pick another file before submitting. Click “Submit Project” when the right file is attached."
+    },
+    "questions": {
+      "title": "Open questions",
+      "body": "Answer the questions in the guided chat. Submit when you have answered everything required.",
+      "tutorial": "Answer each part in the guided chat via the message box at the bottom. Wait for or read the assistant’s prompts, then submit when everything required is covered."
+    },
+    "test": {
+      "title": "Test mode",
+      "body": "Work through each question in order. Submit the test when finished; you may not be able to change answers afterward.",
+      "tutorial": "Move through questions in order. Select or type your answer for each, then go to the next. When all questions are done, use “Submit Test”—after that you may not be able to change answers."
+    },
+    "presentation": {
+      "title": "Presentation",
+      "body": "Upload your presentation file. Confirm the allowed format, then submit for your teacher to review.",
+      "tutorial": "Choose your file in the presentation upload area (drag-and-drop or browse). Check allowed formats in “Your task”, then submit for review."
+    },
+    "langchain": {
+      "title": "Pipeline builder",
+      "body": "Build or document your pipeline in the builder. Save your work, then submit when it matches the assignment.",
+      "tutorial": "Use “Add Node” on the left to place nodes on the canvas. Drag nodes to arrange them and connect handles to wire your flow. Click a node to edit “Node properties” on the right. Press “Save Pipeline” while you work, then “Submit Pipeline” when it matches the assignment."
+    },
+    "chatbot": {
+      "title": "Chat activity",
+      "body": "Interact with the assistant to complete the task. Submit when you have finished the required steps.",
+      "tutorial": "Use the chat input at the bottom to message the assistant. Scroll up to reread earlier messages. Submit when the activity indicates you are done."
+    }
+  },
   "assignmentDetail": {
     "title": "Assignment Details",
     "untitledAssignment": "Untitled assignment",
+    "unitSectionLabel": "Unit {{n}}: {{title}}",
     "studentTaskTitle": "Your task",
+    "referenceMaterials": "Reference materials ({{count}})",
     "loadingStudentTask": "Summarizing what you need to do…",
     "studentTaskNotSetYet": "We could not generate a short task summary. Your teacher can add or refine it in the assignment editor (Review → generate for students). For now, work through the activity in the chat below.",
     "studentTaskFallback": "Follow the chat with the teaching assistant to complete \"{{title}}\". Your teacher will guide the steps there.",
@@ -1624,7 +1740,30 @@
       "basedOnSources": "Synthesized from {{count}} evaluation excerpts in this view",
       "scoresOnlyHint": "No evaluation text excerpts in this view. The interpretation uses aggregate scores and your filters only."
     },
-    "compareNarrativeScope": "Comparing {{a}} vs {{b}}. Filters: {{filters}}"
+    "compareNarrativeScope": "Comparing {{a}} vs {{b}}. Filters: {{filters}}",
+    "lessonBrief": {
+      "exportPdf": "Export lesson brief (PDF)",
+      "exportError": "Could not create the lesson brief PDF. Check your connection and try again.",
+      "title": "Lesson preparation report",
+      "classroom": "Classroom",
+      "structure": "Course structure label",
+      "exportedAt": "Generated",
+      "scope": "Filtered view",
+      "kpiSnapshot": "Snapshot (aligned with CSV export)",
+      "kpiAssignmentsInScope": "Assignments in filtered view",
+      "classAverage5D": "Class average 5D (filtered view)",
+      "rosterTitle": "Students",
+      "columnStudent": "Student",
+      "columnProgress": "Completed / in scope",
+      "footerDisclaimer": "This PDF shows student-performance data from Perleap as of the generation time above. Handle it like other confidential grade information.",
+      "dash": "—",
+      "narrativesSectionTitle": "At a glance",
+      "studentSummaryLabel": "Summary",
+      "preparingSummaries": "Preparing student summaries…",
+      "narrativeNoScores": "No evaluated work in this filter for this learner.",
+      "narrativeEmpty": "No summary returned for this filter.",
+      "narrativeInvokeError": "Could not generate a summary right now. Try again in a moment."
+    }
   },
   "nuance": {
     "baselinesClassWide": "The numbers in the table use your current module, student, and activity filters. Use them to compare students or focus on a single activity.",
@@ -2156,6 +2295,7 @@
   },
   "syllabus": {
     "courseOutline": "Course Outline",
+    "unitMaterialsTitle": "Materials for this unit",
     "noSyllabusYet": "No Syllabus Yet",
     "noSyllabusDesc": "Create a structured syllabus to organize your course into sections, set policies, and provide a visual roadmap for your students.",
     "createSyllabus": "Create Syllabus",
@@ -2391,6 +2531,8 @@
     },
     "resources": {
       "title": "Resources",
+      "sectionHint": "Files and links for this unit only.",
+      "addResource": "Add resource",
       "addLink": "Add Link",
       "addFile": "Add File",
       "uploaded": "{{count}} file(s) uploaded",
@@ -2402,7 +2544,17 @@
       "linkFailed": "Failed to add link",
       "deleted": "Resource deleted",
       "deleteFailed": "Failed to delete resource",
+      "reorderFailed": "Could not save resource order.",
+      "orderSaved": "Resource order saved.",
       "add": "Add",
+      "deleteResourceAria": "Delete resource",
+      "typeFile": "File",
+      "typeVideo": "Video",
+      "typeLink": "Link",
+      "typeDocument": "Document",
+      "typeImage": "Image",
+      "typeText": "Text",
+      "typeLesson": "Activity",
       "externalLink": "External Link",
       "open": "Open",
       "openInNewTab": "Open in new tab",

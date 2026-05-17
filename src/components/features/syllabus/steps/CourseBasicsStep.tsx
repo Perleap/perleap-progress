@@ -5,24 +5,19 @@ import { Label } from '@/components/ui/label';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
-import type { StorageUploadOptions } from '@/lib/storageUpload';
-import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
 import {
-  Upload,
   X,
-  Link as LinkIcon,
   Plus,
   Trash2,
   BookOpen,
   Target,
   FileText,
-  Loader2,
 } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
 import type { WizardData } from '../CreateClassroomWizard';
-import type { Domain, CourseMaterial } from '@/types/models';
+import type { Domain } from '@/types/models';
 
 interface CourseBasicsStepProps {
   data: WizardData;
@@ -32,11 +27,6 @@ interface CourseBasicsStepProps {
 
 export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProps) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [uploadingMaterial, setUploadingMaterial] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [linkInput, setLinkInput] = useState('');
-  const [selectedFileName, setSelectedFileName] = useState('');
   const [rephrasingCourseDescription, setRephrasingCourseDescription] = useState(false);
 
   // Domain helpers
@@ -77,57 +67,6 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
     onChange({ keyChallenges: c });
   };
   const addChallenge = () => onChange({ keyChallenges: [...data.keyChallenges, ''] });
-
-  // Material helpers
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    if (file.type !== 'application/pdf') {
-      toast.error(t('createClassroom.errors.uploadPdf', 'Only PDF files allowed'));
-      return;
-    }
-    setUploadingMaterial(true);
-    setUploadProgress(0);
-    try {
-      const fileName = `${user.id}/${Date.now()}.pdf`;
-      const uploadOptions: StorageUploadOptions = {
-        cacheControl: '3600',
-        upsert: true,
-        onUploadProgress: (progress) => {
-          if (progress.total <= 0) return;
-          setUploadProgress(Math.round((progress.loaded / progress.total) * 100));
-        },
-      };
-      const { error: uploadError } = await supabase.storage
-        .from('course-materials')
-        .upload(fileName, file, uploadOptions);
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('course-materials').getPublicUrl(fileName);
-      onChange({ materials: [...data.materials, { type: 'pdf', url: urlData.publicUrl, name: file.name }] });
-      toast.success(t('createClassroom.success.pdfUploaded', 'PDF uploaded'));
-      setSelectedFileName('');
-      e.target.value = '';
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed');
-    } finally {
-      setUploadingMaterial(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleAddLink = () => {
-    if (!linkInput.trim()) return;
-    try {
-      const url = new URL(linkInput.trim());
-      const linkName = url.hostname.replace('www.', '') + (url.pathname !== '/' ? url.pathname.substring(0, 30) : '');
-      onChange({ materials: [...data.materials, { type: 'link', url: linkInput.trim(), name: linkName }] });
-      setLinkInput('');
-    } catch {
-      toast.error(t('createClassroom.errors.validUrl', 'Enter a valid URL'));
-    }
-  };
-
-  const removeMaterial = (index: number) => onChange({ materials: data.materials.filter((_, i) => i !== index) });
 
   const handleRephraseCourseDescription = async () => {
     if (!data.courseDescription.trim()) {
@@ -273,57 +212,16 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
         </div>
       </div>
 
-      {/* Materials */}
-      <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-        <div className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <FileText className="h-5 w-5" />
-          <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseMaterials', 'Course Materials')}</h3>
-        </div>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="space-y-3">
-            <Label className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.uploadPdf', 'Upload PDF')}</Label>
-            <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <input id="pdf-upload-wizard" type="file" accept="application/pdf" onChange={(e) => { setSelectedFileName(e.target.files?.[0]?.name || ''); handlePdfUpload(e); }} disabled={uploadingMaterial} className="hidden" />
-              <Button type="button" variant="outline" onClick={() => document.getElementById('pdf-upload-wizard')?.click()} disabled={uploadingMaterial} className="rounded-full border-border hover:bg-muted font-bold">
-                {uploadingMaterial ? <><Loader2 className="h-4 w-4 animate-spin me-2" />{uploadProgress > 0 ? `${uploadProgress}%` : t('common.loading', 'Loading...')}</> : t('createClassroom.chooseFile', 'Choose File')}
-              </Button>
-              <span className={`text-sm text-subtle truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}>
-                {selectedFileName || t('createClassroom.noFileChosen', 'No file chosen')}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <Label className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addLink', 'Add Link')}</Label>
-            <div className="flex gap-2">
-              <Input placeholder={t('createClassroom.linkPlaceholder', 'https://...')} value={linkInput} onChange={(e) => setLinkInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddLink(); } }} className="rounded-xl" autoDirection />
-              <Button type="button" onClick={handleAddLink} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        {data.materials.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-            {data.materials.map((material, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border shadow-sm group">
-                <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary">
-                  {material.type === 'pdf' ? <Upload className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
-                </div>
-                <span className="flex-1 text-sm truncate font-bold text-foreground">{material.name}</span>
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterial(index)} className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Outcomes & Challenges */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Label className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.learningOutcomes', 'Learning Outcomes')}</Label>
+            <Label
+              className={`text-foreground font-bold text-heading flex items-center gap-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}
+            >
+              <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+              {t('createClassroom.learningOutcomes', 'Learning Outcomes')}
+            </Label>
             <Button type="button" variant="ghost" size="sm" onClick={addOutcome} className="text-primary hover:bg-primary/5 h-8 text-xs font-bold">
               <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add', 'Add')}
             </Button>

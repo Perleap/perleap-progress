@@ -1,5 +1,5 @@
 /**
- * Suggest up to 5 (domain, skill) pairs from classroom domains based on assignment context.
+ * Suggest up to 5 (domain, skill) pairs: prefer classroom catalog, else AI-proposed custom pairs.
  * After changing prompts, deploy: `supabase functions deploy suggest-assignment-hard-skills`
  */
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
@@ -19,6 +19,15 @@ interface DomainRow {
   name: string;
   components: string[];
 }
+
+const ASSIGNMENT_TYPE_REFERENCE = `Assignment type reference (enum values):
+- chatbot: interactive Q&A with an AI tutor
+- questions: structured question set
+- text_essay: written essay
+- test: formal test / quiz
+- project: multi-step project work
+- presentation: oral/slide presentation
+- langchain: workflow / chain-based activity`;
 
 function validateSuggestions(raw: DomainRow[], suggestions: HardSkillPair[]): HardSkillPair[] {
   const domainMap = new Map<string, Set<string>>();
@@ -46,6 +55,149 @@ function validateSuggestions(raw: DomainRow[], suggestions: HardSkillPair[]): Ha
     if (out.length >= 5) break;
   }
   return out;
+}
+
+function parseSuggestionArray(sugg: unknown): HardSkillPair[] {
+  const rawList: HardSkillPair[] = [];
+  if (!Array.isArray(sugg)) return rawList;
+  for (const item of sugg) {
+    if (item && typeof item === 'object') {
+      const o = item as Record<string, unknown>;
+      const domain = typeof o.domain === 'string' ? o.domain : '';
+      const skill =
+        typeof o.skill === 'string'
+          ? o.skill
+          : typeof o.skill_component === 'string'
+            ? o.skill_component
+            : '';
+      if (domain.trim() && skill.trim()) {
+        rawList.push({ domain: domain.trim(), skill: skill.trim() });
+      }
+    }
+  }
+  return rawList;
+}
+
+function normalizeCustomSuggestions(suggestions: HardSkillPair[]): HardSkillPair[] {
+  const seen = new Set<string>();
+  const out: HardSkillPair[] = [];
+  for (const s of suggestions) {
+    const domain = String(s.domain ?? '').trim();
+    const skill = String(s.skill ?? '').trim();
+    if (!domain || !skill) continue;
+    const key = `${domain}\0${skill}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ domain, skill });
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
+function parseSuggestionsFromContent(content: string | null | undefined): HardSkillPair[] {
+  let parsed: { suggestions?: unknown } = {};
+  try {
+    parsed = JSON.parse(content || '{}');
+  } catch {
+    parsed = {};
+  }
+  return parseSuggestionArray(parsed.suggestions);
+}
+
+async function suggestFromCatalog(
+  normalizedDomains: DomainRow[],
+  title: string,
+  instructions: string,
+  assignmentType: string,
+  language: 'he' | 'en',
+): Promise<HardSkillPair[]> {
+  const allowedJson = JSON.stringify(normalizedDomains);
+  const langNote = language === 'he'
+    ? 'The teacher UI may be in Hebrew; match skill and domain strings exactly as in ALLOWED_TABLE (including language).'
+    : 'Match skill and domain strings exactly as in ALLOWED_TABLE.';
+
+  const systemPrompt = `You are an expert curriculum designer. Pick the most relevant hard skills for an assignment from a fixed table only.
+
+Rules:
+- You MUST ONLY choose skills that appear under the correct domain in ALLOWED_TABLE. Copy domain names and skill strings EXACTLY (same spelling/characters).
+- Return at most 5 items total (you may return fewer if only some skills fit). You may pick multiple skills from the same domain or spread across domains.
+- Rank by relevance to the assignment title, instructions, and assignment type.
+- Diversity: when two or more domains are *similarly* relevant to the assignment, prefer including skills from more than one domain (still at most 5 total). If a single domain clearly matches the instructions best, it is fine to choose most or all skills from that domain—do not add weaker skills from other domains just to diversify.
+- ${langNote}
+- If nothing fits, return an empty suggestions array.
+
+Respond with JSON only, using this shape:
+{"suggestions":[{"domain":"exact domain name from table","skill":"exact skill string from that domain's components"}]}
+
+${ASSIGNMENT_TYPE_REFERENCE}`;
+
+  const userContent = `ALLOWED_TABLE (JSON array of domains, each with name and components):
+${allowedJson}
+
+Assignment type: ${assignmentType || '(unknown)'}
+
+Title:
+${title.trim() || '(none)'}
+
+Instructions:
+${instructions.trim() || '(none)'}`;
+
+  const { content } = await createChatCompletion(
+    systemPrompt,
+    [{ role: 'user', content: userContent }],
+    0.2,
+    1200,
+    'fast',
+    false,
+    'json_object',
+  );
+
+  const rawList = parseSuggestionsFromContent(content);
+  return validateSuggestions(normalizedDomains, rawList);
+}
+
+async function suggestCustom(
+  title: string,
+  instructions: string,
+  assignmentType: string,
+  language: 'he' | 'en',
+): Promise<HardSkillPair[]> {
+  const langNote = language === 'he'
+    ? 'Write every domain and skill string in Hebrew.'
+    : 'Write every domain and skill string in English.';
+
+  const systemPrompt = `You are an expert curriculum designer. Propose hard skills (concrete, assessable technical or domain-specific abilities) for this assignment.
+
+Rules:
+- Return at most 5 items in {"suggestions":[{"domain":"...","skill":"..."}]}. Use domain as a short subject-area label and skill as a concise skill name the teacher can assess.
+- Base choices on the assignment title, instructions, and assignment type. Prefer specific skills over vague ones.
+- ${langNote}
+- If the assignment context is too thin to infer skills, return an empty suggestions array.
+
+Respond with JSON only using that shape.
+
+${ASSIGNMENT_TYPE_REFERENCE}`;
+
+  const userContent = `Assignment type: ${assignmentType || '(unknown)'}
+
+Title:
+${title.trim() || '(none)'}
+
+Instructions:
+${instructions.trim() || '(none)'}`;
+
+  const { content } = await createChatCompletion(
+    systemPrompt,
+    [{ role: 'user', content: userContent }],
+    0.35,
+    1200,
+    'fast',
+    false,
+    'json_object',
+  );
+
+  const rawList = parseSuggestionsFromContent(content);
+  return normalizeCustomSuggestions(rawList);
 }
 
 serve(async (req) => {
@@ -131,90 +283,29 @@ serve(async (req) => {
       }))
       .filter((d) => d.name.length > 0 && d.components.length > 0);
 
-    if (normalizedDomains.length === 0) {
-      return new Response(JSON.stringify({ suggestions: [] as HardSkillPair[] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    let suggestions: HardSkillPair[] = [];
+    let source: 'catalog' | 'custom';
 
-    const allowedJson = JSON.stringify(normalizedDomains);
-    const langNote = language === 'he'
-      ? 'The teacher UI may be in Hebrew; match skill and domain strings exactly as in ALLOWED_TABLE (including language).'
-      : 'Match skill and domain strings exactly as in ALLOWED_TABLE.';
-
-    const systemPrompt = `You are an expert curriculum designer. Pick the most relevant hard skills for an assignment from a fixed table only.
-
-Rules:
-- You MUST ONLY choose skills that appear under the correct domain in ALLOWED_TABLE. Copy domain names and skill strings EXACTLY (same spelling/characters).
-- Return at most 5 items total (you may return fewer if only some skills fit). You may pick multiple skills from the same domain or spread across domains.
-- Rank by relevance to the assignment title, instructions, and assignment type.
-- Diversity: when two or more domains are *similarly* relevant to the assignment, prefer including skills from more than one domain (still at most 5 total). If a single domain clearly matches the instructions best, it is fine to choose most or all skills from that domain—do not add weaker skills from other domains just to diversify.
-- ${langNote}
-- If nothing fits, return an empty suggestions array.
-
-Respond with JSON only, using this shape:
-{"suggestions":[{"domain":"exact domain name from table","skill":"exact skill string from that domain's components"}]}
-
-Assignment type reference (enum values):
-- chatbot: interactive Q&A with an AI tutor
-- questions: structured question set
-- text_essay: written essay
-- test: formal test / quiz
-- project: multi-step project work
-- presentation: oral/slide presentation
-- langchain: workflow / chain-based activity`;
-
-    const userContent = `ALLOWED_TABLE (JSON array of domains, each with name and components):
-${allowedJson}
-
-Assignment type: ${assignmentType || '(unknown)'}
-
-Title:
-${title.trim() || '(none)'}
-
-Instructions:
-${instructions.trim() || '(none)'}`;
-
-    const { content } = await createChatCompletion(
-      systemPrompt,
-      [{ role: 'user', content: userContent }],
-      0.2,
-      1200,
-      'fast',
-      false,
-      'json_object',
-    );
-
-    let parsed: { suggestions?: unknown } = {};
-    try {
-      parsed = JSON.parse(content || '{}');
-    } catch {
-      parsed = {};
-    }
-
-    const rawList: HardSkillPair[] = [];
-    const sugg = parsed.suggestions;
-    if (Array.isArray(sugg)) {
-      for (const item of sugg) {
-        if (item && typeof item === 'object') {
-          const o = item as Record<string, unknown>;
-          const domain = typeof o.domain === 'string' ? o.domain : '';
-          const skill =
-            typeof o.skill === 'string'
-              ? o.skill
-              : typeof o.skill_component === 'string'
-                ? o.skill_component
-                : '';
-          if (domain.trim() && skill.trim()) {
-            rawList.push({ domain: domain.trim(), skill: skill.trim() });
-          }
-        }
+    if (normalizedDomains.length > 0) {
+      suggestions = await suggestFromCatalog(
+        normalizedDomains,
+        title,
+        instructions,
+        assignmentType,
+        language,
+      );
+      if (suggestions.length > 0) {
+        source = 'catalog';
+      } else {
+        suggestions = await suggestCustom(title, instructions, assignmentType, language);
+        source = 'custom';
       }
+    } else {
+      suggestions = await suggestCustom(title, instructions, assignmentType, language);
+      source = 'custom';
     }
 
-    const validated = validateSuggestions(normalizedDomains, rawList);
-
-    return new Response(JSON.stringify({ suggestions: validated }), {
+    return new Response(JSON.stringify({ suggestions, source }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {

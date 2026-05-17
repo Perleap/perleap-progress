@@ -61,9 +61,6 @@ export const ReviewStep = ({ data, isRTL }: ReviewStepProps) => {
                 </div>
               </div>
             )}
-            {data.materials.length > 0 && (
-              <ReviewField label={t('syllabus.review.materials')} value={t('syllabus.review.filesLinks', { count: data.materials.length })} isRTL={isRTL} />
-            )}
             {filteredOutcomes.length > 0 && (
               <ReviewField label={t('syllabus.review.learningOutcomes')} value={t('syllabus.review.defined', { count: filteredOutcomes.length })} isRTL={isRTL} />
             )}

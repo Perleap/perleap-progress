@@ -280,3 +280,206 @@ export const isAppAdmin = async (userId: string): Promise<boolean> => {
   return data === true;
 };
 
+/** Max prior submissions merged from unit (syllabus section) + client chain (ordered, deduped). */
+const UNIT_PRIOR_SUBMISSION_CAP = 15;
+
+/**
+ * Completed learner submissions in the same syllabus section + classroom (excluding current assignment),
+ * one row per assignment (latest completion), ordered oldest → newest by submitted_at.
+ */
+export async function getPriorSubmissionIdsInSameSection(
+  studentId: string,
+  currentAssignmentId: string,
+): Promise<string[]> {
+  const supabase = createSupabaseClient();
+
+  const { data: curr, error: e0 } = await supabase
+    .from('assignments')
+    .select('classroom_id, syllabus_section_id')
+    .eq('id', currentAssignmentId)
+    .maybeSingle();
+  if (e0 || !curr?.classroom_id || !curr.syllabus_section_id) {
+    return [];
+  }
+
+  const { data: sectionAssignments, error: e1 } = await supabase
+    .from('assignments')
+    .select('id')
+    .eq('classroom_id', curr.classroom_id)
+    .eq('syllabus_section_id', curr.syllabus_section_id)
+    .neq('id', currentAssignmentId);
+  if (e1 || !sectionAssignments?.length) return [];
+
+  const assignmentIds = sectionAssignments.map((a) => a.id);
+  const { data: subs, error: e2 } = await supabase
+    .from('submissions')
+    .select('id, assignment_id, submitted_at')
+    .eq('student_id', studentId)
+    .eq('status', 'completed')
+    .eq('is_teacher_attempt', false)
+    .in('assignment_id', assignmentIds)
+    .order('submitted_at', { ascending: false });
+
+  if (e2 || !subs?.length) return [];
+
+  const latestByAssignment = new Map<string, { id: string; submitted_at: string }>();
+  for (const s of subs) {
+    const prev = latestByAssignment.get(s.assignment_id);
+    if (!prev || String(s.submitted_at) > String(prev.submitted_at)) {
+      latestByAssignment.set(s.assignment_id, { id: s.id, submitted_at: String(s.submitted_at) });
+    }
+  }
+  const ordered = [...latestByAssignment.values()].sort((a, b) =>
+    a.submitted_at.localeCompare(b.submitted_at),
+  );
+  let ids = ordered.map((x) => x.id);
+  if (ids.length > UNIT_PRIOR_SUBMISSION_CAP) {
+    ids = ids.slice(-UNIT_PRIOR_SUBMISSION_CAP);
+  }
+  return ids;
+}
+
+const PRIOR_CONTEXT_MAX_CHARS = 8000;
+
+function stripChatContentForPriorContext(raw: string): string {
+  let s = String(raw ?? '').replace(/\r\n/g, '\n');
+  s = s.replace(/\[File:\s*[^\]]+\]\s*URL:\s*https?:\/\/\S+/gi, '[attachment]');
+  return s.trim();
+}
+
+function formatMessagesForPriorContext(messages: Message[]): string {
+  const parts: string[] = [];
+  let total = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m || (m.role !== 'user' && m.role !== 'assistant')) continue;
+    if (typeof m.content !== 'string') continue;
+    const text = stripChatContentForPriorContext(m.content);
+    if (!text) continue;
+    const label = m.role === 'user' ? 'Student' : 'Assistant';
+    const piece = `${label}: ${text}\n\n`;
+    if (total + piece.length > PRIOR_CONTEXT_MAX_CHARS) break;
+    parts.push(piece);
+    total += piece.length;
+  }
+  return parts.reverse().join('').trim();
+}
+
+/**
+ * Returns bounded plain-text context from a prior submission: Perleap chat transcript,
+ * submission text_body, and/or free-text test answers — after validating same student + classroom.
+ */
+export const getValidatedPriorAssignmentChatExcerpt = async (
+  priorSubmissionId: string,
+  studentId: string,
+  currentAssignmentId: string,
+): Promise<string | null> => {
+  const supabase = createSupabaseClient();
+
+  const { data: priorSub, error: e1 } = await supabase
+    .from('submissions')
+    .select('student_id, assignment_id, text_body')
+    .eq('id', priorSubmissionId)
+    .maybeSingle();
+  if (e1 || !priorSub) return null;
+  if (priorSub.student_id !== studentId) return null;
+  if (priorSub.assignment_id === currentAssignmentId) return null;
+
+  const { data: priorClassRow, error: e2 } = await supabase
+    .from('assignments')
+    .select('classroom_id')
+    .eq('id', priorSub.assignment_id)
+    .maybeSingle();
+  const { data: currClassRow, error: e3 } = await supabase
+    .from('assignments')
+    .select('classroom_id')
+    .eq('id', currentAssignmentId)
+    .maybeSingle();
+  if (e2 || e3 || !priorClassRow || !currClassRow) return null;
+  if (priorClassRow.classroom_id !== currClassRow.classroom_id) return null;
+
+  let chatExcerpt = '';
+  const { data: convRows, error: e4 } = await supabase
+    .from('assignment_conversations')
+    .select('messages')
+    .eq('submission_id', priorSubmissionId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (!e4 && convRows?.length) {
+    const raw = convRows[0].messages;
+    if (Array.isArray(raw) && raw.length > 0) {
+      chatExcerpt = formatMessagesForPriorContext(raw as Message[]) || '';
+    }
+  }
+
+  const sections: string[] = [];
+  if (chatExcerpt.trim()) sections.push(chatExcerpt.trim());
+
+  const tb = typeof priorSub.text_body === 'string' ? priorSub.text_body.trim() : '';
+  if (tb) {
+    const cleaned = stripChatContentForPriorContext(tb).slice(0, 4000);
+    if (cleaned) {
+      sections.push(`Submitted written work (prior assignment):\n${cleaned}`);
+    }
+  }
+
+  const { data: testRows, error: eTr } = await supabase
+    .from('test_responses')
+    .select('question_id, selected_option_id, text_answer')
+    .eq('submission_id', priorSubmissionId);
+
+  if (!eTr && testRows?.length) {
+    const qids = [...new Set(testRows.map((r) => r.question_id))];
+    const { data: questions, error: eQ } =
+      qids.length > 0
+        ? await supabase
+            .from('test_questions')
+            .select('id, question_text, options')
+            .in('id', qids)
+        : { data: [] as { id: string; question_text: string; options: unknown }[], error: null };
+
+    const qmap = new Map((questions ?? []).map((q) => [q.id, q]));
+
+    const testLines: string[] = [];
+    for (const tr of testRows) {
+      const q = qmap.get(tr.question_id);
+      const qtext = (q?.question_text ?? 'Question').trim();
+      const ta = typeof tr.text_answer === 'string' ? tr.text_answer.trim() : '';
+      if (ta) {
+        testLines.push(`${qtext}\nAnswer: ${stripChatContentForPriorContext(ta)}`);
+        continue;
+      }
+      const optIdRaw = tr.selected_option_id;
+      const optId = optIdRaw != null && optIdRaw !== '' ? String(optIdRaw).trim() : '';
+      if (!optId) continue;
+
+      let label = '';
+      if (q?.options && Array.isArray(q.options)) {
+        const opts = q.options as { id?: unknown; text?: unknown }[];
+        const opt = opts.find((o) => String(o?.id ?? '') === optId);
+        label = typeof opt?.text === 'string' ? opt.text.trim() : '';
+      }
+      if (label) {
+        testLines.push(`${qtext}\nSelected: ${stripChatContentForPriorContext(label)}`);
+      } else {
+        testLines.push(`${qtext}\nSelected: (multiple-choice; stored option id: ${optId})`);
+      }
+    }
+
+    if (testLines.length > 0) {
+      sections.push(
+        `Prior assignment test responses:\n${testLines.join('\n\n')}`.slice(0, 4000),
+      );
+    }
+  }
+
+  if (sections.length === 0) return null;
+
+  let out = sections.join('\n\n---\n\n');
+  if (out.length > PRIOR_CONTEXT_MAX_CHARS) {
+    out = out.slice(out.length - PRIOR_CONTEXT_MAX_CHARS);
+  }
+  return out.trim() || null;
+};
+

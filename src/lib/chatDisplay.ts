@@ -131,8 +131,9 @@ export function formatInlineListsForChatMarkdown(input: string): string {
 }
 
 /**
- * Display-only split of the exact assistant string: paragraph breaks and one optional first
- * single-newline break. Does not split on every sentence.
+ * Display-only split of assistant text: paragraph breaks (blank lines), one optional first single-newline
+ * split, then sentence boundaries when the message is still a **single** segment with no internal newlines
+ * (preserves intro + list pairs from the first-newline rule and multi-paragraph layouts).
  */
 export function splitChatDisplayText(
   text: string,
@@ -165,6 +166,15 @@ export function splitChatDisplayText(
     } else {
       segments = [block];
     }
+  }
+
+  const segmentCountBeforeSentences = segments.length;
+  if (segmentCountBeforeSentences === 1) {
+    segments = segments.flatMap((seg) => {
+      if (seg.includes('\n')) return [seg];
+      const sents = splitAssistantMessageIntoSentences(seg);
+      return sents.length > 1 ? sents : [seg];
+    });
   }
 
   if (segments.length <= maxB) {

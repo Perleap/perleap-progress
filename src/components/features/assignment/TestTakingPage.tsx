@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -42,12 +52,13 @@ export function TestTakingPage({
 
   const [answers, setAnswers] = useState<Record<string, { selected_option_id?: string; text_answer?: string }>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const updateAnswer = (questionId: string, value: { selected_option_id?: string; text_answer?: string }) => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], ...value } }));
   };
 
-  const handleSubmit = async () => {
+  const requestSubmit = () => {
     if (!questions || !user) return;
 
     const unanswered = questions.filter((q) => {
@@ -63,7 +74,11 @@ export function TestTakingPage({
       return;
     }
 
-    if (!window.confirm(t('assignmentDetail.testTaking.confirmSubmit'))) return;
+    setConfirmOpen(true);
+  };
+
+  const performSubmit = async () => {
+    if (!questions || !user) return;
 
     setSubmitting(true);
     try {
@@ -141,7 +156,28 @@ export function TestTakingPage({
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('assignmentDetail.testTaking.submitTest')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('assignmentDetail.testTaking.confirmSubmit')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false);
+                void performSubmit();
+              }}
+            >
+              {t('common.submit')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="space-y-4">
       <Card className="bg-primary/5 border-primary/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">{t('assignmentDetail.testTaking.title')}</CardTitle>
@@ -210,7 +246,7 @@ export function TestTakingPage({
 
       <div className="flex justify-end pt-4 pb-8">
         <Button
-          onClick={handleSubmit}
+          onClick={requestSubmit}
           disabled={submitting}
           size="lg"
           className="gap-2 rounded-full shadow-md"
@@ -228,6 +264,7 @@ export function TestTakingPage({
           )}
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

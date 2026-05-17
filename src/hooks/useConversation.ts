@@ -30,6 +30,7 @@ interface UseConversationParams {
   assignmentInstructions: string;
   studentId: string;
   assignmentId: string;
+  priorSubmissionIds?: string[];
   /** When true, AI "conversation complete" does not lock the chat or drive assignment submission. */
   companionMode?: boolean;
   /** App admins only; server verifies `is_app_admin` before returning debug payloads. */
@@ -44,6 +45,7 @@ export const useConversation = ({
   assignmentInstructions,
   studentId,
   assignmentId,
+  priorSubmissionIds,
   companionMode = false,
   debugChat = false,
 }: UseConversationParams): UseConversationResult => {
@@ -54,6 +56,8 @@ export const useConversation = ({
   const [error, setError] = useState<ApiError | null>(null);
   const [lastAssistantDebug, setLastAssistantDebug] = useState<ChatDebugPayload | null>(null);
   const hasInitialized = useRef(false);
+  const priorSubmissionIdsRef = useRef<string[] | undefined>(priorSubmissionIds);
+  priorSubmissionIdsRef.current = priorSubmissionIds;
   const { language: uiLanguage } = useLanguage();
   
   // Detect language from assignment instructions
@@ -140,6 +144,9 @@ export const useConversation = ({
         assignmentId,
         isInitialGreeting: true,
         language,
+        ...(priorSubmissionIdsRef.current?.length
+          ? { priorSubmissionIds: priorSubmissionIdsRef.current }
+          : {}),
         ...(debugChat ? { debugChat: true } : {}),
       };
 
@@ -197,6 +204,9 @@ export const useConversation = ({
         assignmentId,
         language,
         ...(fileContext ? { fileContext } : {}),
+        ...(priorSubmissionIdsRef.current?.length
+          ? { priorSubmissionIds: priorSubmissionIdsRef.current }
+          : {}),
         ...(debugChat ? { debugChat: true } : {}),
       };
 

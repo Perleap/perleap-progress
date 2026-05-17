@@ -63,12 +63,14 @@ import {
   useClassroomAssignments,
 } from '@/hooks/queries';
 import type { SyllabusSection, SectionResource, ReleaseMode } from '@/types/syllabus';
+import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { supabase } from '@/integrations/supabase/client';
 import { ModuleFlowEditor, type ModuleFlowEditorHandle } from './ModuleFlowEditor';
 import { ModuleLessonActivityDialog } from './ModuleLessonActivityDialog';
+import { ResourceUploader } from './ResourceUploader';
 
 const EMPTY_SECTION_RESOURCES: SectionResource[] = [];
 
@@ -157,6 +159,14 @@ export const SyllabusEditor = ({
     () => (selected ? sectionResources[selected.id] : undefined) ?? EMPTY_SECTION_RESOURCES,
     [sectionResources, selected?.id],
   );
+  const outlineResources = useMemo(
+    () => filterOutlineMaterialResources(moduleFlowResources),
+    [moduleFlowResources],
+  );
+  const nextResourceOrderIndex = useMemo(() => {
+    if (moduleFlowResources.length === 0) return 0;
+    return Math.max(...moduleFlowResources.map((r) => r.order_index ?? 0)) + 1;
+  }, [moduleFlowResources]);
   const structureLabel = structureType === 'weeks' ? 'Week' : structureType === 'units' ? 'Unit' : 'Module';
 
   const sectionDisplayName = (section: SyllabusSection, pending: Partial<SyllabusSection>, listIndex: number) => {
@@ -561,7 +571,18 @@ export const SyllabusEditor = ({
 
             <Separator className="my-2" />
             <div className="space-y-3">
+              <ResourceUploader
+                key={selected.id}
+                sectionId={selected.id}
+                classroomId={classroomId}
+                resources={outlineResources}
+                isRTL={isRTL}
+                nextOrderIndex={nextResourceOrderIndex}
+              />
+            </div>
+            <div className="space-y-3">
               <ModuleFlowEditor
+                key={selected.id}
                 ref={flowEditorRef}
                 flowHeading={t('syllabus.sections.moduleFlow')}
                 sectionId={selected.id}

@@ -716,6 +716,33 @@ export const useUpdateSectionResource = () => {
   });
 };
 
+export const useReorderSectionResources = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      sectionId,
+      classroomId,
+      updates,
+    }: {
+      sectionId: string;
+      classroomId: string;
+      updates: { resourceId: string; order_index: number }[];
+    }) => {
+      await Promise.all(
+        updates.map(async ({ resourceId, order_index }) => {
+          const { error } = await updateSectionResource(resourceId, { order_index });
+          if (error) throw error;
+        }),
+      );
+    },
+    onSuccess: (_, { sectionId, classroomId }) => {
+      queryClient.invalidateQueries({ queryKey: resourceKeys.bySection(sectionId) });
+      queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
+    },
+  });
+};
+
 /** Video resource from an external URL (not file upload). */
 export const useCreateVideoUrlResource = () => {
   const queryClient = useQueryClient();

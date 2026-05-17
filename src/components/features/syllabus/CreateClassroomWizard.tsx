@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { WizardStepIndicator, type WizardStep } from './WizardStepIndicator';
@@ -29,6 +29,11 @@ import type {
 } from '@/types/syllabus';
 import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
 import { useProvisionSyllabusBundle } from '@/hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { classroomKeys } from '@/hooks/queries/useClassroomQueries';
+import { importCoursePackageV1 } from '@/services/coursePackageService';
+import { packageForNewClassroomFromAny } from '@/services/coursePackageNewImportUtils';
+import { parseCoursePackageJson } from '@/lib/coursePackage/validateCoursePackage';
 
 // ---------------------------------------------------------------------------
 // Wizard Data Shape
@@ -123,11 +128,17 @@ export const CreateClassroomWizard = ({
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const provisionBundle = useProvisionSyllabusBundle();
+
+  const wizardImportFileRef = useRef<HTMLInputElement>(null);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [wizardData, setWizardData] = useState<WizardData>({ ...DEFAULT_WIZARD_DATA });
   const [loading, setLoading] = useState(false);
+  const [wizardImportLoading, setWizardImportLoading] = useState(false);
+
+  const wizardBusy = loading || wizardImportLoading;
 
   const WIZARD_STEPS: WizardStep[] = [
     { id: 'basics', title: t('createClassroom.courseBasics', 'Course Basics') },
@@ -161,6 +172,51 @@ export const CreateClassroomWizard = ({
     setWizardData({ ...DEFAULT_WIZARD_DATA });
   };
 
+  const handleWizardImportPick = () => {
+    wizardImportFileRef.current?.click();
+  };
+
+  const handleWizardImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user?.id) return;
+
+    setWizardImportLoading(true);
+    try {
+      const text = await file.text();
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        toast.error(t('coursePackage.importFailed'), {
+          description: t('coursePackage.invalidFile'),
+        });
+        return;
+      }
+      const parsed = parseCoursePackageJson(json);
+      if (!parsed.ok) {
+        toast.error(t('coursePackage.importFailed'), { description: parsed.error });
+        return;
+      }
+      const pkgForCreate = packageForNewClassroomFromAny(parsed.data);
+      const { data, error } = await importCoursePackageV1(pkgForCreate, user.id);
+      if (error || !data) {
+        toast.error(t('coursePackage.importFailed'), { description: error?.message });
+        return;
+      }
+      toast.success(t('coursePackage.importSuccessWizard'));
+      await queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
+      onOpenChange(false);
+      resetWizard();
+      onSuccess(data.classroomId);
+    } catch (err) {
+      console.error(err);
+      toast.error(t('coursePackage.importFailed'));
+    } finally {
+      setWizardImportLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     setLoading(true);
@@ -188,7 +244,7 @@ export const CreateClassroomWizard = ({
           learning_outcomes: wizardData.learningOutcomes.filter((o) => o.trim()) as unknown as Json,
           key_challenges: wizardData.keyChallenges.filter((c) => c.trim()) as unknown as Json,
           domains: filteredDomains as unknown as Json,
-          materials: wizardData.materials as unknown as Json,
+          materials: [] as unknown as Json,
         })
         .select()
         .single();
@@ -288,6 +344,38 @@ export const CreateClassroomWizard = ({
           <h2 className={`text-2xl font-bold tracking-tight text-foreground mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('createClassroom.title', 'Create Classroom')}
           </h2>
+
+          <div className={`mb-4 flex flex-col gap-2 ${isRTL ? 'items-end' : 'items-start'}`}>
+            <input
+              ref={wizardImportFileRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              aria-hidden
+              onChange={handleWizardImportFileChange}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={wizardBusy}
+              onClick={handleWizardImportPick}
+              className="rounded-full gap-2 shrink-0"
+            >
+              {wizardImportLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {wizardImportLoading
+                ? t('createClassroom.importFromFileBusy')
+                : t('createClassroom.importFromFile')}
+            </Button>
+            <p className={`text-xs text-muted-foreground max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('createClassroom.importWizardHint')}
+            </p>
+          </div>
+
           <WizardStepIndicator
             steps={effectiveSteps}
             currentStep={currentStep}
@@ -337,7 +425,7 @@ export const CreateClassroomWizard = ({
                   type="button"
                   variant="ghost"
                   onClick={handleBack}
-                  disabled={loading}
+                  disabled={wizardBusy}
                   className="rounded-full gap-2"
                 >
                   {isRTL ? <ArrowRight className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
@@ -351,7 +439,7 @@ export const CreateClassroomWizard = ({
                 type="button"
                 variant="ghost"
                 onClick={() => { onOpenChange(false); resetWizard(); }}
-                disabled={loading}
+                disabled={wizardBusy}
                 className="rounded-full"
               >
                 {t('syllabus.cancel')}
@@ -361,7 +449,7 @@ export const CreateClassroomWizard = ({
                 <Button
                   type="button"
                   onClick={handleNext}
-                  disabled={!canProceed() || loading}
+                  disabled={!canProceed() || wizardBusy}
                   className="rounded-full px-8 font-bold shadow-lg shadow-primary/20 gap-2"
                 >
                   {t('syllabus.wizard.next')}
@@ -371,7 +459,7 @@ export const CreateClassroomWizard = ({
                 <Button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={loading || !wizardData.courseTitle.trim()}
+                  disabled={wizardBusy || !wizardData.courseTitle.trim()}
                   className="rounded-full px-10 font-bold shadow-lg shadow-primary/20"
                 >
                   {loading ? (

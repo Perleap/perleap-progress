@@ -2,8 +2,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, ChevronRight, Lock } from 'lucide-react';
+import { Loader2, ArrowLeft, ChevronRight, Lock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,14 +22,14 @@ import {
   useStudentModuleFlowProgressMap,
   useClassroomAssignments,
 } from '@/hooks/queries';
-import { getNextActivityCenterStep, getOrderedActivityCenterFlowSteps, type AssignmentRow } from '@/lib/moduleFlow';
+import { getNextActivityCenterStep, getOrderedActivityCenterFlowSteps, filterOutlineMaterialResources, type AssignmentRow } from '@/lib/moduleFlow';
 import { getFirstNavigableInSection, getNextSectionId } from '@/lib/moduleFlowNavigation';
 import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import { canAccessPersistedStep } from '@/lib/moduleFlowStudent';
 import type { SectionResource } from '@/types/syllabus';
 import type { ActivityLinkState } from '@/types/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { isAppAdminRole } from '@/utils/role';
 
 type Role = 'teacher' | 'student';
@@ -90,6 +91,17 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
     () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources),
     [flowSteps, sectionResources],
   );
+
+  const unitOutlineMaterials = useMemo(
+    () =>
+      filterOutlineMaterialResources(sectionResources, {
+        excludeDrafts: role === 'student',
+        excludeResourceId: resource?.id,
+      }),
+    [sectionResources, role, resource?.id],
+  );
+
+  const [unitMaterialsOpen, setUnitMaterialsOpen] = useState(false);
 
   const flowStepIds = useMemo(() => orderedFlowSteps.map((s) => s.id), [orderedFlowSteps]);
 
@@ -401,6 +413,43 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             </>
           )}
         </div>
+
+        {unitOutlineMaterials.length > 0 ? (
+          <div className="shrink-0 border-b border-border/60 pb-8" dir={isRTL ? 'rtl' : 'ltr'}>
+            <Collapsible
+              open={unitMaterialsOpen}
+              onOpenChange={setUnitMaterialsOpen}
+              className="overflow-hidden rounded-lg border border-border/60 bg-muted/5"
+            >
+              <CollapsibleTrigger
+                className={cn(
+                  'flex w-full items-center justify-between gap-2 border-b border-border/50 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
+                  isRTL ? 'text-end' : 'text-start',
+                )}
+              >
+                <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                  {t('assignmentDetail.referenceMaterials', { count: unitOutlineMaterials.length })}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                    unitMaterialsOpen && 'rotate-180',
+                  )}
+                  aria-hidden
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-3 pb-3 pt-1">
+                <ResourceViewer
+                  resources={unitOutlineMaterials}
+                  isRTL={isRTL}
+                  compact
+                  compactVariant="list"
+                  hideListHeader
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        ) : null}
 
         {canMarkComplete ? (
           <div className={cn('flex flex-wrap items-center gap-2', isRTL ? 'justify-start' : 'justify-end')}>

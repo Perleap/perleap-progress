@@ -12,7 +12,6 @@ import {
   Calendar,
   Target,
   BookOpen,
-  ClipboardList,
   FileText,
   Lock,
   ChevronLeft,
@@ -32,7 +31,8 @@ import {
   type SectionSequentialUnlockFlow,
 } from '@/lib/sectionUnlock';
 import { getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
-import { persistedStepDone } from '@/lib/moduleFlowStudent';
+import { CurriculumAssignmentTypeIcon } from '@/lib/assignmentTypeCurriculumIcon';
+import { computeSectionModuleProgressStats } from '@/lib/sectionModuleProgressStats';
 import type {
   SyllabusSection,
   SectionResource,
@@ -144,39 +144,16 @@ export const SectionContentPage = ({
     user?.id,
   );
 
-  const moduleProgressStats = useMemo(() => {
-    if (useFlowList) {
-      const flowCtx = { progressByStep, assignmentDoneMap };
-      let total = 0;
-      let done = 0;
-      orderedFlow.forEach((step, i) => {
-        if (step.step_kind === 'resource' && step.activity_list_id) {
-          if (!resourceById[step.activity_list_id]) return;
-          total += 1;
-          if (persistedStepDone(step, orderedFlow, i, flowCtx)) done += 1;
-        } else if (step.step_kind === 'assignment' && step.assignment_id) {
-          if (!assignmentById[step.assignment_id]) return;
-          total += 1;
-          if (persistedStepDone(step, orderedFlow, i, flowCtx)) done += 1;
-        }
-      });
-      return {
-        total,
-        done,
-        percent: total > 0 ? Math.round((done / total) * 100) : 0,
-      };
-    }
-    const total = assignments.length;
-    let done = 0;
-    for (const a of assignments) {
-      if (assignmentDoneMap[a.id]) done += 1;
-    }
-    return {
-      total,
-      done,
-      percent: total > 0 ? Math.round((done / total) * 100) : 0,
-    };
-  }, [useFlowList, orderedFlow, resourceById, assignmentById, progressByStep, assignmentDoneMap, assignments]);
+  const moduleProgressStats = useMemo(
+    () =>
+      computeSectionModuleProgressStats({
+        persistedSteps: moduleFlowSteps,
+        resources,
+        linkedAssignments: assignments,
+        flowCtx: { progressByStep, assignmentDoneMap },
+      }),
+    [moduleFlowSteps, resources, assignments, progressByStep, assignmentDoneMap],
+  );
 
   const studentProgress = studentProgressMap[sectionId];
 
@@ -425,7 +402,10 @@ export const SectionContentPage = ({
                         )}
                       >
                         <div className="p-1.5 rounded-md bg-muted/50">
-                          <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                          <CurriculumAssignmentTypeIcon
+                            type={a.type}
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                          />
                         </div>
                         <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                           <span className="text-sm font-medium text-foreground truncate block">
@@ -465,7 +445,7 @@ export const SectionContentPage = ({
                     )}
                   >
                     <div className="p-1.5 rounded-md bg-muted/50">
-                      <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                      <CurriculumAssignmentTypeIcon type={a.type} className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                       <span className="text-sm font-medium text-foreground truncate block">{a.title}</span>

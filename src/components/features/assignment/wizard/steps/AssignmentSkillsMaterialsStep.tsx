@@ -41,6 +41,7 @@ interface AssignmentSkillsMaterialsStepProps {
   uploadingMaterial: boolean;
   uploadProgress: number;
   hardSkillsSuggestionStatus?: HardSkillsSuggestionStatus;
+  hardSkillsSuggestionSource?: 'catalog' | 'custom' | null;
   onRetrySuggestHardSkills?: () => void;
 }
 
@@ -65,6 +66,7 @@ export function AssignmentSkillsMaterialsStep({
   uploadingMaterial,
   uploadProgress,
   hardSkillsSuggestionStatus = 'idle',
+  hardSkillsSuggestionSource = null,
   onRetrySuggestHardSkills,
 }: AssignmentSkillsMaterialsStepProps) {
   const { t } = useTranslation();
@@ -119,7 +121,9 @@ export function AssignmentSkillsMaterialsStep({
         )}
         {hardSkillsSuggestionStatus === 'success' && (
           <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-            {t('createAssignment.hardSkillsSuggestion.successHint')}
+            {hardSkillsSuggestionSource === 'catalog'
+              ? t('createAssignment.hardSkillsSuggestion.successHintCatalog')
+              : t('createAssignment.hardSkillsSuggestion.successHintCustom')}
           </p>
         )}
 

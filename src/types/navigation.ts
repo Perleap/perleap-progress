@@ -9,6 +9,8 @@ export type AssignmentLinkState = {
   returnClassroomSection?: string;
   /** When true, Back with no history goes to `/student/dashboard` instead of classroom. */
   fromStudentDashboard?: boolean;
+  /** Prior submission whose chat may be summarized for Perleap on the destination assignment (server-validated). */
+  priorSubmissionId?: string;
 };
 
 /** Passed when navigating to `/classroom/:id` to open a specific tab. */

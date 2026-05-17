@@ -86,6 +86,10 @@ export interface ChatRequest {
   fileContext?: { name: string; content: string; url?: string; type?: string };
   /** App admins only; Edge Function verifies `is_app_admin`. */
   debugChat?: boolean;
+  /** Optional; edge validates ownership + classroom before injecting into system prompt (new threads only). */
+  priorSubmissionId?: string;
+  /** Ordered prior submissions (e.g. oldest → newest) to merge into one context block. */
+  priorSubmissionIds?: string[];
 }
 
 export interface ChatResponse {
@@ -131,4 +135,52 @@ export interface ApiError {
   message: string;
   code?: string;
   details?: unknown;
+}
+
+/** Structured context when course package merge fails (see ApiError.details.merge). */
+export type MergeFailurePhase =
+  | 'exported_from_guard'
+  | 'classroom_patch'
+  | 'syllabus_fetch'
+  | 'syllabus_mismatch'
+  | 'syllabus_patch'
+  | 'grading_categories'
+  | 'sections'
+  | 'activities'
+  | 'section_prerequisites'
+  | 'assignments'
+  | 'assignment_links'
+  | 'module_flow';
+
+export type MergeFailureEntity =
+  | 'grading_category'
+  | 'section'
+  | 'activity'
+  | 'assignment'
+  | 'flow_step';
+
+export interface MergeFailureContext {
+  phase: MergeFailurePhase;
+  /** 0-based index into package array for the active loop, when applicable. */
+  indexInPkg?: number;
+  entity?: MergeFailureEntity;
+  /** Id from the merge file (UUID), when present. */
+  entityId?: string;
+  /** Short human label (e.g. section title). */
+  humanLabel?: string;
+  /** True when merge ran via atomic Postgres RPC (full rollback on error). */
+  atomic?: boolean;
+}
+
+export function isMergeFailureContext(v: unknown): v is MergeFailureContext {
+  if (v === null || typeof v !== 'object') return false;
+  const o = v as Record<string, unknown>;
+  return typeof o.phase === 'string';
+}
+
+export function getMergeFailureFromApiError(err: ApiError | null | undefined): MergeFailureContext | null {
+  if (!err?.details || typeof err.details !== 'object') return null;
+  const d = err.details as Record<string, unknown>;
+  const m = d.merge;
+  return isMergeFailureContext(m) ? m : null;
 }
