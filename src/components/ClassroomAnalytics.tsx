@@ -1,18 +1,40 @@
+import { format } from 'date-fns';
+import { enUS, he } from 'date-fns/locale';
+import {
+  ChevronDown,
+  Users,
+  BookOpen,
+  FileText,
+  CheckCircle2,
+  BarChart3,
+  Filter,
+  Sparkles,
+  Trophy,
+  Target,
+  Info,
+  Download,
+  GitCompare,
+} from 'lucide-react';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
+import type { Json } from '@/integrations/supabase/types';
+import type { HardSkillAssessmentWithStudent } from '@/types/hard-skills';
+import type { FiveDScores } from '@/types/models';
 import {
   MainAnalytics5dNarrativeBlock,
   CompareSide5dNarrativeBlock,
   StudentList5dNarrativeBlock,
 } from '@/components/analytics/Analytics5dNarrativeBlocks';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { ChevronDown, Users, BookOpen, FileText, CheckCircle2, BarChart3, Filter, Sparkles, Trophy, Target, Info, Download, GitCompare } from 'lucide-react';
+import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
+import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
+import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Select,
   SelectContent,
@@ -28,11 +50,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
+import { DEFAULT_SCORE } from '@/config/constants';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
-import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
-import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
-import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
+import { build5dNarrativeEvidence, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
+import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
+import {
+  buildLessonBriefPdfBlob,
+  countStudentCompletedAssignmentsInScope,
+  type LessonBriefPdfStrings,
+} from '@/lib/analyticsLessonBriefPdf';
 import {
   getAllowedAssignmentIds,
   getClassroomAverage5D,
@@ -41,13 +68,15 @@ import {
   scopedStudentLatestScores,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import {
-  build5dNarrativeEvidence,
-  type Analytics5dNarrativeRow,
-} from '@/lib/analytics5dEvidence';
 // `useClassroomAnalytics` and 5D LLM evidence (incl. optional teacher notes) are teacher-only; do
 // not reuse this data path for student-facing analytics.
-import type { FiveDScores } from '@/types/models';
+
+type LessonBriefAnalyticsStudent = {
+  id: string;
+  fullName: string;
+  submissions?: { student_id: string; assignment_id: string; status: string }[];
+  snapshots: Array<{ user_id: string; submission_id: string; scores: Json }>;
+};
 
 const URL_MOD = 'analyticsModule';
 const URL_ASG = 'analyticsAssignment';
@@ -55,15 +84,22 @@ const URL_STU = 'analyticsStudent';
 
 interface ClassroomAnalyticsProps {
   classroomId: string;
+  classroomName?: string | null;
   onRegenerateComplete?: () => void;
 }
 
-export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: ClassroomAnalyticsProps) {
+export const ClassroomAnalytics = ({
+  classroomId,
+  classroomName,
+  onRegenerateComplete,
+}: ClassroomAnalyticsProps) => {
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage } = useLanguage();
-  const analyticsLanguage = uiLanguage === 'he' ? 'he' as const : 'en' as const;
+  const analyticsLanguage = uiLanguage === 'he' ? ('he' as const) : ('en' as const);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [student5dNarrativeOpen, setStudent5dNarrativeOpen] = useState<Set<string>>(() => new Set());
+  const [student5dNarrativeOpen, setStudent5dNarrativeOpen] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const [selectedModule, setSelectedModule] = useState<AnalyticsModuleFilter>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
@@ -145,16 +181,18 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
 
   const effectiveAssignmentIds = useMemo(
     () => getAllowedAssignmentIds(assignments, selectedModule, selectedAssignment),
-    [assignments, selectedModule, selectedAssignment],
+    [assignments, selectedModule, selectedAssignment]
   );
   const effectiveSet = useMemo(() => new Set(effectiveAssignmentIds), [effectiveAssignmentIds]);
   const moduleScopeIds = useMemo(
     () => getAllowedAssignmentIds(assignments, selectedModule, 'all'),
-    [assignments, selectedModule],
+    [assignments, selectedModule]
   );
 
   const isNarrowingView = !(
-    selectedModule === 'all' && selectedAssignment === 'all' && selectedStudent === 'all'
+    selectedModule === 'all' &&
+    selectedAssignment === 'all' &&
+    selectedStudent === 'all'
   );
   const showRegenerateNote = isNarrowingView;
 
@@ -169,7 +207,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
       next.set(URL_STU, stu);
       setSearchParams(next, { replace: true });
     },
-    [searchParams, setSearchParams],
+    [searchParams, setSearchParams]
   );
 
   const onModuleChange = (m: AnalyticsModuleFilter) => {
@@ -189,13 +227,20 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
   const classAverage = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return null;
     return getClassroomAverage5D(
-      data.students as { id: string; snapshots: { user_id: string; submission_id: string; scores: import('@/integrations/supabase/types').Json }[] }[],
+      data.students as {
+        id: string;
+        snapshots: {
+          user_id: string;
+          submission_id: string;
+          scores: import('@/integrations/supabase/types').Json;
+        }[];
+      }[],
       data.rawSubmissions,
       data.assignments,
       selectedModule,
       selectedAssignment,
       selectedStudent,
-      data.rawSnapshots,
+      data.rawSnapshots
     );
   }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds]);
 
@@ -209,14 +254,16 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
   const displayAssignmentCount = isNarrowingView
     ? effectiveAssignmentIds.length
     : fullAssignmentCount;
-  const displayTotalSubmissions = isNarrowingView ? scopedFeedback.count
+  const displayTotalSubmissions = isNarrowingView
+    ? scopedFeedback.count
     : students.reduce((s, st) => s + st.feedbackCount, 0);
   const displayActiveStudents = isNarrowingView
     ? scopedFeedback.activeStudents
     : students.filter((s) => s.feedbackCount > 0).length;
   const displayCompletion =
     studentCount > 0 ? Math.round((displayActiveStudents / studentCount) * 100) : 0;
-  const displayAvgSubmissions = studentCount > 0 ? (displayTotalSubmissions / studentCount).toFixed(1) : '0';
+  const displayAvgSubmissions =
+    studentCount > 0 ? (displayTotalSubmissions / studentCount).toFixed(1) : '0';
   const displayEngagement = displayCompletion;
 
   const coveredStudents = displayActiveStudents;
@@ -224,26 +271,40 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
   const compareAvgA = useMemo(() => {
     if (!data || !compareA) return null;
     return getClassroomAverage5D(
-      data.students as { id: string; snapshots: { user_id: string; submission_id: string; scores: import('@/integrations/supabase/types').Json }[] }[],
+      data.students as {
+        id: string;
+        snapshots: {
+          user_id: string;
+          submission_id: string;
+          scores: import('@/integrations/supabase/types').Json;
+        }[];
+      }[],
       data.rawSubmissions,
       data.assignments,
       compareA as AnalyticsModuleFilter,
       'all',
       'all',
-      data.rawSnapshots,
+      data.rawSnapshots
     );
   }, [data, compareA]);
 
   const compareAvgB = useMemo(() => {
     if (!data || !compareB) return null;
     return getClassroomAverage5D(
-      data.students as { id: string; snapshots: { user_id: string; submission_id: string; scores: import('@/integrations/supabase/types').Json }[] }[],
+      data.students as {
+        id: string;
+        snapshots: {
+          user_id: string;
+          submission_id: string;
+          scores: import('@/integrations/supabase/types').Json;
+        }[];
+      }[],
       data.rawSubmissions,
       data.assignments,
       compareB as AnalyticsModuleFilter,
       'all',
       'all',
-      data.rawSnapshots,
+      data.rawSnapshots
     );
   }, [data, compareB]);
 
@@ -253,15 +314,17 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
         ? allModulesLabel
         : selectedModule === 'unplaced'
           ? t('analytics.unplacedAssignments')
-          : modules.find((m) => m.id === selectedModule)?.title ?? selectedModule;
+          : (modules.find((m) => m.id === selectedModule)?.title ?? selectedModule);
     const asg =
       selectedAssignment === 'all'
         ? selectedModule === 'all'
           ? t('analytics.allAssignments')
           : t('analytics.allAssignmentsInScope')
-        : assignments.find((a) => a.id === selectedAssignment)?.title ?? selectedAssignment;
+        : (assignments.find((a) => a.id === selectedAssignment)?.title ?? selectedAssignment);
     const stu =
-      selectedStudent === 'all' ? t('analytics.allStudents') : allStudents.find((s) => s.id === selectedStudent)?.name ?? selectedStudent;
+      selectedStudent === 'all'
+        ? t('analytics.allStudents')
+        : (allStudents.find((s) => s.id === selectedStudent)?.name ?? selectedStudent);
     return [mod, asg, stu].join(' | ');
   }, [
     allModulesLabel,
@@ -276,7 +339,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
 
   const main5dNarrativeId = useMemo(
     () => `5d-main-${selectedModule}-${selectedAssignment}-${selectedStudent}`,
-    [selectedModule, selectedAssignment, selectedStudent],
+    [selectedModule, selectedAssignment, selectedStudent]
   );
 
   const sectionTitleResolver = useCallback(
@@ -284,7 +347,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
       if (syllabusSectionId == null) return t('analytics.unplacedAssignments');
       return modules.find((m) => m.id === syllabusSectionId)?.title ?? '—';
     },
-    [modules, t],
+    [modules, t]
   );
 
   const main5dNarrativeEvidence = useMemo(() => {
@@ -364,7 +427,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
           assignmentRefs: data.assignments,
           singleStudentId: s.id,
           sectionTitleResolver,
-        }),
+        })
       );
     }
     return m;
@@ -373,9 +436,13 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
   const compareFilterSummary = useMemo(() => {
     if (!compareA || !compareB) return exportFilterSummary;
     const a =
-      compareA === 'unplaced' ? t('analytics.unplacedAssignments') : modules.find((m) => m.id === compareA)?.title ?? compareA;
+      compareA === 'unplaced'
+        ? t('analytics.unplacedAssignments')
+        : (modules.find((m) => m.id === compareA)?.title ?? compareA);
     const b =
-      compareB === 'unplaced' ? t('analytics.unplacedAssignments') : modules.find((m) => m.id === compareB)?.title ?? compareB;
+      compareB === 'unplaced'
+        ? t('analytics.unplacedAssignments')
+        : (modules.find((m) => m.id === compareB)?.title ?? compareB);
     return t('analytics.compareNarrativeScope', { a, b, filters: exportFilterSummary });
   }, [compareA, compareB, exportFilterSummary, t, modules]);
 
@@ -383,10 +450,62 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
     if (!data || effectiveAssignmentIds.length === 0) return [];
     const rows: { name: string; scores: FiveDScores }[] = [];
     for (const s of data.students) {
-      const scores = scopedStudentLatestScores(s.snapshots, data.rawSubmissions, effectiveAssignmentIds);
+      const scores = scopedStudentLatestScores(
+        s.snapshots,
+        data.rawSubmissions,
+        effectiveAssignmentIds
+      );
       if (scores) rows.push({ name: s.fullName, scores });
     }
     return rows;
+  }, [data, effectiveAssignmentIds]);
+
+  const lessonBriefPdfStrings = useMemo((): LessonBriefPdfStrings => {
+    return {
+      title: t('analytics.lessonBrief.title'),
+      classroom: t('analytics.lessonBrief.classroom'),
+      structure: t('analytics.lessonBrief.structure'),
+      exportedAt: t('analytics.lessonBrief.exportedAt'),
+      scope: t('analytics.lessonBrief.scope'),
+      kpiSnapshotTitle: t('analytics.lessonBrief.kpiSnapshot'),
+      kpiAssignmentsInScope: t('analytics.lessonBrief.kpiAssignmentsInScope'),
+      enrolledStudents: t('analytics.totalStudents'),
+      totalSubmissions: t('analytics.totalSubmissions'),
+      activeStudents: t('analytics.activeStudents'),
+      completionRate: t('analytics.completionRate'),
+      avgSubmissionsPerStudent: t('analytics.avgSubmissions'),
+      classAverage5DSectionTitle: t('analytics.lessonBrief.classAverage5D'),
+      dimVision: t('submissionDetail.dimensions.vision'),
+      dimValues: t('submissionDetail.dimensions.values'),
+      dimThinking: t('submissionDetail.dimensions.thinking'),
+      dimConnection: t('submissionDetail.dimensions.connection'),
+      dimAction: t('submissionDetail.dimensions.action'),
+      rosterSectionTitle: t('analytics.lessonBrief.rosterTitle'),
+      columnStudent: t('analytics.lessonBrief.columnStudent'),
+      columnProgress: t('analytics.lessonBrief.columnProgress'),
+      footerDisclaimer: t('analytics.lessonBrief.footerDisclaimer'),
+      dash: t('analytics.lessonBrief.dash'),
+    };
+  }, [t]);
+
+  const lessonBriefRosterRows = useMemo(() => {
+    if (!data) return [];
+    const denom = effectiveAssignmentIds.length;
+    const list = [...data.students] as LessonBriefAnalyticsStudent[];
+    list.sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' }));
+    return list.map((st) => ({
+      studentName: st.fullName,
+      completedInScope: countStudentCompletedAssignmentsInScope(
+        st.id,
+        st.submissions ?? [],
+        effectiveAssignmentIds
+      ),
+      assignmentsInScope: denom,
+      scores:
+        denom === 0
+          ? null
+          : scopedStudentLatestScores(st.snapshots, data.rawSubmissions, effectiveAssignmentIds),
+    }));
   }, [data, effectiveAssignmentIds]);
 
   const handleExportCsv = useCallback(() => {
@@ -434,6 +553,59 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
     perStudentForExport,
   ]);
 
+  const handleExportLessonBriefPdf = useCallback(async () => {
+    if (!data || studentCount === 0) return;
+    const structLabel = structureType ? t(`syllabus.${structKey}`) : '—';
+    try {
+      const blob = await buildLessonBriefPdfBlob({
+        strings: lessonBriefPdfStrings,
+        classroomName,
+        exportedAtFormatted: format(new Date(), 'PPpp', {
+          locale: uiLanguage === 'he' ? he : enUS,
+        }),
+        structureLabel: structLabel,
+        filterSummary: exportFilterSummary,
+        scopeAssignmentCount: effectiveAssignmentIds.length,
+        enrolledStudents: studentCount,
+        kpi: {
+          totalSubmissions: displayTotalSubmissions,
+          activeStudents: displayActiveStudents,
+          completionPercent: displayCompletion,
+          avgSubmissions: displayAvgSubmissions,
+        },
+        classAverage5D: classAverage,
+        rosterRows: lessonBriefRosterRows,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lesson-brief-${classroomId.slice(0, 8)}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      toast.error(t('analytics.lessonBrief.exportError'));
+    }
+  }, [
+    classroomName,
+    classroomId,
+    classAverage,
+    data,
+    displayActiveStudents,
+    displayAvgSubmissions,
+    displayCompletion,
+    displayTotalSubmissions,
+    effectiveAssignmentIds,
+    exportFilterSummary,
+    lessonBriefPdfStrings,
+    lessonBriefRosterRows,
+    studentCount,
+    structKey,
+    structureType,
+    t,
+    uiLanguage,
+  ]);
+
   const studentsForCollapsible = useMemo(() => {
     if (selectedModule === 'all') {
       return students;
@@ -445,15 +617,13 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
     const allow = new Set(scopeIds);
     return students.map((s) => {
       const fb = (data?.rawFeedback || []).filter(
-        (f) => f.student_id === s.id && allow.has(f.assignment_id),
+        (f) => f.student_id === s.id && allow.has(f.assignment_id)
       );
       const latest = data
         ? scopedStudentLatestScores(s.snapshots, data.rawSubmissions, scopeIds)
         : null;
       const hardFiltered =
-        s.hardSkills?.filter(
-          (h) => h.assignment_id && allow.has(h.assignment_id as string),
-        ) || [];
+        s.hardSkills?.filter((h) => h.assignment_id && allow.has(h.assignment_id as string)) || [];
       return {
         ...s,
         feedbackCount: fb.length,
@@ -466,7 +636,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -516,11 +686,16 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
         onAssignmentChange={onAssignmentChange}
       />
 
-      <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+      <Card
+        className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
         <CardHeader className="pb-2 space-y-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="min-w-0 flex-1">
-              <CardTitle className={`flex items-center gap-3 text-xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+              <CardTitle
+                className={`flex items-center gap-3 text-xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+              >
                 <div className="p-2.5 bg-primary/10 rounded-lg shrink-0">
                   <Filter className="h-6 w-6 text-primary" />
                 </div>
@@ -542,6 +717,17 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                 >
                   <Download className="h-4 w-4 me-1.5" aria-hidden />
                   {t('analytics.exportCsv')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={() => void handleExportLessonBriefPdf()}
+                  disabled={!data || studentCount === 0}
+                >
+                  <FileText className="h-4 w-4 me-1.5" aria-hidden />
+                  {t('analytics.lessonBrief.exportPdf')}
                 </Button>
                 {onRegenerateComplete ? (
                   <RegenerateScoresButton
@@ -580,16 +766,24 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
       </Card>
 
       {effectiveAssignmentIds.length === 0 && selectedModule !== 'all' ? (
-        <div className="text-center text-muted-foreground text-sm border border-dashed border-border rounded-xl py-8 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div
+          className="text-center text-muted-foreground text-sm border border-dashed border-border rounded-xl py-8 px-4"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           {t('analytics.emptyModuleOrScope')}
         </div>
       ) : null}
 
       {/* Key Metrics Grid */}
       <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card
+          className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle
+              className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <div className="p-1.5 bg-primary/10 rounded-md">
                 <Users className="h-3.5 w-3.5 text-primary" />
               </div>
@@ -601,9 +795,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card
+          className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle
+              className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <div className="p-1.5 bg-primary/10 rounded-md">
                 <BookOpen className="h-3.5 w-3.5 text-primary" />
               </div>
@@ -615,9 +814,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card
+          className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle
+              className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <div className="p-1.5 bg-primary/10 rounded-md">
                 <FileText className="h-3.5 w-3.5 text-primary" />
               </div>
@@ -629,9 +833,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
           </CardContent>
         </Card>
 
-        <Card className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card
+          className="rounded-[28px] border-none shadow-md bg-card/80 backdrop-blur-sm overflow-hidden relative group hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle
+              className={`text-sm font-medium text-muted-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <div className="p-1.5 bg-primary/10 rounded-md">
                 <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
               </div>
@@ -639,9 +848,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-foreground">
-              {displayCompletion}%
-            </div>
+            <div className="text-4xl font-bold text-foreground">{displayCompletion}%</div>
           </CardContent>
         </Card>
       </div>
@@ -656,9 +863,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
       </div>
 
       {canCompareSections ? (
-        <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card
+          className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           <CardHeader className="border-b border-border pb-4">
-            <CardTitle className={`flex items-center gap-3 text-lg font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+            <CardTitle
+              className={`flex items-center gap-3 text-lg font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                 <GitCompare className="h-5 w-5 text-primary" />
               </div>
@@ -671,7 +883,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
           <CardContent className="space-y-6 pt-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
               <div className="space-y-2 sm:min-w-[200px]">
-                <span className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}>
+                <span
+                  className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}
+                >
                   {t('analytics.compareModuleA')}
                 </span>
                 <Select
@@ -680,7 +894,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                 >
                   <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectValue placeholder={t('analytics.compareSelectSection')}>
-                      {compareA ? labelForCompareModule(compareA) : t('analytics.compareSelectSection')}
+                      {compareA
+                        ? labelForCompareModule(compareA)
+                        : t('analytics.compareSelectSection')}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -697,7 +913,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                 </Select>
               </div>
               <div className="space-y-2 sm:min-w-[200px]">
-                <span className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}>
+                <span
+                  className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}
+                >
                   {t('analytics.compareModuleB')}
                 </span>
                 <Select
@@ -706,7 +924,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                 >
                   <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectValue placeholder={t('analytics.compareSelectSection')}>
-                      {compareB ? labelForCompareModule(compareB) : t('analytics.compareSelectSection')}
+                      {compareB
+                        ? labelForCompareModule(compareB)
+                        : t('analytics.compareSelectSection')}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -725,11 +945,15 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
             </div>
 
             {compareA && compareB && compareA === compareB ? (
-              <p className="text-sm text-amber-700 dark:text-amber-500">{t('analytics.compareSameSection')}</p>
+              <p className="text-sm text-amber-700 dark:text-amber-500">
+                {t('analytics.compareSameSection')}
+              </p>
             ) : null}
 
             {compareA && compareB && compareA !== compareB && (!compareAvgA || !compareAvgB) ? (
-              <p className="text-sm text-muted-foreground">{t('classroomAnalytics.noStudentDataInScope')}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('classroomAnalytics.noStudentDataInScope')}
+              </p>
             ) : null}
 
             {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
@@ -740,33 +964,45 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                       <TableRow>
                         <TableHead className="w-[28%]">{t('analytics.compareDimension')}</TableHead>
                         <TableHead className="text-center">
-                          {compareA === 'unplaced' ? t('analytics.unplacedAssignments') : modules.find((m) => m.id === compareA)?.title ?? 'A'}
+                          {compareA === 'unplaced'
+                            ? t('analytics.unplacedAssignments')
+                            : (modules.find((m) => m.id === compareA)?.title ?? 'A')}
                         </TableHead>
                         <TableHead className="text-center">
-                          {compareB === 'unplaced' ? t('analytics.unplacedAssignments') : modules.find((m) => m.id === compareB)?.title ?? 'B'}
+                          {compareB === 'unplaced'
+                            ? t('analytics.unplacedAssignments')
+                            : (modules.find((m) => m.id === compareB)?.title ?? 'B')}
                         </TableHead>
-                        <TableHead className="text-center w-[20%]">{t('analytics.compareDelta')}</TableHead>
+                        <TableHead className="text-center w-[20%]">
+                          {t('analytics.compareDelta')}
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(['vision', 'values', 'thinking', 'connection', 'action'] as const).map((dim) => {
-                        const a = compareAvgA[dim];
-                        const b = compareAvgB[dim];
-                        const d = b - a;
-                        return (
-                          <TableRow key={dim}>
-                            <TableCell className="font-medium">
-                              {t(`submissionDetail.dimensions.${dim}`)}
-                            </TableCell>
-                            <TableCell className="text-center tabular-nums">{a.toFixed(2)}</TableCell>
-                            <TableCell className="text-center tabular-nums">{b.toFixed(2)}</TableCell>
-                            <TableCell className="text-center tabular-nums text-muted-foreground">
-                              {d >= 0 ? '+' : ''}
-                              {d.toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {(['vision', 'values', 'thinking', 'connection', 'action'] as const).map(
+                        (dim) => {
+                          const a = compareAvgA[dim];
+                          const b = compareAvgB[dim];
+                          const d = b - a;
+                          return (
+                            <TableRow key={dim}>
+                              <TableCell className="font-medium">
+                                {t(`submissionDetail.dimensions.${dim}`)}
+                              </TableCell>
+                              <TableCell className="text-center tabular-nums">
+                                {a.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-center tabular-nums">
+                                {b.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-center tabular-nums text-muted-foreground">
+                                {d >= 0 ? '+' : ''}
+                                {d.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -817,22 +1053,32 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {classAverage && effectiveAssignmentIds.length > 0 && (
-            <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+            <Card
+              className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
               <CardHeader className="border-b border-border pb-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className={`text-xl font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <CardTitle
+                      className={`text-xl font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       <div className="p-2 bg-primary/10 rounded-xl">
                         <BarChart3 className="h-5 w-5 text-primary" />
                       </div>
-                      {selectedStudent === 'all' ? t('analytics.classAverage') : allStudents.find((s) => s.id === selectedStudent)?.name}
+                      {selectedStudent === 'all'
+                        ? t('analytics.classAverage')
+                        : allStudents.find((s) => s.id === selectedStudent)?.name}
                     </CardTitle>
                     <CardDescription className={`mt-1 ms-11 ${isRTL ? 'text-right' : 'text-left'}`}>
                       {chartSubtext}
                     </CardDescription>
                   </div>
                   {selectedStudent === 'all' && (
-                    <Badge variant="secondary" className="rounded-full px-4 py-1 bg-primary/10 text-primary">
+                    <Badge
+                      variant="secondary"
+                      className="rounded-full px-4 py-1 bg-primary/10 text-primary"
+                    >
                       {t('classroomAnalytics.classOverview')}
                     </Badge>
                   )}
@@ -868,17 +1114,26 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                 title={t('cra.title')}
                 description={
                   selectedStudent !== 'all'
-                    ? t('classroomAnalytics.hardSkillsFor', { student: allStudents.find((s) => s.id === selectedStudent)?.name })
-                    : t('classroomAnalytics.hardSkillsAssignmentFor', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })
+                    ? t('classroomAnalytics.hardSkillsFor', {
+                        student: allStudents.find((s) => s.id === selectedStudent)?.name,
+                      })
+                    : t('classroomAnalytics.hardSkillsAssignmentFor', {
+                        assignment: assignments.find((a) => a.id === selectedAssignment)?.title,
+                      })
                 }
               />
             </div>
           )}
 
           {selectedStudent === 'all' && selectedAssignment === 'all' && (
-            <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+            <Card
+              className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
               <CardHeader className="border-b border-border pb-6">
-                <CardTitle className={`text-xl font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <CardTitle
+                  className={`text-xl font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                >
                   <div className="p-2 bg-primary/10 rounded-xl">
                     <Users className="h-5 w-5 text-primary" />
                   </div>
@@ -890,8 +1145,13 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {studentsForCollapsible.filter((s) => s.latestScores).length === 0 ? (
-                  <div className="text-center py-12 bg-muted/30 rounded-xl border border-dashed border-border" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <p className={`text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>{t('classroomAnalytics.noStudentDataInScope')}</p>
+                  <div
+                    className="text-center py-12 bg-muted/30 rounded-xl border border-dashed border-border"
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
+                    <p className={`text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t('classroomAnalytics.noStudentDataInScope')}
+                    </p>
                   </div>
                 ) : (
                   studentsForCollapsible
@@ -919,7 +1179,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                                 {student.fullName.charAt(0)}
                               </div>
-                              <span className={`font-semibold text-foreground text-base ${isRTL ? 'text-right' : 'text-left'}`}>
+                              <span
+                                className={`font-semibold text-foreground text-base ${isRTL ? 'text-right' : 'text-left'}`}
+                              >
                                 {student.fullName}
                               </span>
                             </div>
@@ -933,7 +1195,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                         </CollapsibleTrigger>
                         <CollapsibleContent className="px-5 pb-5 space-y-6 bg-card/50 border-t border-border">
                           <div className="pt-4">
-                            <h4 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            <h4
+                              className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                            >
                               <Sparkles className="h-3 w-3" />
                               {t('classroomAnalytics.average5DProfile')}
                             </h4>
@@ -941,14 +1205,24 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                               classroomId={classroomId}
                               studentId={student.id}
                               studentName={student.fullName}
-                              scores={student.latestScores! as FiveDScores}
+                              scores={
+                                (student.latestScores ?? {
+                                  vision: DEFAULT_SCORE,
+                                  values: DEFAULT_SCORE,
+                                  thinking: DEFAULT_SCORE,
+                                  connection: DEFAULT_SCORE,
+                                  action: DEFAULT_SCORE,
+                                }) as FiveDScores
+                              }
                               filterSummary={exportFilterSummary}
                               language={analyticsLanguage}
                               isOpen={student5dNarrativeOpen.has(student.id)}
                               isRTL={isRTL}
                               enabled
                               evidenceText={studentList5dEvidenceById.get(student.id)?.evidenceText}
-                              evidenceSourceCount={studentList5dEvidenceById.get(student.id)?.sourceCount}
+                              evidenceSourceCount={
+                                studentList5dEvidenceById.get(student.id)?.sourceCount
+                              }
                             />
                           </div>
                           <div className="border-t border-border pt-6">
@@ -959,7 +1233,7 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                               classroomAssignmentIdFilter={
                                 selectedModule === 'all' ? null : moduleScopeIds
                               }
-                              initialData={student.hardSkills as any}
+                              initialData={student.hardSkills as HardSkillAssessmentWithStudent[]}
                               title={t('cra.title')}
                               description={t('classroomAnalytics.allHardSkills')}
                             />
@@ -973,28 +1247,43 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
           )}
 
           {showAllStudentsCraList && (
-            <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+            <Card
+              className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
               <CardHeader className="border-b border-border pb-6">
-                <CardTitle className={`text-xl font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <CardTitle
+                  className={`text-xl font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                >
                   <div className="p-2 bg-primary/10 rounded-xl">
                     <Target className="h-5 w-5 text-primary" />
                   </div>
                   {t('cra.title')}
                 </CardTitle>
                 <CardDescription className={`ms-11 ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('classroomAnalytics.hardSkillsAllStudents', { assignment: assignments.find((a) => a.id === selectedAssignment)?.title })}
+                  {t('classroomAnalytics.hardSkillsAllStudents', {
+                    assignment: assignments.find((a) => a.id === selectedAssignment)?.title,
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {allStudents.map((student) => (
-                  <Collapsible key={student.id} className="border border-border rounded-lg overflow-hidden bg-muted/20">
+                  <Collapsible
+                    key={student.id}
+                    className="border border-border rounded-lg overflow-hidden bg-muted/20"
+                  >
                     <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between p-5 h-auto hover:bg-muted/40">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-between p-5 h-auto hover:bg-muted/40"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                             {student.name.charAt(0)}
                           </div>
-                          <span className={`font-semibold text-foreground text-base ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <span
+                            className={`font-semibold text-foreground text-base ${isRTL ? 'text-right' : 'text-left'}`}
+                          >
                             {student.name}
                           </span>
                         </div>
@@ -1006,7 +1295,12 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                         studentId={student.id}
                         assignmentId={selectedAssignment}
                         classroomId={classroomId}
-                        initialData={(data?.rawHardSkills?.filter(h => h.student_id === student.id && h.assignment_id === selectedAssignment) || []) as any}
+                        initialData={
+                          (data?.rawHardSkills?.filter(
+                            (h) =>
+                              h.student_id === student.id && h.assignment_id === selectedAssignment
+                          ) ?? []) as HardSkillAssessmentWithStudent[]
+                        }
                         title=""
                         description=""
                       />
@@ -1019,9 +1313,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
         </div>
 
         <div className="space-y-6">
-          <Card className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden sticky top-6" dir={isRTL ? 'rtl' : 'ltr'}>
+          <Card
+            className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden sticky top-6"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
             <CardHeader className="bg-transparent border-b border-border pb-6">
-              <CardTitle className={`text-lg font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <CardTitle
+                className={`text-lg font-bold text-foreground flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+              >
                 <div className="p-2 bg-primary/10 rounded-xl">
                   <Trophy className="h-5 w-5 text-primary" />
                 </div>
@@ -1032,11 +1331,18 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
               <div className="space-y-6">
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
                   <div>
-                    <p className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <p
+                      className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       {t('analytics.activeStudents')}
                     </p>
-                    <p className={`text-2xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
-                      {displayActiveStudents} <span className="text-sm text-muted-foreground font-normal">/ {studentCount}</span>
+                    <p
+                      className={`text-2xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
+                      {displayActiveStudents}{' '}
+                      <span className="text-sm text-muted-foreground font-normal">
+                        / {studentCount}
+                      </span>
                     </p>
                   </div>
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -1046,10 +1352,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
 
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
                   <div>
-                    <p className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <p
+                      className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       {t('analytics.avgSubmissions')}
                     </p>
-                    <p className={`text-2xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <p
+                      className={`text-2xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       {displayAvgSubmissions}
                     </p>
                   </div>
@@ -1060,10 +1370,14 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
 
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
                   <div>
-                    <p className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <p
+                      className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       {t('analytics.engagementRate')}
                     </p>
-                    <p className={`text-2xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <p
+                      className={`text-2xl font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       {displayEngagement}%
                     </p>
                   </div>
@@ -1075,7 +1389,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
 
               {classAverage && studentsForCollapsible.filter((s) => s.latestScores).length > 0 && (
                 <div className="pt-6 border-t border-border">
-                  <h4 className={`text-sm font-bold text-foreground mb-4 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <h4
+                    className={`text-sm font-bold text-foreground mb-4 flex items-center gap-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
                     <Sparkles className="h-4 w-4 text-primary" />
                     {t('analytics.average5D')}
                   </h4>
@@ -1084,7 +1400,9 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
                       const numeric = Number(score);
                       return (
                         <div key={dimension} className="flex items-center justify-between">
-                          <span className={`text-sm font-medium text-muted-foreground capitalize ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <span
+                            className={`text-sm font-medium text-muted-foreground capitalize ${isRTL ? 'text-right' : 'text-left'}`}
+                          >
                             {t(`submissionDetail.dimensions.${dimension}`)}
                           </span>
                           <div className="flex items-center gap-3">
@@ -1110,4 +1428,4 @@ export function ClassroomAnalytics({ classroomId, onRegenerateComplete }: Classr
       </div>
     </div>
   );
-}
+};

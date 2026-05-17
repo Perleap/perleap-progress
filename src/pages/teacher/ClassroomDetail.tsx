@@ -703,7 +703,7 @@ const ClassroomDetail = () => {
                 {t('classroomDetail.analytics')}
               </h2>
             </div>
-            <ClassroomAnalytics classroomId={id!} onRegenerateComplete={refetchClassroom} />
+            <ClassroomAnalytics classroomId={id!} classroomName={classroom?.name} onRegenerateComplete={refetchClassroom} />
           </div>
         )}
       </div>
