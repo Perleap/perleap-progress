@@ -1756,7 +1756,13 @@
       "columnStudent": "Student",
       "columnProgress": "Completed / in scope",
       "footerDisclaimer": "This PDF shows student-performance data from Perleap as of the generation time above. Handle it like other confidential grade information.",
-      "dash": "—"
+      "dash": "—",
+      "narrativesSectionTitle": "At a glance",
+      "studentSummaryLabel": "Summary",
+      "preparingSummaries": "Preparing student summaries…",
+      "narrativeNoScores": "No evaluated work in this filter for this learner.",
+      "narrativeEmpty": "No summary returned for this filter.",
+      "narrativeInvokeError": "Could not generate a summary right now. Try again in a moment."
     }
   },
   "nuance": {

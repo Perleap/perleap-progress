@@ -73,6 +73,8 @@ interface AssignmentChatInterfaceProps {
   submissionId: string;
   /** Student `user_id` for this submission (required so admins opening the page still chat as the learner). */
   studentUserId: string;
+  /** Optional; ordered prior submission ids (whole-unit chain); server validates and merges excerpts. */
+  priorSubmissionIdsForContext?: string[];
   onComplete: (payload: AssignmentChatCompletePayload) => void | Promise<void>;
   nuanceTracking?: NuanceTrackingCallbacks;
   /** primary = chat completes the assignment; companion = Q&A alongside another task UI */
@@ -110,11 +112,12 @@ const cleanTextForTTS = (text: string) => {
 
 export function AssignmentChatInterface({
   assignmentId,
-  assignmentTitle,
-  teacherName,
+  assignmentTitle: _assignmentTitle,
+  teacherName: _teacherName,
   assignmentInstructions,
   submissionId,
   studentUserId,
+  priorSubmissionIdsForContext,
   onComplete,
   nuanceTracking,
   variant = 'primary',
@@ -233,6 +236,7 @@ export function AssignmentChatInterface({
     assignmentInstructions,
     studentId: studentUserId,
     assignmentId,
+    priorSubmissionIds: priorSubmissionIdsForContext,
     companionMode: variant === 'companion',
     debugChat: chatDebugEnabled,
   });
@@ -1070,16 +1074,9 @@ export function AssignmentChatInterface({
             </CollapsibleContent>
           </Collapsible>
         ) : (
-          <>
-            <CardHeader className="px-4 py-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-medium">{`${teacherName} - ${assignmentTitle}`}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col space-y-4 pt-4">
-              {chatPanelBody}
-            </CardContent>
-          </>
+          <CardContent className="flex min-h-0 flex-1 flex-col space-y-4 pt-6">
+            {chatPanelBody}
+          </CardContent>
         )}
       </Card>
 

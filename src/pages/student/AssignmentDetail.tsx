@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { generateFeedback, completeSubmission, startNewSubmissionAttempt } from '@/services/submissionService';
 import { ensureStudentFacingTask } from '@/services/assignmentService';
@@ -30,7 +31,7 @@ import {
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
 import type { AssignmentRow } from '@/lib/moduleFlow';
-import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -47,6 +48,17 @@ import type { AssignmentCompletionTone } from '@/types/submission';
 import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import { cn } from '@/lib/utils';
 import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
+import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
+import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
+import {
+  pickEligiblePriorSubmissionIds,
+  readAssignmentContextCarryover,
+  writeAssignmentContextCarryover,
+} from '@/lib/assignmentContextCarryover';
+import { SUBMISSION_STATUS } from '@/config/constants';
+import type { DbAssignmentType } from '@/types/models';
 
 const AssignmentDetail = () => {
   const { t } = useTranslation();
@@ -61,6 +73,9 @@ const AssignmentDetail = () => {
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
+  const [referenceMaterialsOpen, setReferenceMaterialsOpen] = useState(false);
+  const [assignmentTypeIntroOpen, setAssignmentTypeIntroOpen] = useState(false);
+  const [assignmentIntroStorageTick, setAssignmentIntroStorageTick] = useState(0);
 
   useEffect(() => {
     if (isTeacherTry || !assignmentId || !user?.id) return;
@@ -202,7 +217,7 @@ const AssignmentDetail = () => {
   ]);
 
   const navigateToFlowTarget = useCallback(
-    (target: FlowStepTarget) => {
+    (target: FlowStepTarget, opts?: { priorSubmissionId?: string }) => {
       if (!classroomId) return;
       if (isTeacherTry && teacherRouteClassroomId) {
         if (target.kind === 'resource') {
@@ -221,8 +236,13 @@ const AssignmentDetail = () => {
           state: { returnClassroomSection: 'curriculum' },
         });
       } else {
+        const priorSubmissionId =
+          target.kind === 'assignment' ? opts?.priorSubmissionId : undefined;
         navigate(`/student/assignment/${target.id}`, {
-          state: { returnClassroomSection: 'curriculum' } satisfies AssignmentLinkState,
+          state: {
+            returnClassroomSection: 'curriculum',
+            ...(priorSubmissionId ? { priorSubmissionId } : {}),
+          } satisfies AssignmentLinkState,
         });
       }
     },
@@ -312,6 +332,95 @@ const AssignmentDetail = () => {
   const canRetry = submissionContext?.canRetry ?? false;
   const attemptMode = (assignment as { attempt_mode?: string } | undefined)?.attempt_mode ?? 'single';
 
+  const chatPriorSubmissionIds = useMemo(() => {
+    if (isTeacherTry || !user?.id || !assignmentData?.id || !assignmentData.classroom_id) {
+      return [];
+    }
+    const sid = assignmentData.submission?.id;
+    const fromNav = linkState?.priorSubmissionId?.trim();
+    const stored = readAssignmentContextCarryover();
+    const fromSession = pickEligiblePriorSubmissionIds(
+      stored,
+      user.id,
+      assignmentData.classroom_id,
+      assignmentData.id,
+    );
+    const inSession = new Set(fromSession);
+    const ids = [...fromSession];
+    if (fromNav && (!sid || fromNav !== sid) && !inSession.has(fromNav)) {
+      ids.push(fromNav);
+    }
+    return ids;
+  }, [
+    isTeacherTry,
+    user?.id,
+    assignmentData?.id,
+    assignmentData?.classroom_id,
+    assignmentData?.submission?.id,
+    linkState?.priorSubmissionId,
+  ]);
+
+  const seenAssignmentIntroTypes = useMemo(() => {
+    void assignmentIntroStorageTick;
+    return user?.id ? getSeenAssignmentTypes(user.id) : new Set<DbAssignmentType>();
+  }, [user?.id, assignmentIntroStorageTick]);
+
+  const shouldShowAssignmentTypeIntro = Boolean(
+    !isTeacherTry &&
+      user?.id &&
+      assignment &&
+      submission &&
+      !feedback &&
+      submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
+      !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType),
+  );
+
+  useEffect(() => {
+    if (shouldShowAssignmentTypeIntro) {
+      setAssignmentTypeIntroOpen(true);
+    } else {
+      setAssignmentTypeIntroOpen(false);
+    }
+  }, [shouldShowAssignmentTypeIntro, assignment?.id]);
+
+  const handleAssignmentTypeIntroOpenChange = useCallback(
+    (open: boolean) => {
+      setAssignmentTypeIntroOpen(open);
+      const eligible =
+        user?.id &&
+        assignment &&
+        !isTeacherTry &&
+        submission?.status === SUBMISSION_STATUS.IN_PROGRESS &&
+        !feedback &&
+        !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType);
+      if (!open && eligible) {
+        markAssignmentTypeIntroSeen(user.id, assignment.type as DbAssignmentType);
+        setAssignmentIntroStorageTick((n) => n + 1);
+      }
+    },
+    [user?.id, assignment, isTeacherTry, submission?.status, feedback, seenAssignmentIntroTypes],
+  );
+
+  const syllabusUnitEyebrow = useMemo(() => {
+    const sectionId = assignment?.syllabus_section_id;
+    const sections = syllabusForNav?.sections;
+    if (!sectionId || !sections?.length) return null;
+    const ordered = [...sections].sort((a, b) => a.order_index - b.order_index);
+    const idx = ordered.findIndex((s) => s.id === sectionId);
+    if (idx < 0) return null;
+    const sectionTitle = ordered[idx]?.title?.trim();
+    if (!sectionTitle) return null;
+    return { unitNumber: idx + 1, sectionTitle };
+  }, [assignment?.syllabus_section_id, syllabusForNav?.sections]);
+
+  const unitOutlineMaterials = useMemo(() => {
+    const sid = assignmentData?.syllabus_section_id;
+    if (!sid || !syllabusForNav?.section_resources) return [];
+    return filterOutlineMaterialResources(syllabusForNav.section_resources[sid], {
+      excludeDrafts: true,
+    });
+  }, [assignmentData?.syllabus_section_id, syllabusForNav?.section_resources]);
+
   const nuanceTracking = useNuanceTracking({
     studentId: user?.id,
     assignmentId: assignmentId || undefined,
@@ -321,13 +430,35 @@ const AssignmentDetail = () => {
 
   const handleAssignmentCompleted = useCallback(
     async (_tone?: AssignmentCompletionTone) => {
+      if (
+        !isTeacherTry &&
+        user?.id &&
+        assignmentData?.id &&
+        assignmentData.classroom_id &&
+        assignmentData.submission?.id
+      ) {
+        writeAssignmentContextCarryover({
+          priorSubmissionId: assignmentData.submission.id,
+          priorAssignmentId: assignmentData.id,
+          classroomId: assignmentData.classroom_id,
+          studentId: user.id,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: assignmentKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
       invalidateStudentTimelineCurriculaQueries(queryClient);
       await refetch();
     },
-    [queryClient, refetch],
+    [
+      queryClient,
+      refetch,
+      isTeacherTry,
+      user?.id,
+      assignmentData?.id,
+      assignmentData?.classroom_id,
+      assignmentData?.submission?.id,
+    ],
   );
 
   const handleStartNewAttempt = async () => {
@@ -492,6 +623,14 @@ const AssignmentDetail = () => {
       hideGlobalNav={!isTeacherTry}
     >
       <div className="container py-4 px-0 max-w-4xl">
+        {assignment ? (
+          <AssignmentTypeIntroDialog
+            open={assignmentTypeIntroOpen}
+            onOpenChange={handleAssignmentTypeIntroOpenChange}
+            assignmentType={assignment.type as DbAssignmentType}
+            assignmentTitle={assignment.title}
+          />
+        ) : null}
         <div className="space-y-6 pb-8">
           <div className={cn('flex shrink-0 flex-wrap items-center gap-3', isRTL && 'flex-row-reverse')}>
             <Button
@@ -513,37 +652,41 @@ const AssignmentDetail = () => {
               </Badge>
             ) : null}
           </div>
-          <Card>
-            <CardHeader>
-              <div className="space-y-1">
-                <CardTitle>
-                  {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
-                </CardTitle>
-                <CardDescription className="flex flex-col gap-1 mt-2">
-                  {assignment.due_at && (
-                    <span>
-                      {`${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
-                    </span>
-                  )}
-                    {attemptMode === 'single' && (
-                      <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerSingle')}</span>
-                    )}
-                    {attemptMode === 'multiple_until_due' && (
-                      <span className="text-xs text-muted-foreground">
-                        {assignment.due_at
-                          ? t('assignmentDetail.attemptBannerUntil', {
-                              date: new Date(assignment.due_at).toLocaleString(),
-                            })
-                          : t('assignmentDetail.attemptBannerSingle')}
-                      </span>
-                    )}
-                    {attemptMode === 'multiple_unlimited' && (
-                      <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerUnlimited')}</span>
-                    )}
-                  </CardDescription>
-                </div>
-            </CardHeader>
-          </Card>
+          <div className="space-y-2 text-start" dir={isRTL ? 'rtl' : 'ltr'}>
+            {syllabusUnitEyebrow ? (
+              <p className="text-sm font-medium text-muted-foreground">
+                {t('assignmentDetail.unitSectionLabel', {
+                  n: syllabusUnitEyebrow.unitNumber,
+                  title: syllabusUnitEyebrow.sectionTitle,
+                })}
+              </p>
+            ) : null}
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              {assignment.title?.trim() || t('assignmentDetail.untitledAssignment')}
+            </h1>
+            <div className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+              {assignment.due_at && (
+                <span>
+                  {`${t('assignmentDetail.dueDate')}: ${new Date(assignment.due_at).toLocaleString()}`}
+                </span>
+              )}
+              {attemptMode === 'single' && (
+                <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerSingle')}</span>
+              )}
+              {attemptMode === 'multiple_until_due' && (
+                <span className="text-xs text-muted-foreground">
+                  {assignment.due_at
+                    ? t('assignmentDetail.attemptBannerUntil', {
+                        date: new Date(assignment.due_at).toLocaleString(),
+                      })
+                    : t('assignmentDetail.attemptBannerSingle')}
+                </span>
+              )}
+              {attemptMode === 'multiple_unlimited' && (
+                <span className="text-xs text-muted-foreground">{t('assignmentDetail.attemptBannerUnlimited')}</span>
+              )}
+            </div>
+          </div>
 
           <Card className="border-border/80 bg-muted/20">
             <CardHeader className="py-3">
@@ -566,6 +709,42 @@ const AssignmentDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {unitOutlineMaterials.length > 0 ? (
+            <Collapsible
+              open={referenceMaterialsOpen}
+              onOpenChange={setReferenceMaterialsOpen}
+              className="overflow-hidden rounded-lg border border-border/60 bg-muted/5"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
+              <CollapsibleTrigger
+                className={cn(
+                  'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
+                  isRTL ? 'text-end' : 'text-start',
+                )}
+              >
+                <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                  {t('assignmentDetail.referenceMaterials', { count: unitOutlineMaterials.length })}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                    referenceMaterialsOpen && 'rotate-180',
+                  )}
+                  aria-hidden
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-1">
+                <ResourceViewer
+                  resources={unitOutlineMaterials}
+                  isRTL={isRTL}
+                  compact
+                  compactVariant="list"
+                  hideListHeader
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          ) : null}
 
           {!feedback && !submission && (
             <Card className="border-dashed border-border/80 bg-muted/10">
@@ -612,7 +791,14 @@ const AssignmentDetail = () => {
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.nextIn!)}
+                      onClick={() =>
+                        navigateToFlowTarget(assignmentFlowContinue.nextIn!, {
+                          priorSubmissionId:
+                            assignmentFlowContinue.nextIn!.kind === 'assignment'
+                              ? submission.id
+                              : undefined,
+                        })
+                      }
                     >
                       {assignmentFlowContinue.nextIn.kind === 'assignment'
                         ? t('assignmentDetail.continue')
@@ -625,7 +811,14 @@ const AssignmentDetail = () => {
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.firstNext!)}
+                      onClick={() =>
+                        navigateToFlowTarget(assignmentFlowContinue.firstNext!, {
+                          priorSubmissionId:
+                            assignmentFlowContinue.firstNext!.kind === 'assignment'
+                              ? submission.id
+                              : undefined,
+                        })
+                      }
                     >
                       {t('assignmentDetail.continueNextModule')}
                       <ChevronRight className="h-4 w-4" />
@@ -682,6 +875,7 @@ const AssignmentDetail = () => {
                 assignmentInstructions={assignment.instructions}
                 submissionId={submission.id}
                 studentUserId={submission.student_id}
+                priorSubmissionIdsForContext={isTeacherTry ? undefined : chatPriorSubmissionIds}
                 onComplete={() => {}}
                 nuanceTracking={nuanceTracking}
                 variant="companion"
@@ -769,6 +963,7 @@ const AssignmentDetail = () => {
                     assignmentInstructions={assignment.instructions}
                     submissionId={submission.id}
                     studentUserId={submission.student_id}
+                    priorSubmissionIdsForContext={isTeacherTry ? undefined : chatPriorSubmissionIds}
                     onComplete={handleActivityComplete}
                     nuanceTracking={nuanceTracking}
                     variant="primary"
@@ -824,7 +1019,14 @@ const AssignmentDetail = () => {
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.nextIn!)}
+                      onClick={() =>
+                        navigateToFlowTarget(assignmentFlowContinue.nextIn!, {
+                          priorSubmissionId:
+                            assignmentFlowContinue.nextIn!.kind === 'assignment'
+                              ? submission.id
+                              : undefined,
+                        })
+                      }
                     >
                       {assignmentFlowContinue.nextIn.kind === 'assignment'
                         ? t('assignmentDetail.continue')
@@ -837,7 +1039,14 @@ const AssignmentDetail = () => {
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() => navigateToFlowTarget(assignmentFlowContinue.firstNext!)}
+                      onClick={() =>
+                        navigateToFlowTarget(assignmentFlowContinue.firstNext!, {
+                          priorSubmissionId:
+                            assignmentFlowContinue.firstNext!.kind === 'assignment'
+                              ? submission.id
+                              : undefined,
+                        })
+                      }
                     >
                       {t('assignmentDetail.continueNextModule')}
                       <ChevronRight className="h-4 w-4" />

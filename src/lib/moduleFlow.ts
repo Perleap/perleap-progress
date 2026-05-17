@@ -19,6 +19,42 @@ export function isActivityCenterResource(resource: SectionResource): boolean {
   return isActivityCenterResourceType(resource.resource_type);
 }
 
+/** Outline-only materials (files, links, etc.) — not module-flow steps; shown at unit level. */
+export function isOutlineMaterialResourceType(resourceType: ResourceType): boolean {
+  return (
+    resourceType === 'file' ||
+    resourceType === 'link' ||
+    resourceType === 'document' ||
+    resourceType === 'image'
+  );
+}
+
+export function isOutlineMaterialResource(resource: SectionResource): boolean {
+  return isOutlineMaterialResourceType(resource.resource_type);
+}
+
+export type OutlineMaterialFilterOptions = {
+  /** Omit `activity_list` rows with status draft (student-facing surfaces). */
+  excludeDrafts?: boolean;
+  /** Drop this id after filtering (e.g. current activity row). */
+  excludeResourceId?: string | null;
+};
+
+export function filterOutlineMaterialResources(
+  resources: SectionResource[] | undefined | null,
+  options?: OutlineMaterialFilterOptions,
+): SectionResource[] {
+  let out = (resources ?? []).filter((r) => isOutlineMaterialResource(r));
+  if (options?.excludeDrafts) {
+    out = out.filter((r) => r.status !== 'draft');
+  }
+  const ex = options?.excludeResourceId;
+  if (ex) {
+    out = out.filter((r) => r.id !== ex);
+  }
+  return [...out].sort((a, b) => a.order_index - b.order_index);
+}
+
 /** Assignment steps plus resource steps whose linked material is lesson/text/video (not outline-only files/links). */
 export function filterActivityCenterModuleFlowSteps(
   steps: ModuleFlowStep[],

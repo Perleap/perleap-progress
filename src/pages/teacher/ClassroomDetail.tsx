@@ -45,7 +45,7 @@ import { ClassroomLayout } from '@/components/layouts';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
-import { CourseOutlineSection } from '@/components/features/syllabus';
+import { CourseOutlineSection, CoursePackageCard } from '@/components/features/syllabus';
 import {
   classroomKeys,
   useClassroom,
@@ -314,6 +314,12 @@ const ClassroomDetail = () => {
                   </p>
                 </CardContent>
               </Card>
+
+              <CoursePackageCard
+                classroomId={id!}
+                classroomName={classroom.name}
+                isRTL={isRTL}
+              />
 
               {/* Course info + About (course description): side-by-side on large screens, stacked on small; rows grow with content */}
               {(classroom.course_title || classroom.resources) && (
@@ -703,7 +709,11 @@ const ClassroomDetail = () => {
                 {t('classroomDetail.analytics')}
               </h2>
             </div>
-            <ClassroomAnalytics classroomId={id!} classroomName={classroom?.name} onRegenerateComplete={refetchClassroom} />
+            <ClassroomAnalytics
+              classroomId={id!}
+              classroomName={classroom?.name}
+              onRegenerateComplete={refetchClassroom}
+            />
           </div>
         )}
       </div>

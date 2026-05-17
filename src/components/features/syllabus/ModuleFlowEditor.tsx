@@ -94,13 +94,24 @@ function isSameStepMultiset(a: LocalStep[], b: LocalStep[]): boolean {
   return [...counts.values()].every((n) => n === 0);
 }
 
-/** Merge server-derived `merged` with optimistic `prev` without replacing a valid local order when multisets match. */
-function computeHydratedSteps(prev: LocalStep[], merged: LocalStep[]): LocalStep[] {
+/**
+ * Merge server-derived `merged` with optimistic `prev`.
+ * When the step multiset matches but order differs, prefer `merged` unless a flow replace is in flight
+ * (keeps drag-and-drop optimistic order until persist completes).
+ */
+function computeHydratedSteps(
+  prev: LocalStep[],
+  merged: LocalStep[],
+  replacePending: boolean,
+): LocalStep[] {
   if (prev.length === 0) return merged;
   const prevKeys = new Set(prev.map(stepSortId));
   const additions = merged.filter((s) => !prevKeys.has(stepSortId(s)));
   if (additions.length > 0) return [...prev, ...additions];
-  if (isSameStepMultiset(prev, merged)) return prev;
+  if (isSameStepMultiset(prev, merged)) {
+    if (!replacePending && !moduleFlowLocalStepsEqual(prev, merged)) return merged;
+    return prev;
+  }
   return moduleFlowLocalStepsEqual(prev, merged) ? prev : merged;
 }
 
@@ -231,7 +242,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       /** Same orphan filtering as teacher Curriculum; no student `appendMissing*` merge. */
       const merged = resolveTeacherCurriculumModuleFlow(sectionId, resources, assignments, persistedForResolve);
       const prevSnap = localStepsRef.current;
-      const next = computeHydratedSteps(prevSnap, merged);
+      const next = computeHydratedSteps(prevSnap, merged, replaceMutation.isPending);
       const prevKeys = new Set(prevSnap.map(stepSortId));
       const additions = merged.filter((s) => !prevKeys.has(stepSortId(s)));
 

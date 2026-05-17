@@ -418,3 +418,23 @@ export async function generateEnhancedChatSystemPrompt(
 
   return base + typographyNote;
 }
+
+/**
+ * Bilingual block appended to Perleap chat system prompt when carrying over prior assignment context.
+ */
+export function buildPriorAssignmentContextSection(language: string, excerpt: string): string {
+  const text = excerpt.trim();
+  if (!text) return '';
+
+  const header =
+    language === 'he'
+      ? 'הקשר מפעילויות קודמות שאותו תלמיד השלים ביחידה הזו (אותו כיתת קורס ואותו פרק בסילבוס):'
+      : 'Context from earlier activities this student completed in this unit (same classroom and syllabus section):';
+
+  const rules =
+    language === 'he'
+      ? 'בהנחיות המטלה הנוכחית — המשיכו לעקוב אחרי משימות המטלה הנוכחית. אם התלמיד שואל במפורש מה בחר או מה כתב בפעילות קודמת (לרבות בחידון רב־ברירה), ענו מהשורות בקטע למטה; אל תאמרו שאין לכם גישה. אחרי תשובה קצרה על העבר, חזרו בעדינות למטלה הנוכחית אם צריך.'
+      : 'For the CURRENT assignment, keep guiding its tasks. If the student explicitly asks what they chose or wrote on an earlier activity (including multiple choice), answer accurately from the excerpt below—do not claim you lack access. After briefly answering, gently return to the current task if needed.';
+
+  return `\n\n---\n${header}\n\n${rules}\n\n${text}\n---\n`;
+}

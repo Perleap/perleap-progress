@@ -53,12 +53,18 @@ import {
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
-import { build5dNarrativeEvidence, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
+import {
+  build5dNarrativeEvidence,
+  trimToMax,
+  type Analytics5dNarrativeRow,
+} from '@/lib/analytics5dEvidence';
+import { runPool } from '@/lib/asyncPool';
 import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
 import {
   buildLessonBriefPdfBlob,
   countStudentCompletedAssignmentsInScope,
   type LessonBriefPdfStrings,
+  type LessonBriefRosterBaseRow,
 } from '@/lib/analyticsLessonBriefPdf';
 import {
   getAllowedAssignmentIds,
@@ -68,6 +74,7 @@ import {
   scopedStudentLatestScores,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
+import { invokeExplainAnalytics5d } from '@/services/analytics5dExplainService';
 // `useClassroomAnalytics` and 5D LLM evidence (incl. optional teacher notes) are teacher-only; do
 // not reuse this data path for student-facing analytics.
 
@@ -483,17 +490,20 @@ export const ClassroomAnalytics = ({
       rosterSectionTitle: t('analytics.lessonBrief.rosterTitle'),
       columnStudent: t('analytics.lessonBrief.columnStudent'),
       columnProgress: t('analytics.lessonBrief.columnProgress'),
+      narrativesSectionTitle: t('analytics.lessonBrief.narrativesSectionTitle'),
+      studentSummaryLabel: t('analytics.lessonBrief.studentSummaryLabel'),
       footerDisclaimer: t('analytics.lessonBrief.footerDisclaimer'),
       dash: t('analytics.lessonBrief.dash'),
     };
   }, [t]);
 
-  const lessonBriefRosterRows = useMemo(() => {
+  const lessonBriefPdfRosterBase = useMemo((): LessonBriefRosterBaseRow[] => {
     if (!data) return [];
     const denom = effectiveAssignmentIds.length;
     const list = [...data.students] as LessonBriefAnalyticsStudent[];
     list.sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' }));
     return list.map((st) => ({
+      studentId: st.id,
       studentName: st.fullName,
       completedInScope: countStudentCompletedAssignmentsInScope(
         st.id,
@@ -556,7 +566,61 @@ export const ClassroomAnalytics = ({
   const handleExportLessonBriefPdf = useCallback(async () => {
     if (!data || studentCount === 0) return;
     const structLabel = structureType ? t(`syllabus.${structKey}`) : '—';
+    const allStudentsForEvidence = data.students.map((s) => ({
+      id: s.id,
+      fullName: s.fullName,
+      narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
+    }));
+
+    const toastId =
+      lessonBriefPdfRosterBase.length > 0
+        ? toast.loading(t('analytics.lessonBrief.preparingSummaries'))
+        : undefined;
+
     try {
+      const narrativeStrings =
+        lessonBriefPdfRosterBase.length === 0
+          ? []
+          : await runPool(lessonBriefPdfRosterBase, 4, async (row) => {
+              if (!row.scores || effectiveAssignmentIds.length === 0) {
+                return t('analytics.lessonBrief.narrativeNoScores');
+              }
+              try {
+                const evidence = build5dNarrativeEvidence({
+                  context: 'student_avg',
+                  allowedAssignmentIds: effectiveAssignmentIds,
+                  allStudents: allStudentsForEvidence,
+                  assignmentRefs: data.assignments,
+                  singleStudentId: row.studentId,
+                  sectionTitleResolver,
+                });
+
+                const result = await invokeExplainAnalytics5d({
+                  classroomId,
+                  context: 'student_avg',
+                  language: analyticsLanguage,
+                  scores: row.scores,
+                  filterSummary: exportFilterSummary,
+                  studentName: row.studentName,
+                  evidenceText: evidence.evidenceText || undefined,
+                  evidenceSourceCount: evidence.sourceCount,
+                });
+
+                const summary = result.scopeSummary?.trim() ?? '';
+                if (!summary) {
+                  return t('analytics.lessonBrief.narrativeEmpty');
+                }
+                return trimToMax(summary, 1000);
+              } catch {
+                return t('analytics.lessonBrief.narrativeInvokeError');
+              }
+            });
+
+      const rosterRows = lessonBriefPdfRosterBase.map((row, idx) => ({
+        ...row,
+        narrative: narrativeStrings[idx]!,
+      }));
+
       const blob = await buildLessonBriefPdfBlob({
         strings: lessonBriefPdfStrings,
         classroomName,
@@ -574,7 +638,7 @@ export const ClassroomAnalytics = ({
           avgSubmissions: displayAvgSubmissions,
         },
         classAverage5D: classAverage,
-        rosterRows: lessonBriefRosterRows,
+        rosterRows,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -585,10 +649,13 @@ export const ClassroomAnalytics = ({
     } catch (e) {
       console.error(e);
       toast.error(t('analytics.lessonBrief.exportError'));
+    } finally {
+      if (toastId != null) toast.dismiss(toastId);
     }
   }, [
-    classroomName,
+    analyticsLanguage,
     classroomId,
+    classroomName,
     classAverage,
     data,
     displayActiveStudents,
@@ -597,8 +664,9 @@ export const ClassroomAnalytics = ({
     displayTotalSubmissions,
     effectiveAssignmentIds,
     exportFilterSummary,
+    lessonBriefPdfRosterBase,
     lessonBriefPdfStrings,
-    lessonBriefRosterRows,
+    sectionTitleResolver,
     studentCount,
     structKey,
     structureType,

@@ -153,6 +153,7 @@ export {
   useCreateTextActivity,
   useCreateLessonActivity,
   useUpdateSectionResource,
+  useReorderSectionResources,
   useCreateVideoUrlResource,
   progressKeys,
   useStudentProgress,

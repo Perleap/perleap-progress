@@ -24,6 +24,106 @@ import type {
 
 const STORAGE_BUCKET = 'syllabus-resources';
 
+/** Outline links / uploads use `lesson_content` when `url` / `file_path` columns are missing (slim `activity_list`). */
+const OUTLINE_LINK_V1 = '__outline_link_v1';
+const OUTLINE_FILE_V1 = '__outline_file_v1';
+
+function normalizeUrlForLinkStorage(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  if (/^https?:\/\//i.test(t)) return t;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
+function outlineLinkLessonJson(url: string): Json {
+  return { [OUTLINE_LINK_V1]: { url } } as unknown as Json;
+}
+
+function extractOutlineLinkUrl(lessonContent: unknown): string | null {
+  if (!lessonContent || typeof lessonContent !== 'object' || Array.isArray(lessonContent)) return null;
+  const inner = (lessonContent as Record<string, unknown>)[OUTLINE_LINK_V1];
+  if (!inner || typeof inner !== 'object' || Array.isArray(inner)) return null;
+  const u = (inner as Record<string, unknown>).url;
+  return typeof u === 'string' && u.trim() ? u.trim() : null;
+}
+
+function outlineFileLessonJson(meta: {
+  file_path: string;
+  url: string;
+  mime_type: string;
+  file_size: number;
+}): Json {
+  return {
+    [OUTLINE_FILE_V1]: {
+      file_path: meta.file_path,
+      url: meta.url,
+      mime_type: meta.mime_type,
+      file_size: meta.file_size,
+    },
+  } as unknown as Json;
+}
+
+function extractOutlineFileMeta(lessonContent: unknown): {
+  file_path: string;
+  url: string;
+  mime_type: string | null;
+  file_size: number | null;
+} | null {
+  if (!lessonContent || typeof lessonContent !== 'object' || Array.isArray(lessonContent)) return null;
+  const inner = (lessonContent as Record<string, unknown>)[OUTLINE_FILE_V1];
+  if (!inner || typeof inner !== 'object' || Array.isArray(inner)) return null;
+  const o = inner as Record<string, unknown>;
+  const file_path = o.file_path;
+  const url = o.url;
+  if (typeof file_path !== 'string' || !file_path.trim()) return null;
+  if (typeof url !== 'string' || !url.trim()) return null;
+  const mime_type = typeof o.mime_type === 'string' ? o.mime_type : null;
+  const rawSize = o.file_size;
+  let file_size: number | null = null;
+  if (typeof rawSize === 'number' && Number.isFinite(rawSize)) file_size = rawSize;
+  else if (typeof rawSize === 'string' && rawSize.trim() !== '' && Number.isFinite(Number(rawSize))) {
+    file_size = Number(rawSize);
+  }
+  return { file_path: file_path.trim(), url: url.trim(), mime_type, file_size };
+}
+
+const FILE_BACKED_RESOURCE_TYPES = new Set<SectionResource['resource_type']>([
+  'file',
+  'document',
+  'image',
+  'video',
+]);
+
+export function mapActivityListRowToSectionResource(row: SectionResource | null | undefined): SectionResource | null {
+  if (!row) return null;
+
+  if (row.resource_type === 'link') {
+    const u = row.url?.trim();
+    if (u) return row;
+    const fromLc = extractOutlineLinkUrl(row.lesson_content);
+    if (!fromLc) return row;
+    return { ...row, url: fromLc };
+  }
+
+  if (FILE_BACKED_RESOURCE_TYPES.has(row.resource_type)) {
+    const hasPath = row.file_path?.trim();
+    const hasUrl = row.url?.trim();
+    if (hasPath && hasUrl) return row;
+    const meta = extractOutlineFileMeta(row.lesson_content);
+    if (!meta) return row;
+    return {
+      ...row,
+      file_path: hasPath ?? meta.file_path,
+      url: hasUrl ?? meta.url,
+      mime_type: row.mime_type ?? meta.mime_type,
+      file_size: row.file_size ?? meta.file_size,
+    };
+  }
+
+  return row;
+}
+
 /**
  * Keys allowed on activity_list insert/update. PostgREST returns 400 if the JSON includes a
  * column name that does not exist (e.g. after manually dropping columns).
@@ -38,9 +138,39 @@ const ACTIVITY_LIST_WRITE_KEYS = new Set([
   'order_index',
   'status',
   'lesson_content',
+  'summary',
+  'body_text',
+  'file_path',
+  'url',
+  'mime_type',
+  'file_size',
+  'estimated_duration_minutes',
   'active',
   'deleted_at',
 ]);
+
+/** Omit from PATCH like nulls — trims noise and avoids slim DB rejecting unknown cols on empty payloads. */
+const ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE = new Set([
+  'body_text',
+  'summary',
+  'estimated_duration_minutes',
+  'file_path',
+  'url',
+  'mime_type',
+  'file_size',
+]);
+
+function activityPatchIncludesField(key: string, v: unknown): boolean {
+  if (v === undefined || v === null) return false;
+  if (
+    ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE.has(key) &&
+    typeof v === 'string' &&
+    !v.trim()
+  ) {
+    return false;
+  }
+  return true;
+}
 
 function pickActivityListWritePayload(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -51,6 +181,33 @@ function pickActivityListWritePayload(row: Record<string, unknown>): Record<stri
     out[key] = v;
   }
   return out;
+}
+
+/** PostgREST ~15 returns this text when the JSON body names a column absent from the exposed schema. */
+function unknownPostgrestColumnName(error: unknown): string | null {
+  const blobs: string[] = [];
+  if (error && typeof error === 'object') {
+    const msg = (error as { message?: unknown }).message;
+    if (typeof msg === 'string') blobs.push(msg);
+    try {
+      blobs.push(JSON.stringify(error));
+    } catch {
+      /* ignore */
+    }
+  } else if (typeof error === 'string') {
+    blobs.push(error);
+  }
+  const patterns = [
+    /Could not find the '([^']+)' column /i,
+    /Could not find the "([^"]+)" column /i,
+  ];
+  for (const blob of blobs) {
+    for (const re of patterns) {
+      const m = blob.match(re);
+      if (m?.[1]) return m[1];
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +226,7 @@ export const getSectionResourceById = async (
       .maybeSingle();
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: data as unknown as SectionResource | null, error: null };
+    return { data: mapActivityListRowToSectionResource(data as unknown as SectionResource), error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -87,7 +244,10 @@ export const getSectionResources = async (
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: (data ?? []) as unknown as SectionResource[], error: null };
+    const mapped = (data ?? []).map((r) =>
+      mapActivityListRowToSectionResource(r as unknown as SectionResource),
+    ) as SectionResource[];
+    return { data: mapped, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -97,19 +257,72 @@ export const createSectionResource = async (
   input: CreateSectionResourceInput
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
-    const row = pickActivityListWritePayload({
-      ...input,
-      status: input.status ?? 'published',
-      lesson_content: input.lesson_content ?? null,
-    });
+    const normalizedInput =
+      input.resource_type === 'link' && typeof input.url === 'string'
+        ? { ...input, url: normalizeUrlForLinkStorage(input.url) }
+        : input;
+
+    const isFileBackedOutline =
+      FILE_BACKED_RESOURCE_TYPES.has(normalizedInput.resource_type) &&
+      typeof normalizedInput.file_path === 'string' &&
+      normalizedInput.file_path.trim() !== '' &&
+      typeof normalizedInput.url === 'string' &&
+      normalizedInput.url.trim() !== '';
+
+    const row =
+      normalizedInput.resource_type === 'link' && typeof normalizedInput.url === 'string'
+        ? (() => {
+            const { url: _omitUrl, lesson_content: _omitLc, ...linkRest } = normalizedInput;
+            return pickActivityListWritePayload({
+              ...linkRest,
+              status: normalizedInput.status ?? 'published',
+              lesson_content: outlineLinkLessonJson(normalizedInput.url),
+            } as Record<string, unknown>);
+          })()
+        : isFileBackedOutline
+          ? (() => {
+              const {
+                file_path: _fp,
+                url: _u,
+                mime_type: _mt,
+                file_size: _fs,
+                lesson_content: _lc,
+                ...fileRest
+              } = normalizedInput;
+              return pickActivityListWritePayload({
+                ...fileRest,
+                status: normalizedInput.status ?? 'published',
+                lesson_content: outlineFileLessonJson({
+                  file_path: normalizedInput.file_path!,
+                  url: normalizedInput.url!,
+                  mime_type: normalizedInput.mime_type ?? '',
+                  file_size: normalizedInput.file_size ?? 0,
+                }),
+              } as Record<string, unknown>);
+            })()
+          : pickActivityListWritePayload({
+              ...normalizedInput,
+              status: normalizedInput.status ?? 'published',
+              lesson_content: normalizedInput.lesson_content ?? null,
+            });
+
+    /** Inserts only non-null fields so older / slim `activity_list` schemas avoid PostgREST 400 on unknown columns. */
+    const insertRow = Object.fromEntries(
+      Object.entries(row).filter(([, v]) => v !== null && v !== undefined),
+    ) as ActivityListInsert;
     const { data, error } = await supabase
       .from('activity_list')
-      .insert([row as ActivityListInsert])
+      .insert([insertRow])
       .select()
       .single();
 
-    if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: data as unknown as SectionResource, error: null };
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+    return {
+      data: mapActivityListRowToSectionResource(data as unknown as SectionResource),
+      error: null,
+    };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -121,15 +334,61 @@ export const updateSectionResource = async (
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
     const payload = pickActivityListWritePayload(updates as Record<string, unknown>);
-    const { data, error } = await supabase
-      .from('activity_list')
-      .update(payload as ActivityListUpdate)
-      .eq('id', resourceId)
-      .select()
-      .single();
+    // Omit null/undefined PATCH fields — PostgREST errors on unknown column names present in JSON (even null).
+    // Slim `activity_list` stacks often lack body_text/url/file_path; merges still send nullable columns.
+    let patchMutable: Record<string, unknown> = Object.fromEntries(
+      Object.entries(payload).filter(([k, v]) => activityPatchIncludesField(k, v)),
+    );
+    const strippedUnknownCols: string[] = [];
+    const MAX_UNKNOWN_COL_STRIPS = 24;
 
-    if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: data as unknown as SectionResource, error: null };
+    for (let attempt = 0; attempt <= MAX_UNKNOWN_COL_STRIPS + 10; attempt += 1) {
+      if (Object.keys(patchMutable).length === 0) {
+        return {
+          data: null,
+          error: {
+            message: 'No updatable fields left for activity_list after dropping unknown columns.',
+          },
+        };
+      }
+
+      const { data, error } = await supabase
+        .from('activity_list')
+        .update(patchMutable as ActivityListUpdate)
+        .eq('id', resourceId)
+        .select()
+        .single();
+
+      if (!error) {
+        return {
+          data: mapActivityListRowToSectionResource(data as unknown as SectionResource),
+          error: null,
+        };
+      }
+
+      const badCol = unknownPostgrestColumnName(error.message);
+      const canStrip =
+        badCol &&
+        Object.prototype.hasOwnProperty.call(patchMutable, badCol) &&
+        strippedUnknownCols.length < MAX_UNKNOWN_COL_STRIPS;
+
+      if (!canStrip) {
+        return { data: null, error: handleSupabaseError(error) };
+      }
+
+      strippedUnknownCols.push(badCol);
+      const next: Record<string, unknown> = { ...patchMutable };
+      delete next[badCol];
+      patchMutable = next;
+    }
+
+    return {
+      data: null,
+      error: {
+        message:
+          'activity_list PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+      },
+    };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

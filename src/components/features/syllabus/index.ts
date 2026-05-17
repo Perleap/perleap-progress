@@ -19,3 +19,4 @@ export { SyllabusCustomization } from './SyllabusCustomization';
 export { SyllabusPDFExport } from './SyllabusPDFExport';
 export { SectionCommentThread } from './SectionCommentThread';
 export { ChangelogViewer } from './ChangelogViewer';
+export { CoursePackageCard } from './CoursePackageCard';

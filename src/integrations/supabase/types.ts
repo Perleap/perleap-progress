@@ -53,42 +53,63 @@ export type Database = {
       activity_list: {
         Row: {
           active: boolean
+          body_text: string | null
           created_at: string
           deleted_at: string | null
+          estimated_duration_minutes: number | null
+          file_path: string | null
+          file_size: number | null
           id: string
           lesson_content: Json | null
+          mime_type: string | null
           order_index: number
           resource_type: string
           section_id: string
           status: string
+          summary: string | null
           title: string
           updated_at: string
+          url: string | null
         }
         Insert: {
           active?: boolean
+          body_text?: string | null
           created_at?: string
           deleted_at?: string | null
+          estimated_duration_minutes?: number | null
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           lesson_content?: Json | null
+          mime_type?: string | null
           order_index?: number
           resource_type?: string
           section_id: string
           status?: string
+          summary?: string | null
           title: string
           updated_at?: string
+          url?: string | null
         }
         Update: {
           active?: boolean
+          body_text?: string | null
           created_at?: string
           deleted_at?: string | null
+          estimated_duration_minutes?: number | null
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           lesson_content?: Json | null
+          mime_type?: string | null
           order_index?: number
           resource_type?: string
           section_id?: string
           status?: string
+          summary?: string | null
           title?: string
           updated_at?: string
+          url?: string | null
         }
         Relationships: [
           {
@@ -1910,6 +1931,14 @@ export type Database = {
       }
       replace_module_flow_steps: {
         Args: { p_section_id: string; p_steps: Json }
+        Returns: undefined
+      }
+      merge_course_package_v2: {
+        Args: {
+          p_classroom_id: string
+          p_pkg: Json
+          p_update_classroom?: boolean
+        }
         Returns: undefined
       }
       report_assignment_chat_sentence: {

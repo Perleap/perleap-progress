@@ -12,12 +12,18 @@ import {
   getAssignmentModuleActivityContextText,
   getClassroomResources,
   getTeacherIdFromAssignment,
+  getValidatedPriorAssignmentChatExcerpt,
+  getPriorSubmissionIdsInSameSection,
   isAppAdmin,
 } from '../shared/supabase.ts';
 import type { Message } from '../shared/types.ts';
-import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
+import { generateEnhancedChatSystemPrompt, buildPriorAssignmentContextSection } from '../_shared/prompts.ts';
 import { polishAssistantDraft } from './polish.ts';
 import { normalizeAssistantDashes } from './typography.ts';
+import {
+  createInitialWelcomeStreamStripper,
+  stripRedundantInitialWelcome,
+} from './stripRedundantInitialWelcome.ts';
 import {
   persistEdgeFunctionLog,
   errorToMessage,
@@ -31,7 +37,11 @@ const POLISH_STREAM_CHUNK = 256;
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Expose-Headers':
+    'X-Perleap-Prior-N, X-Perleap-Prior-Parts, X-Perleap-Prior-Section-Len, X-Perleap-Prior-Section-Db, X-Perleap-Prior-Client',
 };
+
+const MAX_UNIT_PRIOR_MERGE = 15;
 
 function isPolishEnabled(): boolean {
   return Deno.env.get('PERLEAP_CHAT_POLISH') === 'true';
@@ -74,6 +84,24 @@ serve(async (req) => {
       }
     }
 
+    const orderedPriorIds: string[] = [];
+    if (Array.isArray(body.priorSubmissionIds)) {
+      for (const x of body.priorSubmissionIds) {
+        if (typeof x === 'string' && x.trim()) orderedPriorIds.push(x.trim());
+      }
+    }
+    const legacyPrior =
+      typeof body.priorSubmissionId === 'string' ? body.priorSubmissionId.trim() : '';
+    if (legacyPrior && !orderedPriorIds.includes(legacyPrior)) {
+      orderedPriorIds.push(legacyPrior);
+    }
+    const priorSeen = new Set<string>();
+    const dedupedPriorIds = orderedPriorIds.filter((id) => {
+      if (priorSeen.has(id)) return false;
+      priorSeen.add(id);
+      return true;
+    });
+
     const stream = body.stream === true || body.stream === 'true';
     const effectiveStream = stream && !allowAdminDebug;
 
@@ -84,13 +112,39 @@ serve(async (req) => {
       teacherId,
       assignmentDetails,
       moduleActivityContextText,
+      sectionPriorIds,
     ] = await Promise.all([
       getTeacherNameByAssignment(assignmentId),
       getOrCreateConversation(submissionId),
       getTeacherIdFromAssignment(assignmentId),
       getAssignmentDetails(assignmentId),
       getAssignmentModuleActivityContextText(assignmentId),
+      getPriorSubmissionIdsInSameSection(studentId, assignmentId),
     ]);
+
+    const mergeSeen = new Set<string>();
+    const mergedPriorIds: string[] = [];
+    for (const id of sectionPriorIds) {
+      if (mergeSeen.has(id)) continue;
+      mergeSeen.add(id);
+      mergedPriorIds.push(id);
+    }
+    for (const id of dedupedPriorIds) {
+      if (mergeSeen.has(id)) continue;
+      mergeSeen.add(id);
+      mergedPriorIds.push(id);
+    }
+    const cappedPriorIds = mergedPriorIds.length > MAX_UNIT_PRIOR_MERGE
+      ? mergedPriorIds.slice(-MAX_UNIT_PRIOR_MERGE)
+      : mergedPriorIds;
+
+    const priorMetaHeaders: Record<string, string> = {
+      'X-Perleap-Prior-N': String(cappedPriorIds.length),
+      'X-Perleap-Prior-Section-Db': String(sectionPriorIds.length),
+      'X-Perleap-Prior-Client': String(dedupedPriorIds.length),
+      'X-Perleap-Prior-Parts': '0',
+      'X-Perleap-Prior-Section-Len': '0',
+    };
 
     // Fetch teacher profile, student profile, and classroom resources in parallel
     const [
@@ -114,6 +168,35 @@ serve(async (req) => {
       messages.push({ role: 'user', content: userMessageContent });
     }
 
+    let priorContextSection = '';
+    const UNIT_PRIOR_MAX = 14000;
+    if (cappedPriorIds.length > 0) {
+      const separator = '\n\n=== Earlier in this course ===\n\n';
+      const perPriorCap = Math.max(
+        2000,
+        Math.floor(UNIT_PRIOR_MAX / cappedPriorIds.length) -
+          Math.ceil(separator.length / cappedPriorIds.length),
+      );
+      const parts: string[] = [];
+      for (const pid of cappedPriorIds) {
+        const excerpt = await getValidatedPriorAssignmentChatExcerpt(
+          pid,
+          studentId,
+          assignmentId,
+        );
+        if (excerpt?.trim()) parts.push(excerpt.trim().slice(0, perPriorCap));
+      }
+      priorMetaHeaders['X-Perleap-Prior-Parts'] = String(parts.length);
+      if (parts.length > 0) {
+        let combined = parts.join(separator);
+        if (combined.length > UNIT_PRIOR_MAX) {
+          combined = combined.slice(0, UNIT_PRIOR_MAX);
+        }
+        priorContextSection = buildPriorAssignmentContextSection(language, combined);
+      }
+      priorMetaHeaders['X-Perleap-Prior-Section-Len'] = String(priorContextSection.length);
+    }
+
     // Use enhanced system prompt with all context elements
     let systemPrompt = await generateEnhancedChatSystemPrompt(
       assignmentInstructions,
@@ -126,6 +209,10 @@ serve(async (req) => {
       language,
       moduleActivityContextText || undefined,
     );
+
+    if (priorContextSection) {
+      systemPrompt += priorContextSection;
+    }
 
     // Explicitly append completion rules to ensure the AI always uses the marker
     const completionRules = `
@@ -213,6 +300,10 @@ CORRECT example:
         aiMessage = normalizeAssistantDashes(aiMessageRaw);
       }
 
+      if (isInitialGreeting) {
+        aiMessage = stripRedundantInitialWelcome(aiMessage, language);
+      }
+
       // Check for conversation completion marker (case-insensitive and flexible)
       const completionMarker = '[CONVERSATION_COMPLETE]';
       let shouldEnd = false;
@@ -270,6 +361,7 @@ CORRECT example:
 
       const resHeaders: Record<string, string> = {
         ...corsHeaders,
+        ...priorMetaHeaders,
         'Content-Type': 'application/json',
       };
       if (allowAdminDebug) {
@@ -295,6 +387,9 @@ CORRECT example:
     let fullContent = '';
     const completionMarker = '[CONVERSATION_COMPLETE]';
     const polishOn = isPolishEnabled();
+    const welcomeStrip = !polishOn
+      ? createInitialWelcomeStreamStripper(Boolean(isInitialGreeting), language)
+      : null;
 
     const readableStream = new ReadableStream({
       async start(controller) {
@@ -337,8 +432,11 @@ CORRECT example:
                     if (polishOn) continue;
 
                     const piece = normalizeAssistantDashes(content);
-                    fullContent += piece;
-                    streamBuffer += piece;
+                    const emitted = welcomeStrip ? welcomeStrip.push(piece) : piece;
+                    if (!emitted) continue;
+
+                    fullContent += emitted;
+                    streamBuffer += emitted;
 
                     if (!wasEndDetected) {
                       const upperBuffer = streamBuffer.toUpperCase();
@@ -369,9 +467,32 @@ CORRECT example:
 
           sseDecoder.decode();
 
+          if (!polishOn && welcomeStrip) {
+            const flushEmit = welcomeStrip.flush();
+            if (flushEmit) {
+              fullContent += flushEmit;
+              streamBuffer += flushEmit;
+            }
+            if (!wasEndDetected && streamBuffer) {
+              const upperBuffer = streamBuffer.toUpperCase();
+              if (upperBuffer.includes(completionMarker)) {
+                wasEndDetected = true;
+                const markerIndex = upperBuffer.indexOf(completionMarker);
+                const beforeMarker = streamBuffer.substring(0, markerIndex);
+                if (beforeMarker) {
+                  controller.enqueue(encoder.encode(beforeMarker));
+                }
+                streamBuffer = '';
+              }
+            }
+          }
+
           if (polishOn) {
             const rawModelAccum = modelAccum;
-            const modelPolished = await polishAssistantDraft(modelAccum, language);
+            let modelPolished = await polishAssistantDraft(modelAccum, language);
+            if (isInitialGreeting) {
+              modelPolished = stripRedundantInitialWelcome(modelPolished, language);
+            }
             fullContent = greetingPrefix + modelPolished;
             const markerIndex = fullContent.toUpperCase().indexOf(completionMarker);
             // Greeting was already streamed above; only emit the polished model text here.
@@ -458,8 +579,9 @@ CORRECT example:
     });
 
     return new Response(readableStream, {
-      headers: { 
-        ...corsHeaders, 
+      headers: {
+        ...corsHeaders,
+        ...priorMetaHeaders,
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',

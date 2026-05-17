@@ -1,0 +1,41 @@
+{
+  "format": "perleap.course",
+  "version": 1,
+  "exported_at": "2026-05-14T12:00:00.000Z",
+  "source_classroom_name": "Example course",
+  "course": {
+    "classroom": {
+      "name": "Imported course name",
+      "subject": "Science",
+      "goals": null,
+      "course_title": "Introduction to Biology",
+      "course_duration": null,
+      "start_date": null,
+      "end_date": null,
+      "course_outline": null,
+      "resources": null,
+      "learning_outcomes": ["Understand core concepts"],
+      "key_challenges": [],
+      "domains": null,
+      "materials": null
+    },
+    "syllabus": {
+      "title": "Syllabus title",
+      "summary": null,
+      "structure_type": "modules",
+      "policies": [],
+      "status": "draft",
+      "release_mode": "all_at_once",
+      "published_at": null,
+      "accent_color": null,
+      "banner_url": null,
+      "section_label_override": null,
+      "custom_settings": {},
+      "grading_categories": [],
+      "sections": []
+    },
+    "assignments": [],
+    "assignment_activity_links": [],
+    "module_flow_by_section": null
+  }
+}

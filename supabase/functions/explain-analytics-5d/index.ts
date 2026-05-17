@@ -180,7 +180,7 @@ Return ONLY valid JSON with this exact shape (no markdown):
     "connection": "...",
     "action": "..."
   },
-  "scopeSummary": "One short paragraph (2-4 sentences) summarizing the overall 5D pattern for this scope and filter: ${filterSummary || '(no extra filter)'}."
+  "scopeSummary": "A detailed paragraph (4-6 sentences) summarizing the overall 5D pattern for this scope and filter: ${filterSummary || '(no extra filter)'}. Highlight specific strengths and weaknesses based on the evidence, and provide 1-2 actionable recommendations for the teacher."
 }
 Be specific to the numbers; avoid generic filler.`;
 

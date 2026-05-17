@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,6 @@ import {
   Lock,
   CheckCircle2,
   Circle,
-  ClipboardList,
   FileText,
   PlayCircle,
   ChevronDown,
@@ -48,6 +47,10 @@ import {
 } from '@/lib/moduleFlowStudent';
 import { cn } from '@/lib/utils';
 import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
+import { computeSectionModuleProgressStats } from '@/lib/sectionModuleProgressStats';
+import { CurriculumAssignmentTypeIcon } from '@/lib/assignmentTypeCurriculumIcon';
+import { buildLinkedAssignmentsMapWholeCourse } from '@/lib/wholeCourseCurriculumCompute';
+import type { Assignment } from '@/types';
 import type { ReleaseMode, StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
 import { StudentModuleOutlineRail } from './StudentModuleOutlineRail';
 
@@ -217,7 +220,27 @@ export function StudentActivitiesSection({
     };
   }, [effectiveProgressUserId, flowBulk, resourceMap, assignRows, flowCtx]);
 
-  const [moduleOpenById, setModuleOpenById] = useState<Record<string, boolean>>({});
+  const linkedAssignmentsMap = useMemo(
+    () => buildLinkedAssignmentsMapWholeCourse(true, assignRows as Assignment[], flowBulk),
+    [assignRows, flowBulk],
+  );
+
+  const sectionModuleRailPercentById = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const s of sections) {
+      map[s.id] = computeSectionModuleProgressStats({
+        persistedSteps: flowBulk[s.id] ?? [],
+        resources: resourceMap[s.id] ?? [],
+        linkedAssignments: linkedAssignmentsMap[s.id] ?? [],
+        flowCtx,
+      }).percent;
+    }
+    return map;
+  }, [sections, flowBulk, resourceMap, linkedAssignmentsMap, flowCtx]);
+
+  const [moduleOpenOverrideById, setModuleOpenOverrideById] = useState<Record<string, boolean>>(
+    {},
+  );
   const [hideFinished, setHideFinished] = useState(true);
   const prevClassroomIdRef = useRef(classroomId);
   const prevProgressUserKeyRef = useRef(progressUserIdProp ?? '');
@@ -265,30 +288,30 @@ export function StudentActivitiesSection({
   }, [sections, hideFinished, resumeSectionId, isUnitFinished]);
 
   useEffect(() => {
-    if (sections.length === 0) return;
     const switchedClassroom = prevClassroomIdRef.current !== classroomId;
     const progressKey = progressUserIdProp ?? '';
     const switchedProgressSubject = prevProgressUserKeyRef.current !== progressKey;
     prevClassroomIdRef.current = classroomId;
     prevProgressUserKeyRef.current = progressKey;
-    const resetOpen = switchedClassroom || switchedProgressSubject;
-    setModuleOpenById((prev) => {
-      const next: Record<string, boolean> = {};
-      for (const s of sections) {
-        next[s.id] = resetOpen ? true : (prev[s.id] ?? true);
-      }
-      const sameKeys =
-        Object.keys(next).length === Object.keys(prev).length &&
-        Object.keys(next).every((id) => prev[id] === next[id]);
-      return sameKeys && !resetOpen ? prev : next;
-    });
-  }, [classroomId, sections, progressUserIdProp]);
+    if (switchedClassroom || switchedProgressSubject) {
+      setModuleOpenOverrideById({});
+    }
+  }, [classroomId, progressUserIdProp]);
+
+  const effectiveModuleOpen = useCallback(
+    (sectionId: string) => {
+      const pct = sectionModuleRailPercentById[sectionId] ?? 0;
+      const defaultOpen = pct > 0 || sectionId === resumeSectionId;
+      return moduleOpenOverrideById[sectionId] ?? defaultOpen;
+    },
+    [moduleOpenOverrideById, sectionModuleRailPercentById, resumeSectionId],
+  );
 
   const allSectionsOpen = useMemo(
     () =>
       visibleSections.length > 0 &&
-      visibleSections.every((s) => moduleOpenById[s.id] === true),
-    [visibleSections, moduleOpenById],
+      visibleSections.every((s) => effectiveModuleOpen(s.id)),
+    [visibleSections, effectiveModuleOpen],
   );
 
   if (syllabusLoading || flowLoading || (flowContextEnabled && curriculumFlowProgressLoading)) {
@@ -352,13 +375,13 @@ export function StudentActivitiesSection({
             disabled={visibleSections.length === 0}
             onClick={() => {
               if (allSectionsOpen) {
-                setModuleOpenById((prev) => {
+                setModuleOpenOverrideById((prev) => {
                   const next = { ...prev };
                   for (const s of visibleSections) next[s.id] = false;
                   return next;
                 });
               } else {
-                setModuleOpenById((prev) => {
+                setModuleOpenOverrideById((prev) => {
                   const next = { ...prev };
                   for (const s of visibleSections) next[s.id] = true;
                   return next;
@@ -404,7 +427,8 @@ export function StudentActivitiesSection({
         const usePersisted = orderedPersisted.length > 0;
         const steps = usePersisted ? orderedPersisted : null;
         const stepCount = steps ? steps.length : computed.length;
-        const open = moduleOpenById[section.id] ?? false;
+        const moduleRailProgress = sectionModuleRailPercentById[section.id] ?? 0;
+        const open = effectiveModuleOpen(section.id);
         const desc = section.description?.trim() ?? '';
 
         const stepSummary =
@@ -424,7 +448,7 @@ export function StudentActivitiesSection({
             key={section.id}
             open={open}
             onOpenChange={(next) =>
-              setModuleOpenById((prev) => ({ ...prev, [section.id]: next }))
+              setModuleOpenOverrideById((prev) => ({ ...prev, [section.id]: next }))
             }
             className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
           >
@@ -435,6 +459,7 @@ export function StudentActivitiesSection({
                 highlightInProgress={highlightInProgress}
                 unlocked={unlocked}
                 isRTL={isRTL}
+                progressPercent={moduleRailProgress}
               />
               <div className="flex min-w-0 flex-1 flex-col">
                 <div
@@ -539,7 +564,7 @@ export function StudentActivitiesSection({
                           );
                         }
                         if (step.step_kind === 'assignment' && step.assignment_id) {
-                          const a = (assignments as { id: string; title: string }[]).find(
+                          const a = (assignments as { id: string; title: string; type?: string }[]).find(
                             (x) => x.id === step.assignment_id,
                           );
                           const label = a?.title ?? t('studentClassroom.activities.assignment');
@@ -556,7 +581,10 @@ export function StudentActivitiesSection({
                                 aria-label={rowAria}
                               >
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                                <ClipboardList className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                                <CurriculumAssignmentTypeIcon
+                                  type={a?.type}
+                                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                                />
                                 <span className="text-muted-foreground">{label}</span>
                               </div>
                             </li>
@@ -589,7 +617,7 @@ export function StudentActivitiesSection({
                             </li>
                           );
                         }
-                        const a = (assignments as { id: string; title: string }[]).find(
+                        const a = (assignments as { id: string; title: string; type?: string }[]).find(
                           (x) => x.id === c.assignment_id,
                         );
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
@@ -605,7 +633,10 @@ export function StudentActivitiesSection({
                               aria-label={rowAria}
                             >
                               <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                              <ClipboardList className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                              <CurriculumAssignmentTypeIcon
+                                type={a?.type}
+                                className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                              />
                               <span className="text-muted-foreground">{label}</span>
                             </div>
                           </li>
@@ -729,7 +760,9 @@ export function StudentActivitiesSection({
                       }
 
                       if (step.step_kind === 'assignment' && step.assignment_id) {
-                        const a = (assignments as { id: string; title: string }[]).find((x) => x.id === step.assignment_id);
+                        const a = (assignments as { id: string; title: string; type?: string }[]).find(
+                          (x) => x.id === step.assignment_id,
+                        );
                         const assignmentUnavailable = !a;
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
                         const displayLabel = assignmentUnavailable
@@ -801,7 +834,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </span>
                               ) : (
@@ -814,7 +847,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}
@@ -954,7 +987,9 @@ export function StudentActivitiesSection({
                             </li>
                           );
                         }
-                        const a = (assignments as { id: string; title: string }[]).find((x) => x.id === c.assignment_id);
+                        const a = (assignments as { id: string; title: string; type?: string }[]).find(
+                          (x) => x.id === c.assignment_id,
+                        );
                         const assignmentUnavailable = !a;
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
                         const displayLabel = assignmentUnavailable
@@ -1029,7 +1064,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </span>
                               ) : (
@@ -1042,7 +1077,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}

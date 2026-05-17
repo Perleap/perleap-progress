@@ -61,6 +61,13 @@ describe('formatInlineListsForChatMarkdown + splitChatDisplayText', () => {
     expect(parts[0]).toMatch(/things:\s*$/);
     expect(parts[1].trimStart()).toMatch(/^1\)/);
   });
+
+  it('splits multiple prose sentences on one line into separate display segments', () => {
+    const t =
+      "On, you used logic that is not fully stated in your prompt. Let's cover the gap: Where in your prompt does it say that an ambiguous email with unclear references should be replied to for clarification instead of being archived, escalated, or just marked medium? Can you add a rule to your prompt and paste the revised version?";
+    const parts = splitChatDisplayText(formatInlineListsForChatMarkdown(t));
+    expect(parts.length).toBe(3);
+  });
 });
 
 describe('splitAssistantMessageIntoSentences', () => {

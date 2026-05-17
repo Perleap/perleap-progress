@@ -29,6 +29,10 @@ interface ResourceViewerProps {
   resources: SectionResource[];
   isRTL?: boolean;
   compact?: boolean;
+  /** Omit the inner “RESOURCES (n)” heading when the parent already provides a title. */
+  hideListHeader?: boolean;
+  /** When `compact`, `list` uses a single divided container instead of bordered cards per row. */
+  compactVariant?: 'card' | 'list';
 }
 
 const resourceTypeConfig: Record<string, { icon: React.ElementType; color: string }> = {
@@ -251,10 +255,11 @@ function ResourcePreview({ resource }: { resource: SectionResource }) {
   return null;
 }
 
-function ResourceCard({ resource, isRTL, compact }: {
+function ResourceCard({ resource, isRTL, compact, compactVariant = 'card' }: {
   resource: SectionResource;
   isRTL: boolean;
   compact: boolean;
+  compactVariant?: 'card' | 'list';
 }) {
   const { t } = useTranslation();
   const [videoRevealed, setVideoRevealed] = useState(false);
@@ -281,12 +286,16 @@ function ResourceCard({ resource, isRTL, compact }: {
   };
 
   if (compact) {
+    const listRow = compactVariant === 'list';
     return (
       <button
+        type="button"
         onClick={handleOpen}
         className={cn(
-          'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg border border-border bg-card/50',
-          'hover:bg-muted/30 hover:border-primary/30 transition-all group text-left',
+          'flex items-center gap-2.5 w-full group text-left',
+          listRow
+            ? 'px-3 py-2 rounded-none border-0 bg-transparent hover:bg-muted/40 transition-colors'
+            : 'px-3 py-2.5 rounded-lg border border-border bg-card/50 hover:bg-muted/30 hover:border-primary/30 transition-all',
           isRTL && 'flex-row-reverse text-right'
         )}
       >
@@ -373,26 +382,47 @@ function ResourceCard({ resource, isRTL, compact }: {
   );
 }
 
-export const ResourceViewer = ({ resources, isRTL = false, compact = false }: ResourceViewerProps) => {
+export const ResourceViewer = ({
+  resources,
+  isRTL = false,
+  compact = false,
+  hideListHeader = false,
+  compactVariant = 'card',
+}: ResourceViewerProps) => {
   const { t } = useTranslation();
 
   if (resources.length === 0) return null;
 
+  const listMode = compact && compactVariant === 'list';
+  const showInnerHeading = !hideListHeader;
+
   return (
-    <div className="space-y-2">
-      <h4 className={cn(
-        'text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1',
-        isRTL && 'flex-row-reverse text-right'
-      )}>
-        <FileText className="h-3 w-3" /> {t('syllabus.resources.title')} ({resources.length})
-      </h4>
-      <div className={compact ? 'space-y-1' : 'space-y-3'}>
+    <div className={cn(!listMode && 'space-y-2')}>
+      {showInnerHeading ? (
+        <h4
+          className={cn(
+            'text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1',
+            isRTL && 'flex-row-reverse text-right',
+          )}
+        >
+          <FileText className="h-3 w-3" /> {t('syllabus.resources.title')} ({resources.length})
+        </h4>
+      ) : null}
+      <div
+        className={cn(
+          listMode &&
+            'divide-y divide-border overflow-hidden rounded-md border border-border/60 bg-muted/5',
+          !listMode && compact && 'space-y-1',
+          !listMode && !compact && 'space-y-3',
+        )}
+      >
         {resources.map((resource) => (
           <ResourceCard
             key={resource.id}
             resource={resource}
             isRTL={isRTL}
             compact={compact}
+            compactVariant={compact ? compactVariant : 'card'}
           />
         ))}
       </div>

@@ -146,16 +146,14 @@ const TeacherDashboard = () => {
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{t('teacherDashboard.myClassrooms')}</h2>
                 <p className="text-sm md:text-base text-muted-foreground mt-2">Manage and track your classes</p>
               </div>
-              {!isAppAdmin && (
-                <Button
-                  onClick={() => setDialogOpen(true)}
-                  size="lg"
-                  className="gap-2 w-full sm:w-auto flex-shrink-0"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
-                </Button>
-              )}
+              <Button
+                onClick={() => setDialogOpen(true)}
+                size="lg"
+                className="gap-2 w-full sm:w-auto flex-shrink-0"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="whitespace-nowrap">{t('teacherDashboard.createClassroom')}</span>
+              </Button>
             </div>
 
             {/* View Switcher */}
@@ -413,13 +411,11 @@ const TeacherDashboard = () => {
         </aside>
       </div>
 
-      {!isAppAdmin && (
-        <CreateClassroomDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSuccess={handleClassroomCreated}
-        />
-      )}
+      <CreateClassroomDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={handleClassroomCreated}
+      />
     </DashboardLayout>
   );
 };

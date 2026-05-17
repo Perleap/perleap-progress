@@ -1737,7 +1737,13 @@
       "columnStudent": "תלמיד",
       "columnProgress": "הושלמו / בטווח",
       "footerDisclaimer": "מסמך זה מציג נתוני ביצועי תלמידים מפרליפ נכון למועד יצירה לעיל. יש להתייחס אליו כאל חומר ציון חסוי, כמו מסמכי הערכה אחרים.",
-      "dash": "—"
+      "dash": "—",
+      "narrativesSectionTitle": "תמונת מצב",
+      "studentSummaryLabel": "תקציר",
+      "preparingSummaries": "מכינים תקצירים לפי תלמיד…",
+      "narrativeNoScores": "אין בתצוגה הזאת משוב מוערך לפי המסנון עבור תלמיד זה.",
+      "narrativeEmpty": "לא התקבל תקציר עבור המסנון הזה.",
+      "narrativeInvokeError": "לא ניתן ליצור תקציר כרגע. נסו שוב."
     }
   },
   "nuance": {

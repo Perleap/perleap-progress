@@ -19,8 +19,13 @@ import type {
   UpdateGradingCategoryInput,
   ProvisionSyllabusBundleInput,
   ResourceType,
+  SectionResource,
 } from '@/types/syllabus';
-import { createSectionResource, uploadResourceFile } from '@/services/syllabusResourceService';
+import {
+  createSectionResource,
+  mapActivityListRowToSectionResource,
+  uploadResourceFile,
+} from '@/services/syllabusResourceService';
 import { normalizeReleaseMode } from '@/lib/releaseMode';
 
 // ---------------------------------------------------------------------------
@@ -65,11 +70,13 @@ export const getSyllabusByClassroom = async (
       .filter((sec: any) => sec.active)
       .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
-    const sectionResourcesMap: Record<string, any[]> = {};
+    const sectionResourcesMap: Record<string, SectionResource[]> = {};
     for (const sec of sections) {
       const resources = ((sec.activity_list ?? []) as any[])
         .filter((r: any) => r.active)
-        .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+        .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0))
+        .map((r: any) => mapActivityListRowToSectionResource(r as SectionResource))
+        .filter(Boolean) as SectionResource[];
       sectionResourcesMap[String(sec.id)] = resources;
     }
 
