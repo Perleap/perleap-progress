@@ -27,8 +27,8 @@ interface UseConversationResult {
 
 interface UseConversationParams {
   submissionId: string;
+  /** Used only for local language detection (`getAssignmentLanguage`); never sent on the chat API. */
   assignmentInstructions: string;
-  studentId: string;
   assignmentId: string;
   priorSubmissionIds?: string[];
   /** When true, AI "conversation complete" does not lock the chat or drive assignment submission. */
@@ -43,7 +43,6 @@ interface UseConversationParams {
 export const useConversation = ({
   submissionId,
   assignmentInstructions,
-  studentId,
   assignmentId,
   priorSubmissionIds,
   companionMode = false,
@@ -136,11 +135,8 @@ export const useConversation = ({
     setSending(true);
     try {
       const request: ChatRequest = {
-        message:
-          '[System: This is the start of the conversation. Please greet the student warmly and introduce yourself.]',
-        assignmentInstructions,
+        message: '',
         submissionId,
-        studentId,
         assignmentId,
         isInitialGreeting: true,
         language,
@@ -198,9 +194,7 @@ export const useConversation = ({
     try {
       const request: ChatRequest = {
         message: content,
-        assignmentInstructions,
         submissionId,
-        studentId,
         assignmentId,
         language,
         ...(fileContext ? { fileContext } : {}),

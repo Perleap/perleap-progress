@@ -121,11 +121,9 @@ export function AssignmentFormatStep({
               isRTL ? 'text-right' : 'text-left',
             )}
           >
-            {attemptPolicyFrozen
-              ? t('editAssignment.attemptPolicyFrozen')
-              : formData.attempt_mode === 'multiple_until_due'
-                ? t('createAssignment.attemptMode.dueDateHelperRetries')
-                : t('createAssignment.metadata.dueDateHelper')}
+            {formData.attempt_mode === 'multiple_until_due'
+              ? t('createAssignment.attemptMode.dueDateHelperRetries')
+              : t('createAssignment.metadata.dueDateHelper')}
           </p>
         </div>
 
@@ -195,6 +193,16 @@ export function AssignmentFormatStep({
               </div>
             </div>
           </RadioGroup>
+          {attemptPolicyFrozen ? (
+            <p
+              className={cn(
+                'text-muted-foreground text-xs leading-snug',
+                isRTL ? 'text-right' : 'text-left',
+              )}
+            >
+              {t('editAssignment.attemptPolicyFrozen')}
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>

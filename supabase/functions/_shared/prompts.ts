@@ -5,6 +5,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import { parseHardSkillsFromDb } from './hardSkillsFormat.ts';
+import { MAX_CHAT_MATERIALS_MODULE_CONTEXT_CHARS } from '../shared/perleapPriorContext.ts';
 
 // In-memory cache for prompts (edge function lifecycle)
 const promptCache = new Map<string, { template: string; timestamp: number }>();
@@ -203,41 +204,51 @@ export async function getInitialGreetingMessage(language: string = 'en'): Promis
 }
 
 /**
+ * Replace em/en dashes with a spaced hyphen so the model doesn't pick up em-dash style from
+ * the teacher's profile examples. Mirrors the output-side `normalizeAssistantDashes` semantics
+ * but kept local so this `_shared` module doesn't reach into `perleap-chat/`.
+ */
+function stripEmDashes(s: string): string {
+  if (!s) return s;
+  return s.replace(/\s*[—–]\s*/g, ' - ');
+}
+
+/**
  * Format teacher profile data into a readable context string
  */
-function formatTeacherStyle(teacherProfile: any): string {
+export function formatTeacherStyle(teacherProfile: any): string {
   if (!teacherProfile) {
     return 'No specific teaching style documented. Use a supportive, encouraging approach.';
   }
 
   const parts = [];
-  
+
   if (teacherProfile.teaching_goals) {
-    parts.push(`Teaching Goals: ${teacherProfile.teaching_goals}`);
+    parts.push(`Teaching Goals: ${stripEmDashes(teacherProfile.teaching_goals)}`);
   }
-  
+
   if (teacherProfile.style_notes) {
-    parts.push(`Teaching Style: ${teacherProfile.style_notes}`);
+    parts.push(`Teaching Style: ${stripEmDashes(teacherProfile.style_notes)}`);
   }
-  
+
   if (teacherProfile.teaching_examples) {
-    parts.push(`Teaching Examples: ${teacherProfile.teaching_examples}`);
+    parts.push(`Teaching Examples: ${stripEmDashes(teacherProfile.teaching_examples)}`);
   }
-  
+
   if (teacherProfile.sample_explanation) {
-    parts.push(`Explanation Style: ${teacherProfile.sample_explanation}`);
+    parts.push(`Explanation Style: ${stripEmDashes(teacherProfile.sample_explanation)}`);
   }
-  
+
   if (teacherProfile.encouragement_phrases) {
-    parts.push(`Encouragement Phrases to Use: ${teacherProfile.encouragement_phrases}`);
+    parts.push(`Encouragement Phrases to Use: ${stripEmDashes(teacherProfile.encouragement_phrases)}`);
   }
-  
+
   if (teacherProfile.phrases_to_avoid) {
-    parts.push(`Phrases to Avoid: ${teacherProfile.phrases_to_avoid}`);
+    parts.push(`Phrases to Avoid: ${stripEmDashes(teacherProfile.phrases_to_avoid)}`);
   }
-  
+
   if (teacherProfile.mistake_response) {
-    parts.push(`How to Respond to Mistakes: ${teacherProfile.mistake_response}`);
+    parts.push(`How to Respond to Mistakes: ${stripEmDashes(teacherProfile.mistake_response)}`);
   }
 
   return parts.length > 0 ? parts.join('\n\n') : 'Use a supportive, encouraging teaching approach.';
@@ -246,7 +257,7 @@ function formatTeacherStyle(teacherProfile: any): string {
 /**
  * Format student profile data into a readable context string
  */
-function formatStudentPreferences(studentProfile: any): string {
+export function formatStudentPreferences(studentProfile: any): string {
   if (!studentProfile) {
     return 'No specific learning preferences documented. Adapt to the student\'s responses.';
   }
@@ -291,7 +302,7 @@ function formatStudentPreferences(studentProfile: any): string {
 /**
  * Format hard skills context
  */
-function formatHardSkillsContext(assignmentDetails: any): string {
+export function formatHardSkillsContext(assignmentDetails: any): string {
   if (!assignmentDetails) {
     return 'No specific hard skills defined for this assignment.';
   }
@@ -321,57 +332,115 @@ function formatHardSkillsContext(assignmentDetails: any): string {
   return parts.length > 0 ? parts.join('\n\n') : 'Focus on helping the student understand the assignment material.';
 }
 
+function truncateContextBlock(s: string, maxChars: number): string {
+  const t = s.trim();
+  if (t.length <= maxChars) return t;
+  const budget = Math.max(0, maxChars - 30);
+  return `${t.slice(0, budget)}\n… [truncated]\n`;
+}
+
+/** Prioritize assignment-linked + syllabus module text; generic classroom blurbs get smaller caps. */
+const CHAT_MATERIALS_ASSIGNMENT_MAX = 4000;
+const CHAT_MATERIALS_MODULE_MAX = 7200;
+const CHAT_MATERIALS_CLASSROOM_RESOURCES_MAX = 2400;
+const CHAT_MATERIALS_COURSE_OUTLINE_MAX = 2400;
+
 /**
- * Format course materials context
+ * Format course materials context.
+ *
+ * When `assignmentTutorText` is provided AND the env flag
+ * `PERLEAP_CHAT_GATE_OFF_TOPIC_MATERIALS` is true (default), the classroom-wide
+ * blocks (`Course Resources`, `Course Outline`) are dropped if they share zero
+ * keywords with the assignment. Assignment-specific materials and module-linked
+ * syllabus activities are always kept - those are scoped to this assignment.
  */
-function formatCourseMaterials(
+export async function formatCourseMaterials(
   assignmentDetails: any,
   classroomResources: any,
   moduleActivityContext?: string,
-): string {
-  const materials = [];
-  
-  // Add assignment-specific materials
+  assignmentTutorText?: string,
+): Promise<string> {
+  const skipClassroomWide =
+    Deno.env.get('PERLEAP_CHAT_SKIP_CLASSROOM_RESOURCES') === 'true';
+  // Default ON: drop classroom-wide materials when they're clearly off-topic.
+  const gateOffTopic =
+    (Deno.env.get('PERLEAP_CHAT_GATE_OFF_TOPIC_MATERIALS') ?? 'true') !== 'false';
+
+  let isOffTopic = (text: string): boolean => false;
+  if (gateOffTopic && assignmentTutorText && assignmentTutorText.trim().length > 0) {
+    const { hasKeywordOverlap, extractKeywordSet } = await import('./topicOverlap.ts');
+    const assignmentKeywords = extractKeywordSet(assignmentTutorText);
+    if (assignmentKeywords.size > 0) {
+      isOffTopic = (text: string) => !hasKeywordOverlap(text, assignmentTutorText);
+    }
+  }
+
+  const blocks: string[] = [];
+
   if (assignmentDetails?.materials) {
     try {
-      // Handle both JSONB (object) and old TEXT (string) formats
       const assignmentMaterials = typeof assignmentDetails.materials === 'string'
         ? JSON.parse(assignmentDetails.materials)
         : assignmentDetails.materials;
       if (Array.isArray(assignmentMaterials) && assignmentMaterials.length > 0) {
-        materials.push('Assignment Materials:');
+        const lines = [`Assignment Materials:`];
         assignmentMaterials.forEach((material: any) => {
-          materials.push(`- ${material.name || 'Material'} (${material.type}): ${material.url}`);
+          lines.push(`- ${material.name || 'Material'} (${material.type}): ${material.url}`);
         });
+        blocks.push(truncateContextBlock(lines.join('\n'), CHAT_MATERIALS_ASSIGNMENT_MAX));
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
   }
-  
-  // Add classroom-level resources
-  if (classroomResources?.resources) {
-    materials.push('\nCourse Resources:');
-    materials.push(classroomResources.resources);
-  }
-  
-  if (classroomResources?.course_outline) {
-    materials.push('\nCourse Outline:');
-    materials.push(classroomResources.course_outline);
-  }
 
   if (moduleActivityContext?.trim()) {
-    materials.push('\nLinked module activities (syllabus):');
-    materials.push(moduleActivityContext.trim());
+    blocks.push(
+      truncateContextBlock(
+        `Linked module activities (syllabus):\n${moduleActivityContext.trim()}`,
+        CHAT_MATERIALS_MODULE_MAX,
+      ),
+    );
   }
 
-  return materials.length > 0 
-    ? materials.join('\n') 
+  if (!skipClassroomWide && classroomResources?.resources) {
+    const text = String(classroomResources.resources).trim();
+    if (text && !isOffTopic(text)) {
+      blocks.push(
+        truncateContextBlock(
+          `Course Resources:\n${text}`,
+          CHAT_MATERIALS_CLASSROOM_RESOURCES_MAX,
+        ),
+      );
+    }
+  }
+
+  if (!skipClassroomWide && classroomResources?.course_outline) {
+    const text = String(classroomResources.course_outline).trim();
+    if (text && !isOffTopic(text)) {
+      blocks.push(
+        truncateContextBlock(
+          `Course Outline:\n${text}`,
+          CHAT_MATERIALS_COURSE_OUTLINE_MAX,
+        ),
+      );
+    }
+  }
+
+  const raw = blocks.length > 0
+    ? blocks.join('\n\n')
     : 'No additional course materials provided. Use your knowledge to support the student.';
+
+  return truncateContextBlock(raw, MAX_CHAT_MATERIALS_MODULE_CONTEXT_CHARS);
 }
 
 /**
- * Generate enhanced chat system prompt with all context elements
+ * Generate enhanced chat system prompt with all context elements.
+ *
+ * Thin delegate for backward compatibility - the actual composition lives in
+ * `composeSystemPrompt.ts` (single declarative precedence + XML-tagged context blocks).
+ * Callers that need to add a prior-context section pass the merged excerpt in via the
+ * new optional `priorContextExcerpt` argument; legacy callers without it still work.
  */
 export async function generateEnhancedChatSystemPrompt(
   assignmentInstructions: string,
@@ -383,40 +452,27 @@ export async function generateEnhancedChatSystemPrompt(
   isInitialGreeting: boolean,
   language: string = 'en',
   moduleActivityContext?: string,
+  priorContextExcerpt?: string,
+  taskProgress?: { index: number; text: string; done: boolean }[],
+  assignmentTutorText?: string,
+  unitMemoryExcerpt?: string,
 ): Promise<string> {
-  const greetingInstruction = isInitialGreeting
-    ? await getPrompt('chat_greeting_instruction', { teacherName }, language)
-    : '';
-
-  const afterGreeting = isInitialGreeting
-    ? await getPromptTemplate('chat_after_greeting', language)
-    : '';
-
-  const teacherStyle = formatTeacherStyle(teacherProfile);
-  const studentPreferences = formatStudentPreferences(studentProfile);
-  const hardSkillsContext = formatHardSkillsContext(assignmentDetails);
-  const courseMaterials = formatCourseMaterials(
+  const { composeSystemPrompt } = await import('./composeSystemPrompt.ts');
+  return composeSystemPrompt({
+    language,
+    isInitialGreeting,
+    teacherName,
+    teacherProfile,
+    studentProfile,
     assignmentDetails,
     classroomResources,
     moduleActivityContext,
-  );
-
-  const base = await getPrompt('chat_system_enhanced', {
-    teacher_style: teacherStyle,
-    student_preferences: studentPreferences,
-    hard_skills_context: hardSkillsContext,
-    course_materials: courseMaterials,
-    assignment_instructions: assignmentInstructions,
-    greeting_instruction: greetingInstruction,
-    after_greeting: afterGreeting,
-  }, language);
-
-  const typographyNote =
-    language === 'he'
-      ? '\n\nסגנון: אל תשתמש במקף הארוך (—) בתשובות לתלמיד; העדף פסיק או מקף רגיל עם רווחים ( - ).'
-      : '\n\nStyle: Do not use em dashes (—) in your replies to the student; prefer a comma or a spaced hyphen ( - ) for asides.';
-
-  return base + typographyNote;
+    assignmentInstructionsBlock: assignmentInstructions,
+    assignmentTutorText,
+    priorContextExcerpt,
+    unitMemoryExcerpt,
+    taskProgress,
+  });
 }
 
 /**

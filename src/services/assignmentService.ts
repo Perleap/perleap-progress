@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { removeAssignmentFromModuleFlows } from './moduleFlowService';
@@ -289,7 +290,7 @@ export const createAssignment = async (
   assignment: CreateAssignmentInput
 ): Promise<{ data: Assignment | null; error: ApiError | null }> => {
   try {
-    const row: Database['public']['Tables']['assignments']['Insert'] = {
+    const insertRow: Record<string, unknown> = {
       classroom_id: assignment.classroom_id,
       title: assignment.title,
       instructions: assignment.instructions,
@@ -301,7 +302,22 @@ export const createAssignment = async (
       auto_publish_ai_feedback: assignment.auto_publish_ai_feedback,
       attempt_mode: assignment.attempt_mode,
     };
-    const { data, error } = await supabase.from('assignments').insert([row]).select().single();
+    const insertPayload = Object.fromEntries(
+      Object.entries(insertRow).filter(([, v]) => v !== null && v !== undefined),
+    );
+    const { data, error } = await activityListWriteWithUnknownColumnFallback(
+      insertPayload,
+      async (payload) => {
+        const result = await supabase
+          .from('assignments')
+          .insert([payload as Database['public']['Tables']['assignments']['Insert']])
+          .select()
+          .single();
+        return { data: result.data, error: result.error };
+      },
+      'No insertable fields left for assignments after dropping unknown columns.',
+      'assignments INSERT stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+    );
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -334,16 +350,27 @@ export const updateAssignment = async (
 ): Promise<{ data: Assignment | null; error: ApiError | null }> => {
   try {
     const { target_dimensions, materials, ...rest } = updates;
-    const payload: Database['public']['Tables']['assignments']['Update'] = { ...rest };
+    const payload: Record<string, unknown> = { ...rest };
     if (target_dimensions !== undefined)
       payload.target_dimensions = target_dimensions as unknown as Json;
     if (materials !== undefined) payload.materials = materials as unknown as Json | null;
-    const { data, error } = await supabase
-      .from('assignments')
-      .update(payload)
-      .eq('id', assignmentId)
-      .select()
-      .single();
+    const patchPayload = Object.fromEntries(
+      Object.entries(payload).filter(([, v]) => v !== null && v !== undefined),
+    );
+    const { data, error } = await activityListWriteWithUnknownColumnFallback(
+      patchPayload,
+      async (mutable) => {
+        const result = await supabase
+          .from('assignments')
+          .update(mutable as Database['public']['Tables']['assignments']['Update'])
+          .eq('id', assignmentId)
+          .select()
+          .single();
+        return { data: result.data, error: result.error };
+      },
+      'No updatable fields left for assignments after dropping unknown columns.',
+      'assignments PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+    );
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };

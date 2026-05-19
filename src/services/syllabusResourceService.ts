@@ -4,6 +4,8 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { ACTIVITY_LIST_OPTIONAL_COLUMNS } from '@/lib/activityListOptionalColumns';
+import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
 import type { ApiError } from '@/types';
 
@@ -150,15 +152,7 @@ const ACTIVITY_LIST_WRITE_KEYS = new Set([
 ]);
 
 /** Omit from PATCH like nulls — trims noise and avoids slim DB rejecting unknown cols on empty payloads. */
-const ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE = new Set([
-  'body_text',
-  'summary',
-  'estimated_duration_minutes',
-  'file_path',
-  'url',
-  'mime_type',
-  'file_size',
-]);
+const ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE = ACTIVITY_LIST_OPTIONAL_COLUMNS;
 
 function activityPatchIncludesField(key: string, v: unknown): boolean {
   if (v === undefined || v === null) return false;
@@ -181,33 +175,6 @@ function pickActivityListWritePayload(row: Record<string, unknown>): Record<stri
     out[key] = v;
   }
   return out;
-}
-
-/** PostgREST ~15 returns this text when the JSON body names a column absent from the exposed schema. */
-function unknownPostgrestColumnName(error: unknown): string | null {
-  const blobs: string[] = [];
-  if (error && typeof error === 'object') {
-    const msg = (error as { message?: unknown }).message;
-    if (typeof msg === 'string') blobs.push(msg);
-    try {
-      blobs.push(JSON.stringify(error));
-    } catch {
-      /* ignore */
-    }
-  } else if (typeof error === 'string') {
-    blobs.push(error);
-  }
-  const patterns = [
-    /Could not find the '([^']+)' column /i,
-    /Could not find the "([^"]+)" column /i,
-  ];
-  for (const blob of blobs) {
-    for (const re of patterns) {
-      const m = blob.match(re);
-      if (m?.[1]) return m[1];
-    }
-  }
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,15 +273,23 @@ export const createSectionResource = async (
               lesson_content: normalizedInput.lesson_content ?? null,
             });
 
-    /** Inserts only non-null fields so older / slim `activity_list` schemas avoid PostgREST 400 on unknown columns. */
+    /** Inserts only non-null fields; retries without unknown columns on slim `activity_list` schemas. */
     const insertRow = Object.fromEntries(
       Object.entries(row).filter(([, v]) => v !== null && v !== undefined),
-    ) as ActivityListInsert;
-    const { data, error } = await supabase
-      .from('activity_list')
-      .insert([insertRow])
-      .select()
-      .single();
+    );
+    const { data, error } = await activityListWriteWithUnknownColumnFallback(
+      insertRow,
+      async (payload) => {
+        const result = await supabase
+          .from('activity_list')
+          .insert([payload as ActivityListInsert])
+          .select()
+          .single();
+        return { data: result.data, error: result.error };
+      },
+      'No insertable fields left for activity_list after dropping unknown columns.',
+      'activity_list INSERT stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+    );
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
@@ -336,58 +311,31 @@ export const updateSectionResource = async (
     const payload = pickActivityListWritePayload(updates as Record<string, unknown>);
     // Omit null/undefined PATCH fields — PostgREST errors on unknown column names present in JSON (even null).
     // Slim `activity_list` stacks often lack body_text/url/file_path; merges still send nullable columns.
-    let patchMutable: Record<string, unknown> = Object.fromEntries(
+    const patchMutable: Record<string, unknown> = Object.fromEntries(
       Object.entries(payload).filter(([k, v]) => activityPatchIncludesField(k, v)),
     );
-    const strippedUnknownCols: string[] = [];
-    const MAX_UNKNOWN_COL_STRIPS = 24;
 
-    for (let attempt = 0; attempt <= MAX_UNKNOWN_COL_STRIPS + 10; attempt += 1) {
-      if (Object.keys(patchMutable).length === 0) {
-        return {
-          data: null,
-          error: {
-            message: 'No updatable fields left for activity_list after dropping unknown columns.',
-          },
-        };
-      }
-
-      const { data, error } = await supabase
-        .from('activity_list')
-        .update(patchMutable as ActivityListUpdate)
-        .eq('id', resourceId)
-        .select()
-        .single();
-
-      if (!error) {
-        return {
-          data: mapActivityListRowToSectionResource(data as unknown as SectionResource),
-          error: null,
-        };
-      }
-
-      const badCol = unknownPostgrestColumnName(error.message);
-      const canStrip =
-        badCol &&
-        Object.prototype.hasOwnProperty.call(patchMutable, badCol) &&
-        strippedUnknownCols.length < MAX_UNKNOWN_COL_STRIPS;
-
-      if (!canStrip) {
-        return { data: null, error: handleSupabaseError(error) };
-      }
-
-      strippedUnknownCols.push(badCol);
-      const next: Record<string, unknown> = { ...patchMutable };
-      delete next[badCol];
-      patchMutable = next;
-    }
-
-    return {
-      data: null,
-      error: {
-        message:
-          'activity_list PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+    const { data, error } = await activityListWriteWithUnknownColumnFallback(
+      patchMutable,
+      async (mutable) => {
+        const result = await supabase
+          .from('activity_list')
+          .update(mutable as ActivityListUpdate)
+          .eq('id', resourceId)
+          .select()
+          .single();
+        return { data: result.data, error: result.error };
       },
+      'No updatable fields left for activity_list after dropping unknown columns.',
+      'activity_list PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+    );
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+    return {
+      data: mapActivityListRowToSectionResource(data as unknown as SectionResource),
+      error: null,
     };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };

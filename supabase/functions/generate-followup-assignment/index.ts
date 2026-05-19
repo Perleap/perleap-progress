@@ -8,6 +8,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,13 +119,40 @@ ${teacherFeedback || 'No teacher feedback available'}
 
 Based on this information, design a personalized follow-up assignment that will help ${studentName} grow in areas that need improvement while building on their strengths. The assignment should feel like a natural next step in their learning journey.`;
 
-    const { content: assignmentText } = await createChatCompletion(
+    const opikThreadId = crypto.randomUUID();
+    const clientTraceId = crypto.randomUUID();
+    const traceStartMs = Date.now();
+    const { content: assignmentText, usage } = await createChatCompletion(
       systemPrompt,
       [{ role: 'user', content: userPrompt }],
       0.7,
       800,
-      'smart'
-    );
+      'smart',
+    ) as { content: string; usage?: unknown };
+    const traceEndMs = Date.now();
+
+    const conversationTurns = Array.isArray(conversationContext) ? conversationContext.length : 0;
+    void queueOpikTrace({
+      traceName: 'generate-followup-assignment.completion',
+      tags: ['generate-followup-assignment', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        detected_language: detectedLanguage,
+        original_assignment_title: originalAssignmentTitle,
+        conversation_turns: conversationTurns,
+        student_feedback_chars: typeof studentFeedback === 'string' ? studentFeedback.length : 0,
+        teacher_feedback_chars: typeof teacherFeedback === 'string' ? teacherFeedback.length : 0,
+      },
+      output: { raw_model_response: assignmentText },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'generate-followup-assignment',
+        model_tier: 'smart',
+      },
+    }).catch(() => undefined);
 
     logInfo('Raw OpenAI response', { length: assignmentText.length });
 

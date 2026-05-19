@@ -4,6 +4,7 @@ import { createSupabaseClient } from '../shared/supabase.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -307,6 +308,7 @@ function applyRules(
 async function rephraseRecommendation(
   ruleResult: { type: string; reason: string; metrics: Record<string, unknown> },
   studentName: string,
+  opik: { threadId: string; classroomId: string; studentId: string },
 ): Promise<string> {
   const systemPrompt = `You are an educational insights assistant. Rephrase the following rule-based recommendation into 1-2 sentences of practical, teacher-friendly, non-diagnostic, action-oriented advice.
 
@@ -324,6 +326,7 @@ Supporting data: ${JSON.stringify(ruleResult.metrics)}
 Student name: ${studentName}`;
 
   try {
+    const traceStartMs = Date.now();
     const result = await createChatCompletion(
       systemPrompt,
       [{ role: 'user', content: 'Generate the teacher recommendation.' }],
@@ -331,9 +334,31 @@ Student name: ${studentName}`;
       200,
       'fast',
     );
+    const traceEndMs = Date.now();
 
     if (typeof result === 'object' && 'content' in result) {
-      return (result as { content: string }).content.trim();
+      const r = result as { content: string; usage?: unknown };
+      void queueOpikTrace({
+        traceName: 'compute-nuance-insights.llm-phrasing',
+        tags: ['compute-nuance-insights', 'edge-function'],
+        threadId: opik.threadId,
+        clientTraceId: crypto.randomUUID(),
+        traceStartMs,
+        traceEndMs,
+        input: {
+          rule_type: ruleResult.type,
+          rule_reason: ruleResult.reason,
+        },
+        output: { recommendation_text: r.content },
+        openaiUsage: r.usage,
+        metadata: {
+          edge_function: 'compute-nuance-insights',
+          model_tier: 'fast',
+          classroom_id: opik.classroomId,
+          student_id: opik.studentId,
+        },
+      }).catch(() => undefined);
+      return r.content.trim();
     }
     return getFallbackText(ruleResult.type);
   } catch (err) {
@@ -517,7 +542,11 @@ serve(async (req) => {
 
       if (ruleResult) {
         const studentName = nameMap.get(sid) || 'Student';
-        const text = await rephraseRecommendation(ruleResult, studentName);
+        const text = await rephraseRecommendation(ruleResult, studentName, {
+          threadId: `${classroom_id}:${sid}`,
+          classroomId: classroom_id,
+          studentId: sid,
+        });
 
         recommendations.push({
           student_id: sid,

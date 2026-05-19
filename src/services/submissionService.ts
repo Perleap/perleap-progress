@@ -866,6 +866,11 @@ export const completeSubmission = async (
       return { success: false, error: handleSupabaseError(error) };
     }
 
+    // Fire-and-forget: distill unit memory from this completed submission (idempotent).
+    void supabase.functions
+      .invoke('extract-unit-memory', { body: { submissionId } })
+      .catch(() => undefined);
+
     return { success: true, error: null };
   } catch (error) {
     return { success: false, error: handleSupabaseError(error) };

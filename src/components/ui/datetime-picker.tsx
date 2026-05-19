@@ -21,6 +21,14 @@ function pad2(n: number) {
   return String(n).padStart(2, '0');
 }
 
+/** Wizard datetime-local value → ISO for Postgres `timestamptz` (parses as local wall time). */
+export function dueAtLocalInputToIso(value: string): string | null {
+  if (!value?.trim()) return null;
+  const d = new Date(value);
+  if (!isValid(d)) return null;
+  return d.toISOString();
+}
+
 /** Build `YYYY-MM-DDTHH:mm` for datetime-local / DB local semantics */
 export function toDatetimeLocalString(d: Date, h: number, m: number) {
   const y = d.getFullYear();

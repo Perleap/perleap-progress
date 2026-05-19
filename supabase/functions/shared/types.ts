@@ -8,6 +8,10 @@ export interface Message {
   content: string;
   /** OpenAI output for this assistant turn only (before polish, dash normalize, greeting prefix, persistence marker strip). */
   raw_model_text?: string;
+  /** JSON body sent to chat/completions for the tutor step (excluding Authorization). */
+  openai_chat_request_snapshot?: Record<string, unknown>;
+  /** When polish ran, JSON body for the copy-edit completion. */
+  openai_polish_chat_request_snapshot?: Record<string, unknown>;
   fileContext?: {
     name: string;
     content: string;

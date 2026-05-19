@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion } from '../shared/openai.ts';
 import { isAppAdmin } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -219,7 +220,13 @@ When present, lean heavily on "Learning Outcome" / "learning goal" / "By the end
 Full teacher/AI instruction text (for your eyes only; distill the learner task, not the bot manual):
 ${instructions.trim()}`;
 
-    const { content } = (await createChatCompletion(
+    const opikThreadId =
+      persistAssignmentId ??
+      (classroomId.trim() ? classroomId : null) ??
+      crypto.randomUUID();
+    const clientTraceId = crypto.randomUUID();
+    const traceStartMs = Date.now();
+    const { content, usage } = (await createChatCompletion(
       language === 'he' ? systemHe : systemEn,
       [{ role: 'user', content: userBlock }],
       0.3,
@@ -227,7 +234,30 @@ ${instructions.trim()}`;
       'fast',
       false,
       'json_object',
-    )) as { content: string };
+    )) as { content: string; usage?: unknown };
+    const traceEndMs = Date.now();
+
+    void queueOpikTrace({
+      traceName: 'generate-student-facing-task.completion',
+      tags: ['generate-student-facing-task', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        language,
+        title: title.trim() || '(untitled)',
+        instructions_excerpt: instructions,
+      },
+      output: { model_response_json: content },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'generate-student-facing-task',
+        model_tier: 'fast',
+        assignment_id: persistAssignmentId ?? undefined,
+        classroom_id: classroomId.trim() || undefined,
+      },
+    }).catch(() => undefined);
 
     let studentFacingTask = '';
     try {

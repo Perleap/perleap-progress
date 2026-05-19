@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { isAppAdmin } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 import type { HardSkillPair } from '../_shared/hardSkillsFormat.ts';
 
 const corsHeaders = {
@@ -104,12 +105,20 @@ function parseSuggestionsFromContent(content: string | null | undefined): HardSk
   return parseSuggestionArray(parsed.suggestions);
 }
 
+type SuggestOpikContext = {
+  threadId: string;
+  classroomId: string;
+  assignmentType: string;
+  language: 'he' | 'en';
+};
+
 async function suggestFromCatalog(
   normalizedDomains: DomainRow[],
   title: string,
   instructions: string,
   assignmentType: string,
   language: 'he' | 'en',
+  opik: SuggestOpikContext | null,
 ): Promise<HardSkillPair[]> {
   const allowedJson = JSON.stringify(normalizedDomains);
   const langNote = language === 'he'
@@ -142,7 +151,8 @@ ${title.trim() || '(none)'}
 Instructions:
 ${instructions.trim() || '(none)'}`;
 
-  const { content } = await createChatCompletion(
+  const traceStartMs = Date.now();
+  const { content, usage } = await createChatCompletion(
     systemPrompt,
     [{ role: 'user', content: userContent }],
     0.2,
@@ -150,7 +160,35 @@ ${instructions.trim() || '(none)'}`;
     'fast',
     false,
     'json_object',
-  );
+  ) as { content: string; usage?: unknown };
+  const traceEndMs = Date.now();
+
+  if (opik) {
+    const clientTraceId = crypto.randomUUID();
+    void queueOpikTrace({
+      traceName: 'suggest-assignment-hard-skills.catalog',
+      tags: ['suggest-assignment-hard-skills', 'edge-function'],
+      threadId: opik.threadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        assignment_type: opik.assignmentType,
+        language: opik.language,
+        title,
+        instructions,
+        catalog_domain_count: normalizedDomains.length,
+      },
+      output: { response_json: content },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'suggest-assignment-hard-skills',
+        model_tier: 'fast',
+        path: 'catalog',
+        classroom_id: opik.classroomId,
+      },
+    }).catch(() => undefined);
+  }
 
   const rawList = parseSuggestionsFromContent(content);
   return validateSuggestions(normalizedDomains, rawList);
@@ -161,6 +199,7 @@ async function suggestCustom(
   instructions: string,
   assignmentType: string,
   language: 'he' | 'en',
+  opik: SuggestOpikContext | null,
 ): Promise<HardSkillPair[]> {
   const langNote = language === 'he'
     ? 'Write every domain and skill string in Hebrew.'
@@ -186,7 +225,8 @@ ${title.trim() || '(none)'}
 Instructions:
 ${instructions.trim() || '(none)'}`;
 
-  const { content } = await createChatCompletion(
+  const traceStartMs = Date.now();
+  const { content, usage } = await createChatCompletion(
     systemPrompt,
     [{ role: 'user', content: userContent }],
     0.35,
@@ -194,7 +234,34 @@ ${instructions.trim() || '(none)'}`;
     'fast',
     false,
     'json_object',
-  );
+  ) as { content: string; usage?: unknown };
+  const traceEndMs = Date.now();
+
+  if (opik) {
+    const clientTraceId = crypto.randomUUID();
+    void queueOpikTrace({
+      traceName: 'suggest-assignment-hard-skills.custom',
+      tags: ['suggest-assignment-hard-skills', 'edge-function'],
+      threadId: opik.threadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        assignment_type: opik.assignmentType,
+        language: opik.language,
+        title,
+        instructions,
+      },
+      output: { response_json: content },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'suggest-assignment-hard-skills',
+        model_tier: 'fast',
+        path: 'custom',
+        classroom_id: opik.classroomId,
+      },
+    }).catch(() => undefined);
+  }
 
   const rawList = parseSuggestionsFromContent(content);
   return normalizeCustomSuggestions(rawList);
@@ -283,6 +350,14 @@ serve(async (req) => {
       }))
       .filter((d) => d.name.length > 0 && d.components.length > 0);
 
+    const opikThreadId = crypto.randomUUID();
+    const opikCtx: SuggestOpikContext = {
+      threadId: opikThreadId,
+      classroomId,
+      assignmentType,
+      language,
+    };
+
     let suggestions: HardSkillPair[] = [];
     let source: 'catalog' | 'custom';
 
@@ -293,15 +368,16 @@ serve(async (req) => {
         instructions,
         assignmentType,
         language,
+        opikCtx,
       );
       if (suggestions.length > 0) {
         source = 'catalog';
       } else {
-        suggestions = await suggestCustom(title, instructions, assignmentType, language);
+        suggestions = await suggestCustom(title, instructions, assignmentType, language, opikCtx);
         source = 'custom';
       }
     } else {
-      suggestions = await suggestCustom(title, instructions, assignmentType, language);
+      suggestions = await suggestCustom(title, instructions, assignmentType, language, opikCtx);
       source = 'custom';
     }
 

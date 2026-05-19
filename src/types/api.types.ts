@@ -77,9 +77,7 @@ export interface ChatDebugPayload {
 
 export interface ChatRequest {
   message: string;
-  assignmentInstructions: string;
   submissionId: string;
-  studentId: string;
   assignmentId: string;
   isInitialGreeting?: boolean;
   language?: string;
@@ -98,6 +96,13 @@ export interface ChatResponse {
   shouldEnd?: boolean;
   endReason?: string;
   debug?: ChatDebugPayload;
+}
+
+export interface UnitMemoryBackfillResult {
+  processed: number;
+  skipped: number;
+  examined: number;
+  errors: { submissionId: string; error: string }[];
 }
 
 // Feedback API Types

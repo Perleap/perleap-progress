@@ -42,6 +42,8 @@ import {
   replaceModuleFlowSteps,
   type FlowStepInput,
 } from '@/services/moduleFlowService';
+import { omitOptionalActivityListFields } from '@/lib/activityListOptionalColumns';
+import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
 import { createSectionResource } from '@/services/syllabusResourceService';
 import { setAssignmentLinkedActivities } from '@/services/assignmentModuleActivityService';
 import type { AssignmentModuleActivityInput } from '@/types/syllabus';
@@ -265,7 +267,7 @@ export async function applyCoursePackageContentToClassroom(
         classroom_id: classroomId,
         title: a.title,
         instructions: a.instructions,
-        type: a.type,
+        type: normalizeAssignmentTypeForImport(a.type),
         due_at: a.due_at,
         status: a.status,
         target_dimensions: a.target_dimensions as CreateAssignmentInput['target_dimensions'],
@@ -550,21 +552,23 @@ async function insertActivityFromPackage(
   sectionId: string,
   act: CoursePackageActivityV1
 ): Promise<{ id: string | null; error: ApiError | null }> {
-  const { data, error } = await createSectionResource({
-    section_id: sectionId,
-    title: act.title,
-    resource_type: act.resource_type as import('@/types/syllabus').ResourceType,
-    order_index: act.order_index,
-    status: act.status as import('@/types/syllabus').ActivityResourceStatus,
-    lesson_content: (act.lesson_content as never) ?? null,
-    summary: act.summary,
-    body_text: act.body_text,
-    file_path: act.file_path,
-    url: act.url,
-    mime_type: act.mime_type,
-    file_size: act.file_size,
-    estimated_duration_minutes: act.estimated_duration_minutes,
-  });
+  const { data, error } = await createSectionResource(
+    omitOptionalActivityListFields({
+      section_id: sectionId,
+      title: act.title,
+      resource_type: act.resource_type as import('@/types/syllabus').ResourceType,
+      order_index: act.order_index,
+      status: act.status as import('@/types/syllabus').ActivityResourceStatus,
+      lesson_content: (act.lesson_content as never) ?? null,
+      summary: act.summary,
+      body_text: act.body_text,
+      file_path: act.file_path,
+      url: act.url,
+      mime_type: act.mime_type,
+      file_size: act.file_size,
+      estimated_duration_minutes: act.estimated_duration_minutes,
+    }),
+  );
   if (error) return { id: null, error };
   return { id: data?.id ?? null, error: null };
 }

@@ -7,6 +7,7 @@ import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,14 +79,18 @@ CRITICAL RULES:
 ${text}
 ---END SOURCE---`;
 
+    const opikThreadId = crypto.randomUUID();
+    const clientTraceId = crypto.randomUUID();
+    const traceStartMs = Date.now();
     // Call OpenAI API (smart tier + low temperature: more reliable on imperatives; higher latency/cost than fast/gpt-4o-mini)
-    const { content: rephrasedText } = await createChatCompletion(
+    const { content: rephrasedText, usage } = await createChatCompletion(
       systemPrompt,
       [{ role: 'user', content: userContent }],
       0.1,
       1500, // max tokens
       'smart',
-    );
+    ) as { content: string; usage?: unknown };
+    const traceEndMs = Date.now();
 
     // Clean up the response to ensure no formatting slipped through
     let cleanedText = rephrasedText.trim();
@@ -99,6 +104,28 @@ ${text}
     cleanedText = cleanedText.split('\n').map(line => {
       return line.replace(/^[\s-•\*]+/, '').trim();
     }).filter(line => line.length > 0).join('\n');
+
+    void queueOpikTrace({
+      traceName: 'rephrase-text.completion',
+      tags: ['rephrase-text', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        language,
+        has_reference_context: referenceBlock.length > 0,
+        source_excerpt: text,
+      },
+      output: { rephrasedText: cleanedText },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'rephrase-text',
+        model_tier: 'smart',
+        original_length: text.length,
+        rephrased_length: cleanedText.length,
+      },
+    }).catch(() => undefined);
 
     return new Response(
       JSON.stringify({ 
