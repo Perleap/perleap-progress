@@ -108,10 +108,7 @@ export const SubmissionTabs = ({
     assignmentType as (typeof nonChatAssignmentTypes)[number]
   );
 
-  /** Feedback first when present (edit/publish); otherwise student work tab (scores, transcript, AI actions). */
-  const [activeTab, setActiveTab] = useState<SubmissionTabValue>(() =>
-    feedback != null ? 'feedback' : 'assignment'
-  );
+  const [activeTab, setActiveTab] = useState<SubmissionTabValue>('evaluation');
 
   const assignmentTabLoadsChatData = activeTab === 'assignment';
 
@@ -276,7 +273,7 @@ export const SubmissionTabs = ({
         </TabsTrigger>
       </TabsList>
 
-      {/* Tab 1: Evaluation — mount only when selected to avoid CRA/analytics waterfall on default Feedback/Assignment tab */}
+      {/* Tab 1: Evaluation — mount only when selected to avoid CRA/analytics waterfall on other tabs */}
       <TabsContent value="evaluation" className="mt-6 space-y-8">
         {activeTab === 'evaluation' ? (
           <>
