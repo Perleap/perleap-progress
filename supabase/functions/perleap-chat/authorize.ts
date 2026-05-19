@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import {
   createSupabaseClient,
+  getServiceRoleKey,
   isAppAdmin,
 } from '../shared/supabase.ts';
 
@@ -39,7 +40,7 @@ export async function authorizePerleapChat(
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const serviceKey = getServiceRoleKey();
   if (!supabaseUrl || !serviceKey) {
     throw new Error('Supabase configuration missing');
   }

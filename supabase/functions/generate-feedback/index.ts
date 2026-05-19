@@ -9,6 +9,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import {
   createSupabaseClient,
   getAssignmentModuleActivityContextText,
+  getServiceRoleKey,
   getStudentName,
   getTeacherNameByAssignment,
 } from '../shared/supabase.ts';
@@ -410,7 +411,7 @@ serve(async (req) => {
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
         const wellbeingUrl = `${supabaseUrl}/functions/v1/analyze-student-wellbeing`;
-        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const serviceKey = getServiceRoleKey();
         
         // Fire and forget calls
         fetch(wellbeingUrl, {

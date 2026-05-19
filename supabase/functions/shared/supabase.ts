@@ -18,11 +18,39 @@ import {
 } from './courseRecall.ts';
 
 /**
+ * Resolve elevated API key: prefer hosted `SUPABASE_SECRET_KEYS` (sb_secret_...)
+ * over legacy JWT `SUPABASE_SERVICE_ROLE_KEY`.
+ */
+export const getServiceRoleKey = (): string => {
+  const secretKeysRaw = Deno.env.get('SUPABASE_SECRET_KEYS');
+  if (secretKeysRaw) {
+    try {
+      const parsed = JSON.parse(secretKeysRaw) as Record<string, string>;
+      for (const name of ['new_secret_key', 'default']) {
+        const value = parsed[name];
+        if (typeof value === 'string' && value.length > 0) return value;
+      }
+      const first = Object.values(parsed).find(
+        (value) => typeof value === 'string' && value.length > 0,
+      );
+      if (first) return first;
+    } catch {
+      // fall through to legacy key
+    }
+  }
+
+  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (legacy) return legacy;
+
+  throw new Error('Supabase configuration missing');
+};
+
+/**
  * Get Supabase configuration from environment
  */
 export const getSupabaseConfig = (): SupabaseConfig => {
   const url = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const serviceRoleKey = getServiceRoleKey();
 
   if (!url || !serviceRoleKey) {
     throw new Error('Supabase configuration missing');

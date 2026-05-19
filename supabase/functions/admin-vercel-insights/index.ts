@@ -4,7 +4,7 @@
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { isAppAdmin } from '../shared/supabase.ts';
+import { getServiceRoleKey, isAppAdmin } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
 const corsHeaders = {
@@ -35,7 +35,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const serviceKey = getServiceRoleKey();
     if (!supabaseUrl || !serviceKey) {
       await persistEdgeFunctionLog(
         {
