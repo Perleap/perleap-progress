@@ -29,8 +29,11 @@ import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
 import { validateChatAttachmentFile } from '@/lib/chatAttachment';
 import {
   formatInlineListsForChatMarkdown,
+  isPerleapAssistantIntro,
+  normalizePerleapIntroParagraphBreaks,
   splitAssistantMessageIntoSentences,
   splitChatDisplayText,
+  splitPerleapIntroDisplayText,
   stripConversationCompleteMarker,
 } from '@/lib/chatDisplay';
 import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
@@ -298,6 +301,10 @@ export function AssignmentChatInterface({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldScrollRef = useRef(false);
+  const firstAssistantMessageIndex = useMemo(
+    () => messages.findIndex((m) => m.role === 'assistant'),
+    [messages],
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -784,12 +791,23 @@ export function AssignmentChatInterface({
           <div className="space-y-4 pt-2 pb-4">
             {messages.map((message, index) => {
               const isUser = message.role === 'user';
+              const rawContent = String(message.content || '');
+              const isIntro =
+                !isUser &&
+                !!message.content &&
+                index === firstAssistantMessageIndex &&
+                isPerleapAssistantIntro(rawContent);
+              const formattedContent = formatInlineListsForChatMarkdown(
+                isIntro ? normalizePerleapIntroParagraphBreaks(rawContent) : rawContent,
+              );
               const displayParts =
                 isUser || !message.content
-                  ? [String(message.content || '')]
-                  : splitChatDisplayText(
-                      formatInlineListsForChatMarkdown(String(message.content)),
-                    );
+                  ? [rawContent]
+                  : isIntro
+                    ? splitPerleapIntroDisplayText(formattedContent)
+                    : splitChatDisplayText(formattedContent, {
+                        singleBubble: sending && index === messages.length - 1,
+                      });
               // User messages always on the right side of the chat (end)
               // Assistant messages always on the left side of the chat (start)
               // This is standard chat convention regardless of language direction

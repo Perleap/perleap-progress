@@ -45,6 +45,48 @@ export interface SplitChatDisplayOptions {
   singleBubble?: boolean;
 }
 
+/** Code-injected Perleap intro (EN/HE) — paragraph-only display split (no sentence bubbles). */
+export function isPerleapAssistantIntro(text: string): boolean {
+  const t = (text || '').trim();
+  return /^(?:Hello! I am Perleap,|שלום! אני Perleap,)/u.test(t);
+}
+
+/** Markdown paragraph break after the fixed intro line when the model used a single newline. */
+export function normalizePerleapIntroParagraphBreaks(text: string): string {
+  if (!isPerleapAssistantIntro(text)) return text;
+  return text.replace(
+    /^((?:Hello! I am Perleap,[\s\S]+?assistant\.)|(?:שלום! אני Perleap,[\s\S]+?\.))\n(?!\n)/u,
+    '$1\n\n',
+  );
+}
+
+/**
+ * Display split for the first Perleap greeting: paragraph bubbles only (never sentence-split "Hello!").
+ */
+export function splitPerleapIntroDisplayText(
+  text: string,
+  options?: SplitChatDisplayOptions,
+): string[] {
+  const maxB = options?.maxBubbles ?? DEFAULT_MAX_BUBBLES;
+  const raw = normalizePerleapIntroParagraphBreaks((text || '').trim());
+  if (!raw) return [];
+
+  const paragraphs = raw
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length <= 1) {
+    return [paragraphs[0] ?? raw];
+  }
+  if (paragraphs.length <= maxB) {
+    return paragraphs;
+  }
+  const out = paragraphs.slice(0, maxB);
+  out[maxB - 1] = paragraphs.slice(maxB - 1).join('\n\n');
+  return out;
+}
+
 /** Long verbatim quotes (prompts, markdown) must not be split into sentence bubbles. */
 export function shouldRenderChatAsSingleBubble(text: string): boolean {
   const t = (text || '').trim();
