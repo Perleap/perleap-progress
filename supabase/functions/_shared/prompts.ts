@@ -456,6 +456,7 @@ export async function generateEnhancedChatSystemPrompt(
   taskProgress?: { index: number; text: string; done: boolean }[],
   assignmentTutorText?: string,
   unitMemoryExcerpt?: string,
+  courseMemoryExcerpt?: string,
 ): Promise<string> {
   const { composeSystemPrompt } = await import('./composeSystemPrompt.ts');
   return composeSystemPrompt({
@@ -471,6 +472,7 @@ export async function generateEnhancedChatSystemPrompt(
     assignmentTutorText,
     priorContextExcerpt,
     unitMemoryExcerpt,
+    courseMemoryExcerpt,
     taskProgress,
   });
 }

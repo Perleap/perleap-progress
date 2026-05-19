@@ -33,7 +33,6 @@ import {
   splitChatDisplayText,
   stripConversationCompleteMarker,
 } from '@/lib/chatDisplay';
-import { UnitMemoryBackfillSection } from '@/pages/admin/UnitMemoryBackfillSection';
 
 /** React Query stale time for syllabus/assignments when filtering admin comparison (repeat visits stay instant). */
 const ADMIN_COURSE_DATA_STALE_MS = 5 * 60 * 1000;
@@ -368,12 +367,6 @@ export default function AdminAiPromptsPage() {
           </Accordion>
         )}
       </section>
-
-      <UnitMemoryBackfillSection
-        classroomId={courseId || undefined}
-        syllabusSectionId={!isAllModulesChoice(moduleId) ? moduleId : undefined}
-        studentId={studentId || undefined}
-      />
 
       <section className="space-y-4">
         <div>

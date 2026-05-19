@@ -219,4 +219,44 @@ WHERE trigger_name LIKE '%prevent_duplicate_profile%';
 
 ---
 
+## Course memory (layered with unit memory)
+
+Cross-unit recall uses `student_classroom_course_memory` plus per-section `student_section_unit_memory`.
+
+### Deploy order
+
+1. Apply migration `20260622120000_student_classroom_course_memory.sql` on Supabase.
+2. Deploy edge functions:
+   ```bash
+   supabase functions deploy extract-unit-memory perleap-chat
+   ```
+3. Set secrets (optional overrides):
+   - `PERLEAP_COURSE_MEMORY_MAX_FACTS` = `60`
+   - `PERLEAP_COURSE_MEMORY_PROMPT_CAP` = `12`
+   - `PERLEAP_COURSE_MEMORY_ENABLED` = `true`
+4. Migrate existing section rows into course memory:
+   ```bash
+   npm run migrate:section-memory-to-course -- --dry-run
+   npm run migrate:section-memory-to-course
+   ```
+5. Deploy frontend (assignment wizard **Remember past work** toggle, default on).
+
+### QA checklist (Unit 1 → Unit 3)
+
+1. Student completes an assignment in **Unit 1** with real chat/essay content.
+2. SQL: `student_classroom_course_memory` has `processed_submission_ids` containing that submission id.
+3. Student starts an assignment in **Unit 3** (same classroom) with **Remember past work** enabled.
+4. Tutor references earlier-unit themes; response header `X-Perleap-Course-Memory-Facts` > 0.
+5. Disable toggle on Unit 3 assignment → no cross-unit references.
+6. Same-unit work still uses `<unit_memory>` via section row.
+
+### Ops scripts
+
+- `npm run extract:unit-memory-outliers` — submissions missing from **course** `processed_submission_ids`
+- `scripts/list_unit_memory_outliers.sql` — SQL diagnostic (section markers)
+
+Requires `SUPABASE_SERVICE_ROLE_KEY` in `.env`.
+
+---
+
 **Last Updated**: December 11, 2024

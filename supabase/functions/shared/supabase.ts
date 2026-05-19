@@ -6,7 +6,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import type { SupabaseConfig, Message } from './types.ts';
 import { buildModuleActivityContextBundle } from '../_shared/assignmentContext.ts';
-import { stripPerleapGreetingPrefixesFromExcerpt, MAX_UNIT_PRIOR_SUBMISSION_IDS } from './perleapPriorContext.ts';
+import {
+  stripPerleapGreetingPrefixesFromExcerpt,
+  MAX_UNIT_PRIOR_SUBMISSION_IDS,
+  MAX_UNIT_PRIOR_SUBMISSION_IDS_CHAT,
+} from './perleapPriorContext.ts';
+import {
+  COURSE_RECALL_MAX_PRIOR_SUBMISSIONS,
+  rankPriorSubmissionCandidates,
+  type PriorSubmissionCandidate,
+} from './courseRecall.ts';
 
 /**
  * Get Supabase configuration from environment
@@ -411,7 +420,135 @@ export async function getPriorSubmissionIdsInSameSection(
   return ids;
 }
 
+function sectionTitleFromJoin(
+  joined: unknown,
+): string {
+  if (joined && typeof joined === 'object' && !Array.isArray(joined) &&
+    'title' in joined && typeof (joined as { title?: string }).title === 'string') {
+    return (joined as { title: string }).title;
+  }
+  return '';
+}
+
+async function listClassroomPriorCandidates(
+  studentId: string,
+  currentAssignmentId: string,
+  opts?: { otherSectionsOnly?: boolean },
+): Promise<{ candidates: PriorSubmissionCandidate[]; classroomId: string | null }> {
+  const supabase = createSupabaseClient();
+  const { data: curr, error: e0 } = await supabase
+    .from('assignments')
+    .select('classroom_id, syllabus_section_id')
+    .eq('id', currentAssignmentId)
+    .maybeSingle();
+  if (e0 || !curr?.classroom_id) {
+    return { candidates: [], classroomId: null };
+  }
+
+  let query = supabase
+    .from('assignments')
+    .select('id, title, syllabus_sections(title)')
+    .eq('classroom_id', curr.classroom_id)
+    .neq('id', currentAssignmentId);
+
+  if (opts?.otherSectionsOnly && curr.syllabus_section_id) {
+    query = query.neq('syllabus_section_id', curr.syllabus_section_id);
+  }
+
+  const { data: assignments, error: e1 } = await query;
+  if (e1 || !assignments?.length) {
+    return { candidates: [], classroomId: curr.classroom_id };
+  }
+
+  const assignmentMeta = new Map<string, string>();
+  for (const a of assignments) {
+    const sectionTitle = sectionTitleFromJoin(a.syllabus_sections);
+    assignmentMeta.set(a.id, `${a.title ?? ''} ${sectionTitle}`.trim());
+  }
+
+  const assignmentIds = assignments.map((a) => a.id);
+  const { data: subs, error: e2 } = await supabase
+    .from('submissions')
+    .select('id, assignment_id, submitted_at')
+    .eq('student_id', studentId)
+    .eq('status', 'completed')
+    .eq('is_teacher_attempt', false)
+    .in('assignment_id', assignmentIds)
+    .order('submitted_at', { ascending: false });
+
+  if (e2 || !subs?.length) {
+    return { candidates: [], classroomId: curr.classroom_id };
+  }
+
+  const latestByAssignment = new Map<string, { id: string; submitted_at: string }>();
+  for (const s of subs) {
+    const prev = latestByAssignment.get(s.assignment_id);
+    if (!prev || String(s.submitted_at) > String(prev.submitted_at)) {
+      latestByAssignment.set(s.assignment_id, {
+        id: s.id,
+        submitted_at: String(s.submitted_at),
+      });
+    }
+  }
+
+  const candidates: PriorSubmissionCandidate[] = [];
+  for (const [assignmentId, sub] of latestByAssignment) {
+    candidates.push({
+      id: sub.id,
+      submitted_at: sub.submitted_at,
+      label: assignmentMeta.get(assignmentId) ?? '',
+    });
+  }
+  return { candidates, classroomId: curr.classroom_id };
+}
+
+/**
+ * Course-wide recall: rank all completed submissions in the classroom (any unit)
+ * by relevance to the student's message; return the best match(es).
+ */
+export async function getPriorSubmissionIdsForCourseRecall(
+  studentId: string,
+  currentAssignmentId: string,
+  relevanceText: string,
+  maxIds: number = COURSE_RECALL_MAX_PRIOR_SUBMISSIONS,
+): Promise<string[]> {
+  const { candidates } = await listClassroomPriorCandidates(studentId, currentAssignmentId);
+  return rankPriorSubmissionCandidates(candidates, relevanceText, maxIds);
+}
+
+/**
+ * Completed learner submissions in other syllabus sections of the same classroom
+ * (excluding current assignment), one row per assignment (latest completion),
+ * ordered oldest → newest by submitted_at.
+ */
+export async function getPriorSubmissionIdsInOtherSections(
+  studentId: string,
+  currentAssignmentId: string,
+  relevanceText?: string,
+): Promise<string[]> {
+  const { candidates } = await listClassroomPriorCandidates(
+    studentId,
+    currentAssignmentId,
+    { otherSectionsOnly: true },
+  );
+  const ref = relevanceText?.trim() ?? '';
+  if (ref) {
+    return rankPriorSubmissionCandidates(
+      candidates,
+      ref,
+      MAX_UNIT_PRIOR_SUBMISSION_IDS_CHAT,
+    );
+  }
+  candidates.sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
+  let ids = candidates.map((x) => x.id);
+  if (ids.length > MAX_UNIT_PRIOR_SUBMISSION_IDS) {
+    ids = ids.slice(-MAX_UNIT_PRIOR_SUBMISSION_IDS);
+  }
+  return ids;
+}
+
 const PRIOR_CONTEXT_MAX_CHARS = 5000;
+const PRIOR_CONTEXT_RECALL_MAX_CHARS = 8_000;
 
 function stripChatContentForPriorContext(raw: string): string {
   let s = String(raw ?? '').replace(/\r\n/g, '\n');
@@ -515,7 +652,72 @@ function isSubstantiveStudentReply(text: string): boolean {
   return true;
 }
 
-function formatMessagesForPriorContext(messages: Message[]): string {
+/** All student turns (newest included), minimal filtering — for course-recall. */
+function formatStudentMessagesForCourseRecall(
+  messages: Message[],
+  maxChars: number,
+): string {
+  const parts: string[] = [];
+  let total = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m || m.role !== 'user' || typeof m.content !== 'string') continue;
+    const text = stripChatContentForPriorContext(m.content).trim();
+    if (text.length < 4) continue;
+    const piece = `Student: ${text}\n\n`;
+    if (total + piece.length > maxChars) break;
+    parts.push(piece);
+    total += piece.length;
+  }
+  return parts.reverse().join('').trim();
+}
+
+function collectStringsFromJson(value: unknown, out: string[], depth = 0): void {
+  if (depth > 12) return;
+  if (typeof value === 'string') {
+    const t = value.trim();
+    if (t.length >= 20) out.push(t);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectStringsFromJson(item, out, depth + 1);
+    return;
+  }
+  if (value && typeof value === 'object') {
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      collectStringsFromJson(v, out, depth + 1);
+    }
+  }
+}
+
+/** Pull human-readable prompt text from langchain / JSON submission bodies. */
+function extractRecallableTextFromSubmissionBody(text: string): string | null {
+  if (!looksLikeJsonHeavySubmissionBody(text)) return null;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    const strings: string[] = [];
+    collectStringsFromJson(parsed, strings);
+    strings.sort((a, b) => b.length - a.length);
+    const best = strings.find((s) => s.length >= 40);
+    if (best) return best.slice(0, 6_000);
+  } catch {
+    // fall through
+  }
+  const promptField = text.match(
+    /"(?:system_?prompt|final_?prompt|user_?prompt|prompt)"\s*:\s*"((?:\\.|[^"\\]){20,})"/i,
+  );
+  if (promptField?.[1]) {
+    return promptField[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').slice(0, 6_000);
+  }
+  return text.slice(0, 4_000);
+}
+
+function formatMessagesForPriorContext(
+  messages: Message[],
+  opts?: { minUserLineChars?: number; maxTotalChars?: number },
+): string {
+  const minUser = opts?.minUserLineChars ?? 12;
+  const maxTotal = opts?.maxTotalChars ?? PRIOR_CONTEXT_MAX_CHARS;
   const parts: string[] = [];
   let total = 0;
   const seenAssistantFingerprints = new Set<string>();
@@ -531,9 +733,9 @@ function formatMessagesForPriorContext(messages: Message[]): string {
     const trimmed = text.trim();
     if (!trimmed) continue;
 
-    if (trimmed.length < 12) continue;
-
     const role = m.role;
+    const minLen = role === 'user' ? minUser : 12;
+    if (trimmed.length < minLen) continue;
 
     if (role === 'assistant' && isPriorAssistantDisclaimer(trimmed)) continue;
 
@@ -565,12 +767,23 @@ function formatMessagesForPriorContext(messages: Message[]): string {
 
     const label = role === 'user' ? 'Student' : 'Assistant';
     const piece = `${label}: ${text}\n\n`;
-    if (total + piece.length > PRIOR_CONTEXT_MAX_CHARS) break;
+    if (total + piece.length > maxTotal) break;
     parts.push(piece);
     total += piece.length;
   }
   return parts.reverse().join('').trim();
 }
+
+export type PriorExcerptOptions = {
+  /** Include essay / short text_body (below the usual noise floor). */
+  includeShortWrittenWork?: boolean;
+  /** Put submitted written work and test answers before chat transcript. */
+  preferWrittenWorkFirst?: boolean;
+  /** Keep shorter student chat lines (course-recall turns). */
+  relaxedChat?: boolean;
+  /** Allow a larger excerpt per prior submission. */
+  expandedBudget?: boolean;
+};
 
 /**
  * Returns bounded plain-text context from a prior submission: Perleap chat transcript,
@@ -580,6 +793,7 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
   priorSubmissionId: string,
   studentId: string,
   currentAssignmentId: string,
+  opts?: PriorExcerptOptions,
 ): Promise<string | null> => {
   const supabase = createSupabaseClient();
 
@@ -594,7 +808,7 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
 
   const { data: priorClassRow, error: e2 } = await supabase
     .from('assignments')
-    .select('classroom_id')
+    .select('classroom_id, type, title')
     .eq('id', priorSub.assignment_id)
     .maybeSingle();
   const { data: currClassRow, error: e3 } = await supabase
@@ -604,6 +818,16 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
     .maybeSingle();
   if (e2 || e3 || !priorClassRow || !currClassRow) return null;
   if (priorClassRow.classroom_id !== currClassRow.classroom_id) return null;
+
+  const isEssayAssignment = priorClassRow.type === 'text_essay';
+  const courseRecallMode = opts?.expandedBudget === true;
+  const includeShortWritten =
+    opts?.includeShortWrittenWork === true || isEssayAssignment || courseRecallMode;
+  const preferWrittenFirst =
+    opts?.preferWrittenWorkFirst === true || isEssayAssignment || courseRecallMode;
+  const maxContextChars = courseRecallMode
+    ? PRIOR_CONTEXT_RECALL_MAX_CHARS
+    : PRIOR_CONTEXT_MAX_CHARS;
 
   let chatExcerpt = '';
   const { data: convRows, error: e4 } = await supabase
@@ -616,24 +840,52 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
   if (!e4 && convRows?.length) {
     const raw = convRows[0].messages;
     if (Array.isArray(raw) && raw.length > 0) {
-      chatExcerpt = formatMessagesForPriorContext(raw as Message[]) || '';
-    }
-  }
-
-  const sections: string[] = [];
-  if (chatExcerpt.trim()) sections.push(chatExcerpt.trim());
-
-  const tb = typeof priorSub.text_body === 'string' ? priorSub.text_body.trim() : '';
-  if (tb && tb.length >= MIN_PRIOR_TEXT_BODY_CHARS) {
-    if (looksLikeJsonHeavySubmissionBody(tb)) {
-      sections.push(`Submitted written work (prior assignment):\n${PRIOR_JSON_ARTIFACT_PLACEHOLDER}`);
-    } else {
-      const cleaned = stripChatContentForPriorContext(tb).slice(0, 4000);
-      if (cleaned) {
-        sections.push(`Submitted written work (prior assignment):\n${cleaned}`);
+      const msgs = raw as Message[];
+      if (courseRecallMode) {
+        const studentRecall = formatStudentMessagesForCourseRecall(msgs, maxContextChars);
+        const standard = formatMessagesForPriorContext(msgs, {
+          minUserLineChars: 4,
+          maxTotalChars: maxContextChars,
+        });
+        chatExcerpt = studentRecall.length >= standard.length ? studentRecall : standard;
+      } else {
+        chatExcerpt = formatMessagesForPriorContext(msgs, {
+          minUserLineChars: opts?.relaxedChat ? 4 : 12,
+          maxTotalChars: maxContextChars,
+        }) || '';
       }
     }
   }
+
+  const writtenSections: string[] = [];
+  const chatSections: string[] = [];
+  const assignmentTitle =
+    typeof priorClassRow.title === 'string' ? priorClassRow.title.trim() : '';
+  if (assignmentTitle) {
+    writtenSections.push(`Prior assignment: ${assignmentTitle}`);
+  }
+
+  const tb = typeof priorSub.text_body === 'string' ? priorSub.text_body.trim() : '';
+  const tbLongEnough = tb.length >= MIN_PRIOR_TEXT_BODY_CHARS;
+  if (tb && (tbLongEnough || includeShortWritten)) {
+    if (looksLikeJsonHeavySubmissionBody(tb)) {
+      const extracted = courseRecallMode ? extractRecallableTextFromSubmissionBody(tb) : null;
+      if (extracted) {
+        writtenSections.push(`Submitted written work (prior assignment):\n${extracted}`);
+      } else if (!courseRecallMode) {
+        writtenSections.push(
+          `Submitted written work (prior assignment):\n${PRIOR_JSON_ARTIFACT_PLACEHOLDER}`,
+        );
+      }
+    } else {
+      const cleaned = stripChatContentForPriorContext(tb).slice(0, courseRecallMode ? 6_000 : 4_000);
+      if (cleaned) {
+        writtenSections.push(`Submitted written work (prior assignment):\n${cleaned}`);
+      }
+    }
+  }
+
+  if (chatExcerpt.trim()) chatSections.push(chatExcerpt.trim());
 
   const { data: testRows, error: eTr } = await supabase
     .from('test_responses')
@@ -679,17 +931,23 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
     }
 
     if (testLines.length > 0) {
-      sections.push(
+      writtenSections.push(
         `Prior assignment test responses:\n${testLines.join('\n\n')}`.slice(0, 4000),
       );
     }
   }
 
+  const sections = preferWrittenFirst
+    ? [...writtenSections, ...chatSections]
+    : [...chatSections, ...writtenSections];
+
   if (sections.length === 0) return null;
 
   let out = stripPerleapGreetingPrefixesFromExcerpt(sections.join('\n\n---\n\n'));
-  if (out.length > PRIOR_CONTEXT_MAX_CHARS) {
-    out = out.slice(out.length - PRIOR_CONTEXT_MAX_CHARS);
+  if (out.length > maxContextChars) {
+    out = preferWrittenFirst
+      ? out.slice(0, maxContextChars)
+      : out.slice(out.length - maxContextChars);
   }
   return stripPerleapGreetingPrefixesFromExcerpt(out.trim()) || null;
 };

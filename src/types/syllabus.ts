@@ -16,6 +16,8 @@ export interface LessonTextBlockV1 {
   slides?: string[];
 }
 
+export type LessonVideoSource = 'upload' | 'youtube';
+
 /** Single uploaded or linked video in a v1 lesson */
 export interface LessonVideoBlockV1 {
   id: string;
@@ -25,6 +27,8 @@ export interface LessonVideoBlockV1 {
   mime_type: string | null;
   file_size: number | null;
   display_name: string;
+  /** When omitted, inferred from url / file_path in lessonContent helpers */
+  source?: LessonVideoSource;
 }
 
 export type LessonBlockV1 = LessonTextBlockV1 | LessonVideoBlockV1;

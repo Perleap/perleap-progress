@@ -42,6 +42,8 @@ export type AssignmentWizardFormData = {
   auto_publish_ai_feedback: boolean;
   materials: Array<{ type: 'pdf' | 'link'; url: string; name: string }>;
   attempt_mode: Database['public']['Enums']['assignment_attempt_mode'];
+  /** When true, tutor may recall distilled facts from earlier units in this course. */
+  use_course_memory: boolean;
 };
 
 export function getDefaultAssignmentWizardFormData(): AssignmentWizardFormData {
@@ -65,6 +67,7 @@ export function getDefaultAssignmentWizardFormData(): AssignmentWizardFormData {
     auto_publish_ai_feedback: true,
     materials: [],
     attempt_mode: 'single',
+    use_course_memory: true,
   };
 }
 

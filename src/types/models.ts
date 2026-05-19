@@ -119,6 +119,7 @@ export interface Assignment {
   hard_skill_domain?: string | null;
   /** When true (default), students see AI feedback as soon as it is generated. */
   auto_publish_ai_feedback?: boolean;
+  use_course_memory?: boolean;
   syllabus_section_id?: string | null;
   grading_category_id?: string | null;
   created_at: string;

@@ -23,6 +23,7 @@ interface ClassroomLayoutProps {
   }>;
   /** When true, hides Dashboard / Planner in the classroom sidebar (student shell). */
   hideGlobalNav?: boolean;
+  onBack?: () => void;
 }
 
 export function ClassroomLayout({
@@ -33,6 +34,7 @@ export function ClassroomLayout({
   onSectionChange,
   customSections,
   hideGlobalNav = false,
+  onBack,
 }: ClassroomLayoutProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -65,6 +67,7 @@ export function ClassroomLayout({
         onSectionChange={onSectionChange}
         sections={sections}
         hideGlobalNav={hideGlobalNav}
+        onBack={onBack}
       />
       <SidebarInset>
         <FloatingShellActions userId={user?.id} showTeacherAssistant={isTeacher} />

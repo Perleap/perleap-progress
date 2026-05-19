@@ -258,6 +258,14 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
     (classroom?.teacher_id === user.id || isAppAdminRole(user.user_metadata?.role));
   const isStudentView = role === 'student';
 
+  const flowStepIndex = useMemo(
+    () =>
+      isStudentView && flowStepForResource && orderedFlowSteps.length > 0
+        ? orderedFlowSteps.findIndex((s) => s.id === flowStepForResource.id)
+        : -1,
+    [isStudentView, flowStepForResource, orderedFlowSteps],
+  );
+
   const canMarkComplete =
     isStudentView &&
     user?.id &&
@@ -291,11 +299,6 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
       </div>
     );
   }
-
-  const flowStepIndex =
-    isStudentView && flowStepForResource && orderedFlowSteps.length > 0
-      ? orderedFlowSteps.findIndex((s) => s.id === flowStepForResource.id)
-      : -1;
 
   const sequentialBlocked =
     isStudentView &&

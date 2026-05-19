@@ -695,6 +695,10 @@
       "dueDateHelperRetries": "Required: all attempts must be submitted by this date.",
       "dueRequiredForRetries": "Set a due date when using multiple attempts until that date."
     },
+    "courseMemory": {
+      "label": "Remember past work from earlier units",
+      "helper": "When on, the tutor may briefly use distilled facts from this student's completed work in other units of this course."
+    },
     "metadata": {
       "assignmentDetailsTitle": "Assignment details",
       "assignmentDetailsDescription": "Define the task and optional links to your course outline.",
@@ -939,6 +943,10 @@
       "activityEdit": "Edit activity",
       "activityVideoFile": "Video file",
       "activityVideoFileHint": "Common video formats are supported (e.g. MP4, WebM, MOV, AVI, MKV).",
+      "activityVideoSourceUpload": "Upload file",
+      "activityVideoSourceYoutube": "YouTube link",
+      "activityYoutubeHint": "Paste a YouTube watch or share link. Students will watch it inside the activity.",
+      "invalidYoutubeUrl": "Enter a valid YouTube URL (youtube.com or youtu.be).",
       "richTextPlaceholder": "Start writing…",
       "activityNeedsContent": "Add at least one text or video block with content.",
       "activitySaved": "Activity saved.",

@@ -63,12 +63,15 @@ interface SubmissionCardProps {
   submissionAttemptCount?: number;
   /** Default stack: tall card with title top, student bottom-left, date bottom-right */
   variant?: SubmissionCardVariant;
+  /** When set, used instead of default navigate (e.g. to preserve classroom filter URL). */
+  onOpen?: (submissionId: string) => void;
 }
 
 export function SubmissionCard({
   submission,
   submissionAttemptCount = 1,
   variant = 'stack',
+  onOpen,
 }: SubmissionCardProps) {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
@@ -334,7 +337,10 @@ export function SubmissionCard({
       type="button"
       dir={isRTL ? 'rtl' : 'ltr'}
       disabled={pending}
-      onClick={() => navigate(`/teacher/submission/${submission.id}`)}
+      onClick={() => {
+        if (onOpen) onOpen(submission.id);
+        else navigate(`/teacher/submission/${submission.id}`);
+      }}
       className={cn(
         'w-full text-start flex flex-col transition-all',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',

@@ -21,8 +21,10 @@ import { FileText, GripVertical, Loader2, Plus, Trash2, Video } from 'lucide-rea
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { LessonBlockV1 } from '@/types/syllabus';
+import type { LessonBlockV1, LessonVideoSource } from '@/types/syllabus';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -34,6 +36,8 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
+import { inferLessonVideoSource } from '@/lib/lessonContent';
+import { parseYoutubeUrl } from '@/lib/youtube';
 import { uploadResourceFile } from '@/services/syllabusResourceService';
 import { SortableLessonTextSlides } from '@/components/features/syllabus/SortableLessonTextSlides';
 
@@ -142,8 +146,60 @@ export const LessonBlocksEditor = ({
         mime_type: null,
         file_size: null,
         display_name: '',
+        source: 'upload' as const,
       },
     ]);
+  };
+
+  const setVideoSource = (blockId: string, source: LessonVideoSource) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'video') return b;
+        if (inferLessonVideoSource(b) === source) return b;
+        return {
+          ...b,
+          source,
+          url: null,
+          file_path: null,
+          mime_type: null,
+          file_size: null,
+          display_name: '',
+        };
+      })
+    );
+  };
+
+  const setYoutubeUrl = (blockId: string, raw: string) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'video') return b;
+        return { ...b, url: raw.trim() || null };
+      })
+    );
+  };
+
+  const commitYoutubeUrl = (blockId: string) => {
+    onChange((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.type !== 'video') return b;
+        const raw = b.url?.trim() ?? '';
+        if (!raw) return b;
+        const parsed = parseYoutubeUrl(raw);
+        if (!parsed) {
+          toast.error(t('classroomDetail.activities.invalidYoutubeUrl'));
+          return b;
+        }
+        return {
+          ...b,
+          source: 'youtube' as const,
+          url: parsed.watchUrl,
+          file_path: null,
+          mime_type: null,
+          file_size: null,
+          display_name: b.display_name?.trim() || parsed.videoId,
+        };
+      })
+    );
   };
 
   const removeBlock = (blockId: string) => {
@@ -247,6 +303,7 @@ export const LessonBlocksEditor = ({
           b.id === blockId && b.type === 'video'
             ? {
                 ...b,
+                source: 'upload' as const,
                 file_path: up.filePath,
                 url: up.publicUrl,
                 mime_type: file.type || null,
@@ -464,9 +521,35 @@ export const LessonBlocksEditor = ({
                               <GripVertical className="h-4 w-4" />
                             </Button>
                             <div className="min-w-0 flex-1 space-y-2">
-                              <p className="text-xs font-medium text-muted-foreground">
-                                {t('classroomDetail.activities.activityVideoFile')}
-                              </p>
+                              {(() => {
+                                const videoSource = inferLessonVideoSource(block);
+                                return (
+                                  <>
+                                    <Tabs
+                                      value={videoSource}
+                                      onValueChange={(v) =>
+                                        setVideoSource(block.id, v as LessonVideoSource)
+                                      }
+                                    >
+                                      <TabsList className="h-8">
+                                        <TabsTrigger
+                                          value="upload"
+                                          className="text-xs"
+                                          disabled={disabled || uploadingHere}
+                                        >
+                                          {t('classroomDetail.activities.activityVideoSourceUpload')}
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                          value="youtube"
+                                          className="text-xs"
+                                          disabled={disabled || uploadingHere}
+                                        >
+                                          {t('classroomDetail.activities.activityVideoSourceYoutube')}
+                                        </TabsTrigger>
+                                      </TabsList>
+                                    </Tabs>
+                                    {videoSource === 'upload' ? (
+                                      <>
                               <input
                                 id={`lesson-video-${block.id}`}
                                 type="file"
@@ -530,6 +613,40 @@ export const LessonBlocksEditor = ({
                               <p className="text-xs text-muted-foreground">
                                 {t('classroomDetail.activities.activityVideoFileHint')}
                               </p>
+                                      </>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        <label
+                                          htmlFor={`lesson-youtube-${block.id}`}
+                                          className="text-xs font-medium text-muted-foreground"
+                                        >
+                                          {t('classroomDetail.activities.fieldVideoUrl')}
+                                        </label>
+                                        <Input
+                                          id={`lesson-youtube-${block.id}`}
+                                          type="url"
+                                          dir="ltr"
+                                          className="font-mono text-sm"
+                                          placeholder="https://www.youtube.com/watch?v=…"
+                                          disabled={disabled || uploadingHere}
+                                          value={block.url ?? ''}
+                                          onChange={(e) => setYoutubeUrl(block.id, e.target.value)}
+                                          onBlur={() => commitYoutubeUrl(block.id)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              commitYoutubeUrl(block.id);
+                                            }
+                                          }}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                          {t('classroomDetail.activities.activityYoutubeHint')}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
                               <div className={cn('flex', isRTL && 'justify-start')}>
                                 <Button
                                   type="button"

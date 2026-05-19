@@ -98,13 +98,6 @@ export interface ChatResponse {
   debug?: ChatDebugPayload;
 }
 
-export interface UnitMemoryBackfillResult {
-  processed: number;
-  skipped: number;
-  examined: number;
-  errors: { submissionId: string; error: string }[];
-}
-
 // Feedback API Types
 export interface FeedbackRequest {
   submissionId: string;

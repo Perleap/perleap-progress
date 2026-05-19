@@ -21,6 +21,7 @@ import {
   getTeacherIdFromAssignment,
   getValidatedPriorAssignmentChatExcerpt,
   getPriorSubmissionIdsInSameSection,
+  getPriorSubmissionIdsForCourseRecall,
   isAppAdmin,
 } from '../shared/supabase.ts';
 import type { Message } from '../shared/types.ts';
@@ -44,6 +45,8 @@ import {
 import {
   PRIOR_MERGE_GREETING_BUDGET_FRACTION,
   PRIOR_MERGE_PER_SUBMISSION_CEILING_CHARS,
+  PRIOR_EXPLICIT_RECALL_PER_SUBMISSION_CEILING_CHARS,
+  PRIOR_COURSE_RECALL_MERGE_MAX_CHARS,
   PRIOR_MERGE_SEP,
   PRIOR_MERGE_TOTAL_MAX,
   MAX_UNIT_PRIOR_SUBMISSION_IDS_CHAT,
@@ -51,13 +54,15 @@ import {
   PRIOR_MIN_CHUNK_BODY_CHARS,
   dedupeAssistantLinesAcrossPriors,
   stripPerleapGreetingPrefixesFromExcerpt,
+  isCourseRecallRequest,
 } from '../shared/perleapPriorContext.ts';
+import { COURSE_RECALL_MAX_PRIOR_SUBMISSIONS } from '../shared/courseRecall.ts';
 import {
   extractKeywordSet,
   hasKeywordOverlap,
   overlappingKeywords,
 } from '../_shared/topicOverlap.ts';
-import { getUnitMemoryForPrompt } from '../shared/unitMemory.ts';
+import { getCourseMemoryForPrompt, getUnitMemoryForPrompt } from '../shared/unitMemory.ts';
 import { createMarkerSink } from './markerSink.ts';
 import { createProgressSink, extractProgressFromFullText } from './progressSink.ts';
 import { consumeChatCompletionsStream, consumeResponsesApiStream } from './streamOpenAI.ts';
@@ -66,6 +71,8 @@ import { queueOpikTrace } from '../shared/opikTrace.ts';
 const CHAT_TEMPERATURE = 0.2;
 const CHAT_MAX_TOKENS_DEFAULT = 500;
 const CHAT_MAX_TOKENS_GREETING = 800;
+/** Course-recall turns quote full prior prompts from <prior_context>. */
+const CHAT_MAX_TOKENS_COURSE_RECALL = 2_800;
 /** Suppress hallucinated next-turn role tags. Chat Completions only; Responses API also accepts `stop`. */
 const CHAT_STOP_SEQUENCES = ['\n\nStudent:', '\n\nUser:'];
 const COMPLETION_MARKER = '[CONVERSATION_COMPLETE]';
@@ -79,7 +86,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Expose-Headers':
-    'X-Perleap-Prior-N, X-Perleap-Prior-Parts, X-Perleap-Prior-Parts-Pre, X-Perleap-Prior-Verbatim, X-Perleap-Prior-Summary, X-Perleap-Prior-Section-Len, X-Perleap-Prior-Section-Db, X-Perleap-Prior-Client, X-Perleap-Unit-Memory-Facts',
+    'X-Perleap-Prior-N, X-Perleap-Prior-Parts, X-Perleap-Prior-Parts-Pre, X-Perleap-Prior-Verbatim, X-Perleap-Prior-Summary, X-Perleap-Prior-Section-Len, X-Perleap-Prior-Section-Db, X-Perleap-Prior-Client, X-Perleap-Unit-Memory-Facts, X-Perleap-Course-Memory-Facts',
 };
 
 /** Budget for merged prior excerpts (characters), after accounting for separators between submissions. */
@@ -249,7 +256,7 @@ serve(async (req) => {
       mergeSeen.add(id);
       mergedPriorIds.push(id);
     }
-    const cappedPriorIds = mergedPriorIds.length > MAX_UNIT_PRIOR_SUBMISSION_IDS_CHAT
+    let cappedPriorIds = mergedPriorIds.length > MAX_UNIT_PRIOR_SUBMISSION_IDS_CHAT
       ? mergedPriorIds.slice(-MAX_UNIT_PRIOR_SUBMISSION_IDS_CHAT)
       : mergedPriorIds;
 
@@ -260,6 +267,7 @@ serve(async (req) => {
       'X-Perleap-Prior-Parts': '0',
       'X-Perleap-Prior-Section-Len': '0',
       'X-Perleap-Unit-Memory-Facts': '0',
+      'X-Perleap-Course-Memory-Facts': '0',
     };
 
     // Fetch teacher profile, student profile, and classroom resources in parallel
@@ -288,35 +296,75 @@ serve(async (req) => {
       messages.push({ role: 'user', content: userMessageContent });
     }
 
+    const courseRecall = isCourseRecallRequest(userMessageContent);
+    if (courseRecall) {
+      cappedPriorIds = await getPriorSubmissionIdsForCourseRecall(
+        learnerUserId,
+        assignmentId,
+        userMessageContent,
+        COURSE_RECALL_MAX_PRIOR_SUBMISSIONS,
+      );
+      priorMetaHeaders['X-Perleap-Prior-N'] = String(cappedPriorIds.length);
+    }
+
     // Resolve the canonical assignment tutor text once - used both for the <assignment>
     // block downstream and as the relevance reference for prior-context + course-materials gating.
     const assignmentTutorTextRaw = resolveAssignmentTutorText(assignmentDetails);
     const assignmentKeywords = extractKeywordSet(assignmentTutorTextRaw);
 
-    const unitMemoryResult = await getUnitMemoryForPrompt(
-      learnerUserId,
-      assignmentId,
-      assignmentTutorTextRaw,
-      submissionIdRaw,
-    );
+    const [unitMemoryResult, courseMemoryResult] = await Promise.all([
+      getUnitMemoryForPrompt(
+        learnerUserId,
+        assignmentId,
+        assignmentTutorTextRaw,
+        submissionIdRaw,
+      ),
+      getCourseMemoryForPrompt(
+        learnerUserId,
+        assignmentId,
+        assignmentTutorTextRaw,
+        submissionIdRaw,
+        courseRecall ? userMessageContent : undefined,
+        courseRecall,
+      ),
+    ]);
     priorMetaHeaders['X-Perleap-Unit-Memory-Facts'] = String(unitMemoryResult.factCount);
+    priorMetaHeaders['X-Perleap-Course-Memory-Facts'] = String(courseMemoryResult.factCount);
 
     let priorContextExcerpt = '';
     if (cappedPriorIds.length > 0) {
       const separator = PRIOR_MERGE_SEP;
-      const mergedPriorMax = Math.floor(
-        PRIOR_MERGE_TOTAL_MAX *
-          (isInitialGreeting ? PRIOR_MERGE_GREETING_BUDGET_FRACTION : 1),
-      );
+      const mergedPriorMax = courseRecall
+        ? PRIOR_COURSE_RECALL_MERGE_MAX_CHARS
+        : Math.floor(
+          PRIOR_MERGE_TOTAL_MAX *
+            (isInitialGreeting ? PRIOR_MERGE_GREETING_BUDGET_FRACTION : 1),
+        );
+      const perSubmissionCeiling = courseRecall
+        ? PRIOR_EXPLICIT_RECALL_PER_SUBMISSION_CEILING_CHARS
+        : PRIOR_MERGE_PER_SUBMISSION_CEILING_CHARS;
       const perPriorCap = computePerPriorMergeCap(
         cappedPriorIds.length,
         mergedPriorMax,
         separator,
-        PRIOR_MERGE_PER_SUBMISSION_CEILING_CHARS,
+        perSubmissionCeiling,
       );
+      const priorExcerptOpts = courseRecall
+        ? {
+          includeShortWrittenWork: true,
+          preferWrittenWorkFirst: true,
+          relaxedChat: true,
+          expandedBudget: true,
+        }
+        : undefined;
       const excerpts = await Promise.all(
         cappedPriorIds.map((pid) =>
-          getValidatedPriorAssignmentChatExcerpt(pid, learnerUserId, assignmentId),
+          getValidatedPriorAssignmentChatExcerpt(
+            pid,
+            learnerUserId,
+            assignmentId,
+            priorExcerptOpts,
+          ),
         ),
       );
       const parts: string[] = [];
@@ -329,19 +377,25 @@ serve(async (req) => {
       }
       priorMetaHeaders['X-Perleap-Prior-Parts-Pre'] = String(parts.length);
       if (parts.length > 0) {
-        // A.2 + dedupe: drop placeholder-only chunks and de-duplicated assistant lines.
-        let cleaned = dedupeAssistantLinesAcrossPriors(parts)
-          .filter((c) => c.trim().length > 0)
-          .filter(isMeaningfulPriorChunk);
+        let cleaned = courseRecall
+          ? parts.filter((c) => c.trim().length > 0)
+          : dedupeAssistantLinesAcrossPriors(parts)
+            .filter((c) => c.trim().length > 0)
+            .filter(isMeaningfulPriorChunk);
 
-        // B.3: topic-overlap gate - drop priors with zero keyword overlap with the assignment.
-        // If the assignment has no extractable keywords (very short or unusual), keep everything.
-        if (assignmentKeywords.size > 0) {
-          cleaned = cleaned.filter((c) => hasKeywordOverlap(c, assignmentTutorTextRaw));
+        // B.3/B.4: on course-recall turns, keep all loaded priors (already ranked by the student's question).
+        if (!courseRecall) {
+          if (assignmentKeywords.size > 0) {
+            cleaned = cleaned.filter((c) => hasKeywordOverlap(c, assignmentTutorTextRaw));
+          }
+          cleaned = cleaned.filter((c) => c.trim().length >= PRIOR_MIN_CHUNK_BODY_CHARS);
+        } else {
+          cleaned = cleaned.filter((c) => {
+            if (c.includes('Submitted written work')) return true;
+            if (c.includes('Prior assignment test responses')) return true;
+            return c.trim().length >= PRIOR_MIN_CHUNK_BODY_CHARS;
+          });
         }
-
-        // B.4: drop ultra-short chunks (kills single-line stubs like "Hi, is 2 + 3?").
-        cleaned = cleaned.filter((c) => c.trim().length >= PRIOR_MIN_CHUNK_BODY_CHARS);
 
         // B.6: newest-first ordering. `parts` arrives in chronological order so the last item is newest.
         cleaned = [...cleaned].reverse();
@@ -350,10 +404,13 @@ serve(async (req) => {
         const wrapped: string[] = [];
         let verbatimCount = 0;
         let summaryCount = 0;
+        const verbatimLimit = courseRecall
+          ? cleaned.length
+          : PRIOR_VERBATIM_COUNT_CHAT;
         for (let i = 0; i < cleaned.length; i++) {
           const chunk = cleaned[i];
           const n = i + 1;
-          if (i < PRIOR_VERBATIM_COUNT_CHAT) {
+          if (i < verbatimLimit) {
             wrapped.push(`<prior_submission n="${n}">\n${chunk.trim()}\n</prior_submission>`);
             verbatimCount++;
           } else {
@@ -371,7 +428,9 @@ serve(async (req) => {
 
         let combined = wrapped.join('\n\n');
         if (combined.length > mergedPriorMax) {
-          combined = combined.slice(0, mergedPriorMax);
+          combined = courseRecall
+            ? combined.slice(0, mergedPriorMax)
+            : combined.slice(0, mergedPriorMax);
         }
         priorContextExcerpt = combined;
       } else {
@@ -411,7 +470,25 @@ serve(async (req) => {
       taskProgressForPrompt,
       assignmentTutorTextRaw || undefined,
       unitMemoryResult.body || undefined,
+      courseMemoryResult.body || undefined,
     );
+    if (courseRecall) {
+      systemPrompt += language === 'he'
+        ? `
+
+COURSE_RECALL_QUOTE (גובר על TUTOR_TURN_PROTOCOL לתור זה)
+- משפט מבוא קצר אחד בלבד, ואז הציטוט המלא בטקסט רגיל (אותו סגנון כמו שאר הצ'אט).
+- אל תשתמש בבלוקי קוד (\`\`\`) — אין רקע כחול ואין גופן מונוספייס.
+- העתק את הפרומפט/ההגשה המלאים מ-<prior_context>; אל תקצר. אפשר שורות ריקות בין פסקאות, אבל הכל ברצף אחד.
+- אחרי הציטוט מותר משפט אחד קצר על המשימה הבאה שטרם הושלמה.`
+        : `
+
+COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
+- One short intro sentence, then the FULL quote as normal chat prose (same style as your other messages).
+- Do NOT use markdown code fences (\`\`\`) — no blue background, no monospace font.
+- Copy the complete prompt/submission from <prior_context>; do not truncate. Use blank lines between paragraphs but keep it as one continuous reply.
+- After the quote you may add one short sentence about the next incomplete task.`;
+    }
     systemPrompt = normalizeSystemPromptWhitespace(systemPrompt);
 
     /**
@@ -463,7 +540,11 @@ serve(async (req) => {
           : `Hello! I am Perleap, ${teacherName}'s AI teaching assistant.\n\n`)
       : '';
 
-    const maxTokens = isInitialGreeting ? CHAT_MAX_TOKENS_GREETING : CHAT_MAX_TOKENS_DEFAULT;
+    const maxTokens = isInitialGreeting
+      ? CHAT_MAX_TOKENS_GREETING
+      : courseRecall
+      ? CHAT_MAX_TOKENS_COURSE_RECALL
+      : CHAT_MAX_TOKENS_DEFAULT;
     const useResponses = isResponsesApiEnabled();
 
     /**
