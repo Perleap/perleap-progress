@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatInlineListsForChatMarkdown,
+  isPerleapAssistantIntro,
+  normalizePerleapIntroParagraphBreaks,
   splitAssistantMessageIntoSentences,
   splitChatDisplayText,
+  splitPerleapIntroDisplayText,
 } from '@/lib/chatDisplay';
 
 const SCREENSHOT_LIKE =
@@ -73,6 +76,30 @@ describe('formatInlineListsForChatMarkdown + splitChatDisplayText', () => {
       "On, you used logic that is not fully stated in your prompt. Let's cover the gap: Where in your prompt does it say that an ambiguous email with unclear references should be replied to for clarification instead of being archived, escalated, or just marked medium? Can you add a rule to your prompt and paste the revised version?";
     const parts = splitChatDisplayText(formatInlineListsForChatMarkdown(t));
     expect(parts.length).toBe(3);
+  });
+});
+
+describe('splitPerleapIntroDisplayText', () => {
+  it('does not sentence-split the intro while streaming', () => {
+    const partial = "Hello! I am Perleap, Dor Abookasis's AI teaching assistant";
+    expect(splitPerleapIntroDisplayText(partial)).toEqual([partial]);
+  });
+
+  it('splits intro and question into separate bubbles on paragraph break', () => {
+    const greeting =
+      "Hello! I am Perleap, Dor Abookasis's AI teaching assistant.\n\nWhat is 1 + 1?";
+    expect(splitPerleapIntroDisplayText(greeting)).toEqual([
+      "Hello! I am Perleap, Dor Abookasis's AI teaching assistant.",
+      'What is 1 + 1?',
+    ]);
+    expect(splitChatDisplayText(greeting)).toHaveLength(2);
+  });
+
+  it('normalizes a single newline after the intro line', () => {
+    const singleNl =
+      "Hello! I am Perleap, Dor Abookasis's AI teaching assistant.\nWhat is 1 + 1?";
+    expect(normalizePerleapIntroParagraphBreaks(singleNl)).toContain('\n\n');
+    expect(splitPerleapIntroDisplayText(singleNl)).toHaveLength(2);
   });
 });
 
