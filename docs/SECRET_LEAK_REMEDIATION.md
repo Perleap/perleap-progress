@@ -2,6 +2,11 @@
 
 Follow these steps after rotating Supabase API keys.
 
+Edge functions resolve elevated keys via `getServiceRoleKey()` in
+[`supabase/functions/shared/supabase.ts`](../supabase/functions/shared/supabase.ts),
+preferring hosted `SUPABASE_SECRET_KEYS` (`new_secret_key`) over legacy JWT
+`SUPABASE_SERVICE_ROLE_KEY`. Redeploy functions before deactivating legacy keys.
+
 ## 1. Deactivate legacy keys (Supabase Dashboard)
 
 1. Open [API Keys](https://supabase.com/dashboard/project/zwhnpteterkrunfevixs/settings/api-keys).
