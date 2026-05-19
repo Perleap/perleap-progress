@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import { parseHardSkillsFromDb } from './hardSkillsFormat.ts';
 import { MAX_CHAT_MATERIALS_MODULE_CONTEXT_CHARS } from '../shared/perleapPriorContext.ts';
+import { getServiceRoleKey } from '../shared/supabase.ts';
 
 // In-memory cache for prompts (edge function lifecycle)
 const promptCache = new Map<string, { template: string; timestamp: number }>();
@@ -23,7 +24,7 @@ export async function getPromptTemplate(promptKey: string, language: string = 'e
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabaseKey = getServiceRoleKey();
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Try to get prompt in requested language (get latest version if multiple exist)

@@ -5,7 +5,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion } from '../shared/openai.ts';
-import { isAppAdmin } from '../shared/supabase.ts';
+import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace } from '../shared/opikTrace.ts';
 
@@ -29,7 +29,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const serviceKey = getServiceRoleKey();
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const token = authHeader.replace(/^Bearer\s+/i, '');
