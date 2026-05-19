@@ -1,10 +1,16 @@
 project_id = "zwhnpteterkrunfevixs"
 
 [functions.perleap-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-feedback]
 verify_jwt = false
+
+[functions.extract-unit-memory]
+verify_jwt = false
+
+[functions.backfill-unit-memory]
+verify_jwt = true
 
 [functions.regenerate-scores]
 verify_jwt = false

@@ -234,7 +234,6 @@ export function AssignmentChatInterface({
   } = useConversation({
     submissionId,
     assignmentInstructions,
-    studentId: studentUserId,
     assignmentId,
     priorSubmissionIds: priorSubmissionIdsForContext,
     companionMode: variant === 'companion',

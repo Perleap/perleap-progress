@@ -1,0 +1,288 @@
+/**
+ * Core unit-memory extraction logic shared by extract-unit-memory and backfill-unit-memory.
+ */
+
+import { createSupabaseClient } from './supabase.ts';
+import { createChatCompletion } from './openai.ts';
+import {
+  hasFactsForSubmission,
+  type UnitMemoryFact,
+  upsertUnitMemoryFacts,
+} from './unitMemory.ts';
+import { queueOpikTrace } from './opikTrace.ts';
+
+export interface ExtractUnitMemoryResult {
+  ok: boolean;
+  skipped?: boolean;
+  reason?: string;
+  factsExtracted?: number;
+  totalFacts?: number;
+  submissionId: string;
+  error?: string;
+}
+
+const MAX_SOURCE_CHARS = 12_000;
+
+function stripHiddenMarkers(text: string): string {
+  return text
+    .replace(/\[CONVERSATION_COMPLETE\]/gi, '')
+    .replace(/<<<PROGRESS:\[[^\]]*\]>>>/g, '')
+    .trim();
+}
+
+/** Build plain-text source from a completed submission for fact extraction. */
+export async function buildSubmissionSourceText(
+  submissionId: string,
+  assignmentId: string,
+  assignmentType: string | null | undefined,
+): Promise<string | null> {
+  const supabase = createSupabaseClient();
+
+  if (assignmentType === 'test') {
+    const [questionsResult, responsesResult] = await Promise.all([
+      supabase
+        .from('test_questions')
+        .select('id, question_text, question_type, options, correct_option_id')
+        .eq('assignment_id', assignmentId)
+        .order('order_index', { ascending: true }),
+      supabase
+        .from('test_responses')
+        .select('question_id, selected_option_id, text_answer')
+        .eq('submission_id', submissionId),
+    ]);
+
+    const questions = questionsResult.data ?? [];
+    const responses = responsesResult.data ?? [];
+    if (questions.length === 0) return null;
+
+    const responseMap = new Map(responses.map((r) => [r.question_id, r]));
+    const lines: string[] = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const response = responseMap.get(q.id);
+      const qtext = (q.question_text ?? 'Question').trim();
+      lines.push(`Question ${i + 1}: ${qtext}`);
+
+      const ta = typeof response?.text_answer === 'string' ? response.text_answer.trim() : '';
+      if (ta) {
+        lines.push(`Student answer: ${ta}`);
+        continue;
+      }
+
+      const optId = response?.selected_option_id != null ? String(response.selected_option_id) : '';
+      if (optId && Array.isArray(q.options)) {
+        const opts = q.options as { id?: unknown; text?: unknown }[];
+        const opt = opts.find((o) => String(o?.id ?? '') === optId);
+        const label = typeof opt?.text === 'string' ? opt.text.trim() : optId;
+        lines.push(`Student selected: ${label}`);
+      }
+    }
+
+    return lines.join('\n').slice(0, MAX_SOURCE_CHARS) || null;
+  }
+
+  if (assignmentType === 'text_essay') {
+    const { data: subRow } = await supabase
+      .from('submissions')
+      .select('text_body')
+      .eq('id', submissionId)
+      .maybeSingle();
+    const body = typeof subRow?.text_body === 'string' ? subRow.text_body.trim() : '';
+    if (!body) return null;
+    return `Essay submission:\n\n${body}`.slice(0, MAX_SOURCE_CHARS);
+  }
+
+  // Default: conversation-based assignment
+  const { data: convRows } = await supabase
+    .from('assignment_conversations')
+    .select('messages')
+    .eq('submission_id', submissionId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  const raw = convRows?.[0]?.messages;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const lines: string[] = [];
+  for (const msg of raw) {
+    if (!msg || typeof msg !== 'object') continue;
+    const m = msg as { role?: string; content?: unknown };
+    if (m.role !== 'user' && m.role !== 'assistant') continue;
+    if (typeof m.content !== 'string') continue;
+    const cleaned = stripHiddenMarkers(m.content);
+    if (!cleaned || cleaned.length < 3) continue;
+    const label = m.role === 'user' ? 'Student' : 'Assistant';
+    lines.push(`${label}: ${cleaned}`);
+  }
+
+  return lines.join('\n\n').slice(0, MAX_SOURCE_CHARS) || null;
+}
+
+function parseExtractionResponse(content: string): string[] {
+  const cleaned = content.replace(/```json\n?|\n?```/g, '').trim();
+  const parsed = JSON.parse(cleaned) as { facts?: unknown };
+  if (!Array.isArray(parsed.facts)) return [];
+  const out: string[] = [];
+  for (const item of parsed.facts) {
+    if (typeof item === 'string') {
+      const t = item.trim();
+      if (t) out.push(t.slice(0, 200));
+    } else if (item && typeof item === 'object' && typeof (item as { text?: unknown }).text === 'string') {
+      const t = (item as { text: string }).text.trim();
+      if (t) out.push(t.slice(0, 200));
+    }
+  }
+  return out.slice(0, 6);
+}
+
+const EXTRACTION_SYSTEM_PROMPT = `You extract durable factual memory bullets about a student's demonstrated work on an assignment.
+
+Return JSON only:
+{ "facts": ["...", "..."] }
+
+Rules:
+- Extract 3 to 6 bullets when there is enough signal; fewer if the submission is very short.
+- Each bullet is one factual statement about what the STUDENT said, wrote, selected, or demonstrated.
+- Include specific answers, sentences they wrote, and clear struggles when evident.
+- Do NOT include tutor/assistant phrasing, grades, scores, or pedagogical framework terms.
+- Do NOT include greetings or filler.
+- Each bullet must be at most 200 characters.
+- Write bullets in the same language as the student's main contributions.`;
+
+/**
+ * Extract and persist unit memory for one completed submission.
+ * Idempotent: skips when facts for submission_id already exist.
+ */
+export async function extractUnitMemoryFromSubmission(
+  submissionId: string,
+  opts: { skipIfExists?: boolean } = {},
+): Promise<ExtractUnitMemoryResult> {
+  const skipIfExists = opts.skipIfExists !== false;
+  const supabase = createSupabaseClient();
+  const startMs = Date.now();
+
+  const { data: sub, error: subErr } = await supabase
+    .from('submissions')
+    .select('id, student_id, assignment_id, status, is_teacher_attempt, text_body')
+    .eq('id', submissionId)
+    .maybeSingle();
+
+  if (subErr || !sub) {
+    return { ok: false, submissionId, error: 'Submission not found' };
+  }
+  if (sub.is_teacher_attempt) {
+    return { ok: true, skipped: true, reason: 'teacher_attempt', submissionId };
+  }
+  if (sub.status !== 'completed') {
+    return { ok: true, skipped: true, reason: 'not_completed', submissionId };
+  }
+
+  const { data: assignment, error: aErr } = await supabase
+    .from('assignments')
+    .select('id, title, type, classroom_id, syllabus_section_id')
+    .eq('id', sub.assignment_id)
+    .maybeSingle();
+
+  if (aErr || !assignment) {
+    return { ok: false, submissionId, error: 'Assignment not found' };
+  }
+  if (!assignment.classroom_id || !assignment.syllabus_section_id) {
+    return { ok: true, skipped: true, reason: 'no_syllabus_section', submissionId };
+  }
+
+  if (skipIfExists) {
+    const exists = await hasFactsForSubmission(
+      sub.student_id,
+      assignment.classroom_id,
+      assignment.syllabus_section_id,
+      submissionId,
+    );
+    if (exists) {
+      return { ok: true, skipped: true, reason: 'already_extracted', submissionId };
+    }
+  }
+
+  const sourceText = await buildSubmissionSourceText(
+    submissionId,
+    sub.assignment_id,
+    assignment.type,
+  );
+  if (!sourceText || sourceText.trim().length < 20) {
+    return { ok: true, skipped: true, reason: 'insufficient_source', submissionId };
+  }
+
+  const userPrompt = `Assignment title: ${assignment.title ?? 'Untitled'}
+
+Student work excerpt:
+${sourceText}`;
+
+  const traceStartMs = Date.now();
+  let extractedTexts: string[] = [];
+
+  try {
+    const result = await createChatCompletion(
+      EXTRACTION_SYSTEM_PROMPT,
+      [{ role: 'user', content: userPrompt }],
+      0.2,
+      800,
+      'fast',
+      false,
+      'json_object',
+    );
+    extractedTexts = parseExtractionResponse(result.content);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, submissionId, error: msg };
+  }
+
+  if (extractedTexts.length === 0) {
+    return { ok: true, skipped: true, reason: 'no_facts_extracted', submissionId };
+  }
+
+  const now = new Date().toISOString();
+  const incomingFacts: UnitMemoryFact[] = extractedTexts.map((text) => ({
+    id: crypto.randomUUID(),
+    submission_id: submissionId,
+    assignment_id: sub.assignment_id,
+    assignment_title: assignment.title ?? '',
+    text,
+    extracted_at: now,
+  }));
+
+  const { factCount } = await upsertUnitMemoryFacts({
+    studentId: sub.student_id,
+    classroomId: assignment.classroom_id,
+    syllabusSectionId: assignment.syllabus_section_id,
+    incomingFacts,
+    submissionId,
+  });
+
+  void queueOpikTrace({
+    traceName: 'extract-unit-memory.extract',
+    tags: ['extract-unit-memory', 'unit-memory'],
+    threadId: submissionId,
+    traceStartMs,
+    traceEndMs: Date.now(),
+    userMessage: userPrompt.slice(0, 4000),
+    assistantMessage: JSON.stringify({ facts: extractedTexts }),
+    metadata: {
+      edge_function: 'extract-unit-memory',
+      submission_id: submissionId,
+      assignment_id: sub.assignment_id,
+      student_id: sub.student_id,
+      classroom_id: assignment.classroom_id,
+      syllabus_section_id: assignment.syllabus_section_id,
+      facts_extracted: extractedTexts.length,
+      total_facts: factCount,
+      duration_ms: Date.now() - startMs,
+    },
+  }).catch(() => undefined);
+
+  return {
+    ok: true,
+    submissionId,
+    factsExtracted: extractedTexts.length,
+    totalFacts: factCount,
+  };
+}

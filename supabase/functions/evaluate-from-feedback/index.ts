@@ -13,6 +13,7 @@ import {
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 import {
   domainForSkillComponent,
   formatHardSkillPairsForPrompt,
@@ -124,27 +125,89 @@ Rules:
 
     logInfo('Starting AI evaluation from teacher feedback...');
 
+    const opikThreadId = typeof submissionId === 'string' && submissionId
+      ? submissionId
+      : crypto.randomUUID();
+    const teacherFbChars = typeof teacherFeedback === 'string' ? teacherFeedback.length : 0;
+
     const [feedbackResult, hardSkillsResult] = await Promise.all([
-      createChatCompletion(
-        feedbackPrompt,
-        [{ role: 'user', content: `Teacher's feedback:\n\n${teacherFeedback}` }],
-        0.4,
-        2000,
-        'smart',
-        false,
-        'json_object',
-      ),
-      skillPairs.length > 0
-        ? createChatCompletion(
-            hardSkillsPrompt,
-            [{ role: 'user', content: `Teacher's feedback:\n\n${teacherFeedback}` }],
-            0.3,
-            1500,
-            'fast',
-            false,
-            'json_object',
-          )
-        : Promise.resolve({ content: JSON.stringify({ hardSkillsAssessment: [] }) }),
+      (async () => {
+        const traceStartMs = Date.now();
+        const r = await createChatCompletion(
+          feedbackPrompt,
+          [{ role: 'user', content: `Teacher's feedback:\n\n${teacherFeedback}` }],
+          0.4,
+          2000,
+          'smart',
+          false,
+          'json_object',
+        ) as { content: string; usage?: unknown };
+        const traceEndMs = Date.now();
+        void queueOpikTrace({
+          traceName: 'evaluate-from-feedback.main',
+          tags: ['evaluate-from-feedback', 'edge-function'],
+          threadId: opikThreadId,
+          clientTraceId: crypto.randomUUID(),
+          traceStartMs,
+          traceEndMs,
+          input: {
+            language,
+            assignment_type: assignmentData?.type,
+            teacher_feedback_chars: teacherFbChars,
+          },
+          output: { raw_json: r.content },
+          openaiUsage: r.usage,
+          metadata: {
+            edge_function: 'evaluate-from-feedback',
+            model_tier: 'smart',
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+            student_id: studentId,
+            classroom_id: classroomId,
+          },
+        }).catch(() => undefined);
+        return r;
+      })(),
+      (async () => {
+        if (skillPairs.length === 0) {
+          return { content: JSON.stringify({ hardSkillsAssessment: [] }) };
+        }
+        const traceStartMs = Date.now();
+        const r = await createChatCompletion(
+          hardSkillsPrompt,
+          [{ role: 'user', content: `Teacher's feedback:\n\n${teacherFeedback}` }],
+          0.3,
+          1500,
+          'fast',
+          false,
+          'json_object',
+        ) as { content: string; usage?: unknown };
+        const traceEndMs = Date.now();
+        void queueOpikTrace({
+          traceName: 'evaluate-from-feedback.hard-skills',
+          tags: ['evaluate-from-feedback', 'edge-function'],
+          threadId: opikThreadId,
+          clientTraceId: crypto.randomUUID(),
+          traceStartMs,
+          traceEndMs,
+          input: {
+            language,
+            teacher_feedback_chars: teacherFbChars,
+            skill_pair_count: skillPairs.length,
+          },
+          output: { raw_json: r.content },
+          openaiUsage: r.usage,
+          metadata: {
+            edge_function: 'evaluate-from-feedback',
+            model_tier: 'fast',
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+            student_id: studentId,
+            classroom_id: classroomId,
+          },
+        }).catch(() => undefined);
+        return r;
+      })(),
     ]);
 
     const feedbackData = JSON.parse((feedbackResult as { content: string }).content);

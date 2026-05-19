@@ -14,6 +14,7 @@ import {
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 import {
   domainForSkillComponent,
   formatHardSkillPairsForPrompt,
@@ -221,27 +222,90 @@ serve(async (req) => {
     - Only assess the requested skills.
     - Be objective and specific.`;
 
+    const opikThreadId = typeof submissionId === 'string' && submissionId
+      ? submissionId
+      : crypto.randomUUID();
+
     const [feedbackResult, hardSkillsResult] = await Promise.all([
-      // Call 1: Feedback and Scores (Smart/GPT-4o)
-      createChatCompletion(
-        feedbackPrompt,
-        [{ role: 'user', content: `Analyze this ${contextType}:\n\n${conversationText}` }],
-        0.4,
-        2000,
-        'smart',
-        false,
-        'json_object'
-      ),
-      // Call 2: Hard Skills (Fast/GPT-4o-mini)
-      skillPairs.length > 0 ? createChatCompletion(
-        hardSkillsPrompt,
-        [{ role: 'user', content: `Analyze this ${contextType} for hard skills:\n\n${conversationText}` }],
-        0.3,
-        1500,
-        'fast',
-        false,
-        'json_object'
-      ) : Promise.resolve({ content: JSON.stringify({ hardSkillsAssessment: [] }) })
+      (async () => {
+        const traceStartMs = Date.now();
+        const r = await createChatCompletion(
+          feedbackPrompt,
+          [{ role: 'user', content: `Analyze this ${contextType}:\n\n${conversationText}` }],
+          0.4,
+          2000,
+          'smart',
+          false,
+          'json_object',
+        ) as { content: string; usage?: unknown };
+        const traceEndMs = Date.now();
+        void queueOpikTrace({
+          traceName: 'generate-feedback.main',
+          tags: ['generate-feedback', 'edge-function'],
+          threadId: opikThreadId,
+          clientTraceId: crypto.randomUUID(),
+          traceStartMs,
+          traceEndMs,
+          input: {
+            context_type: contextType,
+            language,
+            conversation_chars: conversationText.length,
+            assignment_type: assignmentType,
+          },
+          output: { raw_json: r.content },
+          openaiUsage: r.usage,
+          metadata: {
+            edge_function: 'generate-feedback',
+            model_tier: 'smart',
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+            student_id: studentId,
+            classroom_id: classroomId,
+          },
+        }).catch(() => undefined);
+        return r;
+      })(),
+      (async () => {
+        if (skillPairs.length === 0) {
+          return { content: JSON.stringify({ hardSkillsAssessment: [] }) };
+        }
+        const traceStartMs = Date.now();
+        const r = await createChatCompletion(
+          hardSkillsPrompt,
+          [{ role: 'user', content: `Analyze this ${contextType} for hard skills:\n\n${conversationText}` }],
+          0.3,
+          1500,
+          'fast',
+          false,
+          'json_object',
+        ) as { content: string; usage?: unknown };
+        const traceEndMs = Date.now();
+        void queueOpikTrace({
+          traceName: 'generate-feedback.hard-skills',
+          tags: ['generate-feedback', 'edge-function'],
+          threadId: opikThreadId,
+          clientTraceId: crypto.randomUUID(),
+          traceStartMs,
+          traceEndMs,
+          input: {
+            context_type: contextType,
+            language,
+            conversation_chars: conversationText.length,
+            skill_pair_count: skillPairs.length,
+          },
+          output: { raw_json: r.content },
+          openaiUsage: r.usage,
+          metadata: {
+            edge_function: 'generate-feedback',
+            model_tier: 'fast',
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+            student_id: studentId,
+            classroom_id: classroomId,
+          },
+        }).catch(() => undefined);
+        return r;
+      })(),
     ]);
 
     const feedbackData = JSON.parse((feedbackResult as { content: string }).content);
@@ -365,6 +429,16 @@ serve(async (req) => {
             conversationMessages,
           }),
         }).catch(err => logError('Wellbeing call error', err));
+
+        const unitMemoryUrl = `${supabaseUrl}/functions/v1/extract-unit-memory`;
+        fetch(unitMemoryUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ submissionId }),
+        }).catch(err => logError('Unit memory extract call error', err));
 
         if (assignmentData) {
           const assignmentTitle = assignmentData.title;

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createTranscription, handleOpenAIError } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +25,30 @@ serve(async (req) => {
       });
     }
 
+    const opikThreadId = crypto.randomUUID();
+    const clientTraceId = crypto.randomUUID();
+    const traceStartMs = Date.now();
     const text = await createTranscription(audioFile, language);
+    const traceEndMs = Date.now();
+
+    void queueOpikTrace({
+      traceName: 'speech-to-text.transcription',
+      tags: ['speech-to-text', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        audio_bytes: audioFile.size,
+        language: language ?? undefined,
+      },
+      output: {
+        transcript_chars: text.length,
+      },
+      metadata: {
+        edge_function: 'speech-to-text',
+      },
+    }).catch(() => undefined);
 
     return new Response(JSON.stringify({ text }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -9,6 +9,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { createSupabaseClient } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 import { generateWellbeingAnalysisPrompt } from '../_shared/prompts.ts';
 import type { WellbeingAnalysisResult, Message } from './types.ts';
 import { sendAlertEmail } from './email.ts';
@@ -77,12 +78,40 @@ serve(async (req) => {
     const systemPrompt = await generateWellbeingAnalysisPrompt(studentName);
 
     // Call OpenAI with temperature set for consistent, focused analysis
-    const { content: responseText } = await createChatCompletion(
+    const opikThreadId =
+      (typeof submissionId === 'string' && submissionId) ||
+      (typeof assignmentId === 'string' && assignmentId) ||
+      crypto.randomUUID();
+    const traceStartMs = Date.now();
+    const { content: responseText, usage } = await createChatCompletion(
       systemPrompt,
       [{ role: 'user', content: conversationText }],
       0.3, // Low temperature for consistent, focused analysis
       800, // Sufficient tokens for detailed analysis
-    );
+    ) as { content: string; usage?: unknown };
+    const traceEndMs = Date.now();
+
+    void queueOpikTrace({
+      traceName: 'analyze-student-wellbeing.completion',
+      tags: ['analyze-student-wellbeing', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId: crypto.randomUUID(),
+      traceStartMs,
+      traceEndMs,
+      input: {
+        message_count: conversationMessages.length,
+        conversation_chars: conversationText.length,
+        student_id: studentId ?? undefined,
+        submission_id: submissionId ?? undefined,
+        assignment_id: assignmentId ?? undefined,
+      },
+      output: { raw_json: responseText },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'analyze-student-wellbeing',
+        model_tier: 'smart',
+      },
+    }).catch(() => undefined);
 
     // Parse the response
     const analysis = parseWellbeingResponse(responseText);

@@ -401,16 +401,12 @@ const AssignmentDetail = () => {
     [user?.id, assignment, isTeacherTry, submission?.status, feedback, seenAssignmentIntroTypes],
   );
 
-  const syllabusUnitEyebrow = useMemo(() => {
+  const syllabusSectionTitle = useMemo(() => {
     const sectionId = assignment?.syllabus_section_id;
     const sections = syllabusForNav?.sections;
     if (!sectionId || !sections?.length) return null;
-    const ordered = [...sections].sort((a, b) => a.order_index - b.order_index);
-    const idx = ordered.findIndex((s) => s.id === sectionId);
-    if (idx < 0) return null;
-    const sectionTitle = ordered[idx]?.title?.trim();
-    if (!sectionTitle) return null;
-    return { unitNumber: idx + 1, sectionTitle };
+    const section = sections.find((s) => s.id === sectionId);
+    return section?.title?.trim() || null;
   }, [assignment?.syllabus_section_id, syllabusForNav?.sections]);
 
   const unitOutlineMaterials = useMemo(() => {
@@ -653,12 +649,9 @@ const AssignmentDetail = () => {
             ) : null}
           </div>
           <div className="space-y-2 text-start" dir={isRTL ? 'rtl' : 'ltr'}>
-            {syllabusUnitEyebrow ? (
+            {syllabusSectionTitle ? (
               <p className="text-sm font-medium text-muted-foreground">
-                {t('assignmentDetail.unitSectionLabel', {
-                  n: syllabusUnitEyebrow.unitNumber,
-                  title: syllabusUnitEyebrow.sectionTitle,
-                })}
+                {t('assignmentDetail.unitSectionLabel', { title: syllabusSectionTitle })}
               </p>
             ) : null}
             <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">

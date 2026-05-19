@@ -52,6 +52,7 @@ import {
   type AssignmentWizardStepId,
 } from './assignmentWizardTypes';
 import type { HardSkillsSuggestionStatus } from './steps/AssignmentSkillsMaterialsStep';
+import { dueAtLocalInputToIso } from '@/components/ui/datetime-picker';
 
 type DialogOpenProps = {
   open: boolean;
@@ -747,14 +748,12 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     });
   };
 
-  const dueEffectiveDisabled = policyFrozen;
-
   const canProceedForStep = (stepId: AssignmentWizardStepId): boolean => {
     if (stepId === 'basics') {
       return Boolean(formData.title.trim() && formData.instructions.trim());
     }
     if (stepId === 'format') {
-      if (formData.attempt_mode === 'multiple_until_due' && !dueEffectiveDisabled) {
+      if (formData.attempt_mode === 'multiple_until_due') {
         return Boolean(formData.due_at?.trim());
       }
       return true;
@@ -921,7 +920,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
     setLoading(true);
     try {
-      if (formData.attempt_mode === 'multiple_until_due' && !formData.due_at?.trim() && !dueEffectiveDisabled) {
+      if (formData.attempt_mode === 'multiple_until_due' && !formData.due_at?.trim()) {
         toast.error(t('createAssignment.attemptMode.dueRequiredForRetries'));
         setLoading(false);
         return;
@@ -934,7 +933,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           instructions: formData.instructions,
           student_facing_task: formData.student_facing_task.trim() || null,
           type: formData.type as Database['public']['Enums']['assignment_type'],
-          due_at: formData.due_at || null,
+          due_at: dueAtLocalInputToIso(formData.due_at),
           attempt_mode: formData.attempt_mode,
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
@@ -1100,15 +1099,16 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           grading_category_id: gradingCategoryId || null,
         };
 
-        if (!hasSubmissions) {
-          baseUpdate.due_at = formData.due_at || null;
-          baseUpdate.attempt_mode = formData.attempt_mode;
-        } else if (hasSubmissions && !hasDueDateInDb) {
-          baseUpdate.due_at = formData.due_at || null;
+        const dueAtIso = dueAtLocalInputToIso(formData.due_at);
+        baseUpdate.due_at = dueAtIso;
+        if (!policyFrozen) {
           baseUpdate.attempt_mode = formData.attempt_mode;
         }
 
-        const { error } = await supabase.from('assignments').update(baseUpdate).eq('id', assignment.id);
+        const { error } = await supabase
+          .from('assignments')
+          .update(baseUpdate)
+          .eq('id', assignment.id);
         if (error) throw error;
 
         if (!formData.student_facing_task?.trim() && formData.instructions?.trim()) {
@@ -1201,12 +1201,12 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
             await syncModuleFlowToResolvedDisplayForSection(queryClient, cid, syllabusSectionId);
           } else {
             await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(cid) });
-            await queryClient.invalidateQueries({
-              queryKey: assignmentKeys.classroomAssignmentLists(cid),
-              exact: false,
-            });
             await queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
           }
+          await queryClient.invalidateQueries({
+            queryKey: assignmentKeys.classroomAssignmentLists(cid),
+            exact: false,
+          });
         }
         handleDialogOpenChange(false);
         onSuccess();
@@ -1269,7 +1269,6 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 formData={formData}
                 onFormChange={(updater) => setFormData(updater)}
                 isRTL={isRTL}
-                dueDateDisabled={dueEffectiveDisabled}
                 attemptPolicyFrozen={policyFrozen}
               />
             )}

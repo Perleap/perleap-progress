@@ -2,6 +2,21 @@ import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
+
+function lastUserMessageContent(messages: unknown): string {
+    if (!Array.isArray(messages)) return '';
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const m = messages[i] as { role?: string; content?: unknown };
+        if (m?.role !== 'user') continue;
+        const c = m.content;
+        if (typeof c === 'string') return c;
+        if (Array.isArray(c)) return JSON.stringify(c);
+        if (c === null || c === undefined) return '';
+        return JSON.stringify(c);
+    }
+    return '';
+}
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -34,17 +49,43 @@ serve(async (req: Request) => {
     }
 
     try {
-        const { messages, context } = await req.json();
+        const body = await req.json();
+        const { messages, context } = body;
+        const threadId =
+            (typeof body.threadId === 'string' && body.threadId.trim()) ||
+            (typeof body.conversationId === 'string' && body.conversationId.trim()) ||
+            crypto.randomUUID();
+        const clientTraceId = crypto.randomUUID();
+        const userTurn = lastUserMessageContent(messages);
 
         const systemPrompt = `${SYSTEM_PROMPT}\n\nCURRENT CONTEXT:\n${JSON.stringify(context, null, 2)}`;
 
-        const { content } = await createChatCompletion(
+        const traceStartMs = Date.now();
+        const { content, usage } = await createChatCompletion(
             systemPrompt,
             messages,
             0.7,
             1000,
             'smart'
-        );
+        ) as { content: string; usage?: unknown };
+        const traceEndMs = Date.now();
+
+        void queueOpikTrace({
+            traceName: 'teacher-assistant-chat.reply',
+            tags: ['teacher-assistant-chat', 'teacher', 'edge-function'],
+            threadId,
+            clientTraceId,
+            traceStartMs,
+            traceEndMs,
+            userMessage: userTurn,
+            assistantMessage: content,
+            openaiUsage: usage,
+            metadata: {
+                edge_function: 'teacher-assistant-chat',
+                model_tier: 'smart',
+                context_route: typeof context?.route === 'string' ? context.route : undefined,
+            },
+        }).catch(() => undefined);
 
         return new Response(JSON.stringify({ message: content }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -117,11 +117,25 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 # Edge Functions (set in Supabase dashboard)
 OPENAI_API_KEY=your_openai_key
 OPENAI_MODEL=gpt-5.4
-# Optional: grammar polish pass for perleap-chat (extra latency + cost per turn)
-PERLEAP_CHAT_POLISH=true
+
+# Optional: Opik Cloud tracing for LLM edge functions (https://www.comet.com/docs/opik/reference/rest-api/overview)
+# Shared secrets; each function POSTs traces asynchronously (failures never break the handler).
+OPIK_API_KEY=your_opik_api_key
+OPIK_WORKSPACE=your_comet_workspace_name
+# Optional Opik overrides:
+# OPIK_PROJECT_NAME=pearleap-student-chat
+# OPIK_ENVIRONMENT=production
+# OPIK_URL_OVERRIDE=https://www.comet.com/opik/api
+# OPIK_TRACE_DISABLE=true
+
+# If Chat Completions streaming returns 400 on stream_options, disable usage-on-stream (perleap-chat only):
+# PERLEAP_CHAT_STREAM_USAGE=false
 ```
 
-After changing secrets, redeploy edge functions (at least `perleap-chat`). If `OPENAI_MODEL` is unset, the code default is `gpt-5.4`.
+After changing secrets, redeploy edge functions that emit traces. If `OPENAI_MODEL` is unset, the code default is `gpt-5.4`. Opik posts are fire-and-forget (`queueOpikTrace` in `supabase/functions/shared/opikTrace.ts`); they never block the HTTP response when Opik is down. Traces include `metadata.edge_function`, `metadata.openai_usage` when the OpenAI chat completion returns usage, and `metadata.perleap_client_trace_id` for correlation. **Trace `name`** examples: `perleap-chat.reply`, `generate-feedback.main`, `generate-feedback.hard-skills`, `text-to-speech.synthesis` (no usage on audio). Filter in the Opik UI by project, tag, or `metadata.edge_function`.
+
+**Deploy / smoke (when validating tracing):**  
+`perleap-chat`, `teacher-assistant-chat`, `rephrase-text`, `suggest-assignment-hard-skills`, `generate-student-facing-task`, `generate-followup-assignment`, `generate-feedback`, `evaluate-from-feedback`, `explain-analytics-5d`, `regenerate-scores`, `analyze-student-wellbeing`, `compute-nuance-insights`, `text-to-speech`, `speech-to-text`.
 
 ## 🧪 Testing (Future)
 

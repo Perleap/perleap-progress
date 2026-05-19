@@ -11,6 +11,8 @@ export const EDGE_FUNCTION_NAMES = [
   'delete-user-account',
   'evaluate-from-feedback',
   'explain-analytics-5d',
+  'extract-unit-memory',
+  'backfill-unit-memory',
   'generate-feedback',
   'generate-followup-assignment',
   'generate-student-facing-task',

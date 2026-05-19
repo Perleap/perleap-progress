@@ -14,6 +14,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { isAppAdmin } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -203,7 +204,10 @@ ${evidenceText}`
       evidenceNearTotalCap: evidenceText.length >= EVIDENCE_MAX_TOTAL_CHARS * 0.95,
     });
 
-    const { content } = await createChatCompletion(
+    const opikThreadId = crypto.randomUUID();
+    const clientTraceId = crypto.randomUUID();
+    const traceStartMs = Date.now();
+    const { content, usage } = await createChatCompletion(
       systemPrompt,
       [{ role: 'user', content: userContent }],
       0.4,
@@ -211,7 +215,30 @@ ${evidenceText}`
       'fast',
       false,
       'json_object',
-    );
+    ) as { content: string; usage?: unknown };
+    const traceEndMs = Date.now();
+
+    void queueOpikTrace({
+      traceName: 'explain-analytics-5d.completion',
+      tags: ['explain-analytics-5d', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId,
+      traceStartMs,
+      traceEndMs,
+      input: {
+        context,
+        language,
+        classroom_id: classroomId || undefined,
+        filter_summary: filterSummary || undefined,
+        evidence_chars: evidenceText.length,
+      },
+      output: { raw_json: content },
+      openaiUsage: usage,
+      metadata: {
+        edge_function: 'explain-analytics-5d',
+        model_tier: 'fast',
+      },
+    }).catch(() => undefined);
 
     const parsed = JSON.parse(content) as {
       explanations?: Record<string, string>;

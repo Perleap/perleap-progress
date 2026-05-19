@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 import type { SupabaseConfig, Message } from './types.ts';
 import { buildModuleActivityContextBundle } from '../_shared/assignmentContext.ts';
+import { stripPerleapGreetingPrefixesFromExcerpt, MAX_UNIT_PRIOR_SUBMISSION_IDS } from './perleapPriorContext.ts';
 
 /**
  * Get Supabase configuration from environment
@@ -82,7 +83,12 @@ export const getStudentName = async (studentId: string): Promise<string> => {
  */
 export const getOrCreateConversation = async (
   submissionId: string,
-): Promise<{ id: string; messages: Message[] }> => {
+): Promise<{
+  id: string;
+  messages: Message[];
+  lastResponseId: string | null;
+  completedTaskIndexes: number[];
+}> => {
   const supabase = createSupabaseClient();
 
   const { data: conversations, error: convError } = await supabase
@@ -97,20 +103,62 @@ export const getOrCreateConversation = async (
   }
 
   if (conversations && conversations.length > 0) {
+    const row = conversations[0];
+    const rawIdx = row.completed_task_indexes;
+    const completedTaskIndexes = Array.isArray(rawIdx)
+      ? rawIdx
+          .map((v: unknown) => (typeof v === 'number' ? v : parseInt(String(v), 10)))
+          .filter((n: number) => Number.isFinite(n) && n > 0)
+      : [];
     return {
-      id: conversations[0].id,
-      messages: conversations[0].messages || [],
+      id: row.id,
+      messages: row.messages || [],
+      lastResponseId:
+        typeof row.last_openai_response_id === 'string'
+          ? row.last_openai_response_id
+          : null,
+      completedTaskIndexes,
     };
   }
 
   return {
     id: '',
     messages: [],
+    lastResponseId: null,
+    completedTaskIndexes: [],
   };
 };
 
+/** Max persisted messages per assignment_conversations row (keeps rows from ballooning). */
+const SAVE_CONVERSATION_MAX_MESSAGES = 50;
+/** Snapshots (raw_model_text + openai_chat_request_snapshot + polish snapshot) are heavy; keep them only on the most recent N messages. */
+const SAVE_CONVERSATION_KEEP_SNAPSHOTS_LAST_N = 10;
+
 /**
- * Save conversation messages
+ * Trim a messages array for persistence: keep at most `SAVE_CONVERSATION_MAX_MESSAGES` entries
+ * (most recent), and strip per-turn debug snapshots (`raw_model_text`,
+ * `openai_chat_request_snapshot`, `openai_polish_chat_request_snapshot`) from all but the most
+ * recent `SAVE_CONVERSATION_KEEP_SNAPSHOTS_LAST_N` messages. Returns a new array; never mutates
+ * the input.
+ */
+export function trimMessagesForPersistence(messages: Message[]): Message[] {
+  if (!Array.isArray(messages) || messages.length === 0) return [];
+  const start = Math.max(0, messages.length - SAVE_CONVERSATION_MAX_MESSAGES);
+  const window = messages.slice(start);
+  const stripFromIdx = Math.max(0, window.length - SAVE_CONVERSATION_KEEP_SNAPSHOTS_LAST_N);
+  return window.map((m, idx) => {
+    if (idx >= stripFromIdx) return m;
+    if (m && typeof m === 'object') {
+      const { raw_model_text: _r, openai_chat_request_snapshot: _s, openai_polish_chat_request_snapshot: _p, ...rest } = m as Record<string, unknown>;
+      return rest as Message;
+    }
+    return m;
+  });
+}
+
+/**
+ * Save conversation messages. Optionally store the OpenAI Responses-API response id for
+ * previous_response_id chaining on the next turn.
  */
 export const saveConversation = async (
   conversationId: string,
@@ -118,21 +166,48 @@ export const saveConversation = async (
   studentId: string,
   assignmentId: string,
   messages: Message[],
+  responseId?: string | null,
+  completedTaskIndexes?: number[],
 ): Promise<void> => {
   const supabase = createSupabaseClient();
+
+  const trimmed = trimMessagesForPersistence(messages);
+
+  const update: Record<string, unknown> = {
+    messages: trimmed,
+    updated_at: new Date().toISOString(),
+  };
+  if (typeof responseId === 'string' && responseId.length > 0) {
+    update.last_openai_response_id = responseId;
+  }
+  if (Array.isArray(completedTaskIndexes)) {
+    const sanitized = [
+      ...new Set(
+        completedTaskIndexes.filter((n) => Number.isFinite(n) && n > 0),
+      ),
+    ].sort((a, b) => a - b);
+    update.completed_task_indexes = sanitized;
+  }
 
   if (conversationId) {
     await supabase
       .from('assignment_conversations')
-      .update({ messages, updated_at: new Date().toISOString() })
+      .update(update)
       .eq('id', conversationId);
   } else {
-    await supabase.from('assignment_conversations').insert({
+    const insertRow: Record<string, unknown> = {
       submission_id: submissionId,
       student_id: studentId,
       assignment_id: assignmentId,
-      messages,
-    });
+      messages: trimmed,
+    };
+    if (typeof responseId === 'string' && responseId.length > 0) {
+      insertRow.last_openai_response_id = responseId;
+    }
+    if (update.completed_task_indexes) {
+      insertRow.completed_task_indexes = update.completed_task_indexes;
+    }
+    await supabase.from('assignment_conversations').insert(insertRow);
   }
 };
 
@@ -182,7 +257,7 @@ export const getAssignmentDetails = async (assignmentId: string) => {
 
   const { data, error } = await supabase
     .from('assignments')
-    .select('hard_skills, hard_skill_domain, materials, instructions, classroom_id')
+    .select('hard_skills, hard_skill_domain, materials, instructions, student_facing_task, classroom_id')
     .eq('id', assignmentId)
     .single();
 
@@ -280,9 +355,6 @@ export const isAppAdmin = async (userId: string): Promise<boolean> => {
   return data === true;
 };
 
-/** Max prior submissions merged from unit (syllabus section) + client chain (ordered, deduped). */
-const UNIT_PRIOR_SUBMISSION_CAP = 15;
-
 /**
  * Completed learner submissions in the same syllabus section + classroom (excluding current assignment),
  * one row per assignment (latest completion), ordered oldest → newest by submitted_at.
@@ -333,13 +405,13 @@ export async function getPriorSubmissionIdsInSameSection(
     a.submitted_at.localeCompare(b.submitted_at),
   );
   let ids = ordered.map((x) => x.id);
-  if (ids.length > UNIT_PRIOR_SUBMISSION_CAP) {
-    ids = ids.slice(-UNIT_PRIOR_SUBMISSION_CAP);
+  if (ids.length > MAX_UNIT_PRIOR_SUBMISSION_IDS) {
+    ids = ids.slice(-MAX_UNIT_PRIOR_SUBMISSION_IDS);
   }
   return ids;
 }
 
-const PRIOR_CONTEXT_MAX_CHARS = 8000;
+const PRIOR_CONTEXT_MAX_CHARS = 5000;
 
 function stripChatContentForPriorContext(raw: string): string {
   let s = String(raw ?? '').replace(/\r\n/g, '\n');
@@ -347,16 +419,151 @@ function stripChatContentForPriorContext(raw: string): string {
   return s.trim();
 }
 
+const PRIOR_JSON_ARTIFACT_PLACEHOLDER =
+  '[Prior written work: large structured / JSON artifact omitted from tutor context.]';
+
+/** Skip `text_body` submissions shorter than this - one-word answers like "test" add noise without signal. */
+const MIN_PRIOR_TEXT_BODY_CHARS = 40;
+
+/** Avoid dumping langchain-sized JSON graphs into merged prior-unit context */
+function looksLikeJsonHeavySubmissionBody(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/["']schemaVersion["']\s*:/i.test(t)) return true;
+
+  const head = t.slice(0, Math.min(t.length, 24_000));
+  const structureChars = (head.match(/[{}[\]",':]/g) ?? []).length;
+  const brackets = (head.match(/[{[]/g) ?? []).length;
+
+  if (/^\s*[{[]/.test(t)) {
+    if (head.length >= 400 && structureChars / head.length >= 0.09) return true;
+    if (head.length >= 1200 && brackets >= 40) return true;
+  }
+  if (t.length > 4000 && brackets >= 50) return true;
+  return false;
+}
+
+const COMPLETION_MARKER_CORRUPT_SENTINEL = '[completion marker corrupted; omitted]';
+
+/** Normalize obvious completion-marker typos / truncated tails so prior context does not teach bad markers. */
+function scrubCompletionMarkerTypos(raw: string): string {
+  let t = raw.trim();
+  if (!t) return '';
+  t = t.replace(/\bCONATION_COMPLETE\b|\[CONATION_COMPLETE\]/gi, COMPLETION_MARKER_CORRUPT_SENTINEL);
+  const lastOpen = t.lastIndexOf('[');
+  const lastClose = t.lastIndexOf(']');
+  if (lastOpen > lastClose && lastOpen !== -1) {
+    const frag = t.slice(lastOpen);
+    if (/^\[(?:CON|CONVERSATION)?/i.test(frag)) {
+      t = t.slice(0, lastOpen).trimEnd() + ` ${COMPLETION_MARKER_CORRUPT_SENTINEL}`;
+    }
+  }
+  return t;
+}
+
+/**
+ * Detect prior-assistant disclaimer lines that contradict the new "use prior context for
+ * factual recall" rule. Examples: "I do not have access to past lessons", "I cannot recall",
+ * "I do not remember", "אין לי גישה". Drop those lines so the model does not imitate them.
+ */
+function isPriorAssistantDisclaimer(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  const patterns: RegExp[] = [
+    /\bi\s+(do\s+not|don't|do\s*not)\s+have\s+access\b/i,
+    /\bi\s+(do\s+not|don't)\s+remember\b/i,
+    /\bi\s+(cannot|can't|can\s+not)\s+recall\b/i,
+    /\bi\s+(do\s+not|don't)\s+have\s+(?:any\s+)?(?:memory|access|recollection)\b/i,
+    /\bunless\s+you\s+share\s+them\s+here\b/i,
+    /\bunless\s+you\s+share\s+it\s+with\s+me\b/i,
+    /אין\s+לי\s+גישה/,
+    /אני\s+לא\s+זוכר/,
+    /אני\s+אינני\s+זוכר/,
+  ];
+  return patterns.some((p) => p.test(t));
+}
+
+/**
+ * Normalize a line for near-duplicate fingerprinting (lower, collapsed whitespace, no trailing punct).
+ * 48-char window collapses near-paraphrases (e.g. "hi, what does \"fdsfds\" refer to in your assignment"
+ * vs "what does \"fdsfds\" in the assignment instructions refer to" become very similar prefixes).
+ */
+function fingerprintAssistantLine(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/^\s*(hi|hello|hey|שלום)[,.\s]+/i, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?,;:]+\s*$/g, '')
+    .trim()
+    .slice(0, 48);
+}
+
+/**
+ * Assistant "clarify a garbage student token" lines: noise, no signal.
+ * Matches: "Hi, what does 'fds' refer to ...", "What is \"x\" mean ...",
+ * and forms with up to ~6 words of slack between the quote and the verb,
+ * e.g. "What does 'fdsfds' in the assignment instructions refer to?".
+ */
+const CLARIFICATION_QUESTION_RE =
+  /^(hi[,.]?\s+)?what\s+(does|is)\s+["'][^"']{1,12}["']\s+(?:\S+\s+){0,6}(refer\s+to|mean)/i;
+
+/** Substantive student reply test: at least 12 chars and not a one-word filler. */
+function isSubstantiveStudentReply(text: string): boolean {
+  const t = text.trim();
+  if (t.length < 12) return false;
+  if (/^(ok(ay)?|yes|no|sure|nope|yep|yeah|thanks?)[.!?\s]*$/i.test(t)) return false;
+  return true;
+}
+
 function formatMessagesForPriorContext(messages: Message[]): string {
   const parts: string[] = [];
   let total = 0;
+  const seenAssistantFingerprints = new Set<string>();
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (!m || (m.role !== 'user' && m.role !== 'assistant')) continue;
     if (typeof m.content !== 'string') continue;
-    const text = stripChatContentForPriorContext(m.content);
-    if (!text) continue;
-    const label = m.role === 'user' ? 'Student' : 'Assistant';
+
+    let text = stripPerleapGreetingPrefixesFromExcerpt(
+      stripChatContentForPriorContext(m.content),
+    );
+    text = scrubCompletionMarkerTypos(text);
+    const trimmed = text.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.length < 12) continue;
+
+    const role = m.role;
+
+    if (role === 'assistant' && isPriorAssistantDisclaimer(trimmed)) continue;
+
+    if (role === 'assistant') {
+      const fp = fingerprintAssistantLine(trimmed);
+      if (fp && seenAssistantFingerprints.has(fp)) continue;
+      if (fp) seenAssistantFingerprints.add(fp);
+
+      if (CLARIFICATION_QUESTION_RE.test(trimmed)) {
+        const newer = i + 1 < messages.length ? messages[i + 1] : null;
+        const newerIsSubstantiveStudent =
+          newer?.role === 'user' &&
+          typeof newer.content === 'string' &&
+          isSubstantiveStudentReply(newer.content);
+        if (!newerIsSubstantiveStudent) continue;
+      }
+    }
+
+    const newer = i + 1 < messages.length ? messages[i + 1] : null;
+    const newerRole = newer?.role === 'user' || newer?.role === 'assistant' ? newer.role : null;
+    // Drop tiny assistant stubs when wedged between other assistant retries (often noise)
+    if (role === 'assistant' && newerRole === 'assistant') {
+      const words = trimmed.split(/\s+/).filter(Boolean).length;
+      const hasQuestion = /\?\s*$/.test(trimmed);
+      if (words <= 14 && text.length < 80 && !hasQuestion && !/\[attachment\]|\[CONVERSATION_COMPLETE\]/.test(text)) {
+        continue;
+      }
+    }
+
+    const label = role === 'user' ? 'Student' : 'Assistant';
     const piece = `${label}: ${text}\n\n`;
     if (total + piece.length > PRIOR_CONTEXT_MAX_CHARS) break;
     parts.push(piece);
@@ -417,10 +624,14 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
   if (chatExcerpt.trim()) sections.push(chatExcerpt.trim());
 
   const tb = typeof priorSub.text_body === 'string' ? priorSub.text_body.trim() : '';
-  if (tb) {
-    const cleaned = stripChatContentForPriorContext(tb).slice(0, 4000);
-    if (cleaned) {
-      sections.push(`Submitted written work (prior assignment):\n${cleaned}`);
+  if (tb && tb.length >= MIN_PRIOR_TEXT_BODY_CHARS) {
+    if (looksLikeJsonHeavySubmissionBody(tb)) {
+      sections.push(`Submitted written work (prior assignment):\n${PRIOR_JSON_ARTIFACT_PLACEHOLDER}`);
+    } else {
+      const cleaned = stripChatContentForPriorContext(tb).slice(0, 4000);
+      if (cleaned) {
+        sections.push(`Submitted written work (prior assignment):\n${cleaned}`);
+      }
     }
   }
 
@@ -476,10 +687,10 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
 
   if (sections.length === 0) return null;
 
-  let out = sections.join('\n\n---\n\n');
+  let out = stripPerleapGreetingPrefixesFromExcerpt(sections.join('\n\n---\n\n'));
   if (out.length > PRIOR_CONTEXT_MAX_CHARS) {
     out = out.slice(out.length - PRIOR_CONTEXT_MAX_CHARS);
   }
-  return out.trim() || null;
+  return stripPerleapGreetingPrefixesFromExcerpt(out.trim()) || null;
 };
 

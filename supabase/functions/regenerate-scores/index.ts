@@ -10,6 +10,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,14 +75,42 @@ serve(async (req) => {
     // Generate scores prompt from database
     const scoresPrompt = await generateScoresPrompt('the student', detectedLanguage);
     
+    const opikThreadId = typeof submissionId === 'string' && submissionId
+      ? submissionId
+      : crypto.randomUUID();
+    const conversationChars = conversationText.length;
+
     // Call OpenAI for 5D scores analysis
-    const { content: scoresText } = await createChatCompletion(
+    const scoresTraceStart = Date.now();
+    const { content: scoresText, usage: scoresUsage } = await createChatCompletion(
       scoresPrompt,
       [{ role: 'user', content: conversationText }],
       0.5,
       500,
       'smart'
-    );
+    ) as { content: string; usage?: unknown };
+    const scoresTraceEnd = Date.now();
+    void queueOpikTrace({
+      traceName: 'regenerate-scores.scores',
+      tags: ['regenerate-scores', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId: crypto.randomUUID(),
+      traceStartMs: scoresTraceStart,
+      traceEndMs: scoresTraceEnd,
+      input: {
+        detected_language: detectedLanguage,
+        conversation_chars: conversationChars,
+      },
+      output: { raw_json: scoresText },
+      openaiUsage: scoresUsage,
+      metadata: {
+        edge_function: 'regenerate-scores',
+        model_tier: 'smart',
+        submission_id: submissionId,
+        classroom_id: classroomId,
+        student_id: studentId,
+      },
+    }).catch(() => undefined);
 
     // Parse scores
     let scores = { vision: 5, values: 5, thinking: 5, connection: 5, action: 5 };
@@ -104,13 +133,37 @@ serve(async (req) => {
       detectedLanguage
     );
 
-    const { content: explanationsText } = await createChatCompletion(
+    const explanationsTraceStart = Date.now();
+    const { content: explanationsText, usage: explanationsUsage } = await createChatCompletion(
       explanationsPrompt,
       [],
       0.6,
       1500, // Increased token limit for Hebrew explanations which can be longer
       'smart'
-    );
+    ) as { content: string; usage?: unknown };
+    const explanationsTraceEnd = Date.now();
+    void queueOpikTrace({
+      traceName: 'regenerate-scores.explanations',
+      tags: ['regenerate-scores', 'edge-function'],
+      threadId: opikThreadId,
+      clientTraceId: crypto.randomUUID(),
+      traceStartMs: explanationsTraceStart,
+      traceEndMs: explanationsTraceEnd,
+      input: {
+        detected_language: detectedLanguage,
+        conversation_chars: conversationChars,
+        scores_snapshot: scoresContext,
+      },
+      output: { raw_text: explanationsText },
+      openaiUsage: explanationsUsage,
+      metadata: {
+        edge_function: 'regenerate-scores',
+        model_tier: 'smart',
+        submission_id: submissionId,
+        classroom_id: classroomId,
+        student_id: studentId,
+      },
+    }).catch(() => undefined);
 
     let scoreExplanations = null;
     try {

@@ -22,6 +22,7 @@ import type {
 import type { Syllabus, SyllabusStructureType, ResourceType, ActivityResourceStatus } from '@/types/syllabus';
 import type { CreateSyllabusSectionInput } from '@/types/syllabus';
 import type { Json } from '@/integrations/supabase/types';
+import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
 import { normalizeReleaseMode } from '@/lib/releaseMode';
 import { packageNeedsTypescriptCourseMerge, shouldUseCoursePackageMergeRpc } from '@/config/mergeCoursePackage';
 
@@ -617,7 +618,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         title: a.title,
         instructions: a.instructions,
         student_facing_task: a.student_facing_task,
-        type: a.type,
+        type: normalizeAssignmentTypeForImport(a.type),
         status: a.status,
         due_at: a.due_at,
         target_dimensions: a.target_dimensions as never,
