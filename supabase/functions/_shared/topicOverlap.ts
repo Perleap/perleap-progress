@@ -68,6 +68,19 @@ export function extractKeywordSet(text: string): Set<string> {
  * Returns true when `a` and `b` share at least `min` keywords.
  * If either side has zero keywords, returns false (can't be on-topic without signal).
  */
+/** Count shared keywords between two texts (for ranking, not gating). */
+export function countKeywordOverlap(a: string, b: string): number {
+  const ka = extractKeywordSet(a);
+  const kb = extractKeywordSet(b);
+  if (ka.size === 0 || kb.size === 0) return 0;
+  let hits = 0;
+  const [small, large] = ka.size <= kb.size ? [ka, kb] : [kb, ka];
+  for (const w of small) {
+    if (large.has(w)) hits++;
+  }
+  return hits;
+}
+
 export function hasKeywordOverlap(a: string, b: string, min = 1): boolean {
   const ka = extractKeywordSet(a);
   const kb = extractKeywordSet(b);

@@ -10,7 +10,10 @@ import {
 } from '@/lib/moduleFlow';
 import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
-import { isAssignmentMissedDeadline } from '@/lib/moduleFlowStudent';
+import {
+  isAssignmentMissedDeadline,
+  localResourceInferredDoneFromLaterAssignments,
+} from '@/lib/moduleFlowStudent';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
 import type { ReleaseMode, StudentProgressStatus, SyllabusSection, ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
@@ -29,13 +32,7 @@ function localResourceStepDone(
     (p) => p.step_kind === 'resource' && p.activity_list_id === step.resourceId,
   );
   if (persistedRow && ctx.progressByStep[persistedRow.id]) return true;
-  for (let k = index + 1; k < local.length; k++) {
-    const later = local[k];
-    if (later.kind === 'assignment' && (ctx.assignmentDoneMap[later.assignmentId] ?? false)) {
-      return true;
-    }
-  }
-  return false;
+  return localResourceInferredDoneFromLaterAssignments(local, index, ctx);
 }
 
 function localStepDone(

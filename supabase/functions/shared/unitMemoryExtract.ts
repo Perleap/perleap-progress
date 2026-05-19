@@ -6,7 +6,12 @@ import { createSupabaseClient } from './supabase.ts';
 import { createChatCompletion } from './openai.ts';
 import {
   hasFactsForSubmission,
+  hasProcessedSubmission,
+  markSubmissionProcessed,
+  promoteSectionFactsToCourse,
+  type CourseMemoryFact,
   type UnitMemoryFact,
+  upsertCourseMemoryFacts,
   upsertUnitMemoryFacts,
 } from './unitMemory.ts';
 import { queueOpikTrace } from './opikTrace.ts';
@@ -17,6 +22,8 @@ export interface ExtractUnitMemoryResult {
   reason?: string;
   factsExtracted?: number;
   totalFacts?: number;
+  courseFactsExtracted?: number;
+  totalCourseFacts?: number;
   submissionId: string;
   error?: string;
 }
@@ -150,9 +157,18 @@ Rules:
 - Each bullet must be at most 200 characters.
 - Write bullets in the same language as the student's main contributions.`;
 
+async function resolveSectionTitle(syllabusSectionId: string): Promise<string> {
+  const supabase = createSupabaseClient();
+  const { data } = await supabase
+    .from('syllabus_sections')
+    .select('title')
+    .eq('id', syllabusSectionId)
+    .maybeSingle();
+  return typeof data?.title === 'string' ? data.title.trim() : '';
+}
+
 /**
- * Extract and persist unit memory for one completed submission.
- * Idempotent: skips when facts for submission_id already exist.
+ * Extract and persist unit + course memory for one completed submission.
  */
 export async function extractUnitMemoryFromSubmission(
   submissionId: string,
@@ -180,7 +196,7 @@ export async function extractUnitMemoryFromSubmission(
 
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')
-    .select('id, title, type, classroom_id, syllabus_section_id')
+    .select('id, title, type, classroom_id, syllabus_section_id, use_course_memory')
     .eq('id', sub.assignment_id)
     .maybeSingle();
 
@@ -191,16 +207,41 @@ export async function extractUnitMemoryFromSubmission(
     return { ok: true, skipped: true, reason: 'no_syllabus_section', submissionId };
   }
 
-  if (skipIfExists) {
-    const exists = await hasFactsForSubmission(
-      sub.student_id,
-      assignment.classroom_id,
-      assignment.syllabus_section_id,
+  const useCourseMemory = assignment.use_course_memory !== false;
+  const sectionExists = await hasFactsForSubmission(
+    sub.student_id,
+    assignment.classroom_id,
+    assignment.syllabus_section_id,
+    submissionId,
+  );
+  const courseProcessed = useCourseMemory
+    ? await hasProcessedSubmission(sub.student_id, assignment.classroom_id, submissionId)
+    : true;
+
+  if (skipIfExists && sectionExists && (!useCourseMemory || courseProcessed)) {
+    return { ok: true, skipped: true, reason: 'already_extracted', submissionId };
+  }
+
+  // Section already extracted; promote to course without OpenAI.
+  if (sectionExists && useCourseMemory && !courseProcessed) {
+    const sectionTitle = await resolveSectionTitle(assignment.syllabus_section_id);
+    const { promoted } = await promoteSectionFactsToCourse({
+      studentId: sub.student_id,
+      classroomId: assignment.classroom_id,
+      syllabusSectionId: assignment.syllabus_section_id,
+      syllabusSectionTitle: sectionTitle || undefined,
       submissionId,
-    );
-    if (exists) {
-      return { ok: true, skipped: true, reason: 'already_extracted', submissionId };
+    });
+    if (promoted === 0) {
+      await markSubmissionProcessed(sub.student_id, assignment.classroom_id, submissionId);
     }
+    return {
+      ok: true,
+      submissionId,
+      factsExtracted: 0,
+      courseFactsExtracted: promoted,
+      reason: 'promoted_from_section',
+    };
   }
 
   const sourceText = await buildSubmissionSourceText(
@@ -209,6 +250,9 @@ export async function extractUnitMemoryFromSubmission(
     assignment.type,
   );
   if (!sourceText || sourceText.trim().length < 20) {
+    if (useCourseMemory && !courseProcessed) {
+      await markSubmissionProcessed(sub.student_id, assignment.classroom_id, submissionId);
+    }
     return { ok: true, skipped: true, reason: 'insufficient_source', submissionId };
   }
 
@@ -237,10 +281,15 @@ ${sourceText}`;
   }
 
   if (extractedTexts.length === 0) {
+    if (useCourseMemory && !courseProcessed) {
+      await markSubmissionProcessed(sub.student_id, assignment.classroom_id, submissionId);
+    }
     return { ok: true, skipped: true, reason: 'no_facts_extracted', submissionId };
   }
 
   const now = new Date().toISOString();
+  const sectionTitle = await resolveSectionTitle(assignment.syllabus_section_id);
+
   const incomingFacts: UnitMemoryFact[] = extractedTexts.map((text) => ({
     id: crypto.randomUUID(),
     submission_id: submissionId,
@@ -250,17 +299,39 @@ ${sourceText}`;
     extracted_at: now,
   }));
 
-  const { factCount } = await upsertUnitMemoryFacts({
-    studentId: sub.student_id,
-    classroomId: assignment.classroom_id,
-    syllabusSectionId: assignment.syllabus_section_id,
-    incomingFacts,
-    submissionId,
-  });
+  let factCount = 0;
+  if (!sectionExists) {
+    const sectionResult = await upsertUnitMemoryFacts({
+      studentId: sub.student_id,
+      classroomId: assignment.classroom_id,
+      syllabusSectionId: assignment.syllabus_section_id,
+      incomingFacts,
+      submissionId,
+    });
+    factCount = sectionResult.factCount;
+  }
+
+  let totalCourseFacts = 0;
+  let courseFactsExtracted = 0;
+  if (useCourseMemory && !courseProcessed) {
+    const courseIncoming: CourseMemoryFact[] = incomingFacts.map((f) => ({
+      ...f,
+      syllabus_section_id: assignment.syllabus_section_id,
+      syllabus_section_title: sectionTitle || undefined,
+    }));
+    const courseResult = await upsertCourseMemoryFacts({
+      studentId: sub.student_id,
+      classroomId: assignment.classroom_id,
+      incomingFacts: courseIncoming,
+      submissionId,
+    });
+    totalCourseFacts = courseResult.factCount;
+    courseFactsExtracted = courseIncoming.length;
+  }
 
   void queueOpikTrace({
     traceName: 'extract-unit-memory.extract',
-    tags: ['extract-unit-memory', 'unit-memory'],
+    tags: ['extract-unit-memory', 'unit-memory', 'course-memory'],
     threadId: submissionId,
     traceStartMs,
     traceEndMs: Date.now(),
@@ -275,6 +346,9 @@ ${sourceText}`;
       syllabus_section_id: assignment.syllabus_section_id,
       facts_extracted: extractedTexts.length,
       total_facts: factCount,
+      course_facts_extracted: courseFactsExtracted,
+      total_course_facts: totalCourseFacts,
+      use_course_memory: useCourseMemory,
       duration_ms: Date.now() - startMs,
     },
   }).catch(() => undefined);
@@ -284,5 +358,7 @@ ${sourceText}`;
     submissionId,
     factsExtracted: extractedTexts.length,
     totalFacts: factCount,
+    courseFactsExtracted,
+    totalCourseFacts,
   };
 }

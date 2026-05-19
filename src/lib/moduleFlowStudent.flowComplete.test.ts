@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSectionActivityFlowFullyComplete } from './moduleFlowStudent';
+import { isSectionActivityFlowFullyComplete, persistedStepDone } from './moduleFlowStudent';
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
 const ts = '2020-01-01T00:00:00.000Z';
@@ -92,6 +92,19 @@ describe('isSectionActivityFlowFullyComplete', () => {
         assignmentDoneMap: { a1: true },
       }, refNow),
     ).toBe(true);
+  });
+
+  it('persisted path: resource not inferred done when a later assignment is complete but an intervening assignment is not', () => {
+    const r = lessonResource('res-new', sid);
+    const stepR = flowResourceStep('step-r', sid, r.id, 0);
+    const stepA1 = flowAssignmentStep('step-a1', sid, 'a1', 1);
+    const stepA2 = flowAssignmentStep('step-a2', sid, 'a2', 2);
+    const steps = [stepR, stepA1, stepA2];
+    const ctx = { progressByStep: {}, assignmentDoneMap: { a1: false, a2: true } };
+    expect(persistedStepDone(stepR, steps, 0, ctx)).toBe(false);
+    expect(
+      isSectionActivityFlowFullyComplete(sid, steps, [r], [], ctx, refNow),
+    ).toBe(false);
   });
 
   it('persisted path: assignment step follows assignmentDoneMap', () => {

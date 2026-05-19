@@ -52,6 +52,11 @@ export interface ComposeSystemPromptInput {
    */
   unitMemoryExcerpt?: string;
   /**
+   * Distilled course memory from earlier units in this classroom (cross-unit recall).
+   * When non-empty, emitted as <course_memory> after <unit_memory>.
+   */
+  courseMemoryExcerpt?: string;
+  /**
    * Optional server-tracked task progress. When provided and non-empty, emitted as a
    * <task_progress> block above <assignment> and steers TUTOR_TURN_PROTOCOL toward the first
    * INCOMPLETE item. Omit when parseAssignmentTasks returns 0 - the prompt degrades gracefully.
@@ -90,6 +95,7 @@ export async function composeSystemPrompt(input: ComposeSystemPromptInput): Prom
     assignmentTutorText,
     priorContextExcerpt,
     unitMemoryExcerpt,
+    courseMemoryExcerpt,
     taskProgress,
   } = input;
 
@@ -113,6 +119,7 @@ export async function composeSystemPrompt(input: ComposeSystemPromptInput): Prom
     tag('task_and_hard_skills', hardSkills),
     tag('course_materials', courseMaterials),
     unitMemoryExcerpt?.trim() ? tag('unit_memory', unitMemoryExcerpt) : '',
+    courseMemoryExcerpt?.trim() ? tag('course_memory', courseMemoryExcerpt) : '',
     taskProgressBody ? tag('task_progress', taskProgressBody) : '',
     tag('assignment', assignmentInstructionsBlock),
     tag('prior_context', priorContextExcerpt ?? ''),

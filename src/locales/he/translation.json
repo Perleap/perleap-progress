@@ -695,6 +695,10 @@
       "dueDateHelperRetries": "חובה: כל ההגשות עד התאריך הזה.",
       "dueRequiredForRetries": "יש לקבוע תאריך יעד כשמשתמשים במצב ניסיונות עד תאריך."
     },
+    "courseMemory": {
+      "label": "זכירת עבודה קודמת מיחידות אחרות",
+      "helper": "כשמופעל, המורה הווירטואלי עשוי להשתמש בקצרה בעובדות מעבודה שהושלמה ביחידות אחרות בקורס."
+    },
     "metadata": {
       "assignmentDetailsTitle": "פרטי המשימה",
       "assignmentDetailsDescription": "הגדרת סוג המשימה, תאריך יעד וקישור אופציונלי למתווה הקורס.",
@@ -926,6 +930,10 @@
       "activityEdit": "עריכת פעילות",
       "activityVideoFile": "קובץ וידאו",
       "activityVideoFileHint": "נתמכים פורמטי וידאו נפוצים (למשל MP4, WebM, MOV, AVI, MKV).",
+      "activityVideoSourceUpload": "העלאת קובץ",
+      "activityVideoSourceYoutube": "קישור YouTube",
+      "activityYoutubeHint": "הדביקו קישור צפייה או שיתוף מ-YouTube. התלמידים יצפו בפעילות.",
+      "invalidYoutubeUrl": "נא להזין כתובת YouTube תקינה (youtube.com או youtu.be).",
       "richTextPlaceholder": "התחלו לכתוב…",
       "activityNeedsContent": "הוסיפו לפחות בלוק טקסט או וידאו אחד עם תוכן.",
       "activitySaved": "הפעילות נשמרה.",

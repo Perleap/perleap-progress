@@ -68,6 +68,8 @@ interface ClassroomSidebarProps {
   onSectionChange: (section: string) => void;
   sections: ClassroomSection[];
   hideGlobalNav?: boolean;
+  /** When set, overrides default history.back / dashboard fallback for the header back control. */
+  onBack?: () => void;
 }
 
 export function ClassroomSidebar({
@@ -77,6 +79,7 @@ export function ClassroomSidebar({
   onSectionChange,
   sections,
   hideGlobalNav = false,
+  onBack,
 }: ClassroomSidebarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -158,7 +161,11 @@ export function ClassroomSidebar({
                 tooltip={t('common.back')}
                 onClick={(e) => {
                   e.preventDefault();
-                  navigateBackOrDashboard();
+                  if (onBack) {
+                    onBack();
+                  } else {
+                    navigateBackOrDashboard();
+                  }
                 }}
               >
                 <ArrowLeft className="size-4 rtl:rotate-180" />

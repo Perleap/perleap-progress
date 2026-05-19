@@ -549,6 +549,7 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["assignment_type"]
           updated_at: string
+          use_course_memory: boolean
         }
         Insert: {
           active?: boolean
@@ -573,6 +574,7 @@ export type Database = {
           title: string
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
+          use_course_memory?: boolean
         }
         Update: {
           active?: boolean
@@ -597,6 +599,7 @@ export type Database = {
           title?: string
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
+          use_course_memory?: boolean
         }
         Relationships: [
           {
@@ -1407,6 +1410,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "student_recommendations_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_classroom_course_memory: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          facts: Json
+          id: string
+          processed_submission_ids: Json
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          processed_submission_ids?: Json
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          processed_submission_ids?: Json
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_classroom_course_memory_classroom_id_fkey"
             columns: ["classroom_id"]
             isOneToOne: false
             referencedRelation: "classrooms"

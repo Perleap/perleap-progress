@@ -35,8 +35,19 @@ export const PRIOR_VERBATIM_COUNT_CHAT = 2;
 /** Minimum visible-content length for a prior chunk to be kept in the chat prompt. */
 export const PRIOR_MIN_CHUNK_BODY_CHARS = 80;
 
+export { isCourseRecallRequest } from './courseRecall.ts';
+
+/** @deprecated Use isCourseRecallRequest */
+export { isCourseRecallRequest as isExplicitPastWorkRecallRequest } from './courseRecall.ts';
+
 /** Max chars per prior excerpt slice when merging multiple priors into one system prompt */
 export const PRIOR_MERGE_PER_SUBMISSION_CEILING_CHARS = 1_000;
+
+/** Larger per-submission cap on course-recall turns (verbatim prior work). */
+export const PRIOR_EXPLICIT_RECALL_PER_SUBMISSION_CEILING_CHARS = 8_000;
+
+/** Full merged prior budget when the student asks to recall work from anywhere in the course. */
+export const PRIOR_COURSE_RECALL_MERGE_MAX_CHARS = 10_000;
 
 /** On initial tutor turn, multiply merged prior budget by this factor (fraction in (0,1]). */
 export const PRIOR_MERGE_GREETING_BUDGET_FRACTION = 0.5;

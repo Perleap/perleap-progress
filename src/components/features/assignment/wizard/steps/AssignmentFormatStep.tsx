@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { cn } from '@/lib/utils';
@@ -203,6 +204,29 @@ export function AssignmentFormatStep({
               {t('editAssignment.attemptPolicyFrozen')}
             </p>
           ) : null}
+        </div>
+
+        <div
+          className={cn(
+            'flex items-start justify-between gap-3 rounded-lg border border-border/60 p-3 max-w-[min(100%,28rem)]',
+            isRTL && 'flex-row-reverse',
+          )}
+        >
+          <div className={cn('min-w-0 flex-1 space-y-0.5', isRTL ? 'text-right' : 'text-left')}>
+            <Label htmlFor="wiz-use-course-memory" className="text-body font-medium">
+              {t('createAssignment.courseMemory.label')}
+            </Label>
+            <p className="text-muted-foreground text-xs leading-snug">
+              {t('createAssignment.courseMemory.helper')}
+            </p>
+          </div>
+          <Switch
+            id="wiz-use-course-memory"
+            checked={formData.use_course_memory}
+            onCheckedChange={(checked) =>
+              onFormChange((prev) => ({ ...prev, use_course_memory: checked }))
+            }
+          />
         </div>
       </CardContent>
     </Card>

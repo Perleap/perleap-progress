@@ -14,7 +14,7 @@ import {
   Play,
   X,
 } from 'lucide-react';
-import { parseLessonContent } from '@/lib/lessonContent';
+import { inferLessonVideoSource, parseLessonContent, shouldShowLessonVideoBlock } from '@/lib/lessonContent';
 import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
 import {
   ContentImageBlock,
@@ -152,15 +152,16 @@ export function LessonResourceBody({
         );
       }
       if (block.type === 'video') {
+        if (!shouldShowLessonVideoBlock(block)) return null;
         const videoUrl = block.url || '';
-        const show =
-          videoUrl &&
-          (block.mime_type?.startsWith('video/') ||
-            /\.(mp4|webm|ogg|mov)(\?|$)/i.test(videoUrl));
-        if (!show) return null;
+        const source = inferLessonVideoSource(block);
         return (
           <div key={block.id}>
-            <ContentVideoBlock videoUrl={videoUrl} presentation={videoPresentation} />
+            <ContentVideoBlock
+              videoUrl={videoUrl}
+              source={source}
+              presentation={videoPresentation}
+            />
           </div>
         );
       }

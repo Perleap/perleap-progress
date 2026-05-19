@@ -62,6 +62,12 @@ describe('formatInlineListsForChatMarkdown + splitChatDisplayText', () => {
     expect(parts[1].trimStart()).toMatch(/^1\)/);
   });
 
+  it('keeps course-recall prompt quotes in one bubble', () => {
+    const t =
+      "Yes, your final prompt was:\n\n# Email Organizer Agent\n\n**Goal**\n\nYou are an email organizer agent.";
+    expect(splitChatDisplayText(t)).toEqual([t]);
+  });
+
   it('splits multiple prose sentences on one line into separate display segments', () => {
     const t =
       "On, you used logic that is not fully stated in your prompt. Let's cover the gap: Where in your prompt does it say that an ambiguous email with unclear references should be replied to for clarification instead of being archived, escalated, or just marked medium? Can you add a rule to your prompt and paste the revised version?";

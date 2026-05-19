@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ import { useFullSubmissionDetails, useClassroom, useTeacherResetStudentAssignmen
 import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
 import { isAppAdminRole } from '@/utils/role';
 import { getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
+import type { SubmissionDetailLocationState } from '@/types/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +45,8 @@ const SubmissionDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   const { data: submissionData, isLoading: loading, refetch } = useFullSubmissionDetails(id);
   const classroomId = submissionData?.assignments?.classroom_id;
   const { data: classroomRow } = useClassroom(classroomId);
@@ -88,12 +90,36 @@ const SubmissionDetail = () => {
 
   const customSections = useMemo(() => getTeacherClassroomNavSections(t), [t]);
 
+  const submissionNavState = location.state as SubmissionDetailLocationState | null;
+
+  const navigateToClassroomSection = useCallback(
+    (section: string, replace = false) => {
+      if (!classroomId) {
+        navigateBackOrTo(navigate, '/teacher/dashboard');
+        return;
+      }
+      const returnTo = submissionNavState?.returnTo;
+      if (returnTo) {
+        const q = returnTo.indexOf('?');
+        const pathname = q >= 0 ? returnTo.slice(0, q) : returnTo;
+        const search = q >= 0 ? returnTo.slice(q) : '';
+        navigate({ pathname, search }, { replace, state: { activeSection: section } });
+        return;
+      }
+      navigate(`/teacher/classroom/${classroomId}`, { replace, state: { activeSection: section } });
+    },
+    [classroomId, submissionNavState?.returnTo, navigate],
+  );
+
+  const handleBackToSubmissions = useCallback(() => {
+    navigateToClassroomSection('submissions');
+  }, [navigateToClassroomSection]);
+
   const handleClassroomNav = useCallback(
     (section: string) => {
-      if (!classroomId) return;
-      navigate(`/teacher/classroom/${classroomId}`, { replace: true, state: { activeSection: section } });
+      navigateToClassroomSection(section, true);
     },
-    [classroomId, navigate],
+    [navigateToClassroomSection],
   );
 
   const handleGenerateFollowupAssignment = async () => {
@@ -196,7 +222,7 @@ const SubmissionDetail = () => {
       });
       setResetProgressOpen(false);
       toast.success(t('submissionDetail.resetStudentProgress.success'));
-      navigate(`/teacher/submission/${newId}`);
+      navigate(`/teacher/submission/${newId}`, { state: location.state });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('student_already_has_draft')) {
@@ -226,6 +252,7 @@ const SubmissionDetail = () => {
       classroomSubject={classroomSubject}
       activeSection="submissions"
       onSectionChange={handleClassroomNav}
+      onBack={handleBackToSubmissions}
       customSections={customSections}
     >
       <div className="container py-0 px-4 max-w-6xl mx-auto relative z-10">

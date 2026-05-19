@@ -9,6 +9,7 @@ import {
   getOrderedActivityCenterFlowSteps,
   type AssignmentRow,
   type ComputedFlowItem,
+  type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
 
 /** Maps: flow step id -> completed resource progress; assignment id -> submission complete */
@@ -40,9 +41,74 @@ export function isAssignmentMissedDeadline(
   return true;
 }
 
+/** Every assignment step in (fromIndex, toIndex] has a completed submission. */
+function assignmentsInOpenIntervalComplete(
+  length: number,
+  fromIndex: number,
+  toIndex: number,
+  getAssignmentId: (index: number) => string | null,
+  ctx: StudentFlowProgressContext,
+): boolean {
+  for (let k = fromIndex + 1; k <= toIndex; k++) {
+    const assignmentId = getAssignmentId(k);
+    if (assignmentId && !(ctx.assignmentDoneMap[assignmentId] ?? false)) return false;
+  }
+  return true;
+}
+
 /**
- * Resource steps: done when progress exists, or when any later assignment in this flow has a
- * completed submission (covers lost `student_module_flow_progress` rows after flow replace).
+ * Resource inferred done only when a later assignment is complete AND every assignment
+ * between the resource and that assignment is also complete (avoids skipping newly inserted activities).
+ */
+function resourceInferredDoneFromLaterAssignments(
+  length: number,
+  stepIndex: number,
+  getAssignmentId: (index: number) => string | null,
+  ctx: StudentFlowProgressContext,
+): boolean {
+  for (let k = stepIndex + 1; k < length; k++) {
+    const assignmentId = getAssignmentId(k);
+    if (!assignmentId || !(ctx.assignmentDoneMap[assignmentId] ?? false)) continue;
+    if (assignmentsInOpenIntervalComplete(length, stepIndex, k, getAssignmentId, ctx)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function persistedStepAssignmentId(steps: ModuleFlowStep[], index: number): string | null {
+  const s = steps[index];
+  return s.step_kind === 'assignment' && s.assignment_id ? s.assignment_id : null;
+}
+
+function computedStepAssignmentId(items: ComputedFlowItem[], index: number): string | null {
+  const c = items[index];
+  return c.kind === 'assignment' ? c.assignment_id : null;
+}
+
+function localStepAssignmentId(local: ModuleFlowLocalStep[], index: number): string | null {
+  const step = local[index];
+  return step.kind === 'assignment' ? step.assignmentId : null;
+}
+
+/** Shared inference for displayed module flow (resolveStudentResumeTarget). */
+export function localResourceInferredDoneFromLaterAssignments(
+  local: ModuleFlowLocalStep[],
+  index: number,
+  ctx: StudentFlowProgressContext,
+): boolean {
+  return resourceInferredDoneFromLaterAssignments(
+    local.length,
+    index,
+    (k) => localStepAssignmentId(local, k),
+    ctx,
+  );
+}
+
+/**
+ * Resource steps: done when progress exists, or when a later assignment in this flow has a
+ * completed submission and every assignment in between is also complete (covers remapped flows
+ * without treating newly inserted activities as already done).
  */
 export function persistedStepDone(
   step: ModuleFlowStep,
@@ -55,17 +121,12 @@ export function persistedStepDone(
   }
   if (step.step_kind === 'resource' && step.activity_list_id) {
     if (ctx.progressByStep[step.id]) return true;
-    for (let k = stepIndex + 1; k < steps.length; k++) {
-      const s = steps[k];
-      if (
-        s.step_kind === 'assignment' &&
-        s.assignment_id &&
-        ctx.assignmentDoneMap[s.assignment_id]
-      ) {
-        return true;
-      }
-    }
-    return false;
+    return resourceInferredDoneFromLaterAssignments(
+      steps.length,
+      stepIndex,
+      (k) => persistedStepAssignmentId(steps, k),
+      ctx,
+    );
   }
   return false;
 }
@@ -172,13 +233,12 @@ export function computedFlowItemDoneForProgress(
   if (item.kind === 'assignment') {
     return ctx.assignmentDoneMap[item.assignment_id] ?? false;
   }
-  for (let k = index + 1; k < items.length; k++) {
-    const c = items[k];
-    if (c.kind === 'assignment' && ctx.assignmentDoneMap[c.assignment_id]) {
-      return true;
-    }
-  }
-  return false;
+  return resourceInferredDoneFromLaterAssignments(
+    items.length,
+    index,
+    (k) => computedStepAssignmentId(items, k),
+    ctx,
+  );
 }
 
 export function computedPreviousStepsComplete(

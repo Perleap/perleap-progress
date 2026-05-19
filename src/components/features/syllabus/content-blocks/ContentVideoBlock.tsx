@@ -1,5 +1,7 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { cn } from '@/lib/utils';
+import { parseYoutubeUrl, youtubeEmbedUrl } from '@/lib/youtube';
+import type { LessonVideoSource } from '@/types/syllabus';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
 
@@ -7,14 +9,32 @@ export type ContentVideoPresentation = 'reading' | 'embedded' | 'compact';
 
 export function ContentVideoBlock({
   videoUrl,
+  source,
   presentation,
   className,
 }: {
   videoUrl: string;
+  source?: LessonVideoSource;
   presentation: ContentVideoPresentation;
   className?: string;
 }) {
-  const frame = (
+  const parsedYoutube =
+    source === 'youtube' || (source !== 'upload' && parseYoutubeUrl(videoUrl))
+      ? parseYoutubeUrl(videoUrl)
+      : null;
+
+  const frame = parsedYoutube ? (
+    <AspectRatio ratio={16 / 9} className="bg-black/25">
+      <iframe
+        src={youtubeEmbedUrl(parsedYoutube.videoId)}
+        title="YouTube video"
+        className="absolute inset-0 h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+      />
+    </AspectRatio>
+  ) : (
     <AspectRatio ratio={16 / 9} className="bg-black/25">
       <video
         src={videoUrl}

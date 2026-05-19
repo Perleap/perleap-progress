@@ -41,6 +41,21 @@ export function hasConversationCompleteMarker(text: string): boolean {
 export interface SplitChatDisplayOptions {
   /** Cap bubble count; extra paragraphs are merged into the last bubble (full text preserved). */
   maxBubbles?: number;
+  /** Force a single chat bubble (e.g. full prior-prompt quote). */
+  singleBubble?: boolean;
+}
+
+/** Long verbatim quotes (prompts, markdown) must not be split into sentence bubbles. */
+export function shouldRenderChatAsSingleBubble(text: string): boolean {
+  const t = (text || '').trim();
+  if (t.length < 80) return false;
+  if (/```/.test(t)) return true;
+  if (/submitted final prompt|your (?:final )?prompt was|הפרומפט (?:הסופי|שלך)/i.test(t)) {
+    return true;
+  }
+  if (/^#/m.test(t) && /\b(system prompt|prompt)\b/i.test(t)) return true;
+  if ((t.match(/\n/g) ?? []).length >= 3 && t.length >= 200) return true;
+  return false;
 }
 
 const DEFAULT_MAX_BUBBLES = 5;
@@ -142,6 +157,9 @@ export function splitChatDisplayText(
   const maxB = options?.maxBubbles ?? DEFAULT_MAX_BUBBLES;
   const raw = (text || '').trim();
   if (!raw) return [];
+  if (options?.singleBubble || shouldRenderChatAsSingleBubble(raw)) {
+    return [raw];
+  }
 
   const paragraphs = raw
     .split(/\n{2,}/)

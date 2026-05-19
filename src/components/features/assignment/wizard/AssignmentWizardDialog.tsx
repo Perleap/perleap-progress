@@ -514,7 +514,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       const { data } = await supabase
         .from('assignments')
         .select(
-          'hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, syllabus_section_id, grading_category_id, student_facing_task',
+          'hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, use_course_memory, syllabus_section_id, grading_category_id, student_facing_task',
         )
         .eq('id', assignment.id)
         .single();
@@ -522,6 +522,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       setFormData((prev) => ({
         ...prev,
         auto_publish_ai_feedback: data?.auto_publish_ai_feedback !== false,
+        use_course_memory: (data as { use_course_memory?: boolean }).use_course_memory !== false,
         student_facing_task: (data as { student_facing_task?: string | null })?.student_facing_task?.trim() || prev.student_facing_task,
       }));
       setSyllabusSectionId((data as { syllabus_section_id?: string | null })?.syllabus_section_id || '');
@@ -942,6 +943,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           target_dimensions: formData.target_dimensions as unknown as Json,
           personalization_flag: formData.personalization_flag,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
+          use_course_memory: formData.use_course_memory,
           assigned_student_id: assignedStudentId || null,
           syllabus_section_id: syllabusSectionId || null,
           grading_category_id: gradingCategoryId || null,
@@ -1095,6 +1097,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
           materials: (formData.materials ?? null) as unknown as Json | null,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
+          use_course_memory: formData.use_course_memory,
           syllabus_section_id: syllabusSectionId || null,
           grading_category_id: gradingCategoryId || null,
         };

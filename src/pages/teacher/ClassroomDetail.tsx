@@ -154,7 +154,10 @@ const ClassroomDetail = () => {
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
-    navigate(location.pathname, { replace: true, state: { activeSection: section } });
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: { activeSection: section } },
+    );
   };
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);

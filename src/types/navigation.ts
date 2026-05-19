@@ -20,3 +20,8 @@ export type ClassroomLocationState = {
   /** When opening the Submissions tab, pre-filter to this assignment. */
   submissionsAssignmentId?: string;
 };
+
+/** Passed when navigating to `/teacher/submission/:id` so Back restores classroom filters. */
+export type SubmissionDetailLocationState = {
+  returnTo?: string;
+};
