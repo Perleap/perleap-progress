@@ -10,14 +10,17 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
-/** Match installed @ffmpeg/ffmpeg (worker must load sibling ESM modules from the same CDN path). */
+/** Match installed @ffmpeg/ffmpeg; worker ESM files are copied to public/ffmpeg/{version}/ at build/dev. */
 const FFMPEG_VERSION = '0.12.15';
 
 /** Match @ffmpeg/ffmpeg bundled core version (see node_modules/@ffmpeg/ffmpeg/dist/esm/const.js). */
 const FFMPEG_CORE_VERSION = '0.12.9';
 
-const FFMPEG_ESM_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@${FFMPEG_VERSION}/dist/esm`;
 const CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`;
+
+function getFfmpegClassWorkerUrl(): string {
+  return `${window.location.origin}/ffmpeg/${FFMPEG_VERSION}/worker.js`;
+}
 
 /** Keep chunks comfortably below the 25 MB Whisper limit. */
 
@@ -100,9 +103,8 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
 
       const wasmURL = await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm');
 
-      // Load worker from CDN so sibling imports (const.js, errors.js) resolve; Vite ?url emits
-      // an unbundled ESM worker that 404s on /assets/const.js in SPA deployments.
-      const classWorkerURL = `${FFMPEG_ESM_BASE}/worker.js`;
+      // COOP/COEP requires same-origin module worker; static ESM files include const.js/errors.js.
+      const classWorkerURL = getFfmpegClassWorkerUrl();
 
       // #region agent log
       fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
@@ -110,25 +112,29 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
         headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
         body: JSON.stringify({
           sessionId: '83200d',
-          runId: 'post-fix',
-          hypothesisId: 'A',
+          runId: 'post-fix-v3',
+          hypothesisId: 'F',
           location: 'liveSessionExtractAudio.ts:getFfmpeg',
           message: 'ffmpeg worker URL before load',
-          data: { classWorkerURL, bundledConstProbe: `${window.location.origin}/assets/const.js` },
+          data: {
+            classWorkerURL,
+            pageOrigin: window.location.origin,
+            sameOrigin: classWorkerURL.startsWith(window.location.origin),
+          },
           timestamp: Date.now(),
         }),
       }).catch(() => {});
-      fetch(`${window.location.origin}/assets/const.js`)
-        .then(async (res) => {
+      fetch(classWorkerURL, { method: 'HEAD' })
+        .then((res) => {
           fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
             body: JSON.stringify({
               sessionId: '83200d',
-              runId: 'post-fix',
-              hypothesisId: 'B',
+              runId: 'post-fix-v3',
+              hypothesisId: 'G',
               location: 'liveSessionExtractAudio.ts:getFfmpeg',
-              message: 'bundled /assets/const.js probe',
+              message: 'classWorkerURL HEAD probe',
               data: {
                 status: res.status,
                 contentType: res.headers.get('content-type'),
@@ -138,7 +144,21 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
             }),
           }).catch(() => {});
         })
-        .catch(() => {});
+        .catch((probeErr) => {
+          fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
+            body: JSON.stringify({
+              sessionId: '83200d',
+              runId: 'post-fix-v3',
+              hypothesisId: 'G',
+              location: 'liveSessionExtractAudio.ts:getFfmpeg',
+              message: 'classWorkerURL HEAD probe failed',
+              data: { error: probeErr instanceof Error ? probeErr.message : String(probeErr) },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+        });
       // #endregion
 
       await ffmpeg.load({
@@ -155,7 +175,7 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
         headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
         body: JSON.stringify({
           sessionId: '83200d',
-          runId: 'post-fix',
+          runId: 'post-fix-v3',
           hypothesisId: 'C',
           location: 'liveSessionExtractAudio.ts:getFfmpeg',
           message: 'ffmpeg.load succeeded',
@@ -171,7 +191,7 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
         headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
         body: JSON.stringify({
           sessionId: '83200d',
-          runId: 'post-fix',
+          runId: 'post-fix-v3',
           hypothesisId: 'C',
           location: 'liveSessionExtractAudio.ts:getFfmpeg',
           message: 'ffmpeg.load failed',
