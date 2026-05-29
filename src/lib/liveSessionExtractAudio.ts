@@ -10,12 +10,13 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
-import ffmpegClassWorkerUrl from '@ffmpeg/ffmpeg/worker?url';
+/** Match installed @ffmpeg/ffmpeg (worker must load sibling ESM modules from the same CDN path). */
+const FFMPEG_VERSION = '0.12.15';
 
 /** Match @ffmpeg/ffmpeg bundled core version (see node_modules/@ffmpeg/ffmpeg/dist/esm/const.js). */
-
 const FFMPEG_CORE_VERSION = '0.12.9';
 
+const FFMPEG_ESM_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@${FFMPEG_VERSION}/dist/esm`;
 const CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`;
 
 /** Keep chunks comfortably below the 25 MB Whisper limit. */
@@ -99,14 +100,87 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
 
       const wasmURL = await toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm');
 
+      // Load worker from CDN so sibling imports (const.js, errors.js) resolve; Vite ?url emits
+      // an unbundled ESM worker that 404s on /assets/const.js in SPA deployments.
+      const classWorkerURL = `${FFMPEG_ESM_BASE}/worker.js`;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
+        body: JSON.stringify({
+          sessionId: '83200d',
+          runId: 'post-fix',
+          hypothesisId: 'A',
+          location: 'liveSessionExtractAudio.ts:getFfmpeg',
+          message: 'ffmpeg worker URL before load',
+          data: { classWorkerURL, bundledConstProbe: `${window.location.origin}/assets/const.js` },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      fetch(`${window.location.origin}/assets/const.js`)
+        .then(async (res) => {
+          fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
+            body: JSON.stringify({
+              sessionId: '83200d',
+              runId: 'post-fix',
+              hypothesisId: 'B',
+              location: 'liveSessionExtractAudio.ts:getFfmpeg',
+              message: 'bundled /assets/const.js probe',
+              data: {
+                status: res.status,
+                contentType: res.headers.get('content-type'),
+                isHtml: (res.headers.get('content-type') ?? '').includes('text/html'),
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+        })
+        .catch(() => {});
+      // #endregion
+
       await ffmpeg.load({
         coreURL,
 
         wasmURL,
 
-        classWorkerURL: ffmpegClassWorkerUrl,
+        classWorkerURL,
       });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
+        body: JSON.stringify({
+          sessionId: '83200d',
+          runId: 'post-fix',
+          hypothesisId: 'C',
+          location: 'liveSessionExtractAudio.ts:getFfmpeg',
+          message: 'ffmpeg.load succeeded',
+          data: { loaded: ffmpeg.loaded },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
+        body: JSON.stringify({
+          sessionId: '83200d',
+          runId: 'post-fix',
+          hypothesisId: 'C',
+          location: 'liveSessionExtractAudio.ts:getFfmpeg',
+          message: 'ffmpeg.load failed',
+          data: { error: err instanceof Error ? err.message : String(err) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
       resetFfmpegLoadState();
 
       throw err;
