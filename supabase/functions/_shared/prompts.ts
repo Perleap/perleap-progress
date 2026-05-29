@@ -215,9 +215,13 @@ function stripEmDashes(s: string): string {
 }
 
 /**
- * Format teacher profile data into a readable context string
+ * Format teacher profile data into a readable context string.
+ * `compact` omits long examples (used by composeExplainTaskSystemPrompt).
  */
-export function formatTeacherStyle(teacherProfile: any): string {
+export function formatTeacherStyle(
+  teacherProfile: any,
+  options?: { compact?: boolean },
+): string {
   if (!teacherProfile) {
     return 'No specific teaching style documented. Use a supportive, encouraging approach.';
   }
@@ -232,24 +236,26 @@ export function formatTeacherStyle(teacherProfile: any): string {
     parts.push(`Teaching Style: ${stripEmDashes(teacherProfile.style_notes)}`);
   }
 
-  if (teacherProfile.teaching_examples) {
-    parts.push(`Teaching Examples: ${stripEmDashes(teacherProfile.teaching_examples)}`);
-  }
+  if (!options?.compact) {
+    if (teacherProfile.teaching_examples) {
+      parts.push(`Teaching Examples: ${stripEmDashes(teacherProfile.teaching_examples)}`);
+    }
 
-  if (teacherProfile.sample_explanation) {
-    parts.push(`Explanation Style: ${stripEmDashes(teacherProfile.sample_explanation)}`);
-  }
+    if (teacherProfile.sample_explanation) {
+      parts.push(`Explanation Style: ${stripEmDashes(teacherProfile.sample_explanation)}`);
+    }
 
-  if (teacherProfile.encouragement_phrases) {
-    parts.push(`Encouragement Phrases to Use: ${stripEmDashes(teacherProfile.encouragement_phrases)}`);
-  }
+    if (teacherProfile.encouragement_phrases) {
+      parts.push(`Encouragement Phrases to Use: ${stripEmDashes(teacherProfile.encouragement_phrases)}`);
+    }
 
-  if (teacherProfile.phrases_to_avoid) {
-    parts.push(`Phrases to Avoid: ${stripEmDashes(teacherProfile.phrases_to_avoid)}`);
-  }
+    if (teacherProfile.phrases_to_avoid) {
+      parts.push(`Phrases to Avoid: ${stripEmDashes(teacherProfile.phrases_to_avoid)}`);
+    }
 
-  if (teacherProfile.mistake_response) {
-    parts.push(`How to Respond to Mistakes: ${stripEmDashes(teacherProfile.mistake_response)}`);
+    if (teacherProfile.mistake_response) {
+      parts.push(`How to Respond to Mistakes: ${stripEmDashes(teacherProfile.mistake_response)}`);
+    }
   }
 
   return parts.length > 0 ? parts.join('\n\n') : 'Use a supportive, encouraging teaching approach.';

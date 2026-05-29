@@ -5,7 +5,7 @@ import { FileText } from 'lucide-react';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainPromptNodeData } from '../langchainNodeData';
 
 function PromptNodeComponent(node: NodeProps) {
-  const data = ensureLangchainNodeData(node as Node).data as LangchainPromptNodeData;
+  const data = ensureLangchainNodeData(node).data as LangchainPromptNodeData;
   const templatePreview = truncateLangchainPreview(data.template || '', 56);
 
   return (

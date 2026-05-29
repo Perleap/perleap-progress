@@ -37,10 +37,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Link } from 'react-router-dom';
-import { GripVertical, Trash2, Plus, Pencil, Eye, PlayCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { GripVertical, Trash2, Plus, Pencil, Eye, PlayCircle, Radio } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import type { ClassroomLocationState } from '@/types/navigation';
+import type { ActivityLinkState } from '@/types/navigation';
 import { toast } from 'sonner';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
@@ -57,14 +57,19 @@ import {
   useDeleteAssignment,
   useDeleteResource,
 } from '@/hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import type { SectionResource } from '@/types/syllabus';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
+import { CreateLiveSessionDialog } from '@/components/features/liveSession/CreateLiveSessionDialog';
+import { buildRoute } from '@/config/routes';
 
 type LocalStep = ModuleFlowLocalStep;
 
 type AssignmentLite = {
   id: string;
   title: string;
+  type?: string | null;
   syllabus_section_id?: string | null;
   due_at?: string | null;
 };
@@ -188,7 +193,9 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
     ref,
   ) {
     const { t } = useTranslation();
-    const activityLinkState: Pick<ClassroomLocationState, 'returnClassroomSection'> = {
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const activityLinkState: ActivityLinkState = {
       returnClassroomSection: 'outline',
     };
 
@@ -197,6 +204,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
     const deleteAssignmentMutation = useDeleteAssignment();
     const deleteResourceMutation = useDeleteResource();
     const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false);
+    const [createLiveSessionOpen, setCreateLiveSessionOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
     const sensors = useSensors(
@@ -372,9 +380,15 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
           kind === 'resource' ? { kind: 'resource', resourceId: id } : { kind: 'assignment', assignmentId: id },
         ];
         const ok = await persistFlow(next);
-        if (ok) setLocalSteps(next);
+        if (ok) {
+          setLocalSteps(next);
+          void queryClient.invalidateQueries({
+            queryKey: assignmentKeys.classroomAssignmentLists(classroomId),
+            exact: false,
+          });
+        }
       },
-      [persistFlow, resourceById, t],
+      [persistFlow, resourceById, t, queryClient, classroomId],
     );
 
     useImperativeHandle(ref, () => ({ appendStep }), [appendStep]);
@@ -433,6 +447,14 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
               >
                 {t('classroomDetail.activitiesFlow.createActivity')}
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => {
+                  setCreateLiveSessionOpen(true);
+                }}
+              >
+                {t('classroomDetail.activitiesFlow.createLiveSession')}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -450,6 +472,9 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
             <ul className="min-w-0 space-y-2 [contain:layout]">
               {localSteps.map((step, index) => {
                 const sid = stepSortId(step);
+                const isLiveSession =
+                  step.kind === 'assignment' &&
+                  assignmentById[step.assignmentId]?.type === 'live_session';
                 return (
                   <SortableFlowRow key={sid} id={sid}>
                     {({ dragAttributes, dragListeners }) => (
@@ -489,7 +514,9 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                             <span className="block text-xs text-muted-foreground">
                               {step.kind === 'resource'
                                 ? t('classroomDetail.activitiesFlow.stepResource')
-                                : t('classroomDetail.activitiesFlow.stepAssignment')}
+                                : isLiveSession
+                                  ? t('classroomDetail.activitiesFlow.stepLiveSession')
+                                  : t('classroomDetail.activitiesFlow.stepAssignment')}
                             </span>
                           </div>
                           <div className="flex shrink-0 items-center gap-0.5">
@@ -518,6 +545,17 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                                   <PlayCircle className="h-4 w-4" />
                                 </Link>
                               </>
+                            ) : isLiveSession ? (
+                              <Link
+                                to={`/teacher/classroom/${classroomId}/live-session/${step.assignmentId}`}
+                                className={cn(
+                                  buttonVariants({ variant: 'ghost', size: 'icon' }),
+                                  'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
+                                )}
+                                aria-label={t('liveSession.open')}
+                              >
+                                <Radio className="h-4 w-4" />
+                              </Link>
                             ) : onViewAssignment ? (
                               <Button
                                 type="button"
@@ -530,7 +568,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                                 <Eye className="h-4 w-4" />
                               </Button>
                             ) : null}
-                            {step.kind === 'assignment' ? (
+                            {step.kind === 'assignment' && !isLiveSession ? (
                               <Link
                                 to={`/teacher/classroom/${classroomId}/try/assignment/${step.assignmentId}`}
                                 className={cn(
@@ -542,7 +580,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                                 <PlayCircle className="h-4 w-4" />
                               </Link>
                             ) : null}
-                            {step.kind === 'assignment' && onEditAssignment ? (
+                            {step.kind === 'assignment' && !isLiveSession && onEditAssignment ? (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -637,6 +675,20 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
           onCreatedAssignment={(assignmentId) => {
             void appendStep('assignment', assignmentId);
             setCreateAssignmentOpen(false);
+          }}
+        />
+
+        <CreateLiveSessionDialog
+          open={createLiveSessionOpen}
+          onOpenChange={setCreateLiveSessionOpen}
+          classroomId={classroomId}
+          syllabusSectionId={sectionId}
+          onAssignmentCreated={(assignmentId) => {
+            void appendStep('assignment', assignmentId);
+          }}
+          onCreated={(assignmentId) => {
+            setCreateLiveSessionOpen(false);
+            navigate(buildRoute.teacherLiveSession(classroomId, assignmentId));
           }}
         />
       </div>

@@ -23,6 +23,7 @@ export const EDGE_FUNCTION_NAMES = [
   'suggest-assignment-hard-skills',
   'teacher-assistant-chat',
   'text-to-speech',
+  'transcribe-live-session',
 ] as const;
 
 export type EdgeFunctionName = (typeof EDGE_FUNCTION_NAMES)[number];

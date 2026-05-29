@@ -319,7 +319,7 @@ const StudentClassroomDetail = () => {
       const sec = syllabus.sections.find((s) => s.id === resumeHit.sectionId);
       const unitTitle = sec?.title?.trim() ?? '';
       if (resumeHit.target.kind === 'assignment') {
-        const a = (rawAssignments as AssignmentRow[]).find((x) => x.id === resumeHit.target.id);
+        const a = rawAssignments.find((x) => x.id === resumeHit.target.id);
         const stepTitle = a?.title?.trim() || t('studentClassroom.activities.assignment');
         const secondary =
           unitTitle && stepTitle ? `${unitTitle} - ${stepTitle}` : unitTitle || stepTitle || null;

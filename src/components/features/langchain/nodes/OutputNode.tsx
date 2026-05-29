@@ -5,7 +5,7 @@ import { FileOutput } from 'lucide-react';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainOutputNodeData } from '../langchainNodeData';
 
 function OutputNodeComponent(node: NodeProps) {
-  const data = ensureLangchainNodeData(node as Node).data as LangchainOutputNodeData;
+  const data = ensureLangchainNodeData(node).data as LangchainOutputNodeData;
   const preview = truncateLangchainPreview(data.description || data.label);
 
   return (

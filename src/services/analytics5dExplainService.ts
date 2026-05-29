@@ -22,6 +22,9 @@ export interface Analytics5dNarrativeInput {
 export interface Analytics5dNarrativeResult {
   explanations: Partial<Record<keyof FiveDScores, string>> | null;
   scopeSummary: string | null;
+  strengths?: string[];
+  weaknesses?: string[];
+  nextSteps?: string[];
 }
 
 /**
@@ -33,6 +36,9 @@ export async function invokeExplainAnalytics5d(
   const { data, error } = await supabase.functions.invoke<{
     explanations: Record<keyof FiveDScores, string>;
     scopeSummary: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    nextSteps?: string[];
     error?: string;
   }>('explain-analytics-5d', {
     body: {
@@ -58,15 +64,18 @@ export async function invokeExplainAnalytics5d(
   if (error) {
     throw error;
   }
-  const d = data as { explanations?: unknown; scopeSummary?: string; error?: string } | null;
+  const d = data as { explanations?: unknown; scopeSummary?: string; strengths?: string[]; weaknesses?: string[]; nextSteps?: string[]; error?: string } | null;
   if (d && typeof d === 'object' && 'error' in d && d.error) {
     throw new Error(String(d.error));
   }
   if (!d?.explanations) {
-    return { explanations: null, scopeSummary: d?.scopeSummary ?? null };
+    return { explanations: null, scopeSummary: d?.scopeSummary ?? null, strengths: d?.strengths, weaknesses: d?.weaknesses, nextSteps: d?.nextSteps };
   }
   return {
     explanations: d.explanations as Partial<Record<keyof FiveDScores, string>>,
     scopeSummary: d.scopeSummary ?? null,
+    strengths: d.strengths,
+    weaknesses: d.weaknesses,
+    nextSteps: d.nextSteps,
   };
 }

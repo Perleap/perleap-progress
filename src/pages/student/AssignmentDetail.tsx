@@ -30,7 +30,7 @@ import {
   getNextSectionId,
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
-import type { AssignmentRow } from '@/lib/moduleFlow';
+import { studentModuleFlowStepOptions, type AssignmentRow } from '@/lib/moduleFlow';
 import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
@@ -51,7 +51,14 @@ import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
+import { TaskExplanationPanel } from '@/components/features/assignment/TaskExplanationPanel';
 import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
+import { assignmentHasChatUi } from '@/lib/assignmentHasChatUi';
+import {
+  getTaskUnderstandingChoice,
+  markTaskUnderstanding,
+} from '@/lib/taskUnderstandingStorage';
+import { supabase } from '@/integrations/supabase/client';
 import {
   pickEligiblePriorSubmissionIds,
   readAssignmentContextCarryover,
@@ -74,8 +81,10 @@ const AssignmentDetail = () => {
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
   const [referenceMaterialsOpen, setReferenceMaterialsOpen] = useState(false);
-  const [assignmentTypeIntroOpen, setAssignmentTypeIntroOpen] = useState(false);
+  const [introWizardOpen, setIntroWizardOpen] = useState(false);
   const [assignmentIntroStorageTick, setAssignmentIntroStorageTick] = useState(0);
+  const [taskUnderstandingStorageTick, setTaskUnderstandingStorageTick] = useState(0);
+  const [taskExplanationDismissed, setTaskExplanationDismissed] = useState(false);
 
   useEffect(() => {
     if (isTeacherTry || !assignmentId || !user?.id) return;
@@ -109,6 +118,11 @@ const AssignmentDetail = () => {
     assignmentId || undefined,
     { isTeacherTry },
   );
+
+  useEffect(() => {
+    setTaskExplanationDismissed(false);
+  }, [assignmentData?.submission?.id]);
+
   const needsAutoStudentTask = Boolean(
     !isTeacherTry &&
       !loading &&
@@ -117,7 +131,11 @@ const AssignmentDetail = () => {
       assignmentData &&
       !String(assignmentData.student_facing_task ?? '').trim(),
   );
-  const { isPending: isAutoFillingTaskCard } = useQuery({
+  const {
+    data: autoStudentTaskResult,
+    isPending: isAutoFillingTaskCard,
+    isFetching: isAutoFillingTaskFetching,
+  } = useQuery({
     queryKey: ['autoStudentFacingTask', assignmentId, user?.id, uiLanguage],
     enabled: needsAutoStudentTask,
     staleTime: Infinity,
@@ -135,6 +153,18 @@ const AssignmentDetail = () => {
       return data;
     },
   });
+
+  const resolvedStudentFacingTask = useMemo(() => {
+    const fromDb = String(assignmentData?.student_facing_task ?? '').trim();
+    if (fromDb) return fromDb;
+    return String(autoStudentTaskResult?.studentFacingTask ?? '').trim();
+  }, [assignmentData?.student_facing_task, autoStudentTaskResult]);
+
+  const isStudentTaskLoading = Boolean(
+    needsAutoStudentTask &&
+      !resolvedStudentFacingTask &&
+      (isAutoFillingTaskCard || isAutoFillingTaskFetching),
+  );
   const classroomId = assignmentData?.classroom_id;
   const { data: classroomForNav } = useClassroom(classroomId);
   const { data: syllabusForNav } = useSyllabus(classroomId);
@@ -202,6 +232,9 @@ const AssignmentDetail = () => {
             sectionResources: syllabusForNav.section_resources?.[nextModId] ?? [],
             assignments: sectionFlow.assignments as AssignmentRow[],
             persistedSteps: nextSectionFlowSteps,
+            flowStepOptions: studentModuleFlowStepOptions(
+              sectionFlow.assignments as Array<{ id: string; type?: string | null }>,
+            ),
           })
         : null;
     return { nextIn, firstNext, nextModId };
@@ -375,30 +408,101 @@ const AssignmentDetail = () => {
       !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType),
   );
 
-  useEffect(() => {
-    if (shouldShowAssignmentTypeIntro) {
-      setAssignmentTypeIntroOpen(true);
-    } else {
-      setAssignmentTypeIntroOpen(false);
-    }
-  }, [shouldShowAssignmentTypeIntro, assignment?.id]);
+  const storedTaskUnderstandingChoice = useMemo(() => {
+    void taskUnderstandingStorageTick;
+    if (!user?.id || !submission?.id) return null;
+    return getTaskUnderstandingChoice(user.id, submission.id);
+  }, [user?.id, submission?.id, taskUnderstandingStorageTick]);
 
-  const handleAssignmentTypeIntroOpenChange = useCallback(
-    (open: boolean) => {
-      setAssignmentTypeIntroOpen(open);
-      const eligible =
-        user?.id &&
-        assignment &&
-        !isTeacherTry &&
-        submission?.status === SUBMISSION_STATUS.IN_PROGRESS &&
-        !feedback &&
-        !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType);
-      if (!open && eligible) {
-        markAssignmentTypeIntroSeen(user.id, assignment.type as DbAssignmentType);
-        setAssignmentIntroStorageTick((n) => n + 1);
+  const { data: conversationHasMessages, isSuccess: conversationQueryReady } = useQuery({
+    queryKey: ['assignmentConversationHasMessages', submission?.id],
+    enabled: Boolean(submission?.id && !isTeacherTry),
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!submission?.id) return false;
+      const { data, error } = await supabase
+        .from('assignment_conversations')
+        .select('messages')
+        .eq('submission_id', submission.id)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
+      return Boolean(
+        data?.messages && Array.isArray(data.messages) && data.messages.length > 0,
+      );
+    },
+  });
+
+  const taskUnderstandingEligible = Boolean(
+    !isTeacherTry &&
+      user?.id &&
+      assignment &&
+      submission &&
+      !feedback &&
+      submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
+      storedTaskUnderstandingChoice === null &&
+      conversationQueryReady &&
+      conversationHasMessages === false,
+  );
+
+  const shouldShowIntroWizard = taskUnderstandingEligible && !isStudentTaskLoading;
+
+  useEffect(() => {
+    if (shouldShowIntroWizard) {
+      setIntroWizardOpen(true);
+    } else {
+      setIntroWizardOpen(false);
+    }
+  }, [shouldShowIntroWizard, assignment?.id, submission?.id]);
+
+  const handleTypeStepComplete = useCallback(() => {
+    const eligible =
+      user?.id &&
+      assignment &&
+      !isTeacherTry &&
+      submission?.status === SUBMISSION_STATUS.IN_PROGRESS &&
+      !feedback &&
+      !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType);
+    if (eligible) {
+      markAssignmentTypeIntroSeen(user.id, assignment.type as DbAssignmentType);
+      setAssignmentIntroStorageTick((n) => n + 1);
+    }
+  }, [user?.id, assignment, isTeacherTry, submission?.status, feedback, seenAssignmentIntroTypes]);
+
+  const handleTaskConfirm = useCallback(
+    (understood: boolean) => {
+      if (!user?.id || !submission?.id) return;
+      markTaskUnderstanding(user.id, submission.id, understood ? 'yes' : 'no');
+      setTaskUnderstandingStorageTick((n) => n + 1);
+      if (!understood && assignment && !assignmentHasChatUi(assignment.type)) {
+        setTaskExplanationDismissed(false);
       }
     },
-    [user?.id, assignment, isTeacherTry, submission?.status, feedback, seenAssignmentIntroTypes],
+    [user?.id, submission?.id, assignment],
+  );
+
+  const chatInitAllowed = Boolean(
+    isTeacherTry ||
+      !submission ||
+      feedback ||
+      submission.status !== SUBMISSION_STATUS.IN_PROGRESS ||
+      storedTaskUnderstandingChoice !== null ||
+      (conversationQueryReady && conversationHasMessages === true),
+  );
+
+  const initialGreetingMode: 'default' | 'explain_task' =
+    storedTaskUnderstandingChoice === 'no' ? 'explain_task' : 'default';
+
+  const showPageTaskCard = Boolean(assignment && !assignmentHasChatUi(assignment.type));
+
+  const showTaskExplanationPanel = Boolean(
+    !isTeacherTry &&
+      assignment &&
+      submission &&
+      !feedback &&
+      submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
+      storedTaskUnderstandingChoice === 'no' &&
+      !assignmentHasChatUi(assignment.type) &&
+      !taskExplanationDismissed,
   );
 
   const syllabusSectionTitle = useMemo(() => {
@@ -621,10 +725,15 @@ const AssignmentDetail = () => {
       <div className="container py-4 px-0 max-w-4xl">
         {assignment ? (
           <AssignmentTypeIntroDialog
-            open={assignmentTypeIntroOpen}
-            onOpenChange={handleAssignmentTypeIntroOpenChange}
+            open={introWizardOpen}
+            onOpenChange={setIntroWizardOpen}
             assignmentType={assignment.type as DbAssignmentType}
             assignmentTitle={assignment.title}
+            skipTypeStep={!shouldShowAssignmentTypeIntro}
+            studentFacingTask={resolvedStudentFacingTask || assignment.student_facing_task}
+            taskLoading={isStudentTaskLoading}
+            onTypeStepComplete={handleTypeStepComplete}
+            onTaskConfirm={handleTaskConfirm}
           />
         ) : null}
         <div className="space-y-6 pb-8">
@@ -681,27 +790,29 @@ const AssignmentDetail = () => {
             </div>
           </div>
 
-          <Card className="border-border/80 bg-muted/20">
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium">{t('assignmentDetail.studentTaskTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 text-sm">
-              {assignment.student_facing_task?.trim() ? (
+          {showPageTaskCard ? (
+            <Card className="border-border/80 bg-muted/20">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm font-medium">{t('assignmentDetail.studentTaskTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 text-sm">
+              {resolvedStudentFacingTask ? (
                 <p className="whitespace-pre-wrap text-foreground leading-relaxed" dir="auto">
-                  {assignment.student_facing_task.trim()}
+                  {resolvedStudentFacingTask}
                 </p>
-              ) : isAutoFillingTaskCard ? (
-                <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                  {t('assignmentDetail.loadingStudentTask')}
-                </p>
-              ) : (
-                <p className="text-muted-foreground leading-relaxed" dir="auto">
-                  {t('assignmentDetail.studentTaskNotSetYet')}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+              ) : isStudentTaskLoading ? (
+                  <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    {t('assignmentDetail.loadingStudentTask')}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground leading-relaxed" dir="auto">
+                    {t('assignmentDetail.studentTaskNotSetYet')}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {unitOutlineMaterials.length > 0 ? (
             <Collapsible
@@ -860,6 +971,14 @@ const AssignmentDetail = () => {
               );
             }
 
+            const chatSharedProps = {
+              studentFacingTask: resolvedStudentFacingTask || assignment.student_facing_task,
+              taskLoading: isStudentTaskLoading,
+              chatInitAllowed,
+              initialGreetingMode,
+              postExplainTutoring: storedTaskUnderstandingChoice === 'no',
+            };
+
             const companionChat = (
               <AssignmentChatInterface
                 assignmentId={assignment.id}
@@ -872,6 +991,7 @@ const AssignmentDetail = () => {
                 onComplete={() => {}}
                 nuanceTracking={nuanceTracking}
                 variant="companion"
+                {...chatSharedProps}
               />
             );
 
@@ -888,14 +1008,22 @@ const AssignmentDetail = () => {
               case 'test':
                 return (
                   <div className="space-y-6">
-                    <TestTakingPage
-                      assignmentId={assignment.id}
-                      assignmentInstructions={assignment.instructions}
-                      submissionId={submission.id}
-                      autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
-                      isTeacherTry={isTeacherTry}
-                      onComplete={handleAssignmentCompleted}
-                    />
+                    {showTaskExplanationPanel ? (
+                      <TaskExplanationPanel
+                        studentFacingTask={resolvedStudentFacingTask || assignment.student_facing_task}
+                        taskLoading={isStudentTaskLoading}
+                        onContinue={() => setTaskExplanationDismissed(true)}
+                      />
+                    ) : (
+                      <TestTakingPage
+                        assignmentId={assignment.id}
+                        assignmentInstructions={assignment.instructions}
+                        submissionId={submission.id}
+                        autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
+                        isTeacherTry={isTeacherTry}
+                        onComplete={handleAssignmentCompleted}
+                      />
+                    )}
                   </div>
                 );
               case 'text_essay':
@@ -960,6 +1088,7 @@ const AssignmentDetail = () => {
                     onComplete={handleActivityComplete}
                     nuanceTracking={nuanceTracking}
                     variant="primary"
+                    {...chatSharedProps}
                   />
                 );
             }

@@ -33,10 +33,13 @@ import {
   normalizePerleapIntroParagraphBreaks,
   splitAssistantMessageIntoSentences,
   splitChatDisplayText,
+  splitExplainTaskDisplayText,
   splitPerleapIntroDisplayText,
   stripConversationCompleteMarker,
+  stripProgressMarker,
 } from '@/lib/chatDisplay';
 import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
+import { getTaskUnderstandingChoice } from '@/lib/taskUnderstandingStorage';
 import SafeMathMarkdown from './SafeMathMarkdown';
 import { cn } from '@/lib/utils';
 
@@ -82,6 +85,12 @@ interface AssignmentChatInterfaceProps {
   nuanceTracking?: NuanceTrackingCallbacks;
   /** primary = chat completes the assignment; companion = Q&A alongside another task UI */
   variant?: 'primary' | 'companion';
+  studentFacingTask?: string | null;
+  taskLoading?: boolean;
+  /** When false, the first AI greeting is deferred until this becomes true. */
+  chatInitAllowed?: boolean;
+  initialGreetingMode?: 'default' | 'explain_task';
+  postExplainTutoring?: boolean;
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,7 +111,7 @@ const COMPANION_CHAT_OPEN_LS = 'perleap_assignment_companion_chat_open';
 
 // Helper to clean markdown for TTS
 const cleanTextForTTS = (text: string) => {
-  return stripConversationCompleteMarker(text)
+  return stripProgressMarker(stripConversationCompleteMarker(text))
     .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold
     .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italic
     .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links
@@ -124,6 +133,11 @@ export function AssignmentChatInterface({
   onComplete,
   nuanceTracking,
   variant = 'primary',
+  studentFacingTask,
+  taskLoading = false,
+  chatInitAllowed = true,
+  initialGreetingMode = 'default',
+  postExplainTutoring = false,
 }: AssignmentChatInterfaceProps) {
   const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -241,6 +255,9 @@ export function AssignmentChatInterface({
     priorSubmissionIds: priorSubmissionIdsForContext,
     companionMode: variant === 'companion',
     debugChat: chatDebugEnabled,
+    autoInitialize: chatInitAllowed,
+    initialGreetingMode,
+    postExplainTutoring,
   });
 
   const canFlagAssistantText = !!user?.id && user.id === studentUserId;
@@ -304,6 +321,11 @@ export function AssignmentChatInterface({
   const firstAssistantMessageIndex = useMemo(
     () => messages.findIndex((m) => m.role === 'assistant'),
     [messages],
+  );
+
+  const taskUnderstandingChoice = useMemo(
+    () => (studentUserId ? getTaskUnderstandingChoice(studentUserId, submissionId) : null),
+    [studentUserId, submissionId],
   );
 
   const scrollToBottom = () => {
@@ -677,7 +699,7 @@ export function AssignmentChatInterface({
     }
   };
 
-  const isDisabled = loading || sending; // Allow chatting after end
+  const isDisabled = loading || sending || !chatInitAllowed;
   const canComplete = messages.length > 0;
 
   const handleViewInChat = (index: number) => {
@@ -773,10 +795,11 @@ export function AssignmentChatInterface({
     ) : null}
 
     <Tabs value={activeTab} onValueChange={setActiveTab} className={cn('flex min-h-0 flex-col flex-1', variant === 'companion' && 'overflow-hidden')}>
-      <TabsList className="grid w-full grid-cols-2 mb-2">
-        <TabsTrigger value="chat">{t('assignmentChat.tabs.chat', 'Chat')}</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-3 mb-2">
+        <TabsTrigger value="chat">{t('assignmentChat.tabs.chat')}</TabsTrigger>
+        <TabsTrigger value="assignment">{t('assignmentChat.tabs.assignment')}</TabsTrigger>
         <TabsTrigger value="resources">
-          {t('assignmentChat.tabs.resources', 'Resources')}
+          {t('assignmentChat.tabs.resources')}
           {resources.length > 0 && (
             <span className="ml-2 bg-primary/20 text-primary text-xs rounded-full px-2 py-0.5">
               {resources.length}
@@ -791,7 +814,15 @@ export function AssignmentChatInterface({
           <div className="space-y-4 pt-2 pb-4">
             {messages.map((message, index) => {
               const isUser = message.role === 'user';
-              const rawContent = String(message.content || '');
+              const rawContent =
+                isUser
+                  ? String(message.content || '')
+                  : stripProgressMarker(stripConversationCompleteMarker(String(message.content || '')));
+              const isExplainTaskIntro =
+                !isUser &&
+                !!message.content &&
+                index === firstAssistantMessageIndex &&
+                taskUnderstandingChoice === 'no';
               const isIntro =
                 !isUser &&
                 !!message.content &&
@@ -803,11 +834,11 @@ export function AssignmentChatInterface({
               const displayParts =
                 isUser || !message.content
                   ? [rawContent]
-                  : isIntro
-                    ? splitPerleapIntroDisplayText(formattedContent)
-                    : splitChatDisplayText(formattedContent, {
-                        singleBubble: sending && index === messages.length - 1,
-                      });
+                  : isExplainTaskIntro
+                    ? splitExplainTaskDisplayText(formattedContent)
+                    : isIntro
+                      ? splitPerleapIntroDisplayText(formattedContent)
+                      : splitChatDisplayText(formattedContent);
               // User messages always on the right side of the chat (end)
               // Assistant messages always on the left side of the chat (start)
               // This is standard chat convention regardless of language direction
@@ -1012,6 +1043,28 @@ export function AssignmentChatInterface({
           </Button>
         ) : null}
       </div>
+
+      <TabsContent value="assignment" className="flex-1 mt-0 overflow-visible">
+        <ScrollArea className={resourcesScrollAreaClass}>
+          <div className={cn('space-y-2 px-3 py-4 text-sm', isRTL && 'text-end')}>
+            <h3 className="font-medium text-foreground">{t('assignmentDetail.studentTaskTitle')}</h3>
+            {taskLoading ? (
+              <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                {t('assignmentDetail.loadingStudentTask')}
+              </p>
+            ) : studentFacingTask?.trim() ? (
+              <p className="whitespace-pre-wrap leading-relaxed text-foreground" dir="auto">
+                {studentFacingTask.trim()}
+              </p>
+            ) : (
+              <p className="text-muted-foreground leading-relaxed" dir="auto">
+                {t('assignmentDetail.studentTaskNotSetYet')}
+              </p>
+            )}
+          </div>
+        </ScrollArea>
+      </TabsContent>
 
       <TabsContent value="resources" className="flex-1 mt-0 overflow-visible">
         <ScrollArea className={resourcesScrollAreaClass}>

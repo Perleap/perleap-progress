@@ -7,6 +7,7 @@ import { isPastDueForNewAttempts } from '@/lib/assignmentAttemptPolicy';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  studentModuleFlowStepOptions,
   type AssignmentRow,
   type ComputedFlowItem,
   type ModuleFlowLocalStep,
@@ -351,8 +352,18 @@ export function isSectionActivityFlowFullyComplete(
   ctx: StudentFlowProgressContext,
   now: Date
 ): boolean {
-  const orderedPersisted = getOrderedActivityCenterFlowSteps(persistedSteps, sectionResources);
-  const computed = computeDefaultModuleFlow(sectionId, sectionResources, assignments);
+  const studentFlowOpts = studentModuleFlowStepOptions(assignments);
+  const orderedPersisted = getOrderedActivityCenterFlowSteps(
+    persistedSteps,
+    sectionResources,
+    studentFlowOpts,
+  );
+  const computed = computeDefaultModuleFlow(
+    sectionId,
+    sectionResources,
+    assignments,
+    studentFlowOpts,
+  );
   if (orderedPersisted.length > 0) {
     return firstIncompleteActionablePersistedIndex(orderedPersisted, ctx, assignments, now) === -1;
   }

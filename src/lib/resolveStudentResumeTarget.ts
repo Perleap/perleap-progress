@@ -5,6 +5,7 @@
 import {
   getOrderedActivityCenterFlowSteps,
   resolveDisplayedModuleFlow,
+  studentModuleFlowStepOptions,
   type AssignmentRow,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
@@ -41,12 +42,18 @@ function localStepDone(
   ctx: StudentFlowProgressContext,
   persisted: ModuleFlowStep[],
   sectionResources: SectionResource[],
+  assignments: AssignmentRow[],
 ): boolean {
   const step = local[index];
   if (step.kind === 'assignment') {
     return ctx.assignmentDoneMap[step.assignmentId] ?? false;
   }
-  const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, sectionResources);
+  const studentFlowOpts = studentModuleFlowStepOptions(assignments);
+  const orderedPersisted = getOrderedActivityCenterFlowSteps(
+    persisted,
+    sectionResources,
+    studentFlowOpts,
+  );
   return localResourceStepDone(local, index, ctx, orderedPersisted);
 }
 
@@ -61,7 +68,7 @@ function localPreviousStepsComplete(
 ): boolean {
   if (index === 0) return true;
   for (let i = 0; i < index; i++) {
-    if (localStepDone(local, i, ctx, persisted, sectionResources)) continue;
+    if (localStepDone(local, i, ctx, persisted, sectionResources, assignments)) continue;
     const step = local[i];
     if (step.kind === 'assignment' && isAssignmentMissedDeadline(step.assignmentId, assignments, ctx, now)) {
       continue;
@@ -83,10 +90,17 @@ function firstIncompleteInDisplayedFlow(
   ctx: StudentFlowProgressContext,
   now: Date,
 ): FlowStepTarget | null {
-  const local = resolveDisplayedModuleFlow(sectionId, sectionResources, assignments, persisted);
+  const studentFlowOpts = studentModuleFlowStepOptions(assignments);
+  const local = resolveDisplayedModuleFlow(
+    sectionId,
+    sectionResources,
+    assignments,
+    persisted,
+    studentFlowOpts,
+  );
   for (let i = 0; i < local.length; i++) {
     if (!localPreviousStepsComplete(local, i, ctx, persisted, sectionResources, assignments, now)) continue;
-    if (!localStepDone(local, i, ctx, persisted, sectionResources)) {
+    if (!localStepDone(local, i, ctx, persisted, sectionResources, assignments)) {
       const s = local[i];
       if (s.kind === 'assignment' && isAssignmentMissedDeadline(s.assignmentId, assignments, ctx, now)) {
         continue;

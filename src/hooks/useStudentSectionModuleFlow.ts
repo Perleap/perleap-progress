@@ -15,6 +15,7 @@ import {
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  studentModuleFlowStepOptions,
   type ComputedFlowItem,
 } from '@/lib/moduleFlow';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
@@ -34,9 +35,14 @@ export function useStudentSectionModuleFlow(
     [syllabus?.section_resources, sectionId],
   );
 
+  const studentFlowOpts = useMemo(
+    () => studentModuleFlowStepOptions(assignments as Array<{ id: string; type?: string | null }>),
+    [assignments],
+  );
+
   const orderedPersisted = useMemo(
-    () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources),
-    [flowSteps, sectionResources],
+    () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources, studentFlowOpts),
+    [flowSteps, sectionResources, studentFlowOpts],
   );
 
   const computed = useMemo(
@@ -45,7 +51,13 @@ export function useStudentSectionModuleFlow(
         ? computeDefaultModuleFlow(
             sectionId,
             sectionResources,
-            assignments as { id: string; syllabus_section_id?: string | null; due_at?: string | null }[],
+            assignments as {
+              id: string;
+              syllabus_section_id?: string | null;
+              due_at?: string | null;
+              type?: string | null;
+            }[],
+            studentFlowOpts,
           )
         : [],
     [sectionId, sectionResources, assignments],

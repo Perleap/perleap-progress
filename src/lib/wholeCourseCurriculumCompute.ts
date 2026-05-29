@@ -1,6 +1,10 @@
 import type { Assignment } from '@/types';
 import { aggregateCurriculumStepProgress } from '@/lib/curriculumStepProgress';
-import { linkedAssignmentsVisibleInModuleFlow, type AssignmentRow } from '@/lib/moduleFlow';
+import {
+  isLiveSessionAssignmentType,
+  linkedAssignmentsVisibleInModuleFlow,
+  type AssignmentRow,
+} from '@/lib/moduleFlow';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import type { ModuleFlowStep, SyllabusWithSections } from '@/types/syllabus';
 
@@ -27,6 +31,7 @@ export function buildLinkedAssignmentsMapWholeCourse(
   if (!syllabusComputationEnabled) return map;
 
   rawAssignments.forEach((a) => {
+    if (isLiveSessionAssignmentType(a.type)) return;
     const sectionId = a.syllabus_section_id;
     if (sectionId) {
       if (!map[sectionId]) map[sectionId] = [];
@@ -40,7 +45,9 @@ export function buildLinkedAssignmentsMapWholeCourse(
   });
   for (const sectionId of Object.keys(map)) {
     const flow = moduleFlowBulk[sectionId];
-    map[sectionId] = linkedAssignmentsVisibleInModuleFlow(map[sectionId], flow);
+    map[sectionId] = linkedAssignmentsVisibleInModuleFlow(map[sectionId], flow, {
+      hideLiveSessions: true,
+    });
   }
   return map;
 }

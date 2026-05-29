@@ -26,7 +26,11 @@ import {
 } from '../shared/supabase.ts';
 import type { Message } from '../shared/types.ts';
 import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
-import { normalizeAssistantDashes } from './typography.ts';
+import {
+  explainTaskAppend,
+  postExplainTutorAppend,
+} from '../_shared/composeSystemPrompt.ts';
+import { mergeStreamingTextChunk, normalizeAssistantDashes } from './typography.ts';
 import {
   createInitialWelcomeStreamStripper,
   stripRedundantInitialWelcome,
@@ -125,10 +129,22 @@ function isMeaningfulPriorChunk(chunk: string): boolean {
 const SESSION_START_USER_CUE_EN = 'Greet me briefly and ask about the first task.';
 const SESSION_START_USER_CUE_HE = 'ברך אותי בקצרה ושאל על המשימה הראשונה.';
 
-function sessionStartUserCueForLanguage(language: string | undefined): string {
-  return (language ?? 'en').toLowerCase() === 'he'
-    ? SESSION_START_USER_CUE_HE
-    : SESSION_START_USER_CUE_EN;
+const TASK_EXPLAIN_USER_CUE_EN =
+  "I don't understand the assignment yet. Please explain what I need to do.";
+const TASK_EXPLAIN_USER_CUE_HE =
+  'עדיין לא הבנתי את המטלה. בבקשה הסבירו מה נדרש ממני.';
+
+type InitialGreetingMode = 'default' | 'explain_task';
+
+function sessionStartUserCueForLanguage(
+  language: string | undefined,
+  mode: InitialGreetingMode = 'default',
+): string {
+  const isHe = (language ?? 'en').toLowerCase() === 'he';
+  if (mode === 'explain_task') {
+    return isHe ? TASK_EXPLAIN_USER_CUE_HE : TASK_EXPLAIN_USER_CUE_EN;
+  }
+  return isHe ? SESSION_START_USER_CUE_HE : SESSION_START_USER_CUE_EN;
 }
 
 const jsonResponse = (status: number, payload: Record<string, unknown>) =>
@@ -197,9 +213,21 @@ serve(async (req) => {
     } = body as {
       message?: string;
       isInitialGreeting?: boolean;
+      initialGreetingMode?: InitialGreetingMode;
       language?: string;
       fileContext?: { name: string; content: string };
     };
+
+    const initialGreetingMode: InitialGreetingMode =
+      (body as { initialGreetingMode?: InitialGreetingMode }).initialGreetingMode === 'explain_task'
+        ? 'explain_task'
+        : 'default';
+
+    const isExplainTaskGreeting =
+      Boolean(isInitialGreeting) && initialGreetingMode === 'explain_task';
+
+    const postExplainTutoring =
+      body.postExplainTutoring === true || body.postExplainTutoring === 'true';
 
     const debugChatRequested = body.debugChat === true || body.debugChat === 'true';
     const allowAdminDebug = Boolean(
@@ -286,7 +314,8 @@ serve(async (req) => {
     let userMessageContent = typeof message === 'string' ? message : '';
     if (isInitialGreeting) {
       userMessageContent =
-        userMessageContent.trim() || sessionStartUserCueForLanguage(language);
+        userMessageContent.trim() ||
+        sessionStartUserCueForLanguage(language, initialGreetingMode);
     }
     if (fileContext?.content) {
       userMessageContent += `\n\n--- Attached File: ${fileContext.name} ---\n${fileContext.content}`;
@@ -447,14 +476,15 @@ serve(async (req) => {
     // new indexes emitted by the model in this turn (sink fills `newProgressIndexes` below).
     const parsedTasks = parseAssignmentTasks(authoritativeAssignmentForPrompt);
     const completedTaskIndexes = conversation.completedTaskIndexes ?? [];
+
     const taskProgressForPrompt =
-      parsedTasks.length > 0
-        ? parsedTasks.map((text, i) => ({
+      parsedTasks.length === 0
+        ? undefined
+        : parsedTasks.map((text, i) => ({
             index: i + 1,
             text,
             done: completedTaskIndexes.includes(i + 1),
-          }))
-        : undefined;
+          }));
 
     let systemPrompt = await generateEnhancedChatSystemPrompt(
       authoritativeAssignmentForPrompt,
@@ -472,6 +502,20 @@ serve(async (req) => {
       unitMemoryResult.body || undefined,
       courseMemoryResult.body || undefined,
     );
+
+    if (isExplainTaskGreeting) {
+      systemPrompt += '\n\n' + (await explainTaskAppend(language)).trim();
+    }
+
+    const hasPriorAssistantTurn = messages.some((m) => m.role === 'assistant');
+    const applyPostExplainTutor =
+      postExplainTutoring &&
+      !isExplainTaskGreeting &&
+      (hasPriorAssistantTurn || !isInitialGreeting);
+    if (applyPostExplainTutor) {
+      systemPrompt += '\n\n' + (await postExplainTutorAppend(language)).trim();
+    }
+
     if (courseRecall) {
       systemPrompt += language === 'he'
         ? `
@@ -534,17 +578,18 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
       return msg;
     });
 
-    const greetingPrefix = isInitialGreeting
-      ? (language === 'he'
+    const greetingPrefix =
+      isInitialGreeting
+        ? language === 'he'
           ? `שלום! אני Perleap, עוזר ההוראה של ${teacherName}.\n\n`
-          : `Hello! I am Perleap, ${teacherName}'s AI teaching assistant.\n\n`)
-      : '';
+          : `Hello! I am Perleap, ${teacherName}'s AI teaching assistant.\n\n`
+        : '';
 
     const maxTokens = isInitialGreeting
       ? CHAT_MAX_TOKENS_GREETING
       : courseRecall
-      ? CHAT_MAX_TOKENS_COURSE_RECALL
-      : CHAT_MAX_TOKENS_DEFAULT;
+        ? CHAT_MAX_TOKENS_COURSE_RECALL
+        : CHAT_MAX_TOKENS_DEFAULT;
     const useResponses = isResponsesApiEnabled();
 
     /**
@@ -656,12 +701,13 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
         cleanedMessage = cleanedMessage.trim();
       }
 
-      messages.push({
+      const assistantMessageNonStream: Message = {
         role: 'assistant',
         content: cleanedMessage,
         raw_model_text: aiMessageRaw,
         openai_chat_request_snapshot: requestPayload,
-      });
+      };
+      messages.push(assistantMessageNonStream);
 
       const mergedCompletedIndexes = mergeCompletedIndexes(newProgressIndexes);
 
@@ -796,13 +842,17 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
         try {
           let streamUsage: unknown;
           let firstModelTokenMs: number | null = null;
+          let streamForwardBuf = '';
           const onModelDelta = (delta: string) => {
             if (delta && firstModelTokenMs === null) {
               firstModelTokenMs = Date.now();
             }
             modelAccum += delta;
             const piece = normalizeAssistantDashes(delta);
-            const emitted = welcomeStrip.push(piece);
+            const merged = mergeStreamingTextChunk(streamForwardBuf, piece);
+            const incremental = merged.slice(streamForwardBuf.length);
+            streamForwardBuf = merged;
+            const emitted = welcomeStrip.push(incremental);
             if (emitted) progressSink.push(emitted);
           };
 

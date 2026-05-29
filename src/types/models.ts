@@ -83,6 +83,7 @@ export interface Classroom {
   teacher_id: string;
   course_title: string | null;
   course_duration: string | null;
+  goals: string | null;
   start_date: string | null;
   end_date: string | null;
   course_outline: string | null;

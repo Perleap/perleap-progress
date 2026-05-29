@@ -12,8 +12,12 @@ import {
   Presentation,
   Clapperboard,
   Workflow,
+  Radio,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { DbAssignmentType } from '@/types/models';
+
+const CURRICULUM_ICON_SIZE_PX = 14;
 
 const ASSIGNMENT_TYPE_CURRICULUM_ICONS: Record<DbAssignmentType, LucideIcon> = {
   text_essay: FileText,
@@ -27,12 +31,16 @@ const ASSIGNMENT_TYPE_CURRICULUM_ICONS: Record<DbAssignmentType, LucideIcon> = {
   presentation: Presentation,
   langchain: Workflow,
   chatbot: MessageCircle,
+  live_session: Radio,
 };
 
-export function curriculumAssignmentIconForType(type: string | null | undefined): LucideIcon {
+function curriculumIconForType(type: string | null | undefined): LucideIcon {
   if (!type) return ClipboardList;
-  const icon = ASSIGNMENT_TYPE_CURRICULUM_ICONS[type as DbAssignmentType];
-  return icon ?? ClipboardList;
+  return ASSIGNMENT_TYPE_CURRICULUM_ICONS[type as DbAssignmentType] ?? ClipboardList;
+}
+
+export function curriculumAssignmentIconForType(type: string | null | undefined): LucideIcon {
+  return curriculumIconForType(type);
 }
 
 export function CurriculumAssignmentTypeIcon({
@@ -42,6 +50,17 @@ export function CurriculumAssignmentTypeIcon({
   type?: string | null;
   className?: string | undefined;
 }) {
-  const Icon = curriculumAssignmentIconForType(type);
-  return <Icon className={className} aria-hidden />;
+  const Icon = curriculumIconForType(type);
+  return (
+    <span
+      className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-foreground"
+      aria-hidden
+    >
+      <Icon
+        size={CURRICULUM_ICON_SIZE_PX}
+        strokeWidth={2}
+        className={cn('shrink-0', className)}
+      />
+    </span>
+  );
 }

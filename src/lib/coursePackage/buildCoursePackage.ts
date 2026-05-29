@@ -141,7 +141,7 @@ export function buildCoursePackageV1(input: BuildCoursePackageInput): PerleapCou
           title: r.title,
           order_index: r.order_index,
           status: (r.status as string) || 'published',
-          lesson_content: (r.lesson_content as Json | null) ?? null,
+          lesson_content: (r.lesson_content as unknown as Json | null) ?? null,
           summary: r.summary ?? null,
           body_text: r.body_text ?? null,
           file_path: r.file_path ?? null,
@@ -230,11 +230,11 @@ export function buildCoursePackageV1(input: BuildCoursePackageInput): PerleapCou
       type: a.type,
       status: a.status,
       due_at: a.due_at,
-      target_dimensions: (a.target_dimensions as Json) ?? ({} as Json),
+      target_dimensions: (a.target_dimensions as unknown as Json) ?? ({} as Json),
       personalization_flag: Boolean(a.personalization_flag),
       auto_publish_ai_feedback: a.auto_publish_ai_feedback !== false,
       attempt_mode: a.attempt_mode ?? null,
-      materials: (a.materials as Json | null) ?? null,
+      materials: (a.materials as unknown as Json | null) ?? null,
       hard_skills:
         typeof a.hard_skills === 'string'
           ? a.hard_skills
@@ -381,7 +381,7 @@ export function buildCoursePackageV2(input: BuildCoursePackageInput): PerleapCou
           title: r.title,
           order_index: r.order_index,
           status: (r.status as string) || 'published',
-          lesson_content: (r.lesson_content as Json | null) ?? null,
+          lesson_content: (r.lesson_content as unknown as Json | null) ?? null,
           summary: r.summary ?? null,
           body_text: r.body_text ?? null,
           file_path: r.file_path ?? null,
@@ -469,11 +469,11 @@ export function buildCoursePackageV2(input: BuildCoursePackageInput): PerleapCou
       type: a.type,
       status: a.status,
       due_at: a.due_at,
-      target_dimensions: (a.target_dimensions as Json) ?? ({} as Json),
+      target_dimensions: (a.target_dimensions as unknown as Json) ?? ({} as Json),
       personalization_flag: Boolean(a.personalization_flag),
       auto_publish_ai_feedback: a.auto_publish_ai_feedback !== false,
       attempt_mode: a.attempt_mode ?? null,
-      materials: (a.materials as Json | null) ?? null,
+      materials: (a.materials as unknown as Json | null) ?? null,
       hard_skills:
         typeof a.hard_skills === 'string'
           ? a.hard_skills

@@ -30,7 +30,7 @@ import {
   sectionsInCourseOrder,
   type SectionSequentialUnlockFlow,
 } from '@/lib/sectionUnlock';
-import { getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
+import { getOrderedActivityCenterFlowSteps, studentModuleFlowStepOptions } from '@/lib/moduleFlow';
 import { CurriculumAssignmentTypeIcon } from '@/lib/assignmentTypeCurriculumIcon';
 import { computeSectionModuleProgressStats } from '@/lib/sectionModuleProgressStats';
 import type {
@@ -95,12 +95,13 @@ export const SectionContentPage = ({
     () => linkedAssignmentsMap[sectionId] ?? EMPTY_LINKED_ASSIGNMENTS,
     [linkedAssignmentsMap, sectionId],
   );
+  const studentFlowOpts = useMemo(() => studentModuleFlowStepOptions(assignments), [assignments]);
   const orderedFlow = useMemo(
     () =>
       moduleFlowSteps.length > 0
-        ? getOrderedActivityCenterFlowSteps(moduleFlowSteps, resources)
+        ? getOrderedActivityCenterFlowSteps(moduleFlowSteps, resources, studentFlowOpts)
         : [],
-    [moduleFlowSteps, resources],
+    [moduleFlowSteps, resources, studentFlowOpts],
   );
   const useFlowList = orderedFlow.length > 0;
   const assignmentById = useMemo(() => {
@@ -151,8 +152,9 @@ export const SectionContentPage = ({
         resources,
         linkedAssignments: assignments,
         flowCtx: { progressByStep, assignmentDoneMap },
+        flowStepOptions: studentFlowOpts,
       }),
-    [moduleFlowSteps, resources, assignments, progressByStep, assignmentDoneMap],
+    [moduleFlowSteps, resources, assignments, progressByStep, assignmentDoneMap, studentFlowOpts],
   );
 
   const studentProgress = studentProgressMap[sectionId];
@@ -402,10 +404,7 @@ export const SectionContentPage = ({
                         )}
                       >
                         <div className="p-1.5 rounded-md bg-muted/50">
-                          <CurriculumAssignmentTypeIcon
-                            type={a.type}
-                            className="h-3.5 w-3.5 text-muted-foreground"
-                          />
+                          <CurriculumAssignmentTypeIcon type={a.type} />
                         </div>
                         <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                           <span className="text-sm font-medium text-foreground truncate block">
@@ -445,7 +444,7 @@ export const SectionContentPage = ({
                     )}
                   >
                     <div className="p-1.5 rounded-md bg-muted/50">
-                      <CurriculumAssignmentTypeIcon type={a.type} className="h-3.5 w-3.5 text-muted-foreground" />
+                      <CurriculumAssignmentTypeIcon type={a.type} />
                     </div>
                     <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                       <span className="text-sm font-medium text-foreground truncate block">{a.title}</span>

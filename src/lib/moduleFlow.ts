@@ -70,14 +70,41 @@ export function filterActivityCenterModuleFlowSteps(
   });
 }
 
+export function isLiveSessionAssignmentType(type: string | null | undefined): boolean {
+  return type === 'live_session';
+}
+
+export type OrderedActivityCenterFlowStepsOptions = {
+  /** Omit live_session assignment steps (student course outline). */
+  hideLiveSessions?: boolean;
+  assignmentsById?: Record<string, { type?: string | null }>;
+};
+
+export function studentModuleFlowStepOptions(
+  assignments: Array<{ id: string; type?: string | null }>,
+): OrderedActivityCenterFlowStepsOptions {
+  const assignmentsById: Record<string, { type?: string | null }> = {};
+  for (const a of assignments) {
+    assignmentsById[a.id] = { type: a.type };
+  }
+  return { hideLiveSessions: true, assignmentsById };
+}
+
 /** Filter + sort by `order_index` for activity-center steps in a module. */
 export function getOrderedActivityCenterFlowSteps(
   steps: ModuleFlowStep[],
   sectionResources: SectionResource[],
+  options?: OrderedActivityCenterFlowStepsOptions,
 ): ModuleFlowStep[] {
-  return [...filterActivityCenterModuleFlowSteps(steps, sectionResources)].sort(
-    (a, b) => a.order_index - b.order_index,
-  );
+  let filtered = filterActivityCenterModuleFlowSteps(steps, sectionResources);
+  if (options?.hideLiveSessions && options.assignmentsById) {
+    filtered = filtered.filter((step) => {
+      if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
+      const type = options.assignmentsById![step.assignment_id]?.type;
+      return !isLiveSessionAssignmentType(type);
+    });
+  }
+  return [...filtered].sort((a, b) => a.order_index - b.order_index);
 }
 
 /** Next step in teacher-defined order, or undefined if last or not found. */
@@ -100,6 +127,7 @@ export type AssignmentRow = {
   syllabus_section_id?: string | null;
   due_at?: string | null;
   attempt_mode?: string | null;
+  type?: string | null;
 };
 
 /** Same ordering as the assignment tail of `computeDefaultModuleFlow` (due_at, then id). */
@@ -166,13 +194,13 @@ export function resolveDisplayedModuleFlowBase(
   resources: SectionResource[],
   assignments: AssignmentRow[],
   persistedSteps: ModuleFlowStep[],
+  options?: OrderedActivityCenterFlowStepsOptions,
 ): ModuleFlowLocalStep[] {
-  const computedDefault = computeDefaultModuleFlow(sectionId, resources, assignments);
+  const computedDefault = computeDefaultModuleFlow(sectionId, resources, assignments, options);
 
   let base: ModuleFlowLocalStep[];
   if (persistedSteps.length > 0) {
-    const filtered = filterActivityCenterModuleFlowSteps(persistedSteps, resources);
-    const ordered = [...filtered].sort((a, b) => a.order_index - b.order_index);
+    const ordered = getOrderedActivityCenterFlowSteps(persistedSteps, resources, options);
     if (ordered.length > 0) {
       base = ordered.map((s) =>
         s.step_kind === 'resource' && s.activity_list_id
@@ -226,14 +254,18 @@ export function resolveDisplayedModuleFlow(
   resources: SectionResource[],
   assignments: AssignmentRow[],
   persistedSteps: ModuleFlowStep[],
+  options?: OrderedActivityCenterFlowStepsOptions,
 ): ModuleFlowLocalStep[] {
-  const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps);
-  const sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
+  const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps, options);
+  let sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
+  if (options?.hideLiveSessions) {
+    sectionAssignments = sectionAssignments.filter((a) => !isLiveSessionAssignmentType(a.type));
+  }
   let merged = appendMissingActivityCenterResources(base, sectionId, resources);
   /** When the teacher has a saved flow, do not append every section-linked assignment — that undoes removals from the flow. */
   const hasSavedActivityCenterFlow =
     persistedSteps.length > 0 &&
-    filterActivityCenterModuleFlowSteps(persistedSteps, resources).length > 0;
+    getOrderedActivityCenterFlowSteps(persistedSteps, resources, options).length > 0;
   if (!hasSavedActivityCenterFlow) {
     merged = appendMissingSectionLinkedAssignments(merged, sectionAssignments);
   }
@@ -263,12 +295,19 @@ export function computeDefaultModuleFlow(
   sectionId: string,
   resources: SectionResource[],
   assignments: AssignmentRow[],
+  options?: OrderedActivityCenterFlowStepsOptions,
 ): ComputedFlowItem[] {
   const res = resources
     .filter((r) => r.section_id === sectionId && isActivityCenterResource(r))
     .slice()
     .sort((a, b) => a.order_index - b.order_index);
-  const assigns = sortAssignmentsForSection(assignments.filter((a) => a.syllabus_section_id === sectionId));
+  let sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
+  if (options?.hideLiveSessions) {
+    sectionAssignments = sectionAssignments.filter(
+      (a) => !isLiveSessionAssignmentType(a.type),
+    );
+  }
+  const assigns = sortAssignmentsForSection(sectionAssignments);
 
   let i = 0;
   const out: ComputedFlowItem[] = [];
@@ -327,12 +366,18 @@ export function moduleFlowLocalStepsToFlowInput(localSteps: ModuleFlowLocalStep[
  * If there is no saved flow (`persistedFlowSteps` empty), keep legacy behavior (all section-linked assignments).
  * Order matches module flow `order_index`.
  */
-export function linkedAssignmentsVisibleInModuleFlow<T extends { id: string }>(
+export function linkedAssignmentsVisibleInModuleFlow<T extends { id: string; type?: string }>(
   sectionLinked: T[],
   persistedFlowSteps: ModuleFlowStep[] | undefined | null,
+  options?: Pick<OrderedActivityCenterFlowStepsOptions, 'hideLiveSessions'>,
 ): T[] {
+  const withoutLiveSessions = (list: T[]) =>
+    options?.hideLiveSessions
+      ? list.filter((a) => !isLiveSessionAssignmentType(a.type))
+      : list;
+
   if (!persistedFlowSteps || persistedFlowSteps.length === 0) {
-    return sectionLinked;
+    return withoutLiveSessions(sectionLinked);
   }
   const orderedIds: string[] = [];
   const seen = new Set<string>();
@@ -346,7 +391,9 @@ export function linkedAssignmentsVisibleInModuleFlow<T extends { id: string }>(
     });
   if (orderedIds.length === 0) return [];
   const byId = new Map(sectionLinked.map((a) => [a.id, a]));
-  return orderedIds.map((id) => byId.get(id)).filter((a): a is T => a !== undefined);
+  return withoutLiveSessions(
+    orderedIds.map((id) => byId.get(id)).filter((a): a is T => a !== undefined),
+  );
 }
 
 /** Same ordering the curriculum tab and flow editor use, ready for `replaceModuleFlowSteps`. */

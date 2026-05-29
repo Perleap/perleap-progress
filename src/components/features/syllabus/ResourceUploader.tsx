@@ -12,7 +12,6 @@ import {
   type DragStartEvent,
   type DraggableAttributes,
   type Modifier,
-  type Transform,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -21,7 +20,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { CSS, type Transform } from '@dnd-kit/utilities';
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

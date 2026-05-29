@@ -18,8 +18,21 @@
  */
 
 const PROGRESS_PREFIX = '<<<PROGRESS:';
-const PROGRESS_FULL_RE = /<<<PROGRESS:\s*\[([^\]]*)\]>>>/;
+/** Tolerates accidental spaces inside the marker (e.g. "<<<PRO GRESS:[1]>>>"). */
+const PROGRESS_FULL_RE = /<<<PRO\s*GRESS:\s*\[([^\]]*)\]>>>/i;
+const PROGRESS_PREFIX_FLEX_RE = /<<<PRO\s*GRESS:/i;
 const KEEP_TAIL = PROGRESS_PREFIX.length - 1;
+
+function findProgressMarkerStart(pending: string): number {
+  const flex = pending.search(PROGRESS_PREFIX_FLEX_RE);
+  if (flex >= 0) return flex;
+  return pending.indexOf(PROGRESS_PREFIX);
+}
+
+function matchProgressAt(pending: string, startIdx: number): RegExpMatchArray | null {
+  const remainder = pending.slice(startIdx);
+  return remainder.match(/^<<<PRO\s*GRESS:\s*\[([^\]]*)\]>>>/i);
+}
 
 export interface ProgressSinkOptions {
   onChunk?: (text: string) => void;
@@ -61,11 +74,10 @@ export function createProgressSink(opts: ProgressSinkOptions): ProgressSink {
     }
     if (!pending) return;
 
-    const startIdx = pending.indexOf(PROGRESS_PREFIX);
+    const startIdx = findProgressMarkerStart(pending);
 
     if (startIdx !== -1) {
-      const remainder = pending.slice(startIdx);
-      const match = remainder.match(PROGRESS_FULL_RE);
+      const match = matchProgressAt(pending, startIdx);
       if (match && match.index !== undefined && match.index === 0) {
         const before = pending.slice(0, startIdx).replace(/\s+$/g, '');
         forward(before);
