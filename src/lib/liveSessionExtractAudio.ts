@@ -106,61 +106,6 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
       // COOP/COEP requires same-origin module worker; static ESM files include const.js/errors.js.
       const classWorkerURL = getFfmpegClassWorkerUrl();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
-        body: JSON.stringify({
-          sessionId: '83200d',
-          runId: 'post-fix-v3',
-          hypothesisId: 'F',
-          location: 'liveSessionExtractAudio.ts:getFfmpeg',
-          message: 'ffmpeg worker URL before load',
-          data: {
-            classWorkerURL,
-            pageOrigin: window.location.origin,
-            sameOrigin: classWorkerURL.startsWith(window.location.origin),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      fetch(classWorkerURL, { method: 'HEAD' })
-        .then((res) => {
-          fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
-            body: JSON.stringify({
-              sessionId: '83200d',
-              runId: 'post-fix-v3',
-              hypothesisId: 'G',
-              location: 'liveSessionExtractAudio.ts:getFfmpeg',
-              message: 'classWorkerURL HEAD probe',
-              data: {
-                status: res.status,
-                contentType: res.headers.get('content-type'),
-                isHtml: (res.headers.get('content-type') ?? '').includes('text/html'),
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-        })
-        .catch((probeErr) => {
-          fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
-            body: JSON.stringify({
-              sessionId: '83200d',
-              runId: 'post-fix-v3',
-              hypothesisId: 'G',
-              location: 'liveSessionExtractAudio.ts:getFfmpeg',
-              message: 'classWorkerURL HEAD probe failed',
-              data: { error: probeErr instanceof Error ? probeErr.message : String(probeErr) },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-        });
-      // #endregion
-
       await ffmpeg.load({
         coreURL,
 
@@ -168,39 +113,7 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
 
         classWorkerURL,
       });
-
-      // #region agent log
-      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
-        body: JSON.stringify({
-          sessionId: '83200d',
-          runId: 'post-fix-v3',
-          hypothesisId: 'C',
-          location: 'liveSessionExtractAudio.ts:getFfmpeg',
-          message: 'ffmpeg.load succeeded',
-          data: { loaded: ffmpeg.loaded },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '83200d' },
-        body: JSON.stringify({
-          sessionId: '83200d',
-          runId: 'post-fix-v3',
-          hypothesisId: 'C',
-          location: 'liveSessionExtractAudio.ts:getFfmpeg',
-          message: 'ffmpeg.load failed',
-          data: { error: err instanceof Error ? err.message : String(err) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
       resetFfmpegLoadState();
 
       throw err;
