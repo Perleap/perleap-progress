@@ -358,6 +358,64 @@ export const createTranscription = async (
   return data.text;
 };
 
+export interface TranscriptionSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface VerboseTranscription {
+  text: string;
+  segments: TranscriptionSegment[];
+  duration: number;
+}
+
+/**
+ * Transcribe with Whisper requesting `verbose_json` so we get segment-level timestamps.
+ * Used by live-session transcription to build clickable timestamps.
+ */
+export const createVerboseTranscription = async (
+  audioFile: Blob,
+  language?: string,
+  model = 'whisper-1',
+): Promise<VerboseTranscription> => {
+  const config = getOpenAIConfig();
+  const formData = new FormData();
+  formData.append('file', audioFile, 'audio.m4a');
+  formData.append('model', model);
+  formData.append('response_format', 'verbose_json');
+  if (language) {
+    formData.append('language', language);
+  }
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${config.apiKey}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(await parseOpenAIError(response.status, errorText));
+  }
+
+  const data = await response.json();
+  const segments: TranscriptionSegment[] = Array.isArray(data.segments)
+    ? data.segments.map((s: { start: number; end: number; text: string }) => ({
+        start: s.start,
+        end: s.end,
+        text: (s.text ?? '').trim(),
+      }))
+    : [];
+  return {
+    text: data.text ?? '',
+    segments,
+    duration: typeof data.duration === 'number' ? data.duration : 0,
+  };
+};
+
 /**
  * Parse OpenAI error response
  */

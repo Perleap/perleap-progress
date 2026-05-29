@@ -22,7 +22,13 @@ import {
   useStudentModuleFlowProgressMap,
   useClassroomAssignments,
 } from '@/hooks/queries';
-import { getNextActivityCenterStep, getOrderedActivityCenterFlowSteps, filterOutlineMaterialResources, type AssignmentRow } from '@/lib/moduleFlow';
+import {
+  getNextActivityCenterStep,
+  getOrderedActivityCenterFlowSteps,
+  filterOutlineMaterialResources,
+  studentModuleFlowStepOptions,
+  type AssignmentRow,
+} from '@/lib/moduleFlow';
 import { getFirstNavigableInSection, getNextSectionId } from '@/lib/moduleFlowNavigation';
 import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
@@ -67,6 +73,14 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   const { data: nextSectionFlowSteps = [] } = useModuleFlowSteps(nextSectionId);
   const { data: classroomAssignments = [] } = useClassroomAssignments(classroomId);
 
+  const studentFlowOpts = useMemo(
+    () =>
+      role === 'student'
+        ? studentModuleFlowStepOptions(classroomAssignments as Array<{ id: string; type?: string | null }>)
+        : undefined,
+    [role, classroomAssignments],
+  );
+
   const firstInNextSection = useMemo(() => {
     if (!nextSectionId) return null;
     return getFirstNavigableInSection({
@@ -74,8 +88,9 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
       sectionResources: syllabus?.section_resources?.[nextSectionId] ?? [],
       assignments: classroomAssignments as AssignmentRow[],
       persistedSteps: nextSectionFlowSteps,
+      flowStepOptions: studentFlowOpts,
     });
-  }, [nextSectionId, syllabus?.section_resources, classroomAssignments, nextSectionFlowSteps]);
+  }, [nextSectionId, syllabus?.section_resources, classroomAssignments, nextSectionFlowSteps, studentFlowOpts]);
 
   const flowStepForResource = useMemo(
     () => flowSteps.find((s) => s.step_kind === 'resource' && s.activity_list_id === resource?.id),
@@ -88,8 +103,8 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   );
 
   const orderedFlowSteps = useMemo(
-    () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources),
-    [flowSteps, sectionResources],
+    () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources, studentFlowOpts),
+    [flowSteps, sectionResources, studentFlowOpts],
   );
 
   const unitOutlineMaterials = useMemo(

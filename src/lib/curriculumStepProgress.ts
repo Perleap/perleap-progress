@@ -2,6 +2,7 @@ import type { ModuleFlowStep, SectionResource, SyllabusSection } from '@/types/s
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  studentModuleFlowStepOptions,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
 import {
@@ -42,6 +43,7 @@ export function aggregateCurriculumStepProgress(params: {
 
   let done = 0;
   let total = 0;
+  const studentFlowOpts = studentModuleFlowStepOptions(assignments);
 
   let ordered = sectionsInCourseOrder(sections);
   if (onlySectionId) {
@@ -54,8 +56,8 @@ export function aggregateCurriculumStepProgress(params: {
     const persisted = flowBulk[sectionId] ?? [];
     const linkedAssigns = linkedAssignmentsMap[sectionId] ?? [];
 
-    const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, resources);
-    const computed = computeDefaultModuleFlow(sectionId, resources, assignments);
+    const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, resources, studentFlowOpts);
+    const computed = computeDefaultModuleFlow(sectionId, resources, assignments, studentFlowOpts);
     const usePersisted = orderedPersisted.length > 0;
 
     const assignmentById: Record<string, LinkedAssignmentRef> = {};

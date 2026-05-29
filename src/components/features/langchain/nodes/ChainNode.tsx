@@ -5,7 +5,7 @@ import { Link2 } from 'lucide-react';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainChainNodeData } from '../langchainNodeData';
 
 function ChainNodeComponent(node: NodeProps) {
-  const data = ensureLangchainNodeData(node as Node).data as LangchainChainNodeData;
+  const data = ensureLangchainNodeData(node).data as LangchainChainNodeData;
   const desc = truncateLangchainPreview(data.description || data.label);
 
   return (

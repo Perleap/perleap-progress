@@ -446,6 +446,11 @@
     }
   },
   "assignmentChat": {
+    "tabs": {
+      "chat": "צ׳אט",
+      "assignment": "מטלה",
+      "resources": "משאבים"
+    },
     "placeholder": "הקלד את ההודעה שלך כאן...",
     "contextHelpTitle": "הקשר ועזרה",
     "companion": {
@@ -612,6 +617,80 @@
     "addLink": "הוסף קישור",
     "cancel": "ביטול",
     "saveButton": "שמור שינויים"
+  },
+  "liveSession": {
+    "open": "פתח מפגש חי",
+    "notFound": "המפגש החי לא נמצא.",
+    "types": {
+      "workshop": "סדנה",
+      "lecture": "הרצאה",
+      "practice": "תרגול"
+    },
+    "create": {
+      "title": "יצירת מפגש חי",
+      "description": "העלה הקלטה של המפגש הפרונטלי. פרליפ מפיקה תמלול, סיכום ורגעי מפתח להערכת תלמידים.",
+      "titleLabel": "כותרת",
+      "titlePlaceholder": "לדוגמה: מפגש 2 — עבודת סצנה",
+      "typeLabel": "סוג המפגש",
+      "uploadModeLabel": "סוג העלאה",
+      "uploadModeVideo": "וידאו",
+      "uploadModeAudio": "אודיו בלבד",
+      "fileLabel": "הקלטה",
+      "filePlaceholderVideo": "בחר קובץ וידאו",
+      "filePlaceholderAudio": "בחר קובץ אודיו",
+      "fileHintVideo": "האודיו מחולץ בדפדפן לפני ההעלאה. השאר את הלשונית פתוחה עד סיום העיבוד.",
+      "fileHintAudio": "העלה אודיו ישירות (MP3, M4A, WAV וכו').",
+      "longRecordingWarning": "ההקלטה גדולה או ארוכה. ההמרה עלולה לקחת דקות רבות — השאר את הלשונית פתוחה.",
+      "titleRequired": "אנא הזן כותרת.",
+      "fileRequired": "אנא בחר הקלטה להעלאה.",
+      "creating": "יוצר...",
+      "converting": "ממיר לאודיו...",
+      "preparing": "מכין אודיו...",
+      "progressPercent": "{{percent}}%",
+      "conversionError": "לא ניתן להמיר את הווידאו בדפדפן. נסה קליפ קצר יותר או העלה אודיו בלבד.",
+      "uploading": "מעלה...",
+      "transcribing": "מתמלל אודיו...",
+      "summarizing": "בונה סיכום מהתמלול...",
+      "transcriptReady": "התמלול מוכן",
+      "progressPhaseTranscript": "יוצר תמלול מההקלטה שלך",
+      "progressPhaseSummary": "מפיק סיכום מפגש ורגעי מפתח",
+      "progressPhaseFinishing": "שומר את התמלול במפגש החי",
+      "success": "המפגש החי נוצר עם תמלול.",
+      "error": "לא ניתן ליצור את המפגש החי.",
+      "submit": "צור"
+    },
+    "status": {
+      "processing": "מעבד את ההקלטה שלך",
+      "uploaded": "ממתין לעיבוד...",
+      "extracting": "מכין אודיו...",
+      "retryNoAudio": "האודיו לא הועלה. צור מפגש חי חדש כדי לנסות שוב.",
+      "extracted": "האודיו חולץ. מתמלל...",
+      "transcribing": "מתמלל ומסכם...",
+      "failed": "העיבוד נכשל",
+      "retry": "נסה שוב",
+      "retried": "העיבוד הופעל מחדש."
+    },
+    "audio": {
+      "title": "הקלטה"
+    },
+    "summary": {
+      "title": "סיכום"
+    },
+    "timestamps": {
+      "title": "רגעי מפתח"
+    },
+    "transcript": {
+      "title": "תמלול"
+    },
+    "evaluation": {
+      "title": "הערכות תלמידים",
+      "hint": "בחר תלמיד כדי לכתוב הערכה על בסיס המפגש הזה. ההערכה מנוקדת כמו משימה רגילה ומתווספת לתרשים 5D שלו.",
+      "selectStudent": "בחר תלמיד",
+      "evaluated": "הוערך",
+      "notYet": "טרם",
+      "preparing": "מכין הערכה...",
+      "saved": "ההערכה נשמרה."
+    }
   },
   "createAssignment": {
     "title": "צור משימה חדשה",
@@ -991,9 +1070,11 @@
       "saveFailed": "לא ניתן לשמור את הזרימה.",
       "stepResource": "פעילות",
       "stepAssignment": "משימה",
+      "stepLiveSession": "מפגש חי",
       "addNewStep": "הוספת חדש",
       "createAssignment": "יצירת משימה",
       "createActivity": "יצירת פעילות",
+      "createLiveSession": "יצירת מפגש חי",
       "editStep": "עריכת צעד",
       "viewActivity": "צפייה בפעילות",
       "viewAssignment": "צפייה במשימה",
@@ -1283,8 +1364,17 @@
     "chatbot": {
       "title": "פעילות בצ׳אט",
       "body": "דברו עם העוזר כדי להשלים את המשימה. יש להגיש כשסיימתם את הצעדים הנדרשים.",
-      "tutorial": "השתמשו בשדה הקלט בתחתית כדי לכתוב לעוזר. גללו למעלה כדי לקרוא הודעות קודמות. הגישו כשהפעילות מסמנת שהשלמתם."
+      "tutorial": "השתמשו בשדה הקלט בתחתית כדי לכתוב לעוזר. אפשר לפתוח בכל עת את לשונית ״המטלה״ כדי לקרוא שוב את המשימה. הגישו כשהפעילות מסמנת שהשלמתם."
     }
+  },
+  "taskUnderstanding": {
+    "taskStepTitle": "לפני שמתחילים",
+    "question": "האם הבנתם מה נדרש מכם לעשות?",
+    "yes": "כן, הבנתי",
+    "no": "לא, הסבירו לי",
+    "explanationPanelTitle": "הנה המטלה שלכם",
+    "explanationPanelBody": "קראו למטה מה נדרש מכם. כשאתם מוכנים, המשיכו למטלה.",
+    "continueToAssignment": "המשך למטלה"
   },
   "assignmentDetail": {
     "title": "פרטי משימה",
@@ -1756,7 +1846,7 @@
     },
     "compareNarrativeScope": "השוואה: {{a}} מול {{b}}. מסננים: {{filters}}",
     "lessonBrief": {
-      "exportPdf": "יצוא תקציר שיעור (PDF)",
+      "exportPdf": "תקציר שיעור",
       "exportError": "לא ניתן ליצור את תקציר השיעור ב־PDF. בדקו את החיבור ונסו שוב.",
       "title": "דוח הכנה לשיעור",
       "classroom": "כיתה",

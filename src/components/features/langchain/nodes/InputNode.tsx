@@ -5,7 +5,7 @@ import { MessageSquare } from 'lucide-react';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainInputNodeData } from '../langchainNodeData';
 
 function InputNodeComponent(node: NodeProps) {
-  const data = ensureLangchainNodeData(node as Node).data as LangchainInputNodeData;
+  const data = ensureLangchainNodeData(node).data as LangchainInputNodeData;
   const preview = truncateLangchainPreview(data.description || data.label);
 
   return (

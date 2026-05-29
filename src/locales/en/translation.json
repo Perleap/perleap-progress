@@ -446,6 +446,11 @@
     }
   },
   "assignmentChat": {
+    "tabs": {
+      "chat": "Chat",
+      "assignment": "Assignment",
+      "resources": "Resources"
+    },
     "placeholder": "Type your message here...",
     "contextHelpTitle": "Context and help",
     "companion": {
@@ -612,6 +617,80 @@
     "addLink": "Add Link",
     "cancel": "Cancel",
     "saveButton": "Save Changes"
+  },
+  "liveSession": {
+    "open": "Open live session",
+    "notFound": "Live session not found.",
+    "types": {
+      "workshop": "Workshop",
+      "lecture": "Lecture",
+      "practice": "Practice"
+    },
+    "create": {
+      "title": "Create Live Session",
+      "description": "Upload a recording of your in-person session. Perleap builds a transcript, summary, and key moments for you to evaluate students.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. Session 2 — Scene work",
+      "typeLabel": "Session type",
+      "uploadModeLabel": "Upload type",
+      "uploadModeVideo": "Video",
+      "uploadModeAudio": "Audio only",
+      "fileLabel": "Recording",
+      "filePlaceholderVideo": "Choose a video file",
+      "filePlaceholderAudio": "Choose an audio file",
+      "fileHintVideo": "Audio is extracted in your browser before upload. Keep this tab open until processing finishes.",
+      "fileHintAudio": "Upload audio directly (MP3, M4A, WAV, etc.).",
+      "longRecordingWarning": "This recording is large or long. Conversion may take several minutes and needs this tab to stay open.",
+      "titleRequired": "Please enter a title.",
+      "fileRequired": "Please choose a recording to upload.",
+      "creating": "Creating...",
+      "converting": "Converting to audio...",
+      "preparing": "Preparing audio...",
+      "progressPercent": "{{percent}}%",
+      "conversionError": "Could not convert the video in your browser. Try a shorter clip or use Audio only.",
+      "uploading": "Uploading...",
+      "transcribing": "Transcribing audio...",
+      "summarizing": "Building summary from transcript...",
+      "transcriptReady": "Transcript ready",
+      "progressPhaseTranscript": "Creating transcript from your recording",
+      "progressPhaseSummary": "Generating session summary and key moments",
+      "progressPhaseFinishing": "Saving transcript to your live session",
+      "success": "Live session created with transcript.",
+      "error": "Could not create the live session.",
+      "submit": "Create"
+    },
+    "status": {
+      "processing": "Processing your recording",
+      "uploaded": "Queued for processing...",
+      "extracting": "Preparing audio...",
+      "retryNoAudio": "Audio was not uploaded. Create a new live session to try again.",
+      "extracted": "Audio extracted. Transcribing...",
+      "transcribing": "Transcribing and summarizing...",
+      "failed": "Processing failed",
+      "retry": "Retry",
+      "retried": "Processing restarted."
+    },
+    "audio": {
+      "title": "Recording"
+    },
+    "summary": {
+      "title": "Summary"
+    },
+    "timestamps": {
+      "title": "Key moments"
+    },
+    "transcript": {
+      "title": "Transcript"
+    },
+    "evaluation": {
+      "title": "Student evaluations",
+      "hint": "Select a student to write an evaluation based on this session. It is scored like a normal assignment and added to their 5D chart.",
+      "selectStudent": "Select a student",
+      "evaluated": "Evaluated",
+      "notYet": "Not yet",
+      "preparing": "Preparing evaluation...",
+      "saved": "Evaluation saved."
+    }
   },
   "createAssignment": {
     "title": "Create New Assignment",
@@ -1004,9 +1083,11 @@
       "saveFailed": "Could not save flow.",
       "stepResource": "Activity",
       "stepAssignment": "Assignment",
+      "stepLiveSession": "Live session",
       "addNewStep": "Add new",
       "createAssignment": "Create assignment",
       "createActivity": "Create activity",
+      "createLiveSession": "Create live session",
       "editStep": "Edit step",
       "viewActivity": "View activity",
       "viewAssignment": "View assignment",
@@ -1305,8 +1386,17 @@
     "chatbot": {
       "title": "Chat activity",
       "body": "Interact with the assistant to complete the task. Submit when you have finished the required steps.",
-      "tutorial": "Use the chat input at the bottom to message the assistant. Scroll up to reread earlier messages. Submit when the activity indicates you are done."
+      "tutorial": "Use the chat input at the bottom to message the assistant. Open the Assignment tab anytime to reread your task. Submit when the activity indicates you are done."
     }
+  },
+  "taskUnderstanding": {
+    "taskStepTitle": "Before you start",
+    "question": "Do you understand what you need to do?",
+    "yes": "Yes, I understand",
+    "no": "No, explain it to me",
+    "explanationPanelTitle": "Here is your assignment",
+    "explanationPanelBody": "Read through what you need to do below. When you are ready, continue to the assignment.",
+    "continueToAssignment": "Continue to assignment"
   },
   "assignmentDetail": {
     "title": "Assignment Details",
@@ -1775,7 +1865,7 @@
     },
     "compareNarrativeScope": "Comparing {{a}} vs {{b}}. Filters: {{filters}}",
     "lessonBrief": {
-      "exportPdf": "Export lesson brief (PDF)",
+      "exportPdf": "Lesson Brief",
       "exportError": "Could not create the lesson brief PDF. Check your connection and try again.",
       "title": "Lesson preparation report",
       "classroom": "Classroom",

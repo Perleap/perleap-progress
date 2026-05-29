@@ -57,6 +57,8 @@ function lessonResource(id: string, sectionId: string, order_index: number): Sec
     mime_type: null,
     file_size: null,
     order_index,
+    created_at: '',
+    updated_at: '',
   };
 }
 

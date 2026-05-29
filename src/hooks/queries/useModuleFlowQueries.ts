@@ -12,6 +12,7 @@ import {
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  studentModuleFlowStepOptions,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
@@ -264,16 +265,23 @@ export function useStudentCurriculumFlowContext(options: {
 }): { flowCtx: StudentFlowProgressContext; isLoadingProgress: boolean } {
   const { userId, sectionIds, flowBulk, resourceMap, assignments, enabled = true } = options;
 
+  const studentFlowOpts = useMemo(
+    () => studentModuleFlowStepOptions(assignments as Array<{ id: string; type?: string | null }>),
+    [assignments],
+  );
+
   const allStepIds = useMemo(() => {
     if (!enabled) return [];
     const ids: string[] = [];
     sectionIds.forEach((sid) => {
       const persisted = flowBulk[sid] ?? [];
       const resources = resourceMap[sid] ?? [];
-      getOrderedActivityCenterFlowSteps(persisted, resources).forEach((s) => ids.push(s.id));
+      getOrderedActivityCenterFlowSteps(persisted, resources, studentFlowOpts).forEach((s) =>
+        ids.push(s.id),
+      );
     });
     return ids;
-  }, [enabled, flowBulk, sectionIds, resourceMap]);
+  }, [enabled, flowBulk, sectionIds, resourceMap, studentFlowOpts]);
 
   const { data: progressByStep = {}, isLoading: isLoadingStepProgress } = useStudentModuleFlowProgressMap(
     enabled ? userId : undefined,
@@ -286,15 +294,15 @@ export function useStudentCurriculumFlowContext(options: {
     sectionIds.forEach((sid) => {
       const persisted = flowBulk[sid] ?? [];
       const resources = resourceMap[sid] ?? [];
-      getOrderedActivityCenterFlowSteps(persisted, resources).forEach((step) => {
+      getOrderedActivityCenterFlowSteps(persisted, resources, studentFlowOpts).forEach((step) => {
         if (step.step_kind === 'assignment' && step.assignment_id) set.add(step.assignment_id);
       });
-      computeDefaultModuleFlow(sid, resources, assignments).forEach((c) => {
+      computeDefaultModuleFlow(sid, resources, assignments, studentFlowOpts).forEach((c) => {
         if (c.kind === 'assignment') set.add(c.assignment_id);
       });
     });
     return [...set];
-  }, [enabled, flowBulk, sectionIds, resourceMap, assignments]);
+  }, [enabled, flowBulk, sectionIds, resourceMap, assignments, studentFlowOpts]);
 
   const { data: flowMaps, isLoading: isLoadingAssignmentDone } = useAssignmentFlowProgressMaps(
     assignmentIdsInFlow,

@@ -1,5 +1,8 @@
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
-import { getOrderedActivityCenterFlowSteps } from '@/lib/moduleFlow';
+import {
+  getOrderedActivityCenterFlowSteps,
+  type OrderedActivityCenterFlowStepsOptions,
+} from '@/lib/moduleFlow';
 import { persistedStepDone, type StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 
 export type SectionModuleProgressStats = {
@@ -20,12 +23,13 @@ export function computeSectionModuleProgressStats(opts: {
   resources: SectionResource[];
   linkedAssignments: SectionModuleLinkedAssignmentRef[];
   flowCtx: StudentFlowProgressContext;
+  flowStepOptions?: OrderedActivityCenterFlowStepsOptions;
 }): SectionModuleProgressStats {
-  const { persistedSteps, resources, linkedAssignments, flowCtx } = opts;
+  const { persistedSteps, resources, linkedAssignments, flowCtx, flowStepOptions } = opts;
 
   const orderedFlow =
     persistedSteps.length > 0
-      ? getOrderedActivityCenterFlowSteps(persistedSteps, resources)
+      ? getOrderedActivityCenterFlowSteps(persistedSteps, resources, flowStepOptions)
       : [];
 
   if (orderedFlow.length > 0) {

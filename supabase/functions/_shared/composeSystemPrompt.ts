@@ -18,8 +18,69 @@ import {
   formatStudentPreferences,
   formatHardSkillsContext,
   formatCourseMaterials,
+  getPromptTemplate,
 } from './prompts.ts';
 import { getPerleapChatSkeleton } from '../shared/perleapChatCompletionRules.ts';
+
+/** Merged explain-task rules when DB template is unavailable (sync with migration). */
+const EXPLAIN_TASK_RULES_FALLBACK_EN = `TASK_EXPLANATION (this turn only)
+- The student already said they do NOT understand the assignment. Do NOT ask "Do you understand?" or similar comprehension quizzes.
+- In 2-4 short sentences, explain the overall goal AND briefly preview each task using the actual numbers and operation words from <assignment> (do not say "combining"; say "add"; do not say "very small numbers"; name them, e.g. "1 + 1, 1 x 1, 1 - 1").
+- Use plain wording the student would use; do not paraphrase the operations away.
+- End the message by asking the first task from <assignment> directly (e.g. "What is 1 + 1?"). Do NOT add a "ready to start" transition.
+- Always put a single space between words; never glue words together. Bad: "thesame", "moreitem", "threearithmetic". Good: "the same", "more item", "three arithmetic".
+- At most 4 sentences total, plain prose, no bullet lists.`;
+
+const EXPLAIN_TASK_RULES_FALLBACK_HE = `TASK_EXPLANATION (תור זה בלבד)
+- התלמיד/ה כבר אמר/ה שעדיין לא הבין/ה את המטלה. אל תשאלו "הבנת?" או בדיקות הבנה דומות.
+- ב-2-4 משפטים קצרים, הסבירו את המטרה הכללית וכן תנו תצוגה מקדימה קצרה של כל משימה באמצעות המספרים והפעולות המדויקות מ-<assignment> (אל תגידו "צירוף"; אמרו "חיבור"; אל תגידו "מספרים קטנים מאוד"; ציינו אותם, למשל "1 + 1, 1 × 1, 1 - 1").
+- השתמשו בשפה יומיומית שהתלמיד/ה ישתמש/תשתמש בה; אל תפרשו מחדש את הפעולות.
+- סיימו את ההודעה בשאלה של המשימה הראשונה מ-<assignment> ישירות (למשל "כמה זה 1 + 1?"). אל תוסיפו מעבר של "ספרו לי כשאתם מוכנים".
+- שמרו תמיד על רווח אחד בין מילים; אל תדביקו מילים. רע: "thesame", "moreitem", "threearithmetic". טוב: "the same", "more item", "three arithmetic".
+- עד 4 משפטים בסך הכל, פרוזה פשוטה, בלי רשימות.`;
+
+async function loadExplainTaskRules(language: string): Promise<string> {
+  const lang = (language ?? 'en').toLowerCase() === 'he' ? 'he' : 'en';
+  try {
+    return (await getPromptTemplate('chat_task_explanation_instruction', lang)).trim();
+  } catch {
+    return lang === 'he' ? EXPLAIN_TASK_RULES_FALLBACK_HE : EXPLAIN_TASK_RULES_FALLBACK_EN;
+  }
+}
+
+export async function explainTaskAppend(language: string): Promise<string> {
+  return loadExplainTaskRules(language);
+}
+
+/** Post-explain tutoring rules when DB template is unavailable (sync with migration). */
+export const POST_EXPLAIN_TUTOR_FALLBACK_EN = `POST_EXPLAIN_TUTOR (overrides scaffolding in TUTOR_TURN_PROTOCOL for this submission)
+- The student already received a plain-language overview of the whole assignment on the first message.
+- Do NOT re-teach each sub-task with analogies or step-by-step lessons before asking (no "1+1 means one finger plus another" unless they ask).
+- For each turn: target the FIRST INCOMPLETE task in <task_progress>; ask that task directly in the final sentence.
+- If the answer is correct: brief acknowledgment (one short sentence), then ask the next INCOMPLETE task.
+- If the answer is wrong: one short hint only, then re-ask the SAME task (no lecture).
+- If they ask for help or say they don't understand a specific part: explain only that part briefly, then re-ask.
+- Always put a single space between words; never glue words together. Bad: "thesame", "moreitem", "threearithmetic". Good: "the same", "more item", "three arithmetic".
+- Still at most 3 sentences, plain prose, no lists; still append <<<PROGRESS:[...]>>>; still use COMPLETION_PROTOCOL when all tasks done.`;
+
+export const POST_EXPLAIN_TUTOR_FALLBACK_HE = `POST_EXPLAIN_TUTOR (גובר על פיגום ב-TUTOR_TURN_PROTOCOL להגשה זו)
+- התלמיד/ה כבר קיבל/ה סקירה בשפה פשוטה של כל המטלה בהודעה הראשונה.
+- אל תלמדו מחדש כל תת-משימה באנלוגיות או שיעור שלב-אחר-שלב לפני השאלה (לא "1+1 זה אצבע ועוד אצבע" אלא אם מבקשים).
+- בכל תור: כוונו למשימה הראשונה שמסומנת INCOMPLETE ב-<task_progress>; שאלו אותה ישירות במשפט האחרון.
+- תשובה נכונה: אישור קצר (משפט אחד), ואז השאלה על המשימה הבאה ש-INCOMPLETE.
+- תשובה שגויה: רמז קצר אחד בלבד, ואז שאלו שוב את אותה משימה (בלי הרצאה).
+- אם מבקשים עזרה או שלא מבינים חלק מסוים: הסבירו רק את החלק הזה בקצרה, ואז שאלו שוב.
+- שמרו תמיד על רווח אחד בין מילים; אל תדביקו מילים. רע: "thesame", "moreitem", "threearithmetic". טוב: "the same", "more item", "three arithmetic".
+- עדיין עד 3 משפטים, פרוזה פשוטה, בלי רשימות; עדיין <<<PROGRESS:[...]>>>; עדיין COMPLETION_PROTOCOL כשהכל הושלם.`;
+
+export async function postExplainTutorAppend(language: string): Promise<string> {
+  const lang = (language ?? 'en').toLowerCase() === 'he' ? 'he' : 'en';
+  try {
+    return (await getPromptTemplate('chat_post_explain_tutor_instruction', lang)).trim();
+  } catch {
+    return lang === 'he' ? POST_EXPLAIN_TUTOR_FALLBACK_HE : POST_EXPLAIN_TUTOR_FALLBACK_EN;
+  }
+}
 
 export interface TaskProgressItem {
   /** 1-based index matching the order returned by parseAssignmentTasks. */
@@ -111,6 +172,8 @@ export async function composeSystemPrompt(input: ComposeSystemPromptInput): Prom
     assignmentTutorText,
   );
   const taskProgressBody = formatTaskProgressBody(taskProgress);
+  const unitMemory = unitMemoryExcerpt?.trim() ?? '';
+  const courseMemory = courseMemoryExcerpt?.trim() ?? '';
 
   const sections = [
     skeleton,
@@ -118,8 +181,8 @@ export async function composeSystemPrompt(input: ComposeSystemPromptInput): Prom
     tag('learner_preferences', learnerPrefs),
     tag('task_and_hard_skills', hardSkills),
     tag('course_materials', courseMaterials),
-    unitMemoryExcerpt?.trim() ? tag('unit_memory', unitMemoryExcerpt) : '',
-    courseMemoryExcerpt?.trim() ? tag('course_memory', courseMemoryExcerpt) : '',
+    unitMemory ? tag('unit_memory', unitMemory) : '',
+    courseMemory ? tag('course_memory', courseMemory) : '',
     taskProgressBody ? tag('task_progress', taskProgressBody) : '',
     tag('assignment', assignmentInstructionsBlock),
     tag('prior_context', priorContextExcerpt ?? ''),

@@ -43,17 +43,31 @@ The Perleap application now uses a database-driven approach for managing AI prom
 - **Variables**: None
 - **Used by**: `perleap-chat` function (when `isInitialGreeting=true`)
 
-### 5. `feedback_generation`
+### 5. `chat_task_explanation_instruction`
+- **Purpose**: Behavioral rules for the dedicated explain-task system prompt when the student clicks No on task understanding (`initialGreetingMode=explain_task`)
+- **Variables**: None
+- **Languages**: `en`, `he`
+- **Used by**: `explainTaskAppend` in `composeSystemPrompt.ts` (loaded via `getPromptTemplate`; code fallbacks `EXPLAIN_TASK_RULES_FALLBACK_*` if DB unavailable)
+- **Note**: Appended to the main tutor skeleton. Rules require a plain-language goal AND a brief preview of each task using the actual numbers and operation words from `<assignment>` (no "combining"; say "add"; no "very small numbers" - name them). The message ends with the first task question directly (no readiness step). Spacing reminder includes explicit bad/good pairs (e.g. `thesame`/`the same`, `moreitem`/`more item`, `threearithmetic`/`three arithmetic`). Edge `getPromptTemplate` caches templates for 5 minutes after deploy
+
+### 6. `chat_post_explain_tutor_instruction`
+- **Purpose**: Lighter tutoring after the explain-task first turn when the student chose No on task understanding (`postExplainTutoring=true` on chat requests)
+- **Variables**: None
+- **Languages**: `en`, `he`
+- **Used by**: `perleap-chat` appends via `postExplainTutorAppend` in `composeSystemPrompt.ts` (fallbacks `POST_EXPLAIN_TUTOR_FALLBACK_*`)
+- **Note**: Overrides step-by-step scaffolding in `TUTOR_TURN_PROTOCOL`; direct task questions, brief hint on wrong answers only. Spacing reminder uses the same explicit bad/good pairs as prompt #5.
+
+### 7. `feedback_generation`
 - **Purpose**: Generate student and teacher feedback
 - **Variables**: `studentName`, `teacherName`
 - **Used by**: `generate-feedback` function
 
-### 6. `five_d_scores`
+### 8. `five_d_scores`
 - **Purpose**: Generate 5D dimension scores
 - **Variables**: `studentName`
 - **Used by**: `generate-feedback` and `regenerate-scores` functions
 
-### 7. `wellbeing_analysis`
+### 9. `wellbeing_analysis`
 - **Purpose**: Analyze student wellbeing and detect concerning signs
 - **Variables**: `studentName`
 - **Used by**: `analyze-student-wellbeing` function

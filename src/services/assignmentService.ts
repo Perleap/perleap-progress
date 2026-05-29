@@ -207,19 +207,52 @@ export const ensureStudentFacingTask = async (
 };
 
 /**
+ * Draft generation before an assignment row exists (wizard create flow).
+ */
+export async function generateStudentFacingTaskDraft(
+  options: {
+    classroomId: string;
+    title: string;
+    instructions: string;
+    uiLanguage: 'he' | 'en';
+  },
+): Promise<string | null> {
+  if (!options.classroomId || !options.instructions.trim()) return null;
+  const lang = getAssignmentLanguage(options.instructions, options.uiLanguage);
+  const { data, error } = await supabase.functions.invoke<GenerateStudentFacingResponse>(
+    'generate-student-facing-task',
+    {
+      body: {
+        classroomId: options.classroomId,
+        title: options.title,
+        instructions: options.instructions,
+        language: lang,
+      },
+    },
+  );
+  if (error) {
+    console.warn('generateStudentFacingTaskDraft', error);
+    return null;
+  }
+  return data?.studentFacingTask?.trim() ?? null;
+}
+
+/**
  * When `student_facing_task` is still empty, generate and persist the cognitive task card (edge function; no-op if already set).
  * Call after create, or when saving an assignment without a hand-written student summary.
  */
 export async function prefillStudentFacingTaskForAssignment(
   assignmentId: string,
   options: { instructions: string; uiLanguage: 'he' | 'en' },
-): Promise<void> {
-  if (!assignmentId || !options.instructions.trim()) return;
+): Promise<string | null> {
+  if (!assignmentId || !options.instructions.trim()) return null;
   const lang = getAssignmentLanguage(options.instructions, options.uiLanguage);
-  const { error } = await ensureStudentFacingTask(assignmentId, lang);
+  const { data, error } = await ensureStudentFacingTask(assignmentId, lang);
   if (error) {
     console.warn('prefillStudentFacingTaskForAssignment', error);
+    return null;
   }
+  return data?.studentFacingTask?.trim() ?? null;
 }
 
 /**
@@ -327,8 +360,9 @@ export const createAssignment = async (
       const row = data as unknown as Assignment;
       const hasTask = Boolean(String(row.student_facing_task ?? '').trim());
       const inst = String(row.instructions ?? assignment.instructions ?? '');
-      if (!hasTask && inst.trim()) {
-        void prefillStudentFacingTaskForAssignment(data.id, {
+      const skipStudentFacingTask = assignment.type === 'live_session';
+      if (!skipStudentFacingTask && !hasTask && inst.trim()) {
+        await prefillStudentFacingTaskForAssignment(data.id, {
           instructions: inst,
           uiLanguage: 'en',
         });
@@ -384,7 +418,7 @@ export const updateAssignment = async (
           ? String(updates.instructions ?? '')
           : String(row.instructions ?? '');
       if (!hasTask && inst.trim()) {
-        void prefillStudentFacingTaskForAssignment(data.id, {
+        await prefillStudentFacingTaskForAssignment(data.id, {
           instructions: inst,
           uiLanguage: 'en',
         });

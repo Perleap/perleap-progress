@@ -17,9 +17,10 @@ import type {
   CoursePackageCourseV2,
   CoursePackageSectionV2,
   CoursePackageClassroomV1,
+  CoursePackageModuleFlowStepV2,
   PerleapCoursePackageV2,
 } from '@/types/coursePackage';
-import type { Syllabus, SyllabusStructureType, ResourceType, ActivityResourceStatus } from '@/types/syllabus';
+import type { Syllabus, SyllabusStructureType, ResourceType, ActivityResourceStatus, LessonContentV1 } from '@/types/syllabus';
 import type { CreateSyllabusSectionInput } from '@/types/syllabus';
 import type { Json } from '@/integrations/supabase/types';
 import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
@@ -111,8 +112,8 @@ function packageClassroomToUpdateMerge(cc: CoursePackageClassroomV1): Parameters
       ? (learningOutcomes as unknown as string[])
       : null,
     key_challenges: Array.isArray(keyChallenges) ? (keyChallenges as unknown as string[]) : null,
-    domains: cc.domains as Classroom['domains'],
-    materials: cc.materials as Classroom['materials'],
+    domains: cc.domains as unknown as Classroom['domains'],
+    materials: cc.materials as unknown as Classroom['materials'],
   };
 }
 
@@ -509,7 +510,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
               resource_type: act.resource_type as Parameters<typeof updateSectionResource>[1]['resource_type'],
               order_index: act.order_index,
               status: act.status as Parameters<typeof updateSectionResource>[1]['status'],
-              lesson_content: (act.lesson_content as Json | null) ?? null,
+              lesson_content: (act.lesson_content as unknown as LessonContentV1 | null) ?? null,
             });
             if (ua)
               return {
@@ -529,7 +530,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
               resource_type: act.resource_type as ResourceType,
               order_index: act.order_index,
               status: (act.status ?? 'published') as ActivityResourceStatus,
-              lesson_content: (act.lesson_content as Json | null) ?? null,
+              lesson_content: (act.lesson_content as unknown as LessonContentV1 | null) ?? null,
               summary: act.summary ?? null,
               body_text: act.body_text ?? null,
               file_path: act.file_path,
@@ -625,7 +626,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         personalization_flag: a.personalization_flag,
         auto_publish_ai_feedback: a.auto_publish_ai_feedback,
         attempt_mode: a.attempt_mode as Parameters<typeof updateAssignment>[1]['attempt_mode'],
-        materials: a.materials as Json | undefined,
+        materials: a.materials as unknown as Parameters<typeof updateAssignment>[1]['materials'],
         hard_skills: a.hard_skills,
         hard_skill_domain: a.hard_skill_domain ?? undefined,
       });

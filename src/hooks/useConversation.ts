@@ -3,10 +3,10 @@
  * Custom hook for managing assignment conversations
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/api/client';
-import { sendChatMessage, streamChatMessage } from '@/services';
-import type { Message, ApiError, ChatRequest, ChatDebugPayload } from '@/types';
+import { streamChatMessage } from '@/services';
+import type { Message, ApiError, ChatRequest, ChatDebugPayload, InitialGreetingMode } from '@/types';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
@@ -22,7 +22,7 @@ interface UseConversationResult {
   language: string;
   lastAssistantDebug: ChatDebugPayload | null;
   sendMessage: (content: string, fileContext?: { name: string; content: string; url?: string; type?: string }) => Promise<void>;
-  initializeConversation: () => Promise<void>;
+  initializeConversation: (mode?: InitialGreetingMode) => Promise<void>;
 }
 
 interface UseConversationParams {
@@ -35,6 +35,12 @@ interface UseConversationParams {
   companionMode?: boolean;
   /** App admins only; server verifies `is_app_admin` before returning debug payloads. */
   debugChat?: boolean;
+  /** When false, empty conversations are not auto-started until `autoInitialize` becomes true. */
+  autoInitialize?: boolean;
+  /** First greeting mode when auto-initializing (e.g. after task-understanding confirmation). */
+  initialGreetingMode?: InitialGreetingMode;
+  /** Lighter tutoring on follow-up turns after task-explanation overview. */
+  postExplainTutoring?: boolean;
 }
 
 /**
@@ -47,6 +53,9 @@ export const useConversation = ({
   priorSubmissionIds,
   companionMode = false,
   debugChat = false,
+  autoInitialize = true,
+  initialGreetingMode = 'default',
+  postExplainTutoring = false,
 }: UseConversationParams): UseConversationResult => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationEnded, setConversationEnded] = useState(false);
@@ -54,18 +63,115 @@ export const useConversation = ({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [lastAssistantDebug, setLastAssistantDebug] = useState<ChatDebugPayload | null>(null);
-  const hasInitialized = useRef(false);
+  const hasLoadedSubmission = useRef(false);
+  const loadCompletedRef = useRef(false);
+  const initInFlightRef = useRef(false);
+  const initScheduledRef = useRef(false);
+  /** Bumped on submission change / unmount so stale stream callbacks are ignored. */
+  const streamGenerationRef = useRef(0);
+  const autoInitializeRef = useRef(autoInitialize);
+  const initialGreetingModeRef = useRef(initialGreetingMode);
+  const postExplainTutoringRef = useRef(postExplainTutoring);
+  autoInitializeRef.current = autoInitialize;
+  initialGreetingModeRef.current = initialGreetingMode;
+  postExplainTutoringRef.current = postExplainTutoring;
   const priorSubmissionIdsRef = useRef<string[] | undefined>(priorSubmissionIds);
   priorSubmissionIdsRef.current = priorSubmissionIds;
   const { language: uiLanguage } = useLanguage();
-  
-  // Detect language from assignment instructions
+
   const language = getAssignmentLanguage(assignmentInstructions, uiLanguage);
 
-  /**
-   * Load existing conversation from database
-   */
-  const loadConversation = async () => {
+  const appendAssistantStreamToken = useCallback((streamGen: number, token: string) => {
+    if (streamGen !== streamGenerationRef.current) return;
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.role === 'assistant') {
+        const nextContent = last.content + token;
+        return [...prev.slice(0, -1), { ...last, content: nextContent }];
+      }
+      return prev;
+    });
+  }, []);
+
+  /** Replace the last assistant message body atomically (used for post-stream polish frame). */
+  const replaceLastAssistantContent = useCallback((streamGen: number, polished: string) => {
+    if (streamGen !== streamGenerationRef.current) return;
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.role === 'assistant') {
+        return [...prev.slice(0, -1), { ...last, content: polished }];
+      }
+      return prev;
+    });
+  }, []);
+
+  const initializeConversation = useCallback(
+    async (mode: InitialGreetingMode = 'default') => {
+      if (initInFlightRef.current) {
+        return;
+      }
+      initInFlightRef.current = true;
+      const streamGen = streamGenerationRef.current;
+      setSending(true);
+      try {
+        const request: ChatRequest = {
+          message: '',
+          submissionId,
+          assignmentId,
+          isInitialGreeting: true,
+          initialGreetingMode: mode,
+          language,
+          ...(priorSubmissionIdsRef.current?.length
+            ? { priorSubmissionIds: priorSubmissionIdsRef.current }
+            : {}),
+          ...(debugChat ? { debugChat: true } : {}),
+          ...(postExplainTutoringRef.current ? { postExplainTutoring: true } : {}),
+        };
+
+        const aiMessage: Message = { role: 'assistant', content: '' };
+        setMessages([aiMessage]);
+        setLastAssistantDebug(null);
+
+        const { data: endData, error: chatError } = await streamChatMessage(
+          request,
+          (token) => {
+            appendAssistantStreamToken(streamGen, token);
+          }
+        );
+
+        if (streamGen !== streamGenerationRef.current) {
+          return;
+        }
+
+        if (chatError) {
+          setError(chatError);
+          toast.error('Error starting conversation');
+          setMessages([]);
+          return;
+        }
+        if (endData?.debug) {
+          setLastAssistantDebug(endData.debug);
+        }
+        if (endData?.shouldEnd && !companionMode) {
+          setConversationEnded(true);
+        }
+      } catch {
+        if (streamGen === streamGenerationRef.current) {
+          toast.error('Error starting conversation');
+        }
+      } finally {
+        if (streamGen === streamGenerationRef.current) {
+          initInFlightRef.current = false;
+          setSending(false);
+          setLoading(false);
+        }
+      }
+    },
+    [submissionId, assignmentId, language, debugChat, companionMode, appendAssistantStreamToken],
+  );
+
+  const loadConversation = useCallback(async () => {
+    loadCompletedRef.current = false;
     try {
       const { data, error: fetchError } = await supabase
         .from('assignment_conversations')
@@ -79,7 +185,7 @@ export const useConversation = ({
 
       if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         const rawMessages = data.messages as unknown as Message[];
-        const lastAssistantRaw = [...rawMessages].reverse().find(m => m.role === 'assistant');
+        const lastAssistantRaw = [...rawMessages].reverse().find((m) => m.role === 'assistant');
         if (lastAssistantRaw && !companionMode) {
           const upperContent = String(lastAssistantRaw.content).toUpperCase();
           const semanticPhrases = [
@@ -118,76 +224,27 @@ export const useConversation = ({
         }
         const loadedMessages = rehydrateMessages(rawMessages);
         setMessages(loadedMessages);
-      } else {
-        await initializeConversation();
       }
-    } catch (err) {
+      // Empty conversation: greeting is started only by the autoInitialize effect (single init path).
+    } catch {
       toast.error('Error loading conversation');
     } finally {
       setLoading(false);
+      loadCompletedRef.current = true;
     }
-  };
+  }, [submissionId, companionMode]);
 
-  /**
-   * Initialize conversation with AI greeting (Streaming)
-   */
-  const initializeConversation = async () => {
-    setSending(true);
-    try {
-      const request: ChatRequest = {
-        message: '',
-        submissionId,
-        assignmentId,
-        isInitialGreeting: true,
-        language,
-        ...(priorSubmissionIdsRef.current?.length
-          ? { priorSubmissionIds: priorSubmissionIdsRef.current }
-          : {}),
-        ...(debugChat ? { debugChat: true } : {}),
-      };
+  const loadConversationRef = useRef(loadConversation);
+  loadConversationRef.current = loadConversation;
 
-      const aiMessage: Message = { role: 'assistant', content: '' };
-      setMessages([aiMessage]);
-      setLastAssistantDebug(null);
-
-      const { data: endData, error: chatError } = await streamChatMessage(request, (token) => {
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last && last.role === 'assistant') {
-            const nextContent = last.content + token;
-            return [...prev.slice(0, -1), { ...last, content: nextContent }];
-          }
-          return prev;
-        });
-      });
-
-      if (chatError) {
-        setError(chatError);
-        toast.error('Error starting conversation');
-        setMessages([]); // Remove the empty assistant message
-        return;
-      }
-      if (endData?.debug) {
-        setLastAssistantDebug(endData.debug);
-      }
-      if (endData?.shouldEnd && !companionMode) {
-        setConversationEnded(true);
-      }
-    } catch (err) {
-      toast.error('Error starting conversation');
-    } finally {
-      setSending(false);
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Send a user message (Streaming)
-   */
-  const sendMessage = async (content: string, fileContext?: { name: string; content: string; url?: string; type?: string }) => {
+  const sendMessage = async (
+    content: string,
+    fileContext?: { name: string; content: string; url?: string; type?: string },
+  ) => {
     if (!content.trim() && !fileContext) return;
 
     const userMessage: Message = { role: 'user', content, fileContext };
+    const streamGen = streamGenerationRef.current;
     setMessages((prev) => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setSending(true);
     setLastAssistantDebug(null);
@@ -203,23 +260,24 @@ export const useConversation = ({
           ? { priorSubmissionIds: priorSubmissionIdsRef.current }
           : {}),
         ...(debugChat ? { debugChat: true } : {}),
+        ...(postExplainTutoringRef.current ? { postExplainTutoring: true } : {}),
       };
 
-      const { data, error: chatError } = await streamChatMessage(request, (token) => {
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last && last.role === 'assistant') {
-            return [...prev.slice(0, -1), { ...last, content: last.content + token }];
-          }
-          return prev;
-        });
-      });
+      const { data, error: chatError } = await streamChatMessage(
+        request,
+        (token) => {
+          appendAssistantStreamToken(streamGen, token);
+        }
+      );
+
+      if (streamGen !== streamGenerationRef.current) {
+        return;
+      }
 
       if (chatError) {
         setError(chatError);
         toast.error('Error communicating with Perleap agent');
-        // Remove the empty assistant message, keep user message for retry/copy
-        setMessages(prev => prev.slice(0, -1));
+        setMessages((prev) => prev.slice(0, -1));
         return;
       }
 
@@ -230,7 +288,7 @@ export const useConversation = ({
       if (data?.shouldEnd && !companionMode) {
         setConversationEnded(true);
       }
-    } catch (err) {
+    } catch {
       toast.error('Error sending message');
     } finally {
       setSending(false);
@@ -238,15 +296,39 @@ export const useConversation = ({
   };
 
   useEffect(() => {
-    if (!hasInitialized.current) {
-      hasInitialized.current = true;
-      loadConversation();
+    if (!hasLoadedSubmission.current) {
+      hasLoadedSubmission.current = true;
+      void loadConversationRef.current();
     }
 
     return () => {
-      hasInitialized.current = false;
+      streamGenerationRef.current += 1;
+      initInFlightRef.current = false;
+      initScheduledRef.current = false;
+      hasLoadedSubmission.current = false;
+      loadCompletedRef.current = false;
     };
   }, [submissionId]);
+
+  /** Start greeting when task-understanding gate opens (autoInitialize false → true). */
+  useEffect(() => {
+    if (!autoInitialize || !loadCompletedRef.current || loading || sending || initInFlightRef.current) {
+      return;
+    }
+    if (messages.length > 0) return;
+    if (initScheduledRef.current) return;
+    initScheduledRef.current = true;
+    void initializeConversation(initialGreetingModeRef.current).finally(() => {
+      initScheduledRef.current = false;
+    });
+  }, [autoInitialize, loading, sending, messages.length, initializeConversation]);
+
+  const initializeConversationExposed = useCallback(
+    async (mode: InitialGreetingMode = 'default') => {
+      await initializeConversation(mode);
+    },
+    [initializeConversation],
+  );
 
   return {
     messages,
@@ -257,6 +339,6 @@ export const useConversation = ({
     language,
     lastAssistantDebug,
     sendMessage,
-    initializeConversation,
+    initializeConversation: initializeConversationExposed,
   };
 };

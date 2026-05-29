@@ -15,6 +15,8 @@ import StudentOnboarding from './pages/onboarding/StudentOnboarding';
 import RoleSelection from './pages/RoleSelection';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import ClassroomDetail from './pages/teacher/ClassroomDetail';
+import LessonBriefPage from './pages/teacher/LessonBriefPage';
+import LiveSessionPage from './pages/teacher/LiveSessionPage';
 import SubmissionDetail from './pages/teacher/SubmissionDetail';
 import TeacherSettings from './pages/teacher/TeacherSettings';
 import Planner from './pages/teacher/Planner';
@@ -108,6 +110,22 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredRole="teacher">
                       <ClassroomDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/classroom/:id/lesson-brief"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <LessonBriefPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/classroom/:id/live-session/:assignmentId"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <LiveSessionPage />
                     </ProtectedRoute>
                   }
                 />

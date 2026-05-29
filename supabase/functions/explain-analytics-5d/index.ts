@@ -181,7 +181,10 @@ Return ONLY valid JSON with this exact shape (no markdown):
     "connection": "...",
     "action": "..."
   },
-  "scopeSummary": "A detailed paragraph (4-6 sentences) summarizing the overall 5D pattern for this scope and filter: ${filterSummary || '(no extra filter)'}. Highlight specific strengths and weaknesses based on the evidence, and provide 1-2 actionable recommendations for the teacher."
+  "scopeSummary": "A detailed paragraph (4-6 sentences) summarizing the overall 5D pattern for this scope and filter: ${filterSummary || '(no extra filter)'}.",
+  "strengths": ["Strength 1 based on evidence", "Strength 2..."],
+  "weaknesses": ["Area for improvement 1", "Area for improvement 2..."],
+  "nextSteps": ["Actionable recommendation 1 for the teacher", "Recommendation 2..."]
 }
 Be specific to the numbers; avoid generic filler.`;
 
@@ -243,6 +246,9 @@ ${evidenceText}`
     const parsed = JSON.parse(content) as {
       explanations?: Record<string, string>;
       scopeSummary?: string;
+      strengths?: string[];
+      weaknesses?: string[];
+      nextSteps?: string[];
     };
 
     const expl = parsed.explanations || {};
@@ -259,10 +265,17 @@ ${evidenceText}`
         ? parsed.scopeSummary.trim()
         : '';
 
+    const strengths = Array.isArray(parsed.strengths) ? parsed.strengths.filter(s => typeof s === 'string' && s.trim()) : [];
+    const weaknesses = Array.isArray(parsed.weaknesses) ? parsed.weaknesses.filter(s => typeof s === 'string' && s.trim()) : [];
+    const nextSteps = Array.isArray(parsed.nextSteps) ? parsed.nextSteps.filter(s => typeof s === 'string' && s.trim()) : [];
+
     return new Response(
       JSON.stringify({
         explanations,
         scopeSummary,
+        strengths,
+        weaknesses,
+        nextSteps,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

@@ -17,7 +17,10 @@ import {
   getLinkedActivitiesForAssignment,
   getSectionResourceIdsForSectionInOrder,
 } from '@/services/assignmentModuleActivityService';
-import { prefillStudentFacingTaskForAssignment } from '@/services/assignmentService';
+import {
+  generateStudentFacingTaskDraft,
+  prefillStudentFacingTaskForAssignment,
+} from '@/services/assignmentService';
 import {
   useSyllabus,
   syllabusKeys,
@@ -928,11 +931,22 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       }
 
       if (isCreate && classroomId) {
+        let studentFacingTaskForInsert = formData.student_facing_task.trim();
+        if (!studentFacingTaskForInsert && formData.instructions.trim()) {
+          const generated = await generateStudentFacingTaskDraft({
+            classroomId,
+            title: formData.title,
+            instructions: formData.instructions,
+            uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
+          });
+          if (generated) studentFacingTaskForInsert = generated;
+        }
+
         const insertRow: Database['public']['Tables']['assignments']['Insert'] = {
           classroom_id: classroomId,
           title: formData.title,
           instructions: formData.instructions,
-          student_facing_task: formData.student_facing_task.trim() || null,
+          student_facing_task: studentFacingTaskForInsert || null,
           type: formData.type as Database['public']['Enums']['assignment_type'],
           due_at: dueAtLocalInputToIso(formData.due_at),
           attempt_mode: formData.attempt_mode,
@@ -991,8 +1005,12 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           if (questionsError) console.error('Error inserting test questions:', questionsError);
         }
 
-        if (assignmentRow?.id && !formData.student_facing_task?.trim() && formData.instructions?.trim()) {
-          void prefillStudentFacingTaskForAssignment(assignmentRow.id, {
+        if (
+          assignmentRow?.id &&
+          !studentFacingTaskForInsert &&
+          formData.instructions?.trim()
+        ) {
+          await prefillStudentFacingTaskForAssignment(assignmentRow.id, {
             instructions: formData.instructions,
             uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
           });
@@ -1115,7 +1133,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         if (error) throw error;
 
         if (!formData.student_facing_task?.trim() && formData.instructions?.trim()) {
-          void prefillStudentFacingTaskForAssignment(assignment.id, {
+          await prefillStudentFacingTaskForAssignment(assignment.id, {
             instructions: formData.instructions,
             uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
           });

@@ -6,14 +6,14 @@ import type { ApiError } from '@/types';
 import type { Classroom } from '@/types/models';
 import type {
   CoursePackageClassroomV1,
+  CoursePackageActivityV1,
+  CoursePackageAssignmentV1,
+  CoursePackageSectionV1,
   PerleapCoursePackageV1,
   PerleapCoursePackageV2,
 } from '@/types/coursePackage';
 import type { CreateAssignmentInput } from '@/types/api.types';
 import type {
-  CoursePackageActivityV1,
-  CoursePackageAssignmentV1,
-  CoursePackageSectionV1,
   Syllabus,
   SyllabusPolicy,
   SyllabusPolicyType,
@@ -103,7 +103,7 @@ export async function gatherCourseExportData(
     const input: BuildCoursePackageInput = {
       classroom: classroom as Record<string, unknown>,
       syllabus,
-      assignments: assignments as Array<Record<string, unknown>>,
+      assignments: assignments as unknown as Array<Record<string, unknown>>,
       moduleFlowSteps: moduleFlowSteps ?? [],
       assignmentModuleActivitiesByAssignmentId,
       sourceClassroomName: String((classroom as { name?: string }).name ?? ''),
@@ -270,7 +270,7 @@ export async function applyCoursePackageContentToClassroom(
         type: normalizeAssignmentTypeForImport(a.type),
         due_at: a.due_at,
         status: a.status,
-        target_dimensions: a.target_dimensions as CreateAssignmentInput['target_dimensions'],
+        target_dimensions: a.target_dimensions as unknown as CreateAssignmentInput['target_dimensions'],
         personalization_flag: a.personalization_flag,
         auto_publish_ai_feedback: a.auto_publish_ai_feedback,
         attempt_mode: (a.attempt_mode ?? undefined) as CreateAssignmentInput['attempt_mode'],
@@ -463,8 +463,8 @@ function packageClassroomToUpdatePayload(
       ? (learningOutcomes as unknown as string[])
       : null,
     key_challenges: Array.isArray(keyChallenges) ? (keyChallenges as unknown as string[]) : null,
-    domains: cc.domains as Classroom['domains'],
-    materials: cc.materials as Classroom['materials'],
+    domains: cc.domains as unknown as Classroom['domains'],
+    materials: cc.materials as unknown as Classroom['materials'],
   };
 }
 /**
@@ -529,8 +529,8 @@ export async function importCoursePackageV1(
         ? (learningOutcomes as unknown as string[])
         : null,
       key_challenges: Array.isArray(keyChallenges) ? (keyChallenges as unknown as string[]) : null,
-      domains: cc.domains as Classroom['domains'],
-      materials: cc.materials as Classroom['materials'],
+      domains: cc.domains as unknown as Classroom['domains'],
+      materials: cc.materials as unknown as Classroom['materials'],
     };
     const { data: classroom, error: crErr } = await createClassroom(classroomInsert);
     if (crErr || !classroom) {

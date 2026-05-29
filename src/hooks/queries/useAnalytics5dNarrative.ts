@@ -47,7 +47,7 @@ export function useAnalytics5dNarrative(
       : ['analytics5dNarrative', 'disabled', options.narrativeId],
     queryFn: async () => {
       if (!input) {
-        return { explanations: null, scopeSummary: null };
+        return { explanations: null, scopeSummary: null, strengths: [], weaknesses: [], nextSteps: [] };
       }
       return invokeExplainAnalytics5d(input);
     },

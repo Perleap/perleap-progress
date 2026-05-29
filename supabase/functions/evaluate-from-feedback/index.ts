@@ -37,6 +37,7 @@ serve(async (req) => {
       assignmentId,
       teacherFeedback,
       language = 'en',
+      sessionContext,
     } = await req.json();
 
     if (!submissionId || !studentId || !assignmentId || !teacherFeedback) {
@@ -70,12 +71,18 @@ serve(async (req) => {
 
     const langLabel = language === 'he' ? 'Hebrew' : 'English';
 
+    const sessionContextBlock =
+      typeof sessionContext === 'string' && sessionContext.trim()
+        ? `\nSession context (transcript/summary of the recorded session this evaluation is based on):\n${sessionContext.trim().slice(0, 8000)}\n`
+        : '';
+
     const feedbackPrompt = `You are an expert pedagogical AI assistant. A teacher has manually reviewed a student's work and provided written feedback. Based on the teacher's assessment, generate 5D scores and structured feedback.
 
 Student: ${studentName}
 Assignment: ${assignmentData?.title}
 Assignment Type: ${assignmentData?.type}
 Instructions: ${assignmentData?.instructions}
+${sessionContextBlock}
 
 Generate your response in the following JSON format:
 {
@@ -99,6 +106,7 @@ Generate your response in the following JSON format:
 Rules:
 - Respond in ${langLabel}.
 - Base scores on the teacher's feedback, not your own assessment.
+- Use the session context only as supporting background to interpret the teacher's feedback; do not invent assessments it does not support.
 - Be concise but insightful.`;
 
     const hardSkillsPrompt = `Based on a teacher's review of a student's work, assess specific hard skills.

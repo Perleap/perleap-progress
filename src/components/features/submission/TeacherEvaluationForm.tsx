@@ -13,6 +13,8 @@ interface TeacherEvaluationFormProps {
   studentId: string;
   assignmentId: string;
   onEvaluationComplete: () => void;
+  /** Optional extra context (e.g. live session transcript/summary) to ground the AI scoring. */
+  sessionContext?: string;
 }
 
 export function TeacherEvaluationForm({
@@ -20,6 +22,7 @@ export function TeacherEvaluationForm({
   studentId,
   assignmentId,
   onEvaluationComplete,
+  sessionContext,
 }: TeacherEvaluationFormProps) {
   const { t } = useTranslation();
   const { language, isRTL } = useLanguage();
@@ -68,6 +71,7 @@ export function TeacherEvaluationForm({
           assignmentId,
           teacherFeedback: feedback.trim(),
           language: language || 'en',
+          ...(sessionContext ? { sessionContext } : {}),
         },
       });
 

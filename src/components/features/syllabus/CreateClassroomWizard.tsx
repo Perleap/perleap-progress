@@ -194,7 +194,7 @@ export const CreateClassroomWizard = ({
         return;
       }
       const parsed = parseCoursePackageJson(json);
-      if (!parsed.ok) {
+      if (parsed.ok === false) {
         toast.error(t('coursePackage.importFailed'), { description: parsed.error });
         return;
       }

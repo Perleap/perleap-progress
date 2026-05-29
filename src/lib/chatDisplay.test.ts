@@ -5,6 +5,7 @@ import {
   normalizePerleapIntroParagraphBreaks,
   splitAssistantMessageIntoSentences,
   splitChatDisplayText,
+  splitExplainTaskDisplayText,
   splitPerleapIntroDisplayText,
 } from '@/lib/chatDisplay';
 
@@ -100,6 +101,15 @@ describe('splitPerleapIntroDisplayText', () => {
       "Hello! I am Perleap, Dor Abookasis's AI teaching assistant.\nWhat is 1 + 1?";
     expect(normalizePerleapIntroParagraphBreaks(singleNl)).toContain('\n\n');
     expect(splitPerleapIntroDisplayText(singleNl)).toHaveLength(2);
+  });
+});
+
+describe('splitExplainTaskDisplayText', () => {
+  it('returns one segment for multi-sentence explain-task reply', () => {
+    const t =
+      'You will practice basic arithmetic with small numbers. Tell me when you are ready to start.';
+    expect(splitExplainTaskDisplayText(t)).toEqual([t]);
+    expect(splitChatDisplayText(t)).toHaveLength(2);
   });
 });
 

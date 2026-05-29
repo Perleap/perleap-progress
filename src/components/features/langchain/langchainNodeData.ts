@@ -106,8 +106,15 @@ export function defaultDataForLangchainNodeType(type: LangchainNodeType): Langch
   }
 }
 
+/** Minimal node shape accepted by ensureLangchainNodeData (NodeProps or full Node). */
+type LangchainNodeLike = {
+  id?: string;
+  type?: string;
+  data?: Record<string, unknown>;
+};
+
 /** Merge saved node `data` with defaults so inspector always has full shape. */
-export function ensureLangchainNodeData(node: Node): Node {
+export function ensureLangchainNodeData<T extends LangchainNodeLike>(node: T): T {
   const t = node.type;
   if (!isLangchainNodeType(t)) return node;
   const base = defaultDataForLangchainNodeType(t);

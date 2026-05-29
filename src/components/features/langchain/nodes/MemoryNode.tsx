@@ -7,7 +7,7 @@ import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainMemory
 
 function MemoryNodeComponent(node: NodeProps) {
   const { t } = useTranslation();
-  const data = ensureLangchainNodeData(node as Node).data as LangchainMemoryNodeData;
+  const data = ensureLangchainNodeData(node).data as LangchainMemoryNodeData;
   const strategy = data.strategy;
 
   const desc = truncateLangchainPreview(data.description || data.label);

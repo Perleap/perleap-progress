@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -35,6 +35,7 @@ import { isSectionUnlocked, type SectionSequentialUnlockFlow } from '@/lib/secti
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  studentModuleFlowStepOptions,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
 import {
@@ -174,6 +175,11 @@ export function StudentActivitiesSection({
 
   const assignRows = assignments as AssignmentRow[];
 
+  const studentFlowOpts = useMemo(
+    () => studentModuleFlowStepOptions(assignments as Assignment[]),
+    [assignments],
+  );
+
   const classroomAssignmentIdSet = useMemo(
     () => new Set(assignRows.map((a) => a.id)),
     [assignRows],
@@ -233,10 +239,11 @@ export function StudentActivitiesSection({
         resources: resourceMap[s.id] ?? [],
         linkedAssignments: linkedAssignmentsMap[s.id] ?? [],
         flowCtx,
+        flowStepOptions: studentFlowOpts,
       }).percent;
     }
     return map;
-  }, [sections, flowBulk, resourceMap, linkedAssignmentsMap, flowCtx]);
+  }, [sections, flowBulk, resourceMap, linkedAssignmentsMap, flowCtx, studentFlowOpts]);
 
   const [moduleOpenOverrideById, setModuleOpenOverrideById] = useState<Record<string, boolean>>(
     {},
@@ -421,8 +428,17 @@ export function StudentActivitiesSection({
           (progressState === 'in_progress' || progressState === 'reviewed') &&
           !showFlowCheck &&
           unlocked;
-        const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, sectionResources);
-        const computed = computeDefaultModuleFlow(section.id, sectionResources, assignRows);
+        const orderedPersisted = getOrderedActivityCenterFlowSteps(
+          persisted,
+          sectionResources,
+          studentFlowOpts,
+        );
+        const computed = computeDefaultModuleFlow(
+          section.id,
+          sectionResources,
+          assignRows,
+          studentFlowOpts,
+        );
 
         const usePersisted = orderedPersisted.length > 0;
         const steps = usePersisted ? orderedPersisted : null;
@@ -581,10 +597,7 @@ export function StudentActivitiesSection({
                                 aria-label={rowAria}
                               >
                                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                                <CurriculumAssignmentTypeIcon
-                                  type={a?.type}
-                                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                                />
+                                <CurriculumAssignmentTypeIcon type={a?.type} />
                                 <span className="text-muted-foreground">{label}</span>
                               </div>
                             </li>
@@ -633,10 +646,7 @@ export function StudentActivitiesSection({
                               aria-label={rowAria}
                             >
                               <Lock className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                              <CurriculumAssignmentTypeIcon
-                                type={a?.type}
-                                className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                              />
+                              <CurriculumAssignmentTypeIcon type={a?.type} />
                               <span className="text-muted-foreground">{label}</span>
                             </div>
                           </li>
@@ -730,7 +740,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                                  <FileText size={14} strokeWidth={2} className="shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </span>
                               ) : (
@@ -742,7 +752,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                                  <FileText size={14} strokeWidth={2} className="shrink-0" />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}
@@ -834,7 +844,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} />
                                   <span className="truncate">{label}</span>
                                 </span>
                               ) : (
@@ -842,12 +852,11 @@ export function StudentActivitiesSection({
                                   to={`/student/assignment/${step.assignment_id}`}
                                   state={{ returnClassroomSection: 'curriculum' }}
                                   className={cn(
-                                    buttonVariants({ variant: 'link', size: 'default' }),
-                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
+                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base font-medium text-foreground hover:underline',
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}
@@ -959,7 +968,7 @@ export function StudentActivitiesSection({
                                       isActiveHighlight && 'font-semibold',
                                     )}
                                   >
-                                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                                    <FileText size={14} strokeWidth={2} className="shrink-0" />
                                     <span className="truncate">{label}</span>
                                   </span>
                                 ) : (
@@ -971,7 +980,7 @@ export function StudentActivitiesSection({
                                       isActiveHighlight && 'font-semibold',
                                     )}
                                   >
-                                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                                    <FileText size={14} strokeWidth={2} className="shrink-0" />
                                     <span className="truncate">{label}</span>
                                   </Link>
                                 )}
@@ -1064,7 +1073,7 @@ export function StudentActivitiesSection({
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} />
                                   <span className="truncate">{label}</span>
                                 </span>
                               ) : (
@@ -1072,12 +1081,11 @@ export function StudentActivitiesSection({
                                   to={`/student/assignment/${c.assignment_id}`}
                                   state={{ returnClassroomSection: 'curriculum' }}
                                   className={cn(
-                                    buttonVariants({ variant: 'link', size: 'default' }),
-                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base',
+                                    'inline-flex h-auto min-h-0 max-w-full items-center gap-1 p-0 text-base font-medium text-foreground hover:underline',
                                     isActiveHighlight && 'font-semibold',
                                   )}
                                 >
-                                  <CurriculumAssignmentTypeIcon type={a?.type} className="h-3.5 w-3.5 shrink-0" />
+                                  <CurriculumAssignmentTypeIcon type={a?.type} />
                                   <span className="truncate">{label}</span>
                                 </Link>
                               )}

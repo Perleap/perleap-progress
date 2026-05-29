@@ -2,6 +2,7 @@ import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
+  studentModuleFlowStepOptions,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
 
@@ -16,18 +17,19 @@ export function deriveStudentTimelineFlowPrefetchIndices(args: {
   assigns: AssignmentRow[];
 }): { allStepIds: string[]; assignmentIdsSortedJoin: string } {
   const { sectionIds, resourceMap, flowBulk, assigns } = args;
+  const studentFlowOpts = studentModuleFlowStepOptions(assigns);
   const allStepIds: string[] = [];
   const assignmentIds = new Set<string>();
 
   sectionIds.forEach((sid) => {
     const persisted = flowBulk[sid] ?? [];
     const resources = resourceMap[sid] ?? [];
-    const ordered = getOrderedActivityCenterFlowSteps(persisted, resources);
+    const ordered = getOrderedActivityCenterFlowSteps(persisted, resources, studentFlowOpts);
     ordered.forEach((s) => {
       allStepIds.push(s.id);
       if (s.step_kind === 'assignment' && s.assignment_id) assignmentIds.add(s.assignment_id);
     });
-    computeDefaultModuleFlow(sid, resources, assigns).forEach((c) => {
+    computeDefaultModuleFlow(sid, resources, assigns, studentFlowOpts).forEach((c) => {
       if (c.kind === 'assignment') assignmentIds.add(c.assignment_id);
     });
   });

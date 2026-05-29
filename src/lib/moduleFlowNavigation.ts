@@ -7,6 +7,7 @@ import {
   resolveDisplayedModuleFlow,
   type AssignmentRow,
   type ComputedFlowItem,
+  type OrderedActivityCenterFlowStepsOptions,
 } from '@/lib/moduleFlow';
 import type { ModuleFlowStep, SectionResource, SyllabusSection } from '@/types/syllabus';
 
@@ -49,12 +50,14 @@ export function getFirstNavigableInSection(params: {
   sectionResources: SectionResource[];
   assignments: AssignmentRow[];
   persistedSteps: ModuleFlowStep[];
+  flowStepOptions?: OrderedActivityCenterFlowStepsOptions;
 }): FlowStepTarget | null {
   const local = resolveDisplayedModuleFlow(
     params.sectionId,
     params.sectionResources,
     params.assignments,
     params.persistedSteps,
+    params.flowStepOptions,
   );
   const first = local[0];
   if (!first) return null;

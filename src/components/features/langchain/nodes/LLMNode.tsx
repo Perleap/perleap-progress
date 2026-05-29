@@ -5,7 +5,7 @@ import { Brain } from 'lucide-react';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainLlmNodeData } from '../langchainNodeData';
 
 function LLMNodeComponent(node: NodeProps) {
-  const data = ensureLangchainNodeData(node as Node).data as LangchainLlmNodeData;
+  const data = ensureLangchainNodeData(node).data as LangchainLlmNodeData;
   const subtitle = truncateLangchainPreview(data.systemOrRoleNote || '', 72);
 
   return (

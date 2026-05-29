@@ -30,6 +30,12 @@ export function stripConversationCompleteMarker(text: string): string {
     .trim();
 }
 
+/** Remove hidden per-turn progress trailer (must stay in sync with progressSink.ts). */
+export function stripProgressMarker(text: string): string {
+  if (!text) return text;
+  return text.replace(/<<<PRO\s*GRESS:\s*\[[^\]]*\]>>>/gi, '').trimEnd();
+}
+
 /**
  * Return true if raw assistant content contains the completion marker (any casing).
  */
@@ -58,6 +64,18 @@ export function normalizePerleapIntroParagraphBreaks(text: string): string {
     /^((?:Hello! I am Perleap,[\s\S]+?assistant\.)|(?:שלום! אני Perleap,[\s\S]+?\.))\n(?!\n)/u,
     '$1\n\n',
   );
+}
+
+/**
+ * Display split for the first explain-task reply (student chose "don't understand"): one bubble.
+ */
+export function splitExplainTaskDisplayText(
+  text: string,
+  _options?: SplitChatDisplayOptions,
+): string[] {
+  const raw = (text || '').trim();
+  if (!raw) return [];
+  return [raw];
 }
 
 /**

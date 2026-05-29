@@ -14,6 +14,7 @@ import {
   Info,
   Download,
   GitCompare,
+  Presentation,
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -60,12 +61,6 @@ import {
 } from '@/lib/analytics5dEvidence';
 import { runPool } from '@/lib/asyncPool';
 import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
-import {
-  buildLessonBriefPdfBlob,
-  countStudentCompletedAssignmentsInScope,
-  type LessonBriefPdfStrings,
-  type LessonBriefRosterBaseRow,
-} from '@/lib/analyticsLessonBriefPdf';
 import {
   getAllowedAssignmentIds,
   getClassroomAverage5D,
@@ -467,56 +462,6 @@ export const ClassroomAnalytics = ({
     return rows;
   }, [data, effectiveAssignmentIds]);
 
-  const lessonBriefPdfStrings = useMemo((): LessonBriefPdfStrings => {
-    return {
-      title: t('analytics.lessonBrief.title'),
-      classroom: t('analytics.lessonBrief.classroom'),
-      structure: t('analytics.lessonBrief.structure'),
-      exportedAt: t('analytics.lessonBrief.exportedAt'),
-      scope: t('analytics.lessonBrief.scope'),
-      kpiSnapshotTitle: t('analytics.lessonBrief.kpiSnapshot'),
-      kpiAssignmentsInScope: t('analytics.lessonBrief.kpiAssignmentsInScope'),
-      enrolledStudents: t('analytics.totalStudents'),
-      totalSubmissions: t('analytics.totalSubmissions'),
-      activeStudents: t('analytics.activeStudents'),
-      completionRate: t('analytics.completionRate'),
-      avgSubmissionsPerStudent: t('analytics.avgSubmissions'),
-      classAverage5DSectionTitle: t('analytics.lessonBrief.classAverage5D'),
-      dimVision: t('submissionDetail.dimensions.vision'),
-      dimValues: t('submissionDetail.dimensions.values'),
-      dimThinking: t('submissionDetail.dimensions.thinking'),
-      dimConnection: t('submissionDetail.dimensions.connection'),
-      dimAction: t('submissionDetail.dimensions.action'),
-      rosterSectionTitle: t('analytics.lessonBrief.rosterTitle'),
-      columnStudent: t('analytics.lessonBrief.columnStudent'),
-      columnProgress: t('analytics.lessonBrief.columnProgress'),
-      narrativesSectionTitle: t('analytics.lessonBrief.narrativesSectionTitle'),
-      studentSummaryLabel: t('analytics.lessonBrief.studentSummaryLabel'),
-      footerDisclaimer: t('analytics.lessonBrief.footerDisclaimer'),
-      dash: t('analytics.lessonBrief.dash'),
-    };
-  }, [t]);
-
-  const lessonBriefPdfRosterBase = useMemo((): LessonBriefRosterBaseRow[] => {
-    if (!data) return [];
-    const denom = effectiveAssignmentIds.length;
-    const list = [...data.students] as LessonBriefAnalyticsStudent[];
-    list.sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' }));
-    return list.map((st) => ({
-      studentId: st.id,
-      studentName: st.fullName,
-      completedInScope: countStudentCompletedAssignmentsInScope(
-        st.id,
-        st.submissions ?? [],
-        effectiveAssignmentIds
-      ),
-      assignmentsInScope: denom,
-      scores:
-        denom === 0
-          ? null
-          : scopedStudentLatestScores(st.snapshots, data.rawSubmissions, effectiveAssignmentIds),
-    }));
-  }, [data, effectiveAssignmentIds]);
 
   const handleExportCsv = useCallback(() => {
     if (!data) return;
@@ -563,116 +508,16 @@ export const ClassroomAnalytics = ({
     perStudentForExport,
   ]);
 
-  const handleExportLessonBriefPdf = useCallback(async () => {
+  const handleExportLessonBriefPdf = useCallback(() => {
     if (!data || studentCount === 0) return;
-    const structLabel = structureType ? t(`syllabus.${structKey}`) : '—';
-    const allStudentsForEvidence = data.students.map((s) => ({
-      id: s.id,
-      fullName: s.fullName,
-      narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-    }));
-
-    const toastId =
-      lessonBriefPdfRosterBase.length > 0
-        ? toast.loading(t('analytics.lessonBrief.preparingSummaries'))
-        : undefined;
-
-    try {
-      const narrativeStrings =
-        lessonBriefPdfRosterBase.length === 0
-          ? []
-          : await runPool(lessonBriefPdfRosterBase, 4, async (row) => {
-              if (!row.scores || effectiveAssignmentIds.length === 0) {
-                return t('analytics.lessonBrief.narrativeNoScores');
-              }
-              try {
-                const evidence = build5dNarrativeEvidence({
-                  context: 'student_avg',
-                  allowedAssignmentIds: effectiveAssignmentIds,
-                  allStudents: allStudentsForEvidence,
-                  assignmentRefs: data.assignments,
-                  singleStudentId: row.studentId,
-                  sectionTitleResolver,
-                });
-
-                const result = await invokeExplainAnalytics5d({
-                  classroomId,
-                  context: 'student_avg',
-                  language: analyticsLanguage,
-                  scores: row.scores,
-                  filterSummary: exportFilterSummary,
-                  studentName: row.studentName,
-                  evidenceText: evidence.evidenceText || undefined,
-                  evidenceSourceCount: evidence.sourceCount,
-                });
-
-                const summary = result.scopeSummary?.trim() ?? '';
-                if (!summary) {
-                  return t('analytics.lessonBrief.narrativeEmpty');
-                }
-                return trimToMax(summary, 1000);
-              } catch {
-                return t('analytics.lessonBrief.narrativeInvokeError');
-              }
-            });
-
-      const rosterRows = lessonBriefPdfRosterBase.map((row, idx) => ({
-        ...row,
-        narrative: narrativeStrings[idx]!,
-      }));
-
-      const blob = await buildLessonBriefPdfBlob({
-        strings: lessonBriefPdfStrings,
-        classroomName,
-        exportedAtFormatted: format(new Date(), 'PPpp', {
-          locale: uiLanguage === 'he' ? he : enUS,
-        }),
-        structureLabel: structLabel,
-        filterSummary: exportFilterSummary,
-        scopeAssignmentCount: effectiveAssignmentIds.length,
-        enrolledStudents: studentCount,
-        kpi: {
-          totalSubmissions: displayTotalSubmissions,
-          activeStudents: displayActiveStudents,
-          completionPercent: displayCompletion,
-          avgSubmissions: displayAvgSubmissions,
-        },
-        classAverage5D: classAverage,
-        rosterRows,
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `lesson-brief-${classroomId.slice(0, 8)}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      toast.error(t('analytics.lessonBrief.exportError'));
-    } finally {
-      if (toastId != null) toast.dismiss(toastId);
-    }
-  }, [
-    analyticsLanguage,
-    classroomId,
-    classroomName,
-    classAverage,
-    data,
-    displayActiveStudents,
-    displayAvgSubmissions,
-    displayCompletion,
-    displayTotalSubmissions,
-    effectiveAssignmentIds,
-    exportFilterSummary,
-    lessonBriefPdfRosterBase,
-    lessonBriefPdfStrings,
-    sectionTitleResolver,
-    studentCount,
-    structKey,
-    structureType,
-    t,
-    uiLanguage,
-  ]);
+    
+    const params = new URLSearchParams();
+    if (selectedModule !== 'all') params.set('analyticsModule', selectedModule);
+    if (selectedAssignment !== 'all') params.set('analyticsAssignment', selectedAssignment);
+    
+    const url = `/teacher/classroom/${classroomId}/lesson-brief?${params.toString()}`;
+    window.open(url, '_blank');
+  }, [data, studentCount, classroomId, selectedModule, selectedAssignment]);
 
   const studentsForCollapsible = useMemo(() => {
     if (selectedModule === 'all') {
@@ -794,7 +639,7 @@ export const ClassroomAnalytics = ({
                   onClick={() => void handleExportLessonBriefPdf()}
                   disabled={!data || studentCount === 0}
                 >
-                  <FileText className="h-4 w-4 me-1.5" aria-hidden />
+                  <Presentation className="h-4 w-4 me-1.5" aria-hidden />
                   {t('analytics.lessonBrief.exportPdf')}
                 </Button>
                 {onRegenerateComplete ? (

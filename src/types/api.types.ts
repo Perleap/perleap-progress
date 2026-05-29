@@ -49,6 +49,9 @@ export interface CreateAssignmentInput {
 export interface UpdateAssignmentInput extends Partial<CreateAssignmentInput> {
   id: string;
   materials?: Assignment['materials'];
+  student_facing_task?: Assignment['student_facing_task'];
+  hard_skills?: Assignment['hard_skills'];
+  hard_skill_domain?: Assignment['hard_skill_domain'];
 }
 
 // Submission API Types
@@ -75,11 +78,17 @@ export interface ChatDebugPayload {
   maxTokens: number;
 }
 
+export type InitialGreetingMode = 'default' | 'explain_task';
+
 export interface ChatRequest {
   message: string;
   submissionId: string;
   assignmentId: string;
   isInitialGreeting?: boolean;
+  /** When `isInitialGreeting` is true: default = brief greeting; explain_task = clarify assignment first. */
+  initialGreetingMode?: InitialGreetingMode;
+  /** When true (student chose "don't understand"), lighter tutoring after the explain turn. */
+  postExplainTutoring?: boolean;
   language?: string;
   fileContext?: { name: string; content: string; url?: string; type?: string };
   /** App admins only; Edge Function verifies `is_app_admin`. */

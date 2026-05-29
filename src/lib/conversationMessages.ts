@@ -1,5 +1,5 @@
 import type { Message } from '@/types';
-import { stripConversationCompleteMarker } from '@/lib/chatDisplay';
+import { stripConversationCompleteMarker, stripProgressMarker } from '@/lib/chatDisplay';
 
 /**
  * Rehydrate fileContext from saved message content (matches student chat display).
@@ -10,7 +10,7 @@ export function rehydrateMessages(msgs: Message[]): Message[] {
     if (msg.role === 'assistant') {
       return {
         ...msg,
-        content: stripConversationCompleteMarker(String(msg.content ?? '')),
+        content: stripProgressMarker(stripConversationCompleteMarker(String(msg.content ?? ''))),
       };
     }
     if (msg.role !== 'user' || msg.fileContext) return msg;

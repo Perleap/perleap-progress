@@ -483,6 +483,78 @@ export type Database = {
           },
         ]
       }
+      live_sessions: {
+        Row: {
+          assignment_id: string
+          audio_chunk_paths: Json
+          audio_path: string | null
+          classroom_id: string
+          created_at: string
+          duration_seconds: number | null
+          error: string | null
+          id: string
+          session_type: string
+          status: string
+          summary: string | null
+          syllabus_section_id: string | null
+          timestamps: Json
+          transcript: string | null
+          updated_at: string
+          video_temp_path: string | null
+        }
+        Insert: {
+          assignment_id: string
+          audio_chunk_paths?: Json
+          audio_path?: string | null
+          classroom_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          session_type?: string
+          status?: string
+          summary?: string | null
+          syllabus_section_id?: string | null
+          timestamps?: Json
+          transcript?: string | null
+          updated_at?: string
+          video_temp_path?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          audio_chunk_paths?: Json
+          audio_path?: string | null
+          classroom_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          session_type?: string
+          status?: string
+          summary?: string | null
+          syllabus_section_id?: string | null
+          timestamps?: Json
+          transcript?: string | null
+          updated_at?: string
+          video_temp_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_module_activities: {
         Row: {
           activity_list_id: string
@@ -2018,6 +2090,7 @@ export type Database = {
         | "presentation"
         | "langchain"
         | "chatbot"
+        | "live_session"
       entity_type: "classroom" | "assignment" | "submission" | "student"
       nuance_event_type:
         | "session_started"
@@ -2177,6 +2250,7 @@ export const Constants = {
         "presentation",
         "langchain",
         "chatbot",
+        "live_session",
       ],
       entity_type: ["classroom", "assignment", "submission", "student"],
       nuance_event_type: [
