@@ -6,10 +6,11 @@ interface FiveDChartProps {
   scores: FiveDScores;
   explanations?: Partial<Record<keyof FiveDScores, string>> | null;
   showLabels?: boolean;
+  height?: number;
 }
 
-export const FiveDChart = ({ scores, explanations, showLabels = true }: FiveDChartProps) => {
-  return <RadarChart scores={scores} explanations={explanations} showLabels={showLabels} />;
+export const FiveDChart = ({ scores, explanations, showLabels = true, height }: FiveDChartProps) => {
+  return <RadarChart scores={scores} explanations={explanations} showLabels={showLabels} height={height} />;
 };
 
 export const FiveDChartCard = ({

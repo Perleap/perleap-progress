@@ -16,6 +16,7 @@ interface RadarChartProps {
   scores: FiveDScores;
   explanations?: Partial<Record<keyof FiveDScores, string>> | null;
   showLabels?: boolean;
+  height?: number;
 }
 
 interface CustomTooltipProps {
@@ -54,7 +55,7 @@ const CustomTooltip = ({ active, payload, explanations }: CustomTooltipProps) =>
   );
 };
 
-export const RadarChart = ({ scores, explanations, showLabels = true }: RadarChartProps) => {
+export const RadarChart = ({ scores, explanations, showLabels = true, height = 400 }: RadarChartProps) => {
   const { t } = useTranslation();
   const [hoveredDimension, setHoveredDimension] = useState<keyof FiveDScores | null>(null);
 
@@ -85,7 +86,7 @@ export const RadarChart = ({ scores, explanations, showLabels = true }: RadarCha
 
   return (
     <div className="w-full">
-      <ResponsiveContainer width="100%" height={400}>
+      <ResponsiveContainer width="100%" height={height}>
         <RechartsRadarChart data={data}>
           <defs>
             <linearGradient id="rainbowGradient" x1="0" y1="0" x2="1" y2="1">

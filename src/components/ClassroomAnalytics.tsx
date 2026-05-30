@@ -16,6 +16,7 @@ import {
   GitCompare,
   Presentation,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -54,6 +55,7 @@ import {
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
+import { analytics5dNarrativeKeys } from '@/hooks/queries/useAnalytics5dNarrative';
 import {
   build5dNarrativeEvidence,
   trimToMax,
@@ -69,7 +71,11 @@ import {
   scopedStudentLatestScores,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { invokeExplainAnalytics5d } from '@/services/analytics5dExplainService';
+import { setLessonBriefClassNarrativeCache } from '@/lib/lessonBriefNarrativeCache';
+import {
+  invokeExplainAnalytics5d,
+  type Analytics5dNarrativeResult,
+} from '@/services/analytics5dExplainService';
 // `useClassroomAnalytics` and 5D LLM evidence (incl. optional teacher notes) are teacher-only; do
 // not reuse this data path for student-facing analytics.
 
@@ -109,6 +115,7 @@ export const ClassroomAnalytics = ({
   const [compareA, setCompareA] = useState<string>('');
   const [compareB, setCompareB] = useState<string>('');
 
+  const queryClient = useQueryClient();
   const { data, isLoading: loading } = useClassroomAnalytics(classroomId);
 
   const students = data?.students || [];
@@ -510,14 +517,85 @@ export const ClassroomAnalytics = ({
 
   const handleExportLessonBriefPdf = useCallback(() => {
     if (!data || studentCount === 0) return;
-    
+
+    const classAvgForBrief =
+      effectiveAssignmentIds.length > 0
+        ? getClassroomAverage5D(
+            data.students as {
+              id: string;
+              snapshots: {
+                user_id: string;
+                submission_id: string;
+                scores: import('@/integrations/supabase/types').Json;
+              }[];
+            }[],
+            data.rawSubmissions,
+            data.assignments,
+            selectedModule,
+            selectedAssignment,
+            'all',
+            data.rawSnapshots
+          )
+        : null;
+
+    const classNarrativeId = `5d-main-${selectedModule}-${selectedAssignment}-all`;
+
+    if (classAvgForBrief) {
+      const classEvidence = build5dNarrativeEvidence({
+        context: 'class_avg',
+        allowedAssignmentIds: effectiveAssignmentIds,
+        allStudents: data.students.map((s) => ({
+          id: s.id,
+          fullName: s.fullName,
+          narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
+        })),
+        assignmentRefs: data.assignments,
+        sectionTitleResolver,
+      });
+
+      const narrativeInput = {
+        classroomId,
+        context: 'class_avg' as const,
+        language: analyticsLanguage,
+        scores: classAvgForBrief,
+        filterSummary: exportFilterSummary,
+        evidenceText: classEvidence.evidenceText || undefined,
+        evidenceSourceCount: classEvidence.sourceCount,
+      };
+
+      const cachedNarrative = queryClient.getQueryData<Analytics5dNarrativeResult>(
+        analytics5dNarrativeKeys.one({ ...narrativeInput, narrativeId: classNarrativeId })
+      );
+
+      if (cachedNarrative) {
+        setLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment, {
+          classAverage: classAvgForBrief,
+          narrative: cachedNarrative,
+          evidenceSourceCount: classEvidence.sourceCount,
+          filterSummary: exportFilterSummary,
+          cachedAt: Date.now(),
+        });
+      }
+    }
+
     const params = new URLSearchParams();
     if (selectedModule !== 'all') params.set('analyticsModule', selectedModule);
     if (selectedAssignment !== 'all') params.set('analyticsAssignment', selectedAssignment);
-    
+
     const url = `/teacher/classroom/${classroomId}/lesson-brief?${params.toString()}`;
     window.open(url, '_blank');
-  }, [data, studentCount, classroomId, selectedModule, selectedAssignment]);
+  }, [
+    data,
+    studentCount,
+    classroomId,
+    selectedModule,
+    selectedAssignment,
+    effectiveAssignmentIds,
+    analyticsLanguage,
+    exportFilterSummary,
+    queryClient,
+    sectionTitleResolver,
+  ]);
 
   const studentsForCollapsible = useMemo(() => {
     if (selectedModule === 'all') {
