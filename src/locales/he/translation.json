@@ -511,6 +511,13 @@
       "finalClient": "הודעה סופית ללקוח (נשמרת)"
     }
   },
+  "aiContentFlag": {
+    "title": "סימון תוכן שנוצר בבינה מלאכותית",
+    "success": "הדיווח נשמר לבדיקה.",
+    "duplicate": "כבר דיווחת על תוכן זה.",
+    "error": "לא ניתן לשלוח דיווח. נסה שוב.",
+    "emptyContent": "אין עדיין תוכן לדיווח."
+  },
   "calendar": {
     "title": "לוח שנה",
     "today": "היום",
@@ -1171,6 +1178,7 @@
     "notStarted": "טרם התחיל",
     "conversationFlowComplete": "הצ'אט הושלם",
     "conversationFlowEarly": "הסתיים מוקדם",
+    "flaggedSentencesBadge": "{{count}} מסומנים",
     "fullReport": "דוח מלא"
   },
   "submissionDetail": {
@@ -1744,7 +1752,6 @@
     "notificationPreferences": "העדפות התראות",
     "notificationPreferencesDesc": "בחר אילו התראות תרצה לקבל",
     "savePreferences": "שמור שינויים",
-    "saveChanges": "שמור שינויים",
     "dangerZone": "אזור מסוכן",
     "dangerZoneDesc": "פעולות בלתי הפיכות והרסניות",
     "deleteAccountWarning": "ברגע שתמחק את החשבון שלך, אין דרך חזרה. אנא היה בטוח.",
@@ -2442,9 +2449,6 @@
     "archived": "הסילבוס אורכב",
     "archiveFailed": "הארכוב נכשל",
     "publishedAt": "פורסם בתאריך",
-    "courseOutline": "מתווה קורס",
-    "noSyllabusYet": "אין סילבוס עדיין",
-    "noSyllabusDesc": "צור סילבוס כדי לארגן את הקורס שלך לפרקים עם תאריכים, מטרות ומשאבים.",
     "assignmentLinked": "המטלה קושרה לפרק",
     "linkFailed": "קישור המטלה נכשל",
     "assignmentUnlinked": "המטלה נותקה",

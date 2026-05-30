@@ -18,6 +18,8 @@ export interface Message {
     url?: string;
     type?: string;
   };
+  /** Opik trace id for this assistant turn (used for flag → feedback scoring). */
+  opik_client_trace_id?: string;
 }
 
 export interface FiveDScores {

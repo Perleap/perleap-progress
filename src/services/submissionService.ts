@@ -260,7 +260,7 @@ export const getFullSubmissionDetails = async (
       .from('submissions')
       .select(`
         *,
-        assignments(id, title, instructions, classroom_id, due_at, type, auto_publish_ai_feedback, student_facing_task, classrooms(name, teacher_id))
+        assignments(id, title, instructions, classroom_id, due_at, type, auto_publish_ai_feedback, student_facing_task, opik_trace_ids, classrooms(name, teacher_id))
       `)
       .eq('id', submissionId)
       .single();
@@ -337,6 +337,14 @@ export const getAssignmentConversationMessages = async (
 
 export type AssignmentChatSentenceFlag = Database['public']['Tables']['assignment_chat_sentence_flags']['Row'];
 
+export type OpikTraceIds = Record<string, string>;
+
+export type TeacherAiContentType =
+  | 'student_feedback'
+  | 'teacher_feedback'
+  | 'student_facing_task'
+  | 'instructions';
+
 /**
  * Sentence flags reported by the student on assistant chat (teacher + student RLS).
  */
@@ -356,6 +364,79 @@ export const getAssignmentChatSentenceFlags = async (
     return { data: data ?? [], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Fire-and-forget: sync a student chat sentence flag to Opik feedback scores.
+ */
+export const syncOpikChatSentenceFlag = (params: {
+  submissionId: string;
+  messageIndex: number;
+  sentenceText: string;
+}): void => {
+  void supabase.functions
+    .invoke('opik-ai-flag-feedback', {
+      body: {
+        type: 'chat_sentence',
+        submissionId: params.submissionId,
+        messageIndex: params.messageIndex,
+        sentenceText: params.sentenceText,
+      },
+    })
+    .catch(() => undefined);
+};
+
+/**
+ * Report teacher AI content flag in DB, then sync to Opik (fire-and-forget on Opik).
+ */
+export const reportTeacherAiContentFlag = async (params: {
+  assignmentId?: string;
+  submissionId?: string;
+  contentType: TeacherAiContentType;
+  contentExcerpt: string;
+  opikTraceId?: string;
+}): Promise<{ ok: boolean; duplicate?: boolean; error?: string }> => {
+  try {
+    const hasPersistTarget = Boolean(params.assignmentId || params.submissionId);
+    if (hasPersistTarget) {
+      const { data, error } = await supabase.rpc('report_teacher_ai_content_flag', {
+        args: {
+          p_assignment_id: params.assignmentId ?? null,
+          p_submission_id: params.submissionId ?? null,
+          p_content_type: params.contentType,
+          p_content_excerpt: params.contentExcerpt,
+          p_opik_trace_id: params.opikTraceId ?? null,
+        },
+      });
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+      const r = data as { ok?: boolean; duplicate?: boolean; error?: string };
+      if (r?.duplicate) {
+        return { ok: false, duplicate: true };
+      }
+      if (!r?.ok) {
+        return { ok: false, error: r?.error ?? 'flag_rejected' };
+      }
+    }
+
+    void supabase.functions
+      .invoke('opik-ai-flag-feedback', {
+        body: {
+          type: 'teacher_content',
+          assignmentId: params.assignmentId,
+          submissionId: params.submissionId,
+          contentType: params.contentType,
+          contentExcerpt: params.contentExcerpt,
+          opikTraceId: params.opikTraceId,
+        },
+      })
+      .catch(() => undefined);
+
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: handleSupabaseError(error).message };
   }
 };
 
@@ -410,6 +491,18 @@ export const getEnrichedClassroomSubmissions = async (
       .select('submission_id, teacher_feedback, conversation_context')
       .in('submission_id', submissionIds);
 
+    const flagCountBySubmissionId = new Map<string, number>();
+    if (submissionIds.length > 0) {
+      const { data: flagRows } = await supabase
+        .from('assignment_chat_sentence_flags')
+        .select('submission_id')
+        .in('submission_id', submissionIds);
+      for (const row of flagRows ?? []) {
+        const sid = row.submission_id;
+        flagCountBySubmissionId.set(sid, (flagCountBySubmissionId.get(sid) ?? 0) + 1);
+      }
+    }
+
     // 4. Combine data
     const feedbackMap = new Map(feedback?.map((f) => [f.submission_id, f]) || []);
     const submissionMap = new Set(submissions?.map(s => `${s.assignment_id}-${s.student_id}`) || []);
@@ -429,7 +522,8 @@ export const getEnrichedClassroomSubmissions = async (
         syllabus_section_id: assignment?.syllabus_section_id ?? null,
         has_feedback: !!fb,
         teacher_feedback: fb?.teacher_feedback,
-        conversation_context: (fb?.conversation_context as unknown as Message[]) || []
+        conversation_context: (fb?.conversation_context as unknown as Message[]) || [],
+        chat_sentence_flag_count: flagCountBySubmissionId.get(sub.id) ?? 0,
       };
     });
 

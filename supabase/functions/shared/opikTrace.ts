@@ -2,14 +2,45 @@
  * Fire-and-forget Opik trace batch ingest (REST) for Supabase Edge (Deno).
  * https://www.comet.com/docs/opik/reference/rest-api/overview
  *
- * Do not set Opik trace `id` (server assigns). `clientTraceId` is stored as
- * `metadata.perleap_client_trace_id`.
+ * When `clientTraceId` is set it becomes the Opik trace `id` (for feedback scoring)
+ * and is also stored as `metadata.perleap_client_trace_id`.
  */
 
-function opikBatchUrl(): string {
+export const OPIK_FEEDBACK_SCORE_STUDENT_FLAG = 'student_flag';
+export const OPIK_FEEDBACK_SCORE_TEACHER_FLAG = 'teacher_flag';
+
+function opikApiBase(): string {
   const raw = Deno.env.get('OPIK_URL_OVERRIDE')?.trim();
-  const base = (raw ? raw.replace(/\/$/, '') : 'https://www.comet.com/opik/api');
-  return `${base}/v1/private/traces/batch`;
+  return raw ? raw.replace(/\/$/, '') : 'https://www.comet.com/opik/api';
+}
+
+function opikBatchUrl(): string {
+  return `${opikApiBase()}/v1/private/traces/batch`;
+}
+
+function opikFeedbackScoresUrl(): string {
+  return `${opikApiBase()}/v1/private/traces/feedback-scores`;
+}
+
+function opikAuthHeaders(): { headers: Record<string, string> } | null {
+  const apiKey = Deno.env.get('OPIK_API_KEY')?.trim();
+  const workspace = Deno.env.get('OPIK_WORKSPACE')?.trim();
+  if (!apiKey || !workspace) return null;
+  return {
+    headers: {
+      'Content-Type': 'application/json',
+      'Comet-Workspace': workspace,
+      'authorization': apiKey,
+    },
+  };
+}
+
+function defaultProjectName(override?: string): string {
+  return (
+    override?.trim() ||
+    Deno.env.get('OPIK_PROJECT_NAME')?.trim() ||
+    'pearleap-student-chat'
+  );
 }
 
 const BODY_TRUNCATE_CHARS = 4096;
@@ -62,6 +93,14 @@ export type QueueOpikTraceParams = {
   projectName?: string;
 };
 
+export type QueueOpikFeedbackScoreParams = {
+  traceId: string;
+  name: typeof OPIK_FEEDBACK_SCORE_STUDENT_FLAG | typeof OPIK_FEEDBACK_SCORE_TEACHER_FLAG | string;
+  value?: number;
+  reason?: string;
+  projectName?: string;
+};
+
 function resolveInputOutput(params: QueueOpikTraceParams): {
   input: Record<string, unknown>;
   output: Record<string, unknown>;
@@ -89,14 +128,10 @@ function resolveInputOutput(params: QueueOpikTraceParams): {
 export async function queueOpikTrace(params: QueueOpikTraceParams): Promise<void> {
   if (Deno.env.get('OPIK_TRACE_DISABLE') === 'true') return;
 
-  const apiKey = Deno.env.get('OPIK_API_KEY')?.trim();
-  const workspace = Deno.env.get('OPIK_WORKSPACE')?.trim();
-  if (!apiKey || !workspace) return;
+  const auth = opikAuthHeaders();
+  if (!auth) return;
 
-  const projectName =
-    params.projectName?.trim() ||
-    Deno.env.get('OPIK_PROJECT_NAME')?.trim() ||
-    'pearleap-student-chat';
+  const projectName = defaultProjectName(params.projectName);
   const environment = Deno.env.get('OPIK_ENVIRONMENT')?.trim();
 
   const { input, output } = resolveInputOutput(params);
@@ -121,6 +156,9 @@ export async function queueOpikTrace(params: QueueOpikTraceParams): Promise<void
     tags: params.tags,
     source: 'sdk',
   };
+  if (params.clientTraceId) {
+    trace.id = params.clientTraceId;
+  }
   if (environment) trace.environment = environment;
 
   if (
@@ -136,16 +174,52 @@ export async function queueOpikTrace(params: QueueOpikTraceParams): Promise<void
 
   const res = await fetch(batchUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Comet-Workspace': workspace,
-      'authorization': apiKey,
-    },
+    headers: auth.headers,
     body,
   });
 
   if (!res.ok) {
     const hint = await res.text().catch(() => '');
     throw new Error(`Opik trace batch failed: ${res.status} ${hint.slice(0, 200)}`);
+  }
+}
+
+/**
+ * Posts a human feedback score to an existing Opik trace.
+ * Caller should not await; use `void queueOpikFeedbackScore(...).catch(() => undefined)`.
+ */
+export async function queueOpikFeedbackScore(
+  params: QueueOpikFeedbackScoreParams,
+): Promise<void> {
+  if (Deno.env.get('OPIK_TRACE_DISABLE') === 'true') return;
+
+  const auth = opikAuthHeaders();
+  if (!auth) return;
+
+  const projectName = defaultProjectName(params.projectName);
+  const reason = params.reason ? truncate(params.reason, BODY_TRUNCATE_CHARS) : undefined;
+
+  const body = JSON.stringify({
+    scores: [
+      {
+        id: params.traceId,
+        project_name: projectName,
+        name: params.name,
+        value: params.value ?? 0,
+        source: 'ui',
+        ...(reason ? { reason } : {}),
+      },
+    ],
+  });
+
+  const res = await fetch(opikFeedbackScoresUrl(), {
+    method: 'PUT',
+    headers: auth.headers,
+    body,
+  });
+
+  if (!res.ok) {
+    const hint = await res.text().catch(() => '');
+    throw new Error(`Opik feedback score failed: ${res.status} ${hint.slice(0, 200)}`);
   }
 }

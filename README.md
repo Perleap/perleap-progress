@@ -134,8 +134,10 @@ OPIK_WORKSPACE=your_comet_workspace_name
 
 After changing secrets, redeploy edge functions that emit traces. If `OPENAI_MODEL` is unset, the code default is `gpt-5.4`. Opik posts are fire-and-forget (`queueOpikTrace` in `supabase/functions/shared/opikTrace.ts`); they never block the HTTP response when Opik is down. Traces include `metadata.edge_function`, `metadata.openai_usage` when the OpenAI chat completion returns usage, and `metadata.perleap_client_trace_id` for correlation. **Trace `name`** examples: `perleap-chat.reply`, `generate-feedback.main`, `generate-feedback.hard-skills`, `text-to-speech.synthesis` (no usage on audio). Filter in the Opik UI by project, tag, or `metadata.edge_function`.
 
+**User flags → Opik feedback scores:** When students flag chat sentences or teachers flag AI-generated feedback/assignments, the app calls `opik-ai-flag-feedback`, which posts `student_flag: 0` or `teacher_flag: 0` on the linked trace. Filter traces by those feedback score names in Opik to review bad outputs.
+
 **Deploy / smoke (when validating tracing):**  
-`perleap-chat`, `teacher-assistant-chat`, `rephrase-text`, `suggest-assignment-hard-skills`, `generate-student-facing-task`, `generate-followup-assignment`, `generate-feedback`, `evaluate-from-feedback`, `explain-analytics-5d`, `regenerate-scores`, `analyze-student-wellbeing`, `compute-nuance-insights`, `text-to-speech`, `speech-to-text`.
+`perleap-chat`, `teacher-assistant-chat`, `rephrase-text`, `suggest-assignment-hard-skills`, `generate-student-facing-task`, `generate-followup-assignment`, `generate-feedback`, `evaluate-from-feedback`, `explain-analytics-5d`, `regenerate-scores`, `analyze-student-wellbeing`, `compute-nuance-insights`, `text-to-speech`, `speech-to-text`, `opik-ai-flag-feedback`.
 
 ## 🧪 Testing (Future)
 

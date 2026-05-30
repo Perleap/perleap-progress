@@ -38,6 +38,7 @@ import {
   updateAssignmentFeedbackText,
 } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
+import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
 
 type SubmissionTabValue = 'evaluation' | 'feedback' | 'assignment' | 'notes';
 
@@ -63,6 +64,7 @@ interface SubmissionTabsProps {
       auto_publish_ai_feedback?: boolean;
       /** AI-generated short task shown to students before they start. */
       student_facing_task?: string | null;
+      opik_trace_ids?: Record<string, string> | null;
       classrooms?: { name?: string; teacher_id?: string } | null;
     };
   };
@@ -71,6 +73,7 @@ interface SubmissionTabsProps {
     student_feedback: string | null;
     conversation_context: Message[] | null;
     visible_to_student?: boolean;
+    opik_trace_ids?: Record<string, string> | null;
   } | null;
   studentName: string;
   alerts: StudentAlert[];
@@ -118,9 +121,10 @@ export const SubmissionTabs = ({
       isChatLikeAssignment && assignmentTabLoadsChatData
     );
 
+  const flagsQueryEnabled = isChatLikeAssignment && assignmentTabLoadsChatData;
   const { data: chatSentenceFlagsRaw } = useTeacherChatSentenceFlags(
     submission.id,
-    isChatLikeAssignment && assignmentTabLoadsChatData
+    flagsQueryEnabled
   );
   const chatSentenceFlags = chatSentenceFlagsRaw ?? [];
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
@@ -175,6 +179,16 @@ export const SubmissionTabs = ({
     !feedback &&
     !submission.is_teacher_attempt &&
     ['text_essay', 'test', 'questions', 'chatbot'].includes(assignmentType);
+
+  const feedbackMainTraceId = readOpikTraceId(feedback?.opik_trace_ids, 'feedback_main');
+  const studentFacingTraceId = readOpikTraceId(
+    submission.assignments.opik_trace_ids,
+    'student_facing_task',
+  );
+  const instructionsTraceId = readOpikTraceId(
+    submission.assignments.opik_trace_ids,
+    'instructions',
+  );
 
   const handleGenerateAiEvaluation = async () => {
     setGeneratingAi(true);
@@ -313,12 +327,25 @@ export const SubmissionTabs = ({
 
             <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden p-0 gap-0">
               <CardHeader className="bg-accent dark:bg-accent/30 px-6 py-4 pb-4 text-left rounded-t-xl">
-                <CardTitle className="text-foreground text-left">
-                  {t('submissionDetail.teacherFeedback')}
-                </CardTitle>
-                <CardDescription className="text-left text-xs pt-1">
-                  {t('submissionDetail.editFeedback.teacherHint')}
-                </CardDescription>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-foreground text-left">
+                      {t('submissionDetail.teacherFeedback')}
+                    </CardTitle>
+                    <CardDescription className="text-left text-xs pt-1">
+                      {t('submissionDetail.editFeedback.teacherHint')}
+                    </CardDescription>
+                  </div>
+                  {feedbackMainTraceId ? (
+                    <AiContentFlagButton
+                      contentType="teacher_feedback"
+                      contentExcerpt={teacherDraft}
+                      opikTraceId={feedbackMainTraceId}
+                      assignmentId={submission.assignments.id}
+                      submissionId={submission.id}
+                    />
+                  ) : null}
+                </div>
               </CardHeader>
               <CardContent className="p-6 pt-4 space-y-3">
                 <Textarea
@@ -332,12 +359,25 @@ export const SubmissionTabs = ({
 
             <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden p-0 gap-0">
               <CardHeader className="bg-accent dark:bg-accent/30 px-6 py-4 pb-4 text-left rounded-t-xl">
-                <CardTitle className="text-foreground text-left">
-                  {t('submissionDetail.studentFeedback')}
-                </CardTitle>
-                <CardDescription className="text-left text-xs pt-1">
-                  {t('submissionDetail.editFeedback.studentHint')}
-                </CardDescription>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-foreground text-left">
+                      {t('submissionDetail.studentFeedback')}
+                    </CardTitle>
+                    <CardDescription className="text-left text-xs pt-1">
+                      {t('submissionDetail.editFeedback.studentHint')}
+                    </CardDescription>
+                  </div>
+                  {feedbackMainTraceId ? (
+                    <AiContentFlagButton
+                      contentType="student_feedback"
+                      contentExcerpt={studentDraft}
+                      opikTraceId={feedbackMainTraceId}
+                      assignmentId={submission.assignments.id}
+                      submissionId={submission.id}
+                    />
+                  ) : null}
+                </div>
               </CardHeader>
               <CardContent className="p-6 pt-4 space-y-3">
                 <Textarea
@@ -390,9 +430,19 @@ export const SubmissionTabs = ({
       <TabsContent value="assignment" className="mt-6 space-y-6">
         <Card className="border-border/80 bg-muted/20">
           <CardHeader className="py-3">
-            <CardTitle className="text-sm font-medium text-start">
-              {t('createAssignment.wizard.studentFacingTitle')}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm font-medium text-start">
+                {t('createAssignment.wizard.studentFacingTitle')}
+              </CardTitle>
+              {studentFacingTraceId ? (
+                <AiContentFlagButton
+                  contentType="student_facing_task"
+                  contentExcerpt={submission.assignments.student_facing_task ?? ''}
+                  opikTraceId={studentFacingTraceId}
+                  assignmentId={submission.assignments.id}
+                />
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="pt-0 text-sm">
             {submission.assignments.student_facing_task?.trim() ? (
@@ -457,9 +507,19 @@ export const SubmissionTabs = ({
                 <div className="space-y-6">
                   <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                     <CardHeader>
-                      <CardTitle className="text-base text-left">
-                        {submission.assignments.title}
-                      </CardTitle>
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-base text-left">
+                          {submission.assignments.title}
+                        </CardTitle>
+                        {instructionsTraceId && submission.assignments.instructions?.trim() ? (
+                          <AiContentFlagButton
+                            contentType="instructions"
+                            contentExcerpt={submission.assignments.instructions}
+                            opikTraceId={instructionsTraceId}
+                            assignmentId={submission.assignments.id}
+                          />
+                        ) : null}
+                      </div>
                       {submission.assignments.instructions?.trim() ? (
                         <LessonReadingDetailsCollapsible
                           className="mt-3"

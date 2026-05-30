@@ -511,6 +511,13 @@
       "finalClient": "Final message to client (stored)"
     }
   },
+  "aiContentFlag": {
+    "title": "Flag AI-generated content",
+    "success": "Flag recorded for review.",
+    "duplicate": "You already flagged this content.",
+    "error": "Could not send flag. Please try again.",
+    "emptyContent": "Nothing to flag yet."
+  },
   "calendar": {
     "title": "Calendar",
     "today": "Today",
@@ -1184,6 +1191,7 @@
     "notStarted": "Not Started",
     "conversationFlowComplete": "Chat completed",
     "conversationFlowEarly": "Ended early",
+    "flaggedSentencesBadge": "{{count}} flagged",
     "fullReport": "Full Report"
   },
   "submissionDetail": {
@@ -2461,9 +2469,6 @@
     "archived": "Syllabus archived",
     "archiveFailed": "Failed to archive syllabus",
     "publishedAt": "Published on",
-    "courseOutline": "Course Outline",
-    "noSyllabusYet": "No Syllabus Yet",
-    "noSyllabusDesc": "Create a syllabus to organize your course into sections with dates, objectives, and resources.",
     "assignmentLinked": "Assignment linked to section",
     "linkFailed": "Failed to link assignment",
     "assignmentUnlinked": "Assignment unlinked",

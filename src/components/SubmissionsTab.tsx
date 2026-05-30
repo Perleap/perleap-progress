@@ -36,6 +36,7 @@ import {
 import {
   SubmissionCard,
   formatSubmissionAssignmentTitle,
+  SubmissionFlaggedSentencesBadge,
   type SubmissionCardVariant,
 } from './SubmissionCard';
 import { toast } from 'sonner';
@@ -730,6 +731,8 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 let feedbackText: string;
                 const submitted = !pending && submission.status === 'completed';
                 const teacherTry = !pending && Boolean((submission as { is_teacher_attempt?: boolean }).is_teacher_attempt);
+                const flaggedCount =
+                  (submission as { chat_sentence_flag_count?: number }).chat_sentence_flag_count ?? 0;
                 if (pending) {
                   feedbackText = '—';
                 } else if (!submission.has_feedback) {
@@ -761,6 +764,11 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                     <TableCell className="text-start align-middle">{submission.student_name}</TableCell>
                     <TableCell className="align-middle">
                       <div className="flex flex-wrap items-center justify-end gap-1">
+                        <SubmissionFlaggedSentencesBadge
+                          count={flaggedCount}
+                          assignmentType={assignmentType}
+                          size="compact"
+                        />
                         {teacherTry ? (
                           <Badge
                             variant="outline"

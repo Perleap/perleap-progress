@@ -332,6 +332,54 @@ export type Database = {
           },
         ]
       },
+      ai_teacher_content_flags: {
+        Row: {
+          assignment_id: string | null
+          content_excerpt: string | null
+          content_type: string
+          created_at: string
+          flagger_id: string
+          id: string
+          opik_trace_id: string | null
+          submission_id: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          content_excerpt?: string | null
+          content_type: string
+          created_at?: string
+          flagger_id: string
+          id?: string
+          opik_trace_id?: string | null
+          submission_id?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          content_excerpt?: string | null
+          content_type?: string
+          created_at?: string
+          flagger_id?: string
+          id?: string
+          opik_trace_id?: string | null
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_teacher_content_flags_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_teacher_content_flags_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
       assignment_chat_sentence_flags: {
         Row: {
           assignment_id: string
@@ -436,6 +484,7 @@ export type Database = {
           submission_id: string
           teacher_feedback: string | null
           visible_to_student: boolean
+          opik_trace_ids: Json
         }
         Insert: {
           assignment_id: string
@@ -447,6 +496,7 @@ export type Database = {
           submission_id: string
           teacher_feedback?: string | null
           visible_to_student?: boolean
+          opik_trace_ids?: Json
         }
         Update: {
           assignment_id?: string
@@ -458,6 +508,7 @@ export type Database = {
           submission_id?: string
           teacher_feedback?: string | null
           visible_to_student?: boolean
+          opik_trace_ids?: Json
         }
         Relationships: [
           {
@@ -622,6 +673,7 @@ export type Database = {
           type: Database["public"]["Enums"]["assignment_type"]
           updated_at: string
           use_course_memory: boolean
+          opik_trace_ids: Json
         }
         Insert: {
           active?: boolean
@@ -647,6 +699,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
           use_course_memory?: boolean
+          opik_trace_ids?: Json
         }
         Update: {
           active?: boolean
@@ -672,6 +725,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
           use_course_memory?: boolean
+          opik_trace_ids?: Json
         }
         Relationships: [
           {
@@ -2055,6 +2109,10 @@ export type Database = {
         Returns: undefined
       }
       report_assignment_chat_sentence: {
+        Args: { args: Json }
+        Returns: Json
+      }
+      report_teacher_ai_content_flag: {
         Args: { args: Json }
         Returns: Json
       }

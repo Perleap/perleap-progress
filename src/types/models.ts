@@ -107,6 +107,8 @@ export interface Assignment {
   instructions: string;
   /** Short learner-facing task copy; not the full AI/teacher instructions. */
   student_facing_task?: string | null;
+  /** Opik trace UUIDs keyed by generated field. */
+  opik_trace_ids?: Record<string, string> | null;
   type: DbAssignmentType;
   status: DbAssignmentStatus;
   due_at: string | null;
@@ -179,6 +181,8 @@ export interface Message {
     url?: string;
     type?: string;
   };
+  /** Opik trace id for this assistant turn (used for flag → feedback scoring). */
+  opik_client_trace_id?: string;
 }
 
 export interface AssignmentConversation {

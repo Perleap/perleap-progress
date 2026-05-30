@@ -16,6 +16,7 @@ export const EDGE_FUNCTION_NAMES = [
   'generate-feedback',
   'generate-followup-assignment',
   'generate-student-facing-task',
+  'opik-ai-flag-feedback',
   'perleap-chat',
   'regenerate-scores',
   'rephrase-text',

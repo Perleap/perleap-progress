@@ -44,6 +44,8 @@ export type AssignmentWizardFormData = {
   attempt_mode: Database['public']['Enums']['assignment_attempt_mode'];
   /** When true, tutor may recall distilled facts from earlier units in this course. */
   use_course_memory: boolean;
+  /** Opik trace UUIDs for AI-generated fields (persisted on assignment create). */
+  opik_trace_ids?: Record<string, string>;
 };
 
 export function getDefaultAssignmentWizardFormData(): AssignmentWizardFormData {
@@ -68,6 +70,7 @@ export function getDefaultAssignmentWizardFormData(): AssignmentWizardFormData {
     materials: [],
     attempt_mode: 'single',
     use_course_memory: true,
+    opik_trace_ids: {},
   };
 }
 
@@ -112,4 +115,5 @@ export type AssignmentWizardCreateInitialData = {
   target_dimensions?: AssignmentWizardFormData['target_dimensions'];
   syllabus_section_id?: string;
   grading_category_id?: string;
+  opik_trace_ids?: Record<string, string>;
 };

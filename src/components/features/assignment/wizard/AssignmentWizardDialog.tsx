@@ -213,12 +213,21 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         });
         if (myId !== studentTaskBgRequestIdRef.current) return;
         if (error) return;
-        const task = (data as { studentFacingTask?: string })?.studentFacingTask?.trim();
+        const payload = data as { studentFacingTask?: string; opikTraceId?: string };
+        const task = payload.studentFacingTask?.trim();
         if (!task) return;
         setFormData((prev) => {
           if (prev.instructions !== snapshot.instructions) return prev;
           if (prev.student_facing_task?.trim()) return prev;
-          return { ...prev, student_facing_task: task };
+          const nextIds = { ...(prev.opik_trace_ids ?? {}) };
+          if (payload.opikTraceId?.trim()) {
+            nextIds.student_facing_task = payload.opikTraceId.trim();
+          }
+          return {
+            ...prev,
+            student_facing_task: task,
+            opik_trace_ids: nextIds,
+          };
         });
       })();
     },
@@ -487,6 +496,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
             connection: false,
             action: false,
           },
+        opik_trace_ids: initialData.opik_trace_ids ?? prev.opik_trace_ids ?? {},
       }));
       setAiMetadata({
         difficulty_level: initialData.difficulty_level,
@@ -883,14 +893,25 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         toast.error(error.message || t('common.error'));
         return;
       }
-      const task = (data as { studentFacingTask?: string; error?: string })?.studentFacingTask;
-      const errMsg = (data as { error?: string })?.error;
+      const payload = data as { studentFacingTask?: string; opikTraceId?: string; error?: string };
+      const task = payload.studentFacingTask;
+      const errMsg = payload.error;
       if (errMsg) {
         toast.error(errMsg);
         return;
       }
       if (task?.trim()) {
-        setFormData((prev) => ({ ...prev, student_facing_task: task.trim() }));
+        setFormData((prev) => {
+          const nextIds = { ...(prev.opik_trace_ids ?? {}) };
+          if (payload.opikTraceId?.trim()) {
+            nextIds.student_facing_task = payload.opikTraceId.trim();
+          }
+          return {
+            ...prev,
+            student_facing_task: task.trim(),
+            opik_trace_ids: nextIds,
+          };
+        });
         toast.success(t('createAssignment.wizard.studentFacingGenerated'));
       } else {
         toast.error(t('createAssignment.wizard.studentFacingGenerateFailed'));
@@ -932,6 +953,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
       if (isCreate && classroomId) {
         let studentFacingTaskForInsert = formData.student_facing_task.trim();
+        let opikTraceIdsForInsert = { ...(formData.opik_trace_ids ?? {}) };
         if (!studentFacingTaskForInsert && formData.instructions.trim()) {
           const generated = await generateStudentFacingTaskDraft({
             classroomId,
@@ -939,7 +961,15 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
             instructions: formData.instructions,
             uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
           });
-          if (generated) studentFacingTaskForInsert = generated;
+          if (generated) {
+            studentFacingTaskForInsert = generated.task;
+            if (generated.opikTraceId) {
+              opikTraceIdsForInsert = {
+                ...opikTraceIdsForInsert,
+                student_facing_task: generated.opikTraceId,
+              };
+            }
+          }
         }
 
         const insertRow: Database['public']['Tables']['assignments']['Insert'] = {
@@ -947,6 +977,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           title: formData.title,
           instructions: formData.instructions,
           student_facing_task: studentFacingTaskForInsert || null,
+          opik_trace_ids: Object.keys(opikTraceIdsForInsert).length > 0
+            ? (opikTraceIdsForInsert as unknown as Json)
+            : {},
           type: formData.type as Database['public']['Enums']['assignment_type'],
           due_at: dueAtLocalInputToIso(formData.due_at),
           attempt_mode: formData.attempt_mode,

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Clock, MessageSquare } from 'lucide-react';
+import { Clock, Flag, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 
@@ -41,6 +41,36 @@ export function formatSubmissionAssignmentTitle(
   return `${assignmentTitle} #${attemptNumber}`;
 }
 
+export function SubmissionFlaggedSentencesBadge({
+  count,
+  assignmentType,
+  className,
+  size = 'default',
+}: {
+  count: number;
+  assignmentType?: string | null;
+  className?: string;
+  size?: 'default' | 'compact';
+}) {
+  const { t } = useTranslation();
+  if (count <= 0 || !isChatLikeAssignmentType(assignmentType)) return null;
+
+  const compact = size === 'compact';
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'shrink-0 rounded-full border-rose-500/50 bg-rose-500/10 font-medium text-rose-800 dark:text-rose-200',
+        compact ? 'gap-1 px-2 py-0.5 text-[10px]' : 'gap-1 px-2.5 py-0.5 text-xs',
+        className,
+      )}
+    >
+      <Flag className={cn(compact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden />
+      {t('submissionCard.flaggedSentencesBadge', { count })}
+    </Badge>
+  );
+}
+
 interface SubmissionCardProps {
   submission: {
     id: string;
@@ -58,6 +88,8 @@ interface SubmissionCardProps {
     conversation_context?: ConversationMessage[];
     student_avatar_url?: string;
     is_teacher_attempt?: boolean | null;
+    /** Student-reported assistant sentence flags (from enriched classroom query). */
+    chat_sentence_flag_count?: number;
   };
   /** Total submission rows for this student + assignment in the classroom (from the same query). */
   submissionAttemptCount?: number;
@@ -219,10 +251,18 @@ export function SubmissionCard({
     </Badge>
   ) : null;
 
+  const flaggedSentencesBadge = (
+    <SubmissionFlaggedSentencesBadge
+      count={submission.chat_sentence_flag_count ?? 0}
+      assignmentType={submission.assignment_type}
+    />
+  );
+
   const topRow = (
     <div className="flex items-start justify-between gap-3">
       <h3 className={titleClass}>{displayAssignmentTitle}</h3>
       <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        {flaggedSentencesBadge}
         {chatFlowBadge}
         {teacherPreviewBadge}
         {statusBadge}
@@ -312,6 +352,7 @@ export function SubmissionCard({
             {displayAssignmentTitle}
           </h3>
           <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:pt-0.5">
+            {flaggedSentencesBadge}
             {chatFlowBadge}
             {teacherPreviewBadge}
             {statusBadge}

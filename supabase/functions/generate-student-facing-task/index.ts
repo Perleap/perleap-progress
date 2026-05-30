@@ -277,9 +277,22 @@ ${instructions.trim()}`;
     }
 
     if (persistAssignmentId) {
+      const { data: existingRow } = await supabase
+        .from('assignments')
+        .select('opik_trace_ids')
+        .eq('id', persistAssignmentId)
+        .maybeSingle();
+      const priorIds =
+        existingRow?.opik_trace_ids && typeof existingRow.opik_trace_ids === 'object'
+          ? (existingRow.opik_trace_ids as Record<string, string>)
+          : {};
       const { error: upErr } = await supabase
         .from('assignments')
-        .update({ student_facing_task: studentFacingTask, updated_at: new Date().toISOString() })
+        .update({
+          student_facing_task: studentFacingTask,
+          updated_at: new Date().toISOString(),
+          opik_trace_ids: { ...priorIds, student_facing_task: clientTraceId },
+        })
         .eq('id', persistAssignmentId);
       if (upErr) {
         await persistEdgeFunctionLog(
@@ -302,6 +315,7 @@ ${instructions.trim()}`;
     return new Response(
       JSON.stringify({
         studentFacingTask,
+        opikTraceId: clientTraceId,
         source: 'generated',
         persisted: Boolean(persistAssignmentId),
       }),

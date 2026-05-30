@@ -38,6 +38,7 @@ interface GeneratedAssignmentData {
   scaffolding_tips?: string;
   target_dimensions: Record<string, boolean>;
   due_at: string;
+  opik_trace_ids?: Record<string, string>;
 }
 
 const SubmissionDetail = () => {
@@ -187,6 +188,9 @@ const SubmissionDetail = () => {
         scaffolding_tips: data.scaffolding_tips,
         target_dimensions: data.target_dimensions,
         due_at: defaultDueDate,
+        opik_trace_ids: data.opikTraceId
+          ? { instructions: data.opikTraceId as string }
+          : undefined,
       });
       setAssignmentDialogOpen(true);
 

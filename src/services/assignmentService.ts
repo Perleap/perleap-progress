@@ -189,9 +189,15 @@ export const getStudentAssignmentDetails = async (
 
 type GenerateStudentFacingResponse = {
   studentFacingTask?: string;
+  opikTraceId?: string;
   source?: string;
   persisted?: boolean;
   error?: string;
+};
+
+export type GenerateStudentFacingDraftResult = {
+  task: string;
+  opikTraceId?: string;
 };
 
 /**
@@ -216,7 +222,7 @@ export async function generateStudentFacingTaskDraft(
     instructions: string;
     uiLanguage: 'he' | 'en';
   },
-): Promise<string | null> {
+): Promise<GenerateStudentFacingDraftResult | null> {
   if (!options.classroomId || !options.instructions.trim()) return null;
   const lang = getAssignmentLanguage(options.instructions, options.uiLanguage);
   const { data, error } = await supabase.functions.invoke<GenerateStudentFacingResponse>(
@@ -234,7 +240,12 @@ export async function generateStudentFacingTaskDraft(
     console.warn('generateStudentFacingTaskDraft', error);
     return null;
   }
-  return data?.studentFacingTask?.trim() ?? null;
+  const task = data?.studentFacingTask?.trim() ?? '';
+  if (!task) return null;
+  return {
+    task,
+    opikTraceId: data?.opikTraceId?.trim() || undefined,
+  };
 }
 
 /**

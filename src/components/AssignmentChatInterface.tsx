@@ -26,6 +26,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useConversation } from '@/hooks/useConversation';
 import { useStudentProfile } from '@/hooks/queries';
 import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
+import { syncOpikChatSentenceFlag } from '@/services/submissionService';
 import { validateChatAttachmentFile } from '@/lib/chatAttachment';
 import {
   formatInlineListsForChatMarkdown,
@@ -606,9 +607,20 @@ export function AssignmentChatInterface({
     let anyDup = false;
     try {
       const sortedIdx = [...flagSelectedSentenceIdx].sort((a, b) => a - b);
+      const { data: dbConv } = await supabase
+        .from('assignment_conversations')
+        .select('messages')
+        .eq('submission_id', submissionId)
+        .maybeSingle();
+      const dbMessages = Array.isArray(dbConv?.messages) ? dbConv.messages : [];
+      const dbMsg = dbMessages[flagDialogMessageIndex] as { content?: string } | undefined;
+      const dbContent = typeof dbMsg?.content === 'string' ? dbMsg.content : '';
+      const dbSentences = splitAssistantMessageIntoSentences(dbContent);
+
       for (const si of sortedIdx) {
-        const sentenceText = flagDialogSentences[si];
-        if (!sentenceText) continue;
+        const uiSentence = flagDialogSentences[si];
+        if (!uiSentence) continue;
+        const sentenceText = dbSentences[si] ?? uiSentence;
         const { data, error } = await supabase.rpc('report_assignment_chat_sentence', {
           args: {
             p_submission_id: submissionId,
@@ -623,6 +635,11 @@ export function AssignmentChatInterface({
           anyDup = true;
         } else if (r?.ok) {
           anyNew = true;
+          syncOpikChatSentenceFlag({
+            submissionId,
+            messageIndex: flagDialogMessageIndex,
+            sentenceText,
+          });
         } else {
           throw new Error(r?.error ?? 'flag_rejected');
         }

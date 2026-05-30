@@ -224,6 +224,7 @@ Based on this information, design a personalized follow-up assignment that will 
         scaffolding_tips: assignmentData.scaffolding_tips,
         target_dimensions: assignmentData.target_dimensions,
         reasoning: assignmentData.reasoning || '',
+        opikTraceId: clientTraceId,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

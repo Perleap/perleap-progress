@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { distinctDomains } from '@/lib/hardSkillsFormat';
+import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
 import type { AssignmentWizardFormData, AssignmentWizardStepId } from '../assignmentWizardTypes';
 import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
 import type { SyllabusWithSections } from '@/types/syllabus';
@@ -78,6 +79,9 @@ export function AssignmentReviewStep({
     if (s.length <= 200) return s;
     return `${s.slice(0, 200)}…`;
   })();
+
+  const studentFacingTraceId = readOpikTraceId(formData.opik_trace_ids, 'student_facing_task');
+  const instructionsTraceId = readOpikTraceId(formData.opik_trace_ids, 'instructions');
 
   const attemptLabel =
     formData.attempt_mode === 'multiple_until_due'
@@ -199,21 +203,30 @@ export function AssignmentReviewStep({
             </h4>
             <p className="text-xs text-muted-foreground">{t('createAssignment.wizard.studentFacingHint')}</p>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            onClick={onGenerateForStudents}
-            disabled={!formData.instructions.trim() || generatingStudentTask}
-          >
-            {generatingStudentTask ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            {t('createAssignment.wizard.generateForStudents')}
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            {studentFacingTraceId ? (
+              <AiContentFlagButton
+                contentType="student_facing_task"
+                contentExcerpt={formData.student_facing_task}
+                opikTraceId={studentFacingTraceId}
+              />
+            ) : null}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="gap-1.5"
+              onClick={onGenerateForStudents}
+              disabled={!formData.instructions.trim() || generatingStudentTask}
+            >
+              {generatingStudentTask ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              {t('createAssignment.wizard.generateForStudents')}
+            </Button>
+          </div>
         </div>
         <div className="space-y-2 px-4 py-4">
           <Label htmlFor="student-facing-task" className="sr-only">
@@ -230,6 +243,29 @@ export function AssignmentReviewStep({
           />
         </div>
       </section>
+
+      {instructionsTraceId && formData.instructions.trim() ? (
+        <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div
+            className={cn(
+              'flex items-center justify-between gap-3 border-b border-border bg-muted/25 px-4 py-3',
+              isRTL && 'flex-row-reverse',
+            )}
+          >
+            <h4 className="text-sm font-semibold text-foreground">
+              {t('createAssignment.instructionsLabel')}
+            </h4>
+            <AiContentFlagButton
+              contentType="instructions"
+              contentExcerpt={formData.instructions}
+              opikTraceId={instructionsTraceId}
+            />
+          </div>
+          <p className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap" dir="auto">
+            {instructionPreview}
+          </p>
+        </section>
+      ) : null}
 
       <div className="space-y-4">
         {sections.map((section) => (

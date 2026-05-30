@@ -493,7 +493,7 @@ serve(async (req) => {
       studentProfile,
       assignmentDetails,
       classroomResources,
-      isInitialGreeting,
+      Boolean(isInitialGreeting),
       language,
       moduleActivityContextText || undefined,
       priorContextExcerpt || undefined,
@@ -706,6 +706,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
         content: cleanedMessage,
         raw_model_text: aiMessageRaw,
         openai_chat_request_snapshot: requestPayload,
+        opik_client_trace_id: opikClientTraceId,
       };
       messages.push(assistantMessageNonStream);
 
@@ -889,6 +890,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
             content: cleanedContent,
             raw_model_text: modelAccum,
             openai_chat_request_snapshot: requestPayload,
+            opik_client_trace_id: opikClientTraceId,
           });
 
           const mergedCompletedIndexes = mergeCompletedIndexes(capturedProgressIndexes);

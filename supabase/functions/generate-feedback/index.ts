@@ -227,6 +227,9 @@ serve(async (req) => {
       ? submissionId
       : crypto.randomUUID();
 
+    const feedbackTraceId = crypto.randomUUID();
+    const hardSkillsTraceId = crypto.randomUUID();
+
     const [feedbackResult, hardSkillsResult] = await Promise.all([
       (async () => {
         const traceStartMs = Date.now();
@@ -244,7 +247,7 @@ serve(async (req) => {
           traceName: 'generate-feedback.main',
           tags: ['generate-feedback', 'edge-function'],
           threadId: opikThreadId,
-          clientTraceId: crypto.randomUUID(),
+          clientTraceId: feedbackTraceId,
           traceStartMs,
           traceEndMs,
           input: {
@@ -285,7 +288,7 @@ serve(async (req) => {
           traceName: 'generate-feedback.hard-skills',
           tags: ['generate-feedback', 'edge-function'],
           threadId: opikThreadId,
-          clientTraceId: crypto.randomUUID(),
+          clientTraceId: hardSkillsTraceId,
           traceStartMs,
           traceEndMs,
           input: {
@@ -358,6 +361,10 @@ serve(async (req) => {
         teacher_feedback: teacherFeedback,
         conversation_context: conversationMessages,
         visible_to_student: visibleToStudent,
+        opik_trace_ids: {
+          feedback_main: feedbackTraceId,
+          hard_skills: hardSkillsTraceId,
+        },
       }),
 
       // 3. Save hard skills assessment
