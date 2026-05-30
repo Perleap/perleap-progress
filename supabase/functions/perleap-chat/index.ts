@@ -70,7 +70,7 @@ import { getCourseMemoryForPrompt, getUnitMemoryForPrompt } from '../shared/unit
 import { createMarkerSink } from './markerSink.ts';
 import { createProgressSink, extractProgressFromFullText } from './progressSink.ts';
 import { consumeChatCompletionsStream, consumeResponsesApiStream } from './streamOpenAI.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const CHAT_TEMPERATURE = 0.2;
 const CHAT_MAX_TOKENS_DEFAULT = 500;
@@ -660,7 +660,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
     let chainingFellBack = false;
 
     if (!effectiveStream) {
-      const opikClientTraceId = crypto.randomUUID();
+      const opikClientTraceId = uuidv7();
       const traceStartMs = Date.now();
       let result: { content: string; responseId?: string; usage?: unknown };
       if (useResponses) {
@@ -788,7 +788,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
     }
 
     // Streaming branch (unified Chat Completions + Responses API via markerSink).
-    const opikClientTraceId = crypto.randomUUID();
+    const opikClientTraceId = uuidv7();
     const traceStartMs = Date.now();
     let upstream: Response;
     if (useResponses) {

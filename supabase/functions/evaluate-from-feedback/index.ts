@@ -13,7 +13,7 @@ import {
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 import {
   domainForSkillComponent,
   formatHardSkillPairsForPrompt,
@@ -155,7 +155,7 @@ Rules:
           traceName: 'evaluate-from-feedback.main',
           tags: ['evaluate-from-feedback', 'edge-function'],
           threadId: opikThreadId,
-          clientTraceId: crypto.randomUUID(),
+          clientTraceId: uuidv7(),
           traceStartMs,
           traceEndMs,
           input: {
@@ -195,7 +195,7 @@ Rules:
           traceName: 'evaluate-from-feedback.hard-skills',
           tags: ['evaluate-from-feedback', 'edge-function'],
           threadId: opikThreadId,
-          clientTraceId: crypto.randomUUID(),
+          clientTraceId: uuidv7(),
           traceStartMs,
           traceEndMs,
           input: {

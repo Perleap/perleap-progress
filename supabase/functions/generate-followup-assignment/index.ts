@@ -8,7 +8,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -120,7 +120,7 @@ ${teacherFeedback || 'No teacher feedback available'}
 Based on this information, design a personalized follow-up assignment that will help ${studentName} grow in areas that need improvement while building on their strengths. The assignment should feel like a natural next step in their learning journey.`;
 
     const opikThreadId = crypto.randomUUID();
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     const traceStartMs = Date.now();
     const { content: assignmentText, usage } = await createChatCompletion(
       systemPrompt,

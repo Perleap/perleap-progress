@@ -9,7 +9,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { createSupabaseClient } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 import { generateWellbeingAnalysisPrompt } from '../_shared/prompts.ts';
 import type { WellbeingAnalysisResult, Message } from './types.ts';
 import { sendAlertEmail } from './email.ts';
@@ -95,7 +95,7 @@ serve(async (req) => {
       traceName: 'analyze-student-wellbeing.completion',
       tags: ['analyze-student-wellbeing', 'edge-function'],
       threadId: opikThreadId,
-      clientTraceId: crypto.randomUUID(),
+      clientTraceId: uuidv7(),
       traceStartMs,
       traceEndMs,
       input: {

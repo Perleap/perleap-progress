@@ -14,7 +14,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -208,7 +208,7 @@ ${evidenceText}`
     });
 
     const opikThreadId = crypto.randomUUID();
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     const traceStartMs = Date.now();
     const { content, usage } = await createChatCompletion(
       systemPrompt,

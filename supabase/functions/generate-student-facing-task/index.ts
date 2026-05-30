@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion } from '../shared/openai.ts';
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -224,7 +224,7 @@ ${instructions.trim()}`;
       persistAssignmentId ??
       (classroomId.trim() ? classroomId : null) ??
       crypto.randomUUID();
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     const traceStartMs = Date.now();
     const { content, usage } = (await createChatCompletion(
       language === 'he' ? systemHe : systemEn,

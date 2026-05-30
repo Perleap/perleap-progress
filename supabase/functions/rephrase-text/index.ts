@@ -7,7 +7,7 @@ import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,7 +80,7 @@ ${text}
 ---END SOURCE---`;
 
     const opikThreadId = crypto.randomUUID();
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     const traceStartMs = Date.now();
     // Call OpenAI API (smart tier + low temperature: more reliable on imperatives; higher latency/cost than fast/gpt-4o-mini)
     const { content: rephrasedText, usage } = await createChatCompletion(

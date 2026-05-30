@@ -4,7 +4,7 @@ import { createSupabaseClient } from '../shared/supabase.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -342,7 +342,7 @@ Student name: ${studentName}`;
         traceName: 'compute-nuance-insights.llm-phrasing',
         tags: ['compute-nuance-insights', 'edge-function'],
         threadId: opik.threadId,
-        clientTraceId: crypto.randomUUID(),
+        clientTraceId: uuidv7(),
         traceStartMs,
         traceEndMs,
         input: {

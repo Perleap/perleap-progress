@@ -10,7 +10,7 @@ import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -94,7 +94,7 @@ serve(async (req) => {
       traceName: 'regenerate-scores.scores',
       tags: ['regenerate-scores', 'edge-function'],
       threadId: opikThreadId,
-      clientTraceId: crypto.randomUUID(),
+      clientTraceId: uuidv7(),
       traceStartMs: scoresTraceStart,
       traceEndMs: scoresTraceEnd,
       input: {
@@ -146,7 +146,7 @@ serve(async (req) => {
       traceName: 'regenerate-scores.explanations',
       tags: ['regenerate-scores', 'edge-function'],
       threadId: opikThreadId,
-      clientTraceId: crypto.randomUUID(),
+      clientTraceId: uuidv7(),
       traceStartMs: explanationsTraceStart,
       traceEndMs: explanationsTraceEnd,
       input: {

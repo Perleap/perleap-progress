@@ -9,6 +9,34 @@
 export const OPIK_FEEDBACK_SCORE_STUDENT_FLAG = 'student_flag';
 export const OPIK_FEEDBACK_SCORE_TEACHER_FLAG = 'teacher_flag';
 
+const UUID_V7_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Whether a string is a valid UUIDv7 (required by Opik for trace ids). */
+export function isUuidV7(value: string): boolean {
+  return UUID_V7_REGEX.test(value);
+}
+
+/**
+ * Generate a UUIDv7 (time-ordered). Opik requires trace/span ids to be v7;
+ * `crypto.randomUUID()` returns v4, which Opik silently rejects.
+ */
+export function uuidv7(): string {
+  const ts = Date.now();
+  const b = new Uint8Array(16);
+  b[0] = (ts / 2 ** 40) & 0xff;
+  b[1] = (ts / 2 ** 32) & 0xff;
+  b[2] = (ts / 2 ** 24) & 0xff;
+  b[3] = (ts / 2 ** 16) & 0xff;
+  b[4] = (ts / 2 ** 8) & 0xff;
+  b[5] = ts & 0xff;
+  crypto.getRandomValues(b.subarray(6));
+  b[6] = (b[6] & 0x0f) | 0x70; // version 7
+  b[8] = (b[8] & 0x3f) | 0x80; // variant
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 function opikApiBase(): string {
   const raw = Deno.env.get('OPIK_URL_OVERRIDE')?.trim();
   return raw ? raw.replace(/\/$/, '') : 'https://www.comet.com/opik/api';
@@ -156,7 +184,7 @@ export async function queueOpikTrace(params: QueueOpikTraceParams): Promise<void
     tags: params.tags,
     source: 'sdk',
   };
-  if (params.clientTraceId) {
+  if (params.clientTraceId && isUuidV7(params.clientTraceId)) {
     trace.id = params.clientTraceId;
   }
   if (environment) trace.environment = environment;

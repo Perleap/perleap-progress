@@ -2,7 +2,7 @@ import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 function lastUserMessageContent(messages: unknown): string {
     if (!Array.isArray(messages)) return '';
@@ -55,7 +55,7 @@ serve(async (req: Request) => {
             (typeof body.threadId === 'string' && body.threadId.trim()) ||
             (typeof body.conversationId === 'string' && body.conversationId.trim()) ||
             crypto.randomUUID();
-        const clientTraceId = crypto.randomUUID();
+        const clientTraceId = uuidv7();
         const userTurn = lastUserMessageContent(messages);
 
         const systemPrompt = `${SYSTEM_PROMPT}\n\nCURRENT CONTEXT:\n${JSON.stringify(context, null, 2)}`;

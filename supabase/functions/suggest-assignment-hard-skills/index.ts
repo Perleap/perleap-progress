@@ -8,7 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 import type { HardSkillPair } from '../_shared/hardSkillsFormat.ts';
 
 const corsHeaders = {
@@ -164,7 +164,7 @@ ${instructions.trim() || '(none)'}`;
   const traceEndMs = Date.now();
 
   if (opik) {
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     void queueOpikTrace({
       traceName: 'suggest-assignment-hard-skills.catalog',
       tags: ['suggest-assignment-hard-skills', 'edge-function'],
@@ -238,7 +238,7 @@ ${instructions.trim() || '(none)'}`;
   const traceEndMs = Date.now();
 
   if (opik) {
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     void queueOpikTrace({
       traceName: 'suggest-assignment-hard-skills.custom',
       tags: ['suggest-assignment-hard-skills', 'edge-function'],

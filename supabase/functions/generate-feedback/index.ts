@@ -15,7 +15,7 @@ import {
 } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 import {
   domainForSkillComponent,
   formatHardSkillPairsForPrompt,
@@ -227,8 +227,8 @@ serve(async (req) => {
       ? submissionId
       : crypto.randomUUID();
 
-    const feedbackTraceId = crypto.randomUUID();
-    const hardSkillsTraceId = crypto.randomUUID();
+    const feedbackTraceId = uuidv7();
+    const hardSkillsTraceId = uuidv7();
 
     const [feedbackResult, hardSkillsResult] = await Promise.all([
       (async () => {

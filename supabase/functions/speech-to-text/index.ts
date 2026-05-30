@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createTranscription, handleOpenAIError } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
-import { queueOpikTrace } from '../shared/opikTrace.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +26,7 @@ serve(async (req) => {
     }
 
     const opikThreadId = crypto.randomUUID();
-    const clientTraceId = crypto.randomUUID();
+    const clientTraceId = uuidv7();
     const traceStartMs = Date.now();
     const text = await createTranscription(audioFile, language);
     const traceEndMs = Date.now();
