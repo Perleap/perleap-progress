@@ -5,7 +5,7 @@
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import {
   createSupabaseClient,
   getAssignmentModuleActivityContextText,
@@ -258,6 +258,7 @@ serve(async (req) => {
           },
           output: { raw_json: r.content },
           openaiUsage: r.usage,
+          llmModel: resolveChatModel('smart'),
           metadata: {
             edge_function: 'generate-feedback',
             model_tier: 'smart',
@@ -299,6 +300,7 @@ serve(async (req) => {
           },
           output: { raw_json: r.content },
           openaiUsage: r.usage,
+          llmModel: resolveChatModel('fast'),
           metadata: {
             edge_function: 'generate-feedback',
             model_tier: 'fast',

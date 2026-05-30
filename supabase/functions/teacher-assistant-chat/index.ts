@@ -1,6 +1,6 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
@@ -80,6 +80,7 @@ serve(async (req: Request) => {
             userMessage: userTurn,
             assistantMessage: content,
             openaiUsage: usage,
+            llmModel: resolveChatModel('smart'),
             metadata: {
                 edge_function: 'teacher-assistant-chat',
                 model_tier: 'smart',

@@ -6,7 +6,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createSupabaseClient } from '../shared/supabase.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
@@ -103,6 +103,7 @@ serve(async (req) => {
       },
       output: { raw_json: scoresText },
       openaiUsage: scoresUsage,
+      llmModel: resolveChatModel('smart'),
       metadata: {
         edge_function: 'regenerate-scores',
         model_tier: 'smart',
@@ -156,6 +157,7 @@ serve(async (req) => {
       },
       output: { raw_text: explanationsText },
       openaiUsage: explanationsUsage,
+      llmModel: resolveChatModel('smart'),
       metadata: {
         edge_function: 'regenerate-scores',
         model_tier: 'smart',

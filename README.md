@@ -130,14 +130,19 @@ OPIK_WORKSPACE=your_comet_workspace_name
 
 # If Chat Completions streaming returns 400 on stream_options, disable usage-on-stream (perleap-chat only):
 # PERLEAP_CHAT_STREAM_USAGE=false
+
+# Log the provider/model/usage/cost sent to Opik for each LLM call (stdout, debugging only):
+# OPIK_COST_DEBUG=true
 ```
 
 After changing secrets, redeploy edge functions that emit traces. If `OPENAI_MODEL` is unset, the code default is `gpt-5.4`. Opik posts are fire-and-forget (`queueOpikTrace` in `supabase/functions/shared/opikTrace.ts`); they never block the HTTP response when Opik is down. Traces include `metadata.edge_function`, `metadata.openai_usage` when the OpenAI chat completion returns usage, and `metadata.perleap_client_trace_id` for correlation. **Trace `name`** examples: `perleap-chat.reply`, `generate-feedback.main`, `generate-feedback.hard-skills`, `text-to-speech.synthesis` (no usage on audio). Filter in the Opik UI by project, tag, or `metadata.edge_function`.
 
+**Cost tracking (estimated cost in the Opik dashboard):** for each LLM call we also emit a child span with `type: "llm"`, `provider`, the resolved `model` (`resolveChatModel` in `supabase/functions/shared/openai.ts`), and normalized token `usage` (`prompt_tokens`/`completion_tokens`/`total_tokens` via `normalizeOpikTokenUsage`, which maps OpenAI Chat, OpenAI Responses `input_tokens`/`output_tokens`, and Gemini `promptTokenCount`/`candidatesTokenCount`). Opik computes cost from supported models automatically; for models it may not price (e.g. `gpt-5.5`) we also attach a manual `total_cost` from `MODEL_PRICING_USD_PER_TOKEN` (`gpt-5.5` = $5/1M input, $30/1M output; `gpt-4o-mini` = $0.15/$0.60), which overrides Opik's own calc so cost never shows "-". Update that map in `opikTrace.ts` when pricing or models change. Audio (Whisper/TTS) has no token usage, so those spans carry no cost. Set `OPIK_COST_DEBUG=true` to log what is sent. Helper tests: `deno test supabase/functions/shared/opikTrace.test.ts`.
+
 **User flags → Opik feedback scores:** When students flag chat sentences or teachers flag AI-generated feedback/assignments, the app calls `opik-ai-flag-feedback`, which posts `student_flag: 0` or `teacher_flag: 0` on the linked trace. Filter traces by those feedback score names in Opik to review bad outputs.
 
 **Deploy / smoke (when validating tracing):**  
-`perleap-chat`, `teacher-assistant-chat`, `rephrase-text`, `suggest-assignment-hard-skills`, `generate-student-facing-task`, `generate-followup-assignment`, `generate-feedback`, `evaluate-from-feedback`, `explain-analytics-5d`, `regenerate-scores`, `analyze-student-wellbeing`, `compute-nuance-insights`, `text-to-speech`, `speech-to-text`, `opik-ai-flag-feedback`.
+`perleap-chat`, `teacher-assistant-chat`, `rephrase-text`, `suggest-assignment-hard-skills`, `generate-student-facing-task`, `generate-followup-assignment`, `generate-feedback`, `evaluate-from-feedback`, `explain-analytics-5d`, `regenerate-scores`, `analyze-student-wellbeing`, `compute-nuance-insights`, `extract-unit-memory`, `transcribe-live-session`, `text-to-speech`, `speech-to-text`, `opik-ai-flag-feedback`.
 
 ## 🧪 Testing (Future)
 

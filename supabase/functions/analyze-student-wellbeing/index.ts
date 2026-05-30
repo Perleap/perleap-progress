@@ -5,7 +5,7 @@
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { createSupabaseClient } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
@@ -107,6 +107,7 @@ serve(async (req) => {
       },
       output: { raw_json: responseText },
       openaiUsage: usage,
+      llmModel: resolveChatModel('smart'),
       metadata: {
         edge_function: 'analyze-student-wellbeing',
         model_tier: 'smart',

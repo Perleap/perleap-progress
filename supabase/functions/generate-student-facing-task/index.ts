@@ -4,7 +4,7 @@
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createChatCompletion } from '../shared/openai.ts';
+import { createChatCompletion, resolveChatModel } from '../shared/openai.ts';
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
@@ -251,6 +251,7 @@ ${instructions.trim()}`;
       },
       output: { model_response_json: content },
       openaiUsage: usage,
+      llmModel: resolveChatModel('fast'),
       metadata: {
         edge_function: 'generate-student-facing-task',
         model_tier: 'fast',

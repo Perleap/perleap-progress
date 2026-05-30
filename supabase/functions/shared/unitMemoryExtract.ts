@@ -3,7 +3,7 @@
  */
 
 import { createSupabaseClient } from './supabase.ts';
-import { createChatCompletion } from './openai.ts';
+import { createChatCompletion, resolveChatModel } from './openai.ts';
 import {
   hasFactsForSubmission,
   hasProcessedSubmission,
@@ -263,6 +263,7 @@ ${sourceText}`;
 
   const traceStartMs = Date.now();
   let extractedTexts: string[] = [];
+  let extractionUsage: unknown;
 
   try {
     const result = await createChatCompletion(
@@ -273,8 +274,9 @@ ${sourceText}`;
       'fast',
       false,
       'json_object',
-    );
+    ) as { content: string; usage?: unknown };
     extractedTexts = parseExtractionResponse(result.content);
+    extractionUsage = result.usage;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, submissionId, error: msg };
@@ -337,6 +339,8 @@ ${sourceText}`;
     traceEndMs: Date.now(),
     userMessage: userPrompt.slice(0, 4000),
     assistantMessage: JSON.stringify({ facts: extractedTexts }),
+    openaiUsage: extractionUsage,
+    llmModel: resolveChatModel('fast'),
     metadata: {
       edge_function: 'extract-unit-memory',
       submission_id: submissionId,

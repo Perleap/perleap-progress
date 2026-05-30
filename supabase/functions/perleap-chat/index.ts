@@ -549,7 +549,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
       return [...set].sort((a, b) => a - b);
     };
 
-    const openAIMessages: any[] = isInitialGreeting
+    const openAIMessages: Message[] = isInitialGreeting
       ? [{ role: 'user', content: userMessageContent }]
       : [...messages];
 
@@ -568,7 +568,10 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
       }
 
       if (imageUrls.length > 0) {
-        const contentParts: any[] = [{ type: 'text', text: msg.content }];
+        const contentParts: Array<
+          | { type: 'text'; text: string }
+          | { type: 'image_url'; image_url: { url: string; detail: string } }
+        > = [{ type: 'text', text: msg.content }];
         for (const url of imageUrls) {
           contentParts.push({ type: 'image_url', image_url: { url, detail: 'high' } });
         }
@@ -734,6 +737,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
         userMessage: userMessageContent,
         assistantMessage: cleanedMessage,
         openaiUsage: result.usage,
+        llmModel: (requestPayload.model as string | undefined) ?? smartModel,
         metadata: {
           edge_function: 'perleap-chat',
           assignmentId,
@@ -920,6 +924,7 @@ COURSE_RECALL_QUOTE (overrides TUTOR_TURN_PROTOCOL for this turn)
             userMessage: userMessageContent,
             assistantMessage: cleanedContent,
             openaiUsage: streamUsage,
+            llmModel: (requestPayload.model as string | undefined) ?? smartModelStream,
             metadata: {
               edge_function: 'perleap-chat',
               assignmentId,

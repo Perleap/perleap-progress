@@ -10,7 +10,7 @@ const EVIDENCE_MAX_TOTAL_CHARS = 10_000;
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
@@ -237,6 +237,7 @@ ${evidenceText}`
       },
       output: { raw_json: content },
       openaiUsage: usage,
+      llmModel: resolveChatModel('fast'),
       metadata: {
         edge_function: 'explain-analytics-5d',
         model_tier: 'fast',

@@ -5,7 +5,7 @@
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
@@ -148,6 +148,7 @@ Based on this information, design a personalized follow-up assignment that will 
       },
       output: { raw_model_response: assignmentText },
       openaiUsage: usage,
+      llmModel: resolveChatModel('smart'),
       metadata: {
         edge_function: 'generate-followup-assignment',
         model_tier: 'smart',

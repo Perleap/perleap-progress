@@ -19,6 +19,15 @@ export const getOpenAIConfig = (): OpenAIConfig => {
   return { apiKey, model };
 };
 
+/**
+ * Resolve the concrete model name used for a tier. Mirrors the tier logic in
+ * `buildChatCompletionsPayload` / `buildResponsesApiPayload` so callers can report
+ * the exact model to Opik for cost tracking without duplicating the mapping.
+ */
+export const resolveChatModel = (modelTier: 'fast' | 'smart' = 'smart'): string => {
+  return modelTier === 'fast' ? 'gpt-4o-mini' : getOpenAIConfig().model;
+};
+
 /** GPT-5 chat/completions expects max_completion_tokens, not max_tokens (400 otherwise). */
 const usesMaxCompletionTokens = (model: string): boolean => /^gpt-5/i.test(model.trim());
 

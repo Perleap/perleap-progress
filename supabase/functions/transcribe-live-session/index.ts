@@ -11,11 +11,13 @@ import {
   createChatCompletion,
   createVerboseTranscription,
   handleOpenAIError,
+  resolveChatModel,
   type TranscriptionSegment,
 } from '../shared/openai.ts';
 import { createSupabaseClient } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,6 +124,7 @@ Rules:
     let summary = '';
     let timestamps: Array<{ time: number; label: string }> = [];
     try {
+      const summaryTraceStartMs = Date.now();
       const summaryResult = (await createChatCompletion(
         summaryPrompt,
         [{ role: 'user', content: `Timestamped transcript:\n\n${outline}` }],
@@ -130,7 +133,8 @@ Rules:
         'smart',
         false,
         'json_object',
-      )) as { content: string };
+      )) as { content: string; usage?: unknown };
+      const summaryTraceEndMs = Date.now();
       const parsed = JSON.parse(summaryResult.content);
       summary = typeof parsed.summary === 'string' ? parsed.summary : '';
       if (Array.isArray(parsed.timestamps)) {
@@ -142,6 +146,28 @@ Rules:
           }))
           .filter((tp: { label: string }) => tp.label.length > 0);
       }
+
+      void queueOpikTrace({
+        traceName: 'transcribe-live-session.summary',
+        tags: ['transcribe-live-session', 'edge-function'],
+        threadId: liveSessionId,
+        clientTraceId: uuidv7(),
+        traceStartMs: summaryTraceStartMs,
+        traceEndMs: summaryTraceEndMs,
+        input: {
+          language,
+          transcript_chars: transcriptText.length,
+          segment_count: allSegments.length,
+        },
+        output: { raw_json: summaryResult.content },
+        openaiUsage: summaryResult.usage,
+        llmModel: resolveChatModel('smart'),
+        metadata: {
+          edge_function: 'transcribe-live-session',
+          model_tier: 'smart',
+          live_session_id: liveSessionId,
+        },
+      }).catch(() => undefined);
     } catch (e) {
       logError('Live session summary generation failed', e);
     }

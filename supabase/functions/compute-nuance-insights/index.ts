@@ -1,7 +1,7 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createSupabaseClient } from '../shared/supabase.ts';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
@@ -351,6 +351,7 @@ Student name: ${studentName}`;
         },
         output: { recommendation_text: r.content },
         openaiUsage: r.usage,
+        llmModel: resolveChatModel('fast'),
         metadata: {
           edge_function: 'compute-nuance-insights',
           model_tier: 'fast',

@@ -5,7 +5,7 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createChatCompletion, handleOpenAIError } from '../shared/openai.ts';
+import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
@@ -181,6 +181,7 @@ ${instructions.trim() || '(none)'}`;
       },
       output: { response_json: content },
       openaiUsage: usage,
+      llmModel: resolveChatModel('fast'),
       metadata: {
         edge_function: 'suggest-assignment-hard-skills',
         model_tier: 'fast',
@@ -254,6 +255,7 @@ ${instructions.trim() || '(none)'}`;
       },
       output: { response_json: content },
       openaiUsage: usage,
+      llmModel: resolveChatModel('fast'),
       metadata: {
         edge_function: 'suggest-assignment-hard-skills',
         model_tier: 'fast',
