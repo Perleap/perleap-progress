@@ -1,3 +1,4 @@
+import { type IframeHTMLAttributes } from 'react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { cn } from '@/lib/utils';
 import { parseYoutubeUrl, youtubeEmbedUrl } from '@/lib/youtube';
@@ -26,6 +27,7 @@ export function ContentVideoBlock({
   const frame = parsedYoutube ? (
     <AspectRatio ratio={16 / 9} className="bg-black/25">
       <iframe
+        {...({ credentialless: '' } as IframeHTMLAttributes<HTMLIFrameElement>)}
         src={youtubeEmbedUrl(parsedYoutube.videoId)}
         title="YouTube video"
         className="absolute inset-0 h-full w-full"
