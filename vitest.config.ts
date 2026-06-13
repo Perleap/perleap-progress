@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: false,
+    exclude: ['**/node_modules/**', '**/dist/**', 'supabase/functions/**'],
   },
   resolve: {
     alias: {

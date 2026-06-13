@@ -563,23 +563,25 @@ const ClassroomDetail = () => {
 
             {/* Classroom Actions */}
             <div className="pt-6 border-t border-border">
-              <div className={`flex flex-col sm:flex-row gap-3 ${isRTL ? 'sm:justify-end' : 'sm:justify-start'}`}>
+              <div className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${isRTL ? 'sm:justify-end' : 'sm:justify-start'}`}>
                 <Button
+                  type="button"
                   onClick={() => setEditDialogOpen(true)}
-                  size="sm"
-                  className="w-full sm:w-auto"
                   variant="outline"
+                  size="sm"
+                  className="h-9 w-full gap-1.5 rounded-full shadow-xs sm:w-auto"
                 >
-                  <Edit className="me-2 h-4 w-4" />
+                  <Edit className="h-4 w-4" />
                   {t('classroomDetail.edit')}
                 </Button>
                 <Button
+                  type="button"
                   onClick={() => setDeleteDialogOpen(true)}
-                  size="sm"
                   variant="destructive"
-                  className="w-full sm:w-auto"
+                  size="sm"
+                  className="h-9 w-full gap-1.5 rounded-full shadow-xs sm:w-auto"
                 >
-                  <Trash2 className="me-2 h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                   {t('classroomDetail.deleteButton')}
                 </Button>
               </div>
