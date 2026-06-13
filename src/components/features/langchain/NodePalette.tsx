@@ -1,34 +1,59 @@
+import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, FileOutput, Brain, FileText, Link2, Database } from 'lucide-react';
+import { MessageSquare, FileOutput, Brain, Zap, Mail } from 'lucide-react';
 
 const NODE_TYPES_CONFIG = [
   { type: 'inputNode', icon: MessageSquare, color: 'text-blue-600 bg-blue-50 border-blue-200' },
   { type: 'outputNode', icon: FileOutput, color: 'text-green-600 bg-green-50 border-green-200' },
   { type: 'llmNode', icon: Brain, color: 'text-purple-600 bg-purple-50 border-purple-200' },
-  { type: 'promptNode', icon: FileText, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-  { type: 'chainNode', icon: Link2, color: 'text-rose-600 bg-rose-50 border-rose-200' },
-  { type: 'memoryNode', icon: Database, color: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
+  { type: 'triggerNode', icon: Zap, color: 'text-orange-600 bg-orange-50 border-orange-200' },
+  { type: 'emailNode', icon: Mail, color: 'text-teal-600 bg-teal-50 border-teal-200' },
 ] as const;
 
 const NODE_KEY_MAP: Record<string, string> = {
   inputNode: 'input',
   outputNode: 'output',
   llmNode: 'llm',
-  promptNode: 'prompt',
-  chainNode: 'chain',
-  memoryNode: 'memory',
+  triggerNode: 'trigger',
+  emailNode: 'email',
 };
 
 export function NodePalette() {
   const { t } = useTranslation();
+  const dragImageRef = useRef<HTMLDivElement | null>(null);
 
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
+  const onDragEnd = useCallback(() => {
+    dragImageRef.current?.remove();
+    dragImageRef.current = null;
+  }, []);
+
+  const onDragStart = useCallback((event: React.DragEvent<HTMLDivElement>, nodeType: string) => {
+    event.stopPropagation();
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
-  };
+
+    const source = event.currentTarget;
+    const rect = source.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+
+    const clone = source.cloneNode(true) as HTMLDivElement;
+    clone.style.position = 'fixed';
+    clone.style.top = '-2000px';
+    clone.style.left = '-2000px';
+    clone.style.width = `${source.offsetWidth}px`;
+    clone.style.margin = '0';
+    clone.style.pointerEvents = 'none';
+    clone.style.opacity = '0.92';
+    clone.style.boxShadow = '0 4px 12px rgb(0 0 0 / 0.15)';
+    document.body.appendChild(clone);
+    dragImageRef.current = clone;
+
+    event.dataTransfer.setDragImage(clone, offsetX, offsetY);
+  }, []);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 select-none">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
         {t('assignmentDetail.langchain.addNode')}
       </h3>
@@ -39,7 +64,8 @@ export function NodePalette() {
             key={type}
             draggable
             onDragStart={(e) => onDragStart(e, type)}
-            className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-grab active:cursor-grabbing transition-all hover:shadow-sm ${color}`}
+            onDragEnd={onDragEnd}
+            className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-grab active:cursor-grabbing transition-shadow hover:shadow-sm ${color}`}
           >
             <Icon className="h-4 w-4 shrink-0" />
             <div className="min-w-0">

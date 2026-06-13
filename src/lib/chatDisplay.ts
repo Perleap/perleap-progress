@@ -372,7 +372,7 @@ export function createChatStreamEmission() {
       if (hasConversationCompleteMarker(tail)) {
         shouldEnd = true;
       }
-      const cleaned = stripConversationCompleteMarker(tail);
+      const cleaned = tail.replace(/\[(?:CONVERSATION_COMPLETE|CONATION_COMPLETE)\]/gi, '');
       if (cleaned) onToken(cleaned);
     }
   };

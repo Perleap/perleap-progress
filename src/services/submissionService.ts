@@ -16,7 +16,7 @@ import type {
   FeedbackResponse,
   Message,
 } from '@/types';
-import { SUBMISSION_STATUS } from '@/config/constants';
+import { SUBMISSION_STATUS, EVALUATION_STATUS, type EvaluationStatus } from '@/config/constants';
 import { createNotification } from '@/lib/notificationService';
 import { rehydrateMessages } from '@/lib/conversationMessages';
 import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
@@ -28,6 +28,12 @@ export type StudentSubmissionContext = {
   allAttempts: Submission[];
   canRetry: boolean;
 };
+
+/** Assignment fields required by attempt policy; callers may pass a row already loaded. */
+export type SubmissionContextAssignment = Pick<
+  Database['public']['Tables']['assignments']['Row'],
+  'id' | 'attempt_mode' | 'due_at' | 'status'
+>;
 
 async function insertSubmissionRow(
   assignmentId: string,
@@ -64,20 +70,27 @@ export const getStudentSubmissionContext = async (
   assignmentId: string,
   studentId: string,
   opts?: { isTeacherTry?: boolean },
+  prefetchedAssignment?: SubmissionContextAssignment | null,
 ): Promise<{ data: StudentSubmissionContext; error: ApiError | null }> => {
   try {
-    const { data: assignment, error: assignErr } = await supabase
-      .from('assignments')
-      .select('id, attempt_mode, due_at, status')
-      .eq('id', assignmentId)
-      .maybeSingle();
+    let assignment: SubmissionContextAssignment | null = prefetchedAssignment ?? null;
 
-    if (assignErr) {
-      return {
-        data: { submission: null, allAttempts: [], canRetry: false },
-        error: handleSupabaseError(assignErr),
-      };
+    if (!assignment) {
+      const { data: fetched, error: assignErr } = await supabase
+        .from('assignments')
+        .select('id, attempt_mode, due_at, status')
+        .eq('id', assignmentId)
+        .maybeSingle();
+
+      if (assignErr) {
+        return {
+          data: { submission: null, allAttempts: [], canRetry: false },
+          error: handleSupabaseError(assignErr),
+        };
+      }
+      assignment = fetched;
     }
+
     if (!assignment) {
       return { data: { submission: null, allAttempts: [], canRetry: false }, error: null };
     }
@@ -238,6 +251,30 @@ export const startNewSubmissionAttempt = async (
   }
 };
 
+/**
+ * Lightweight poll for evaluation pipeline status (one row, two columns).
+ */
+export const getSubmissionEvaluationStatus = async (
+  submissionId: string,
+): Promise<{ data: EvaluationStatus | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('evaluation_status')
+      .eq('id', submissionId)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+
+    const status = data?.evaluation_status as EvaluationStatus | null | undefined;
+    return { data: status ?? null, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
 /** @deprecated Prefer getStudentSubmissionContext */
 export const getOrCreateSubmission = async (
   assignmentId: string,
@@ -260,7 +297,7 @@ export const getFullSubmissionDetails = async (
       .from('submissions')
       .select(`
         *,
-        assignments(id, title, instructions, classroom_id, due_at, type, auto_publish_ai_feedback, student_facing_task, opik_trace_ids, classrooms(name, teacher_id))
+        assignments(id, title, instructions, classroom_id, due_at, type, enable_ai_feedback, auto_publish_ai_feedback, student_facing_task, opik_trace_ids, classrooms(name, teacher_id))
       `)
       .eq('id', submissionId)
       .single();
@@ -911,7 +948,7 @@ export const streamChatMessage = async (
 };
 
 /**
- * Generate feedback for a completed submission
+ * Generate feedback for a completed submission (synchronous; used by teacher retry).
  */
 export const generateFeedback = async (
   request: FeedbackRequest
@@ -932,6 +969,84 @@ export const generateFeedback = async (
 };
 
 /**
+ * Queue AI feedback generation in the background (returns after edge function accepts the job).
+ */
+export const requestBackgroundFeedback = async (
+  request: FeedbackRequest,
+): Promise<{ data: { accepted?: boolean } | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('generate-feedback', {
+      body: { ...request, background: true },
+    });
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+export const markEvaluationStatus = async (
+  submissionId: string,
+  status: EvaluationStatus,
+): Promise<{ success: boolean; error: ApiError | null }> => {
+  try {
+    const { error } = await supabase
+      .from('submissions')
+      .update({ evaluation_status: status })
+      .eq('id', submissionId);
+
+    if (error) {
+      return { success: false, error: handleSupabaseError(error) };
+    }
+
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Complete a submission and queue background AI evaluation (non-blocking for the student).
+ */
+export const submitWithBackgroundAiFeedback = async (params: {
+  submissionId: string;
+  studentId: string;
+  assignmentId: string;
+  language: string;
+  completeOptions?: {
+    awaitingTeacherFeedbackRelease?: boolean;
+    conversationCompleteAtSubmit?: boolean | null;
+  };
+}): Promise<{ success: boolean; error: ApiError | null; evaluationInvokeFailed?: boolean }> => {
+  const { submissionId, studentId, assignmentId, language, completeOptions } = params;
+
+  const { success, error } = await completeSubmission(submissionId, {
+    ...completeOptions,
+    aiEvaluationPending: true,
+  });
+  if (!success || error) {
+    return { success: false, error };
+  }
+
+  void requestBackgroundFeedback({
+    submissionId,
+    studentId,
+    assignmentId,
+    language,
+  }).then(({ error: invokeError }) => {
+    if (invokeError) {
+      void markEvaluationStatus(submissionId, EVALUATION_STATUS.FAILED);
+    }
+  });
+
+  return { success: true, error: null };
+};
+
+/**
  * Mark submission as completed
  */
 export const completeSubmission = async (
@@ -940,6 +1055,8 @@ export const completeSubmission = async (
     awaitingTeacherFeedbackRelease?: boolean;
     /** Chat-primary: true if conversation had ended (green banner) at submit; false if early. Omit to leave column unchanged. */
     conversationCompleteAtSubmit?: boolean | null;
+    /** Set evaluation_status=pending when AI feedback will run asynchronously after submit. */
+    aiEvaluationPending?: boolean;
   },
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
@@ -952,6 +1069,9 @@ export const completeSubmission = async (
     }
     if (options && 'conversationCompleteAtSubmit' in options) {
       update.conversation_complete_at_submit = options.conversationCompleteAtSubmit ?? null;
+    }
+    if (options?.aiEvaluationPending) {
+      update.evaluation_status = EVALUATION_STATUS.PENDING;
     }
 
     const { error } = await supabase.from('submissions').update(update).eq('id', submissionId);
@@ -1064,9 +1184,14 @@ export const releaseAiFeedbackToStudent = async (params: {
   assignmentId: string;
   assignmentTitle: string;
   teacherId: string | null;
+  notification?: {
+    title: string;
+    message: string;
+  };
 }): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { submissionId } = params;
+    const { submissionId, studentId, assignmentId, assignmentTitle, teacherId, notification } =
+      params;
 
     const { error: fbErr } = await supabase
       .from('assignment_feedback')
@@ -1084,6 +1209,26 @@ export const releaseAiFeedbackToStudent = async (params: {
 
     if (subErr) {
       return { success: false, error: handleSupabaseError(subErr) };
+    }
+
+    if (notification) {
+      try {
+        await createNotification(
+          studentId,
+          'feedback_received',
+          notification.title,
+          notification.message,
+          `/student/assignment/${assignmentId}`,
+          {
+            assignment_id: assignmentId,
+            assignment_title: assignmentTitle,
+            submission_id: submissionId,
+          },
+          teacherId ?? undefined,
+        );
+      } catch (notifErr) {
+        return { success: false, error: handleSupabaseError(notifErr) };
+      }
     }
 
     return { success: true, error: null };

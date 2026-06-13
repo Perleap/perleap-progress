@@ -31,6 +31,7 @@ export const analytics5dNarrativeKeys = {
       input.compareLabelB ?? '',
       stableScoreKey(input.scores),
       input.peerScores ? stableScoreKey(input.peerScores) : '',
+      input.brief ? 'brief' : 'full',
       input.evidenceText != null && input.evidenceText !== ''
         ? hashEvidenceKey(input.evidenceText)
         : 'no-evidence',

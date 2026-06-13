@@ -15,6 +15,7 @@ import {
   Download,
   GitCompare,
   Presentation,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -32,6 +33,7 @@ import {
 } from '@/components/analytics/Analytics5dNarrativeBlocks';
 import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
 import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
+import { VideoEngagementPanel } from '@/components/features/analytics/VideoEngagementPanel';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,13 +57,12 @@ import {
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
-import { analytics5dNarrativeKeys } from '@/hooks/queries/useAnalytics5dNarrative';
+import { analytics5dNarrativeKeys, useAnalytics5dNarrative } from '@/hooks/queries/useAnalytics5dNarrative';
 import {
   build5dNarrativeEvidence,
   trimToMax,
   type Analytics5dNarrativeRow,
 } from '@/lib/analytics5dEvidence';
-import { runPool } from '@/lib/asyncPool';
 import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
 import {
   getAllowedAssignmentIds,
@@ -71,20 +72,11 @@ import {
   scopedStudentLatestScores,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { setLessonBriefClassNarrativeCache } from '@/lib/lessonBriefNarrativeCache';
-import {
-  invokeExplainAnalytics5d,
-  type Analytics5dNarrativeResult,
-} from '@/services/analytics5dExplainService';
+import { isLessonBriefCacheReady, setLessonBriefClassNarrativeCache } from '@/lib/lessonBriefNarrativeCache';
+import { prepareLessonBriefNarratives } from '@/services/lessonBriefPreloadService';
+import { ensurePilotReportSnapshot } from '@/services/pilotReportCacheService';
 // `useClassroomAnalytics` and 5D LLM evidence (incl. optional teacher notes) are teacher-only; do
 // not reuse this data path for student-facing analytics.
-
-type LessonBriefAnalyticsStudent = {
-  id: string;
-  fullName: string;
-  submissions?: { student_id: string; assignment_id: string; status: string }[];
-  snapshots: Array<{ user_id: string; submission_id: string; scores: Json }>;
-};
 
 const URL_MOD = 'analyticsModule';
 const URL_ASG = 'analyticsAssignment';
@@ -359,6 +351,21 @@ export const ClassroomAnalytics = ({
     [modules, t]
   );
 
+  // Warm default-scope pilot report cache while analytics is open (v1: all/all only).
+  useEffect(() => {
+    if (!data || studentCount === 0) return;
+    void ensurePilotReportSnapshot({
+      classroomId,
+      scopeModule: 'all',
+      scopeAssignment: 'all',
+      language: analyticsLanguage,
+      analyticsData: data,
+      sectionTitleResolver,
+      recommendationFallback: t('pilotReport.recommendationFallback'),
+      force: false,
+    });
+  }, [classroomId, data, studentCount, analyticsLanguage, sectionTitleResolver, t]);
+
   const main5dNarrativeEvidence = useMemo(() => {
     if (!data) {
       return { evidenceText: '', sourceCount: 0 };
@@ -414,6 +421,53 @@ export const ClassroomAnalytics = ({
       sectionTitleResolver,
     });
   }, [data, compareB, assignments, sectionTitleResolver]);
+
+  const { data: mainClassNarrative } = useAnalytics5dNarrative(
+    classAverage && selectedStudent === 'all'
+      ? {
+          classroomId,
+          context: 'class_avg',
+          language: analyticsLanguage,
+          scores: classAverage,
+          filterSummary: exportFilterSummary,
+          evidenceText: main5dNarrativeEvidence.evidenceText || undefined,
+          evidenceSourceCount: main5dNarrativeEvidence.sourceCount,
+        }
+      : null,
+    {
+      enabled: !!classAverage && selectedStudent === 'all' && effectiveAssignmentIds.length > 0,
+      narrativeId: main5dNarrativeId,
+    },
+  );
+
+  useEffect(() => {
+    if (
+      !classAverage ||
+      selectedStudent !== 'all' ||
+      !mainClassNarrative ||
+      effectiveAssignmentIds.length === 0
+    ) {
+      return;
+    }
+
+    setLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment, {
+      classAverage,
+      narrative: mainClassNarrative,
+      evidenceSourceCount: main5dNarrativeEvidence.sourceCount,
+      filterSummary: exportFilterSummary,
+      cachedAt: Date.now(),
+    });
+  }, [
+    classAverage,
+    selectedStudent,
+    mainClassNarrative,
+    effectiveAssignmentIds.length,
+    classroomId,
+    selectedModule,
+    selectedAssignment,
+    main5dNarrativeEvidence.sourceCount,
+    exportFilterSummary,
+  ]);
 
   const studentList5dEvidenceById = useMemo(() => {
     if (!data) {
@@ -518,72 +572,44 @@ export const ClassroomAnalytics = ({
   const handleExportLessonBriefPdf = useCallback(() => {
     if (!data || studentCount === 0) return;
 
-    const classAvgForBrief =
-      effectiveAssignmentIds.length > 0
-        ? getClassroomAverage5D(
-            data.students as {
-              id: string;
-              snapshots: {
-                user_id: string;
-                submission_id: string;
-                scores: import('@/integrations/supabase/types').Json;
-              }[];
-            }[],
-            data.rawSubmissions,
-            data.assignments,
-            selectedModule,
-            selectedAssignment,
-            'all',
-            data.rawSnapshots
-          )
-        : null;
-
-    const classNarrativeId = `5d-main-${selectedModule}-${selectedAssignment}-all`;
-
-    if (classAvgForBrief) {
-      const classEvidence = build5dNarrativeEvidence({
-        context: 'class_avg',
-        allowedAssignmentIds: effectiveAssignmentIds,
-        allStudents: data.students.map((s) => ({
-          id: s.id,
-          fullName: s.fullName,
-          narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-        })),
-        assignmentRefs: data.assignments,
-        sectionTitleResolver,
-      });
-
-      const narrativeInput = {
-        classroomId,
-        context: 'class_avg' as const,
-        language: analyticsLanguage,
-        scores: classAvgForBrief,
-        filterSummary: exportFilterSummary,
-        evidenceText: classEvidence.evidenceText || undefined,
-        evidenceSourceCount: classEvidence.sourceCount,
-      };
-
-      const cachedNarrative = queryClient.getQueryData<Analytics5dNarrativeResult>(
-        analytics5dNarrativeKeys.one({ ...narrativeInput, narrativeId: classNarrativeId })
-      );
-
-      if (cachedNarrative) {
-        setLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment, {
-          classAverage: classAvgForBrief,
-          narrative: cachedNarrative,
-          evidenceSourceCount: classEvidence.sourceCount,
-          filterSummary: exportFilterSummary,
-          cachedAt: Date.now(),
-        });
-      }
-    }
-
     const params = new URLSearchParams();
     if (selectedModule !== 'all') params.set('analyticsModule', selectedModule);
     if (selectedAssignment !== 'all') params.set('analyticsAssignment', selectedAssignment);
 
     const url = `/teacher/classroom/${classroomId}/lesson-brief?${params.toString()}`;
     window.open(url, '_blank');
+  }, [data, studentCount, classroomId, selectedModule, selectedAssignment]);
+
+  useEffect(() => {
+    if (!data || studentCount === 0 || effectiveAssignmentIds.length === 0) return;
+    if (isLessonBriefCacheReady(classroomId, selectedModule, selectedAssignment)) return;
+
+    const controller = new AbortController();
+
+    void prepareLessonBriefNarratives({
+      classroomId,
+      module: selectedModule,
+      assignment: selectedAssignment,
+      language: analyticsLanguage,
+      filterSummary: exportFilterSummary,
+      students: data.students.map((s) => ({
+        id: s.id,
+        fullName: s.fullName,
+        snapshots: s.snapshots,
+        narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
+      })),
+      assignments: data.assignments,
+      rawSubmissions: data.rawSubmissions,
+      effectiveAssignmentIds,
+      sectionTitleResolver,
+      signal: controller.signal,
+    }).catch(() => {
+      // Errors logged in service; background preload is silent on analytics page
+    });
+
+    return () => {
+      controller.abort();
+    };
   }, [
     data,
     studentCount,
@@ -593,9 +619,15 @@ export const ClassroomAnalytics = ({
     effectiveAssignmentIds,
     analyticsLanguage,
     exportFilterSummary,
-    queryClient,
     sectionTitleResolver,
   ]);
+
+  const handleOpenPilotReport = useCallback(() => {
+    const params = new URLSearchParams();
+    if (selectedModule !== 'all') params.set('analyticsModule', selectedModule);
+    if (selectedAssignment !== 'all') params.set('analyticsAssignment', selectedAssignment);
+    window.open(`/teacher/classroom/${classroomId}/pilot-report?${params.toString()}`, '_blank');
+  }, [classroomId, selectedModule, selectedAssignment]);
 
   const studentsForCollapsible = useMemo(() => {
     if (selectedModule === 'all') {
@@ -714,11 +746,22 @@ export const ClassroomAnalytics = ({
                   variant="outline"
                   size="sm"
                   className="rounded-lg"
-                  onClick={() => void handleExportLessonBriefPdf()}
+                  onClick={handleExportLessonBriefPdf}
                   disabled={!data || studentCount === 0}
                 >
                   <Presentation className="h-4 w-4 me-1.5" aria-hidden />
                   {t('analytics.lessonBrief.exportPdf')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={handleOpenPilotReport}
+                  disabled={!data || studentCount === 0}
+                >
+                  <ClipboardCheck className="h-4 w-4 me-1.5" aria-hidden />
+                  {t('pilotReport.openButton')}
                 </Button>
                 {onRegenerateComplete ? (
                   <RegenerateScoresButton
@@ -843,6 +886,8 @@ export const ClassroomAnalytics = ({
           </CardContent>
         </Card>
       </div>
+
+      <VideoEngagementPanel classroomId={classroomId} students={allStudents} isRTL={isRTL} />
 
       <div
         className="rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-foreground"

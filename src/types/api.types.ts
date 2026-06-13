@@ -42,6 +42,7 @@ export interface CreateAssignmentInput {
   status: Assignment['status'];
   target_dimensions: Assignment['target_dimensions'];
   personalization_flag: boolean;
+  enable_ai_feedback?: boolean;
   auto_publish_ai_feedback?: boolean;
   attempt_mode?: AssignmentAttemptMode;
 }
@@ -113,6 +114,8 @@ export interface FeedbackRequest {
   studentId: string;
   assignmentId: string;
   language?: string;
+  /** When true, edge function returns 202 immediately and runs evaluation in the background. */
+  background?: boolean;
 }
 
 export interface FeedbackResponse {

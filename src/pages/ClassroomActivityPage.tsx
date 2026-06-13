@@ -58,6 +58,11 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   const { user } = useAuth();
   const { isRTL } = useLanguage();
 
+  const videoTracking =
+    role === 'student' && user?.id && classroomId
+      ? { classroomId, studentUserId: user.id }
+      : undefined;
+
   const returnClassroomSection = (location.state as ActivityLinkState | null)?.returnClassroomSection;
 
   const { data: classroom, isLoading: loadingClass } = useClassroom(classroomId);
@@ -419,14 +424,24 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             <div className={cn(lessonActivityColumnClass, 'flex min-h-0 flex-1 flex-col gap-8')}>
               {activityHeader}
               <div className="min-h-0 w-full flex-1">
-                <LessonResourceBody resource={resource} variant="reading" isRTL={isRTL} />
+                <LessonResourceBody
+                  resource={resource}
+                  variant="reading"
+                  isRTL={isRTL}
+                  videoTracking={videoTracking}
+                />
               </div>
             </div>
           ) : (
             <>
               {activityHeader}
               <div className="min-h-0 w-full max-w-3xl flex-1 space-y-3">
-                <ResourceViewer resources={[resource]} isRTL={isRTL} compact={false} />
+                <ResourceViewer
+                  resources={[resource]}
+                  isRTL={isRTL}
+                  compact={false}
+                  videoTracking={videoTracking}
+                />
               </div>
             </>
           )}
@@ -463,6 +478,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
                   compact
                   compactVariant="list"
                   hideListHeader
+                  videoTracking={videoTracking}
                 />
               </CollapsibleContent>
             </Collapsible>

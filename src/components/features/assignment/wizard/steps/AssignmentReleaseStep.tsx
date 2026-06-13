@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import { isArtifactAssignmentType } from '@/lib/artifactAssignmentTypes';
 
 interface AssignmentReleaseStepProps {
   formData: AssignmentWizardFormData;
@@ -17,8 +18,52 @@ interface AssignmentReleaseStepProps {
   isRTL: boolean;
 }
 
+function YesNoSelect({
+  id,
+  value,
+  onChange,
+  disabled,
+  isRTL,
+}: {
+  id: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+  isRTL: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Select
+      value={value ? 'yes' : 'no'}
+      onValueChange={(next) => onChange(next === 'yes')}
+      disabled={disabled}
+    >
+      <SelectTrigger
+        id={id}
+        className={cn(
+          'h-9 w-full min-w-0 rounded-lg text-sm',
+          isRTL ? 'text-right' : 'text-left',
+        )}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        <SelectValue>{value ? t('common.yes') : t('common.no')}</SelectValue>
+      </SelectTrigger>
+      <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
+        <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>
+          {t('common.yes')}
+        </SelectItem>
+        <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>
+          {t('common.no')}
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: AssignmentReleaseStepProps) {
   const { t } = useTranslation();
+  const showFeedbackDisabled = !formData.enable_ai_feedback;
 
   return (
     <Card className="shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -95,36 +140,18 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
             >
               {t('createAssignment.metadata.aiFeedback')}
             </Label>
-            <Select
-              value={formData.auto_publish_ai_feedback ? 'yes' : 'no'}
-              onValueChange={(value) =>
+            <YesNoSelect
+              id="wiz_ai_feedback_select"
+              value={formData.enable_ai_feedback}
+              onChange={(enabled) =>
                 onFormChange((prev) => ({
                   ...prev,
-                  auto_publish_ai_feedback: value === 'yes',
+                  enable_ai_feedback: enabled,
+                  auto_publish_ai_feedback: enabled ? prev.auto_publish_ai_feedback : false,
                 }))
               }
-            >
-              <SelectTrigger
-                id="wiz_ai_feedback_select"
-                className={cn(
-                  'h-9 w-full min-w-0 rounded-lg text-sm',
-                  isRTL ? 'text-right' : 'text-left',
-                )}
-                dir={isRTL ? 'rtl' : 'ltr'}
-              >
-                <SelectValue>
-                  {formData.auto_publish_ai_feedback ? t('common.yes') : t('common.no')}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
-                <SelectItem value="yes" className={isRTL ? 'text-right' : 'text-left'}>
-                  {t('common.yes')}
-                </SelectItem>
-                <SelectItem value="no" className={isRTL ? 'text-right' : 'text-left'}>
-                  {t('common.no')}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              isRTL={isRTL}
+            />
           </div>
           <p
             className={cn(
@@ -133,6 +160,77 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
             )}
           >
             {t('createAssignment.metadata.aiFeedbackHelper')}
+          </p>
+        </div>
+
+        <div className="space-y-1 pt-0.5">
+          <div
+            className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
+            <Label
+              htmlFor="wiz_show_feedback_select"
+              className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+            >
+              {t('createAssignment.metadata.showFeedback')}
+            </Label>
+            <YesNoSelect
+              id="wiz_show_feedback_select"
+              value={formData.auto_publish_ai_feedback}
+              onChange={(show) =>
+                onFormChange((prev) => ({ ...prev, auto_publish_ai_feedback: show }))
+              }
+              disabled={showFeedbackDisabled}
+              isRTL={isRTL}
+            />
+          </div>
+          <p
+            className={cn(
+              'text-muted-foreground text-xs leading-relaxed',
+              isRTL ? 'text-right' : 'text-left',
+            )}
+          >
+            {t('createAssignment.metadata.showFeedbackHelper')}
+          </p>
+          {isArtifactAssignmentType(formData.type) ? (
+            <p
+              className={cn(
+                'text-muted-foreground text-xs leading-relaxed',
+                isRTL ? 'text-right' : 'text-left',
+              )}
+            >
+              {t('createAssignment.metadata.artifactFeedbackHint')}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-1 pt-0.5">
+          <div
+            className="grid w-full min-w-0 shrink-0 gap-1.5 sm:w-[11.5rem] sm:max-w-[11.5rem]"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
+            <Label
+              htmlFor="wiz_task_understanding_prompt"
+              className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+            >
+              {t('createAssignment.taskUnderstandingPrompt.label')}
+            </Label>
+            <YesNoSelect
+              id="wiz_task_understanding_prompt"
+              value={formData.show_task_understanding_prompt}
+              onChange={(enabled) =>
+                onFormChange((prev) => ({ ...prev, show_task_understanding_prompt: enabled }))
+              }
+              isRTL={isRTL}
+            />
+          </div>
+          <p
+            className={cn(
+              'text-muted-foreground text-xs leading-relaxed',
+              isRTL ? 'text-right' : 'text-left',
+            )}
+          >
+            {t('createAssignment.taskUnderstandingPrompt.helper')}
           </p>
         </div>
       </CardContent>

@@ -4,6 +4,12 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import {
+  TUS_UPLOAD_THRESHOLD_BYTES,
+  uploadFileResumable,
+  type UploadProgressCallback,
+} from '@/lib/resumableStorageUpload';
+import { isStoragePayloadTooLarge } from '@/lib/storageUploadErrors';
 import { ACTIVITY_LIST_OPTIONAL_COLUMNS } from '@/lib/activityListOptionalColumns';
 import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
@@ -371,19 +377,29 @@ export const deleteSectionResource = async (
   }
 };
 
+export type UploadResourceFileOptions = {
+  onProgress?: UploadProgressCallback;
+};
+
 export const uploadResourceFile = async (
   sectionId: string,
-  file: File
+  file: File,
+  options?: UploadResourceFileOptions,
 ): Promise<{ filePath: string; publicUrl: string } | { error: string }> => {
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${sectionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(fileName, file, { upsert: false });
+    if (file.size > TUS_UPLOAD_THRESHOLD_BYTES) {
+      await uploadFileResumable(STORAGE_BUCKET, fileName, file, options?.onProgress);
+    } else {
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(fileName, file, { upsert: false });
 
-    if (uploadError) return { error: uploadError.message };
+      if (uploadError) return { error: uploadError.message };
+      options?.onProgress?.(file.size, file.size);
+    }
 
     const { data: { publicUrl } } = supabase.storage
       .from(STORAGE_BUCKET)
@@ -391,6 +407,12 @@ export const uploadResourceFile = async (
 
     return { filePath: fileName, publicUrl };
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === 'STORAGE_GLOBAL_LIMIT_EXCEEDED' || isStoragePayloadTooLarge(error))
+    ) {
+      return { error: 'STORAGE_GLOBAL_LIMIT_EXCEEDED' };
+    }
     return { error: error instanceof Error ? error.message : 'Upload failed' };
   }
 };
@@ -412,9 +434,10 @@ function deriveResourceType(mimeType: string): SectionResource['resource_type'] 
 export const uploadAndCreateResource = async (
   sectionId: string,
   file: File,
-  orderIndex: number
+  orderIndex: number,
+  options?: UploadResourceFileOptions,
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
-  const uploadResult = await uploadResourceFile(sectionId, file);
+  const uploadResult = await uploadResourceFile(sectionId, file, options);
   if ('error' in uploadResult) {
     return { data: null, error: { message: uploadResult.error } };
   }

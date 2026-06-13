@@ -15,31 +15,42 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, CircleDot, AlignLeft } from 'lucide-react';
+import { Loader2, Send, CircleDot, AlignLeft, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
-import { generateFeedback, completeSubmission } from '@/services/submissionService';
+import { submitWithBackgroundAiFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useAuth } from '@/contexts/useAuth';
 import type { AssignmentCompletionTone } from '@/types/submission';
+import { isMultiSelectMcq, toggleOptionId } from '@/lib/testMcq';
 
 interface TestTakingPageProps {
   assignmentId: string;
   assignmentInstructions: string;
   submissionId: string;
-  autoPublishAiFeedback?: boolean;
+  /** When false, student submit does not run AI; teacher can generate evaluation later. */
+  enableAiFeedback?: boolean;
+  /** When false after generation, student waits for teacher to release feedback. */
+  showAiFeedbackToStudents?: boolean;
   /** Teacher "Try assignment" — skip AI feedback (edge function writes assume student_profiles). */
   isTeacherTry?: boolean;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
+type TestAnswer = {
+  selected_option_ids?: string[];
+  text_answer?: string;
+};
+
 export function TestTakingPage({
   assignmentId,
   assignmentInstructions,
   submissionId,
-  autoPublishAiFeedback = true,
+  enableAiFeedback = true,
+  showAiFeedbackToStudents = true,
   isTeacherTry = false,
   onComplete,
 }: TestTakingPageProps) {
@@ -47,15 +58,28 @@ export function TestTakingPage({
   const { isRTL, language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
 
-  const { data: questions, isLoading } = useTestQuestions(assignmentId);
+  const { data: questions, isLoading } = useTestQuestions(assignmentId, { forStudent: true });
   const submitResponses = useSubmitTestResponses();
 
-  const [answers, setAnswers] = useState<Record<string, { selected_option_id?: string; text_answer?: string }>>({});
+  const [answers, setAnswers] = useState<Record<string, TestAnswer>>({});
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const updateAnswer = (questionId: string, value: { selected_option_id?: string; text_answer?: string }) => {
+  const updateAnswer = (questionId: string, value: TestAnswer) => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], ...value } }));
+  };
+
+  const isMcqAnswered = (
+    question: { question_type: string; allow_multiple_selections?: boolean | null },
+    answer: TestAnswer | undefined,
+  ) => {
+    if (!answer) return false;
+    if (question.question_type !== 'multiple_choice') return false;
+    const selected = answer.selected_option_ids ?? [];
+    if (isMultiSelectMcq(question.allow_multiple_selections)) {
+      return selected.length > 0;
+    }
+    return selected.length === 1;
   };
 
   const requestSubmit = () => {
@@ -63,10 +87,9 @@ export function TestTakingPage({
 
     const unanswered = questions.filter((q) => {
       const answer = answers[q.id];
-      if (!answer) return true;
-      if (q.question_type === 'multiple_choice' && !answer.selected_option_id) return true;
-      if (q.question_type === 'open_ended' && !answer.text_answer?.trim()) return true;
-      return false;
+      if (q.question_type === 'multiple_choice') return !isMcqAnswered(q, answer);
+      if (q.question_type === 'open_ended') return !answer?.text_answer?.trim();
+      return true;
     });
 
     if (unanswered.length > 0) {
@@ -84,7 +107,7 @@ export function TestTakingPage({
     try {
       const responses = questions.map((q) => ({
         question_id: q.id,
-        selected_option_id: answers[q.id]?.selected_option_id,
+        selected_option_ids: answers[q.id]?.selected_option_ids ?? [],
         text_answer: answers[q.id]?.text_answer,
       }));
 
@@ -102,31 +125,31 @@ export function TestTakingPage({
         return;
       }
 
-      if (!autoPublishAiFeedback) {
-        const { error: completeError } = await completeSubmission(submissionId, {
-          awaitingTeacherFeedbackRelease: true,
-        });
+      if (!enableAiFeedback) {
+        const { error: completeError } = await completeSubmission(submissionId);
         if (completeError) {
           console.error('Error completing submission:', completeError);
           toast.error(t('assignmentDetail.testTaking.submitError'));
         } else {
-          await onComplete('awaitingTeacher');
+          await onComplete('testSubmitted');
         }
       } else {
         const language = getAssignmentLanguage(assignmentInstructions, uiLanguage);
-        const { error: feedbackError } = await generateFeedback({
+        const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback({
           submissionId,
           studentId: user.id,
           assignmentId,
           language,
         });
 
-        if (feedbackError) {
-          console.error('Error generating feedback:', feedbackError);
+        if (submitError) {
+          console.error('Error completing submission:', submitError);
           toast.error(t('assignmentDetail.testTaking.submitError'));
         } else {
-          await completeSubmission(submissionId);
-          await onComplete('testSubmitted');
+          if (evaluationInvokeFailed) {
+            toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
+          }
+          await onComplete(showAiFeedbackToStudents ? 'testSubmitted' : 'awaitingTeacher');
         }
       }
     } catch (error) {
@@ -192,6 +215,9 @@ export function TestTakingPage({
 
       {questions.map((question, index) => {
         const options = (question.options as { id: string; text: string }[] | null) || [];
+        const multiSelect = isMultiSelectMcq(question.allow_multiple_selections);
+        const selectedIds = answers[question.id]?.selected_option_ids ?? [];
+
         return (
           <Card key={question.id} className="overflow-hidden">
             <CardHeader className="pb-3 bg-transparent">
@@ -200,7 +226,11 @@ export function TestTakingPage({
                   {t('assignmentDetail.testTaking.question', { number: index + 1 })}
                 </Badge>
                 {question.question_type === 'multiple_choice' ? (
-                  <CircleDot className="h-4 w-4 text-muted-foreground" />
+                  multiSelect ? (
+                    <ListChecks className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <CircleDot className="h-4 w-4 text-muted-foreground" />
+                  )
                 ) : (
                   <AlignLeft className="h-4 w-4 text-muted-foreground" />
                 )}
@@ -208,18 +238,34 @@ export function TestTakingPage({
               <p className={`text-sm font-medium mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {question.question_text}
               </p>
+              {question.question_type === 'multiple_choice' && multiSelect && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('assignmentDetail.testTaking.selectAllThatApply')}
+                </p>
+              )}
             </CardHeader>
             <CardContent className="pt-4">
               {question.question_type === 'multiple_choice' ? (
-                <RadioGroup
-                  value={answers[question.id]?.selected_option_id || ''}
-                  onValueChange={(val) => updateAnswer(question.id, { selected_option_id: val })}
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                >
-                  <div className="space-y-2">
+                multiSelect ? (
+                  <div className="space-y-2" dir={isRTL ? 'rtl' : 'ltr'}>
                     {options.map((option) => (
-                      <div key={option.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
+                      <div
+                        key={option.id}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          id={`${question.id}-${option.id}`}
+                          checked={selectedIds.includes(option.id)}
+                          onCheckedChange={(checked) =>
+                            updateAnswer(question.id, {
+                              selected_option_ids: toggleOptionId(
+                                selectedIds,
+                                option.id,
+                                checked === true,
+                              ),
+                            })
+                          }
+                        />
                         <Label
                           htmlFor={`${question.id}-${option.id}`}
                           className="flex-1 cursor-pointer text-sm"
@@ -229,7 +275,29 @@ export function TestTakingPage({
                       </div>
                     ))}
                   </div>
-                </RadioGroup>
+                ) : (
+                  <RadioGroup
+                    value={selectedIds[0] || ''}
+                    onValueChange={(val) =>
+                      updateAnswer(question.id, { selected_option_ids: val ? [val] : [] })
+                    }
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  >
+                    <div className="space-y-2">
+                      {options.map((option) => (
+                        <div key={option.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
+                          <Label
+                            htmlFor={`${question.id}-${option.id}`}
+                            className="flex-1 cursor-pointer text-sm"
+                          >
+                            {option.text}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                )
               ) : (
                 <Textarea
                   value={answers[question.id]?.text_answer || ''}

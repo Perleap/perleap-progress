@@ -84,6 +84,7 @@ export type CoursePackageAssignmentV1 = {
   due_at: string | null;
   target_dimensions: Json;
   personalization_flag: boolean;
+  enable_ai_feedback: boolean;
   auto_publish_ai_feedback: boolean;
   attempt_mode: string | null;
   materials: Json | null;

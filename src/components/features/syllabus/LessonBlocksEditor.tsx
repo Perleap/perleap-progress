@@ -39,6 +39,8 @@ import { cn } from '@/lib/utils';
 import { inferLessonVideoSource } from '@/lib/lessonContent';
 import { parseYoutubeUrl } from '@/lib/youtube';
 import { uploadResourceFile } from '@/services/syllabusResourceService';
+import { isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
+import { Progress, ProgressValue } from '@/components/ui/progress';
 import { SortableLessonTextSlides } from '@/components/features/syllabus/SortableLessonTextSlides';
 
 const SortableLessonBlock = ({
@@ -109,6 +111,7 @@ export const LessonBlocksEditor = ({
   const [uploadTarget, setUploadTarget] = useState<{ blockId: string; fileName: string } | null>(
     null
   );
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   useEffect(() => {
     onUploadStateChange?.(!!uploadTarget);
   }, [uploadTarget, onUploadStateChange]);
@@ -291,11 +294,27 @@ export const LessonBlocksEditor = ({
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !sectionId) return;
+
+    if (!isResourceFileWithinSizeLimit(file)) {
+      toast.error(t('classroomDetail.activities.videoFileTooLarge', { name: file.name }));
+      return;
+    }
+
     setUploadTarget({ blockId, fileName: file.name });
+    setUploadProgress(0);
     try {
-      const up = await uploadResourceFile(sectionId, file);
+      const up = await uploadResourceFile(sectionId, file, {
+        onProgress: (loaded, total) => {
+          if (total <= 0) return;
+          setUploadProgress(Math.round((loaded / total) * 100));
+        },
+      });
       if ('error' in up) {
-        toast.error(up.error);
+        if (up.error === 'STORAGE_GLOBAL_LIMIT_EXCEEDED') {
+          toast.error(t('syllabus.resources.uploadGlobalLimitExceeded'));
+        } else {
+          toast.error(up.error);
+        }
         return;
       }
       onChange((prev) =>
@@ -315,6 +334,7 @@ export const LessonBlocksEditor = ({
       );
     } finally {
       setUploadTarget(null);
+      setUploadProgress(null);
     }
   };
 
@@ -583,21 +603,33 @@ export const LessonBlocksEditor = ({
                                   )}
                                 >
                                   {uploadingHere && uploadTarget ? (
-                                    <>
-                                      <span
-                                        className="min-w-0 truncate"
-                                        title={uploadTarget.fileName}
+                                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                      <div
+                                        className={cn(
+                                          'flex min-w-0 items-center gap-2 text-sm text-muted-foreground',
+                                          isRTL && 'flex-row-reverse',
+                                        )}
                                       >
-                                        {uploadTarget.fileName}
-                                      </span>
-                                      <Loader2
-                                        className="h-3.5 w-3.5 shrink-0 animate-spin"
-                                        aria-hidden
-                                      />
+                                        <span
+                                          className="min-w-0 truncate"
+                                          title={uploadTarget.fileName}
+                                        >
+                                          {uploadTarget.fileName}
+                                        </span>
+                                        <Loader2
+                                          className="h-3.5 w-3.5 shrink-0 animate-spin"
+                                          aria-hidden
+                                        />
+                                      </div>
+                                      {uploadProgress != null ? (
+                                        <Progress value={uploadProgress} className="w-full max-w-xs">
+                                          <ProgressValue />
+                                        </Progress>
+                                      ) : null}
                                       <span className="sr-only">
                                         {t('classroomDetail.activities.videoUploading')}
                                       </span>
-                                    </>
+                                    </div>
                                   ) : block.url || block.file_path ? (
                                     <span
                                       className="min-w-0 truncate"

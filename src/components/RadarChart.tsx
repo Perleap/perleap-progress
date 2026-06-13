@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { DIMENSION_CONFIG } from '@/config/constants';
 import type { FiveDScores } from '@/types/models';
+import { fiveDScoreForChart } from '@/lib/fiveDScores';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 
@@ -64,9 +65,10 @@ export const RadarChart = ({ scores, explanations, showLabels = true, height = 4
 
   const data = dimensionOrder.map((dimension) => ({
     dimension,
-    value: scores[dimension] || 0,
+    value: fiveDScoreForChart(scores, dimension),
     fullMark: 10,
     label: t(`dimensions.${dimension}.label`),
+    rawScore: scores[dimension],
   }));
 
   // Calculate fill color based on hover state
@@ -151,7 +153,10 @@ export const RadarChart = ({ scores, explanations, showLabels = true, height = 4
           {dimensionOrder.map((dimension) => {
             const config = DIMENSION_CONFIG[dimension];
             const explanation = explanations?.[dimension];
-            const value = scores[dimension] || 0;
+            const displayValue =
+              typeof scores[dimension] === 'number' && !Number.isNaN(scores[dimension])
+                ? `${scores[dimension]!.toFixed(1)}/10`
+                : t('dimensions.notAssessable', { defaultValue: 'N/A' });
             const isHovered = hoveredDimension === dimension;
 
             return (
@@ -171,7 +176,7 @@ export const RadarChart = ({ scores, explanations, showLabels = true, height = 4
                     <span className={`text-sm font-semibold ${isHovered ? 'text-foreground' : ''}`}>
                       {t(`dimensions.${dimension}.label`)}
                     </span>
-                    <span className="text-sm font-bold">{value.toFixed(1)}/10</span>
+                    <span className="text-sm font-bold">{displayValue}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {explanation || t(`dimensions.${dimension}.description`)}

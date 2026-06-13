@@ -15,6 +15,8 @@ interface TeacherEvaluationFormProps {
   onEvaluationComplete: () => void;
   /** Optional extra context (e.g. live session transcript/summary) to ground the AI scoring. */
   sessionContext?: string;
+  /** When true, relabel as an override of existing AI evaluation. */
+  isOverride?: boolean;
 }
 
 export function TeacherEvaluationForm({
@@ -23,6 +25,7 @@ export function TeacherEvaluationForm({
   assignmentId,
   onEvaluationComplete,
   sessionContext,
+  isOverride = false,
 }: TeacherEvaluationFormProps) {
   const { t } = useTranslation();
   const { language, isRTL } = useLanguage();
@@ -92,7 +95,9 @@ export function TeacherEvaluationForm({
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-primary" />
-          {t('submissionDetail.teacherEvaluation.writeEvaluation')}
+          {isOverride
+            ? t('submissionDetail.teacherEvaluation.overrideEvaluation')
+            : t('submissionDetail.teacherEvaluation.writeEvaluation')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

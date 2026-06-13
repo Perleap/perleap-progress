@@ -6,6 +6,8 @@
 
 export type LiveSessionType = 'workshop' | 'lecture' | 'practice';
 
+export type LiveSessionUploadMode = 'video' | 'audio';
+
 export type LiveSessionStatus =
   | 'uploaded'
   | 'extracting'

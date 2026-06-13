@@ -17,8 +17,11 @@ import { useEnrolledStudents } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 import { TeacherEvaluationForm } from '@/components/features/submission/TeacherEvaluationForm';
 import {
+  LiveSessionAudioPlayback,
+  type LiveSessionAudioPlaybackHandle,
+} from '@/components/features/liveSession/LiveSessionAudioPlayback';
+import {
   ensureStudentEvaluationSubmission,
-  getLiveSessionAudioUrl,
   getLiveSessionByAssignment,
   getLiveSessionEvaluationStates,
   startLiveSessionTranscription,
@@ -43,13 +46,12 @@ export default function LiveSessionPage() {
 
   const [session, setSession] = useState<LiveSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [evalStates, setEvalStates] = useState<Record<string, StudentEvaluationState>>({});
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [activeSubmissionId, setActiveSubmissionId] = useState<string | null>(null);
   const [preparingEval, setPreparingEval] = useState(false);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioPlaybackRef = useRef<LiveSessionAudioPlaybackHandle | null>(null);
   const selectRequestRef = useRef(0);
   const { data: students = [] } = useEnrolledStudents(classroomId);
 
@@ -88,12 +90,16 @@ export default function LiveSessionPage() {
     return () => clearInterval(interval);
   }, [session, refreshSession]);
 
-  // Fetch a signed audio URL once ready.
-  useEffect(() => {
-    if (session?.status === 'ready' && session.audio_path && !audioUrl) {
-      void getLiveSessionAudioUrl(session.audio_path).then((url) => setAudioUrl(url));
+  const audioStoragePaths = useMemo(() => {
+    if (!session) return [];
+    if (session.audio_path?.includes('playback.m4a')) {
+      return [session.audio_path];
     }
-  }, [session, audioUrl]);
+    if (session.audio_chunk_paths.length > 0) {
+      return session.audio_chunk_paths;
+    }
+    return session.audio_path ? [session.audio_path] : [];
+  }, [session]);
 
   const sessionContext = useMemo(() => {
     if (!session) return '';
@@ -113,10 +119,7 @@ export default function LiveSessionPage() {
   }, [students, t]);
 
   const handleSeek = (seconds: number) => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.currentTime = seconds;
-    void el.play().catch(() => {});
+    audioPlaybackRef.current?.seek(seconds);
   };
 
   const handleSelectStudent = async (studentId: string) => {
@@ -162,7 +165,15 @@ export default function LiveSessionPage() {
       toast.error(t('liveSession.status.retryNoAudio'));
       return;
     }
-    const { error } = await startLiveSessionTranscription(session.id, language === 'he' ? 'he' : 'en');
+    const chunkCount = Math.max(
+      1,
+      session.audio_chunk_paths?.length ?? (session.audio_path ? 1 : 0)
+    );
+    const { error } = await startLiveSessionTranscription(
+      session.id,
+      language === 'he' ? 'he' : 'en',
+      chunkCount
+    );
     if (error) {
       toast.error(error.message);
       return;
@@ -252,14 +263,17 @@ export default function LiveSessionPage() {
             {/* Audio + summary + timestamps */}
             {isReady ? (
               <div className="space-y-6">
-                {audioUrl ? (
+                {audioStoragePaths.length > 0 ? (
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">{t('liveSession.audio.title')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                      <audio ref={audioRef} src={audioUrl} controls className="w-full" />
+                      <LiveSessionAudioPlayback
+                        ref={audioPlaybackRef}
+                        storagePaths={audioStoragePaths}
+                        durationSeconds={session.duration_seconds}
+                      />
                     </CardContent>
                   </Card>
                 ) : null}

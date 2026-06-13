@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 
@@ -21,13 +21,6 @@ export const Hero = () => {
             </div>
 
             <div className="container mx-auto px-4 md:px-6 relative z-10 text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 border border-black/5 backdrop-blur-sm mb-8 animate-fade-in shadow-sm">
-                    <Sparkles className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-medium text-foreground/80">
-                        {t('landing.hero.badge')}
-                    </span>
-                </div>
-
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 animate-fade-in delay-100 text-foreground">
                     <span className="block">{t('landing.hero.title1')}</span>
                     <span className="text-gradient-primary">{t('landing.hero.title2')}</span>

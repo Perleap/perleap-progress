@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatCourseDuration } from '@/lib/dateUtils';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -46,6 +46,8 @@ import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { CourseOutlineSection, CoursePackageCard } from '@/components/features/syllabus';
+import { pilotReportKeys } from '@/hooks/queries';
+import { invalidatePilotReportSnapshots } from '@/services/pilotReportCacheService';
 import {
   classroomKeys,
   useClassroom,
@@ -125,6 +127,16 @@ const ClassroomDetail = () => {
   const queryClient = useQueryClient();
 
   const { data: rawClassroom, isLoading: classroomLoading, refetch: refetchClassroom } = useClassroom(id);
+
+  const handleRegenerateComplete = useCallback(async () => {
+    if (id) {
+      await invalidatePilotReportSnapshots(id);
+      await queryClient.invalidateQueries({
+        queryKey: [...pilotReportKeys.all, 'snapshot', id],
+      });
+    }
+    await refetchClassroom();
+  }, [id, refetchClassroom, queryClient]);
   const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useClassroomAssignments(id);
   const { data: students = [], isLoading: studentsLoading } = useClassroomStudents(id);
   const deleteAssignmentMutation = useDeleteAssignment();
@@ -551,23 +563,25 @@ const ClassroomDetail = () => {
 
             {/* Classroom Actions */}
             <div className="pt-6 border-t border-border">
-              <div className={`flex flex-col sm:flex-row gap-3 ${isRTL ? 'sm:justify-end' : 'sm:justify-start'}`}>
+              <div className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${isRTL ? 'sm:justify-end' : 'sm:justify-start'}`}>
                 <Button
+                  type="button"
                   onClick={() => setEditDialogOpen(true)}
-                  size="sm"
-                  className="w-full sm:w-auto"
                   variant="outline"
+                  size="sm"
+                  className="h-9 w-full gap-1.5 rounded-full shadow-xs sm:w-auto"
                 >
-                  <Edit className="me-2 h-4 w-4" />
+                  <Edit className="h-4 w-4" />
                   {t('classroomDetail.edit')}
                 </Button>
                 <Button
+                  type="button"
                   onClick={() => setDeleteDialogOpen(true)}
-                  size="sm"
                   variant="destructive"
-                  className="w-full sm:w-auto"
+                  size="sm"
+                  className="h-9 w-full gap-1.5 rounded-full shadow-xs sm:w-auto"
                 >
-                  <Trash2 className="me-2 h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                   {t('classroomDetail.deleteButton')}
                 </Button>
               </div>
@@ -715,7 +729,7 @@ const ClassroomDetail = () => {
             <ClassroomAnalytics
               classroomId={id!}
               classroomName={classroom?.name}
-              onRegenerateComplete={refetchClassroom}
+              onRegenerateComplete={handleRegenerateComplete}
             />
           </div>
         )}

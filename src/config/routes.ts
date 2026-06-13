@@ -22,6 +22,7 @@ export const ROUTES = {
   TEACHER_DASHBOARD: '/teacher/dashboard',
   TEACHER_CLASSROOM: '/teacher/classroom/:id',
   TEACHER_LESSON_BRIEF: '/teacher/classroom/:id/lesson-brief',
+  TEACHER_PILOT_REPORT: '/teacher/classroom/:id/pilot-report',
   TEACHER_LIVE_SESSION: '/teacher/classroom/:id/live-session/:assignmentId',
   TEACHER_SUBMISSION: '/teacher/submission/:id',
   TEACHER_SETTINGS: '/teacher/settings',
@@ -43,6 +44,7 @@ export const ROUTES = {
 export const buildRoute = {
   teacherClassroom: (id: string) => `/teacher/classroom/${id}`,
   teacherLessonBrief: (id: string) => `/teacher/classroom/${id}/lesson-brief`,
+  teacherPilotReport: (id: string) => `/teacher/classroom/${id}/pilot-report`,
   teacherLiveSession: (id: string, assignmentId: string) =>
     `/teacher/classroom/${id}/live-session/${assignmentId}`,
   teacherSubmission: (id: string) => `/teacher/submission/${id}`,

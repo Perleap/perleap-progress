@@ -305,6 +305,8 @@ const StudentClassroomDetail = () => {
       return {
         primary: studyCtaLabelStart,
         secondary: null as string | null,
+        unitTitle: null as string | null,
+        stepTitle: null as string | null,
         headlineVariant: 'start' as const,
       };
     }
@@ -312,6 +314,8 @@ const StudentClassroomDetail = () => {
       return {
         primary: studyCtaLabelStart,
         secondary: null as string | null,
+        unitTitle: null as string | null,
+        stepTitle: null as string | null,
         headlineVariant: 'start' as const,
       };
     }
@@ -326,6 +330,8 @@ const StudentClassroomDetail = () => {
         return {
           primary: studyCtaLabelContinueCourse,
           secondary,
+          unitTitle: unitTitle || null,
+          stepTitle: stepTitle || null,
           headlineVariant: 'continue' as const,
         };
       }
@@ -338,6 +344,8 @@ const StudentClassroomDetail = () => {
       return {
         primary: studyCtaLabelContinueCourse,
         secondary,
+        unitTitle: unitTitle || null,
+        stepTitle: stepTitle || null,
         headlineVariant: 'continue' as const,
       };
     }
@@ -355,6 +363,8 @@ const StudentClassroomDetail = () => {
       return {
         primary: t('studentClassroom.studyCta.viewCurriculum'),
         secondary: t('studentClassroom.resumeCard.viewCurriculumSubtext'),
+        unitTitle: null as string | null,
+        stepTitle: null as string | null,
         headlineVariant: 'viewCurriculum' as const,
       };
     }
@@ -379,6 +389,8 @@ const StudentClassroomDetail = () => {
     return {
       primary,
       secondary: t('classroomDetail.curriculum.tabTitle'),
+      unitTitle: null as string | null,
+      stepTitle: null as string | null,
       headlineVariant: variant,
     };
   }, [
@@ -584,6 +596,8 @@ const StudentClassroomDetail = () => {
                         `studentClassroom.resumeCard.headline.${aboutCtaDisplay.headlineVariant}`,
                       )}
                       headlineHighlight={aboutCtaDisplay.secondary}
+                      headlineUnitTitle={aboutCtaDisplay.unitTitle}
+                      headlineStepTitle={aboutCtaDisplay.stepTitle}
                       buttonLabel={aboutCtaDisplay.primary}
                       onContinue={handleStudyCtaClick}
                       isRTL={isRTL}
@@ -601,7 +615,7 @@ const StudentClassroomDetail = () => {
                 </div>
 
                 <Card
-                  className="order-4 max-md:order-4 w-full border border-border shadow-sm rounded-xl bg-card overflow-hidden"
+                  className="order-4 max-md:order-4 w-full border border-border shadow-sm rounded-xl bg-card overflow-hidden py-0 gap-0"
                   dir={isRTL ? 'rtl' : 'ltr'}
                 >
                   <CardContent className="flex flex-col p-3 sm:p-4">
@@ -609,7 +623,7 @@ const StudentClassroomDetail = () => {
                       <div
                         className={cn(
                           'flex min-h-[2.5rem] items-center gap-3',
-                          (classroom.start_date || classroom.end_date) && 'pb-4',
+                          (classroom.start_date || classroom.end_date) && 'pb-3',
                           isRTL && 'flex-row-reverse',
                         )}
                       >
@@ -668,7 +682,7 @@ const StudentClassroomDetail = () => {
                         <p
                           className={cn(
                             'text-sm font-medium leading-snug text-foreground sm:text-base tabular-nums [overflow-wrap:anywhere]',
-                            teacherId ? 'pt-4' : 'pt-0',
+                            teacherId ? 'pt-3' : 'pt-0',
                             isRTL ? 'text-right' : 'text-left',
                           )}
                         >

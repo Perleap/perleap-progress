@@ -10,7 +10,12 @@ import { FiveDChart } from '@/components/FiveDChart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DIMENSION_CONFIG } from '@/config/constants';
-import { getLessonBriefClassNarrativeCache } from '@/lib/lessonBriefNarrativeCache';
+import {
+  getLessonBriefClassNarrativeCache,
+  getLessonBriefPreloadStatus,
+  getLessonBriefStudentNarrativesCache,
+  isLessonBriefCacheReady,
+} from '@/lib/lessonBriefNarrativeCache';
 import {
   getAllowedAssignmentIds,
   getClassroomAverage5D,
@@ -85,6 +90,9 @@ const STATUS_PRIORITY_ORDER: Record<StudentStatus, number> = {
   Stable: 3,
 };
 
+const LESSON_BRIEF_POLL_MS = 500;
+const LESSON_BRIEF_POLL_TIMEOUT_MS = 60_000;
+
 function lessonBriefDownloadFilename(courseName: string | undefined | null): string {
   const shortName =
     (courseName || 'course')
@@ -111,6 +119,7 @@ function ClassSnapshotSection({
   narrativeId,
   evidenceText,
   evidenceSourceCount,
+  cachedNarrative,
 }: {
   classroomId: string;
   classAverage: FiveDScores;
@@ -120,8 +129,10 @@ function ClassSnapshotSection({
   narrativeId: string;
   evidenceText?: string;
   evidenceSourceCount: number;
+  cachedNarrative?: Analytics5dNarrativeResult | null;
 }) {
   const { t } = useTranslation();
+  const hasCachedNarrative = Boolean(cachedNarrative?.explanations);
   const { data, isLoading, isError } = useAnalytics5dNarrative(
     {
       classroomId,
@@ -132,11 +143,12 @@ function ClassSnapshotSection({
       evidenceText,
       evidenceSourceCount,
     },
-    { enabled: !!classroomId, narrativeId }
+    { enabled: !!classroomId && !hasCachedNarrative, narrativeId }
   );
 
-  const explanations = data?.explanations ?? null;
-  const showEvidenceStatus = !isLoading && !isError;
+  const explanations = cachedNarrative?.explanations ?? data?.explanations ?? null;
+  const scopeSummary = cachedNarrative?.scopeSummary ?? data?.scopeSummary ?? null;
+  const showEvidenceStatus = hasCachedNarrative || (!isLoading && !isError);
 
   return (
     <Card className="rounded-2xl border border-slate-200 shadow-sm break-inside-avoid">
@@ -144,16 +156,16 @@ function ClassSnapshotSection({
         <CardTitle className="text-base">{t('analytics.classAverage')}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 space-y-4">
-        {isLoading && (
+        {isLoading && !hasCachedNarrative && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin shrink-0" />
             {t('analytics.narrative.loading')}
           </div>
         )}
-        {isError && <p className="text-xs text-destructive">{t('analytics.narrative.error')}</p>}
-        {data?.scopeSummary && !isLoading && (
+        {isError && !hasCachedNarrative && <p className="text-xs text-destructive">{t('analytics.narrative.error')}</p>}
+        {scopeSummary && (hasCachedNarrative || !isLoading) && (
           <p className={`text-sm text-muted-foreground leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
-            {data.scopeSummary}
+            {scopeSummary}
           </p>
         )}
         {showEvidenceStatus && evidenceSourceCount > 0 ? (
@@ -167,7 +179,7 @@ function ClassSnapshotSection({
           </p>
         ) : null}
 
-        <div className={isLoading ? 'opacity-60 pointer-events-none' : ''}>
+        <div className={isLoading && !hasCachedNarrative ? 'opacity-60 pointer-events-none' : ''}>
           <div className="grid grid-cols-1 xl:grid-cols-[1.75fr_0.9fr] gap-6 items-center">
             <div className="min-h-[420px] md:min-h-[520px] w-full">
               <FiveDChart
@@ -367,29 +379,31 @@ export default function LessonBriefPage() {
     });
   }, [data, effectiveAssignmentIds, sectionTitleResolver]);
 
-  const cachedClassNarrative = useMemo(() => {
+  const analyticsClassCache = useMemo(() => {
     if (!classroomId) return null;
     return getLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment);
   }, [classroomId, selectedModule, selectedAssignment]);
 
+  const displayClassAverage = analyticsClassCache?.classAverage ?? classAverage;
+
   useLayoutEffect(() => {
-    if (!cachedClassNarrative?.narrative || !classAverage || !classroomId) return;
+    if (!analyticsClassCache?.narrative || !displayClassAverage || !classroomId) return;
     const key = analytics5dNarrativeKeys.one({
       classroomId,
       context: 'class_avg',
       language: analyticsLanguage,
-      scores: classAverage,
+      scores: displayClassAverage,
       filterSummary: exportFilterSummary,
       evidenceText: classNarrativeEvidence.evidenceText || undefined,
       evidenceSourceCount: classNarrativeEvidence.sourceCount,
       narrativeId: classNarrativeId,
     });
     if (!queryClient.getQueryData(key)) {
-      queryClient.setQueryData(key, cachedClassNarrative.narrative);
+      queryClient.setQueryData(key, analyticsClassCache.narrative);
     }
   }, [
-    cachedClassNarrative,
-    classAverage,
+    analyticsClassCache,
+    displayClassAverage,
     classroomId,
     analyticsLanguage,
     exportFilterSummary,
@@ -489,18 +503,17 @@ export default function LessonBriefPage() {
   }, [classAverage, studentRows, scopedClassCompletionRatio]);
 
   useEffect(() => {
-    if (!data || effectiveAssignmentIds.length === 0) return;
+    if (!data || !classroomId || effectiveAssignmentIds.length === 0) return;
 
     let isMounted = true;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-    const generateNarratives = async () => {
-      setIsGenerating(true);
-      
+    const buildBaseStudents = () => {
       const denom = effectiveAssignmentIds.length;
       const list = [...data.students];
       list.sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' }));
 
-      const baseStudents = list.map((st) => ({
+      return list.map((st) => ({
         id: st.id,
         name: st.fullName,
         completedInScope: countStudentCompletedAssignmentsInScope(
@@ -510,16 +523,73 @@ export default function LessonBriefPage() {
         ),
         assignmentsInScope: denom,
         scores: scopedStudentLatestScores(st.snapshots, data.rawSubmissions, effectiveAssignmentIds),
-        narrative: null,
+        narrative: null as Analytics5dNarrativeResult | null,
       }));
+    };
+
+    const applyCachedNarratives = () => {
+      const cached = getLessonBriefStudentNarrativesCache(
+        classroomId,
+        selectedModule,
+        selectedAssignment
+      );
+      const baseStudents = buildBaseStudents();
+      const narrativeById = new Map(
+        (cached?.narratives ?? []).map((entry) => [entry.studentId, entry.narrative])
+      );
+
+      setStudentData(
+        baseStudents.map((st) => ({
+          ...st,
+          narrative: narrativeById.get(st.id) ?? null,
+        }))
+      );
+      setIsGenerating(false);
+    };
+
+    const waitForPreload = (): Promise<boolean> =>
+      new Promise((resolve) => {
+        if (isLessonBriefCacheReady(classroomId, selectedModule, selectedAssignment)) {
+          resolve(true);
+          return;
+        }
+
+        setIsGenerating(true);
+        const startedAt = Date.now();
+
+        pollTimer = setInterval(() => {
+          if (!isMounted) return;
+
+          if (isLessonBriefCacheReady(classroomId, selectedModule, selectedAssignment)) {
+            if (pollTimer) clearInterval(pollTimer);
+            resolve(true);
+            return;
+          }
+
+          const status = getLessonBriefPreloadStatus(classroomId, selectedModule, selectedAssignment);
+          if (status === 'error') {
+            if (pollTimer) clearInterval(pollTimer);
+            resolve(false);
+            return;
+          }
+
+          if (Date.now() - startedAt >= LESSON_BRIEF_POLL_TIMEOUT_MS) {
+            if (pollTimer) clearInterval(pollTimer);
+            resolve(false);
+          }
+        }, LESSON_BRIEF_POLL_MS);
+      });
+
+    const generateNarratives = async () => {
+      setIsGenerating(true);
+
+      const baseStudents = buildBaseStudents();
 
       const allStudentsForEvidence = data.students.map((s) => ({
         id: s.id,
         fullName: s.fullName,
         narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
       }));
-
-      const sectionTitleResolverForStudent = sectionTitleResolver;
 
       const results = await runPool(baseStudents, 4, async (row) => {
         if (!row.scores) return null;
@@ -530,11 +600,11 @@ export default function LessonBriefPage() {
             allStudents: allStudentsForEvidence,
             assignmentRefs: data.assignments,
             singleStudentId: row.id,
-            sectionTitleResolver: sectionTitleResolverForStudent,
+            sectionTitleResolver,
           });
 
           return await invokeExplainAnalytics5d({
-            classroomId: classroomId!,
+            classroomId,
             context: 'student_avg',
             language: analyticsLanguage,
             scores: row.scores,
@@ -542,6 +612,7 @@ export default function LessonBriefPage() {
             studentName: row.name,
             evidenceText: evidence.evidenceText || undefined,
             evidenceSourceCount: evidence.sourceCount,
+            brief: true,
           });
         } catch (e) {
           console.error('Failed to generate narrative for', row.name, e);
@@ -555,12 +626,41 @@ export default function LessonBriefPage() {
       }
     };
 
-    generateNarratives();
+    const loadStudentNarratives = async () => {
+      if (isLessonBriefCacheReady(classroomId, selectedModule, selectedAssignment)) {
+        applyCachedNarratives();
+        return;
+      }
+
+      const status = getLessonBriefPreloadStatus(classroomId, selectedModule, selectedAssignment);
+      if (status === 'loading') {
+        const ready = await waitForPreload();
+        if (!isMounted) return;
+        if (ready) {
+          applyCachedNarratives();
+          return;
+        }
+      }
+
+      await generateNarratives();
+    };
+
+    void loadStudentNarratives();
 
     return () => {
       isMounted = false;
+      if (pollTimer) clearInterval(pollTimer);
     };
-  }, [data, effectiveAssignmentIds, classroomId, analyticsLanguage, exportFilterSummary, sectionTitleResolver]);
+  }, [
+    data,
+    classroomId,
+    effectiveAssignmentIds,
+    selectedModule,
+    selectedAssignment,
+    analyticsLanguage,
+    exportFilterSummary,
+    sectionTitleResolver,
+  ]);
 
   const handlePrint = () => {
     window.print();
@@ -695,16 +795,17 @@ export default function LessonBriefPage() {
             </div>
           </div>
 
-          {classAverage && effectiveAssignmentIds.length > 0 ? (
+          {displayClassAverage && effectiveAssignmentIds.length > 0 ? (
             <ClassSnapshotSection
               classroomId={classroomId!}
-              classAverage={classAverage}
+              classAverage={displayClassAverage}
               filterSummary={exportFilterSummary}
               language={analyticsLanguage}
               isRTL={isRTL}
               narrativeId={classNarrativeId}
               evidenceText={classNarrativeEvidence.evidenceText}
               evidenceSourceCount={classNarrativeEvidence.sourceCount}
+              cachedNarrative={analyticsClassCache?.narrative}
             />
           ) : (
             <Card className="rounded-2xl border border-slate-200 shadow-sm">

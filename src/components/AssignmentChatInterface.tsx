@@ -171,6 +171,7 @@ export function AssignmentChatInterface({
 
   const [companionPanelOpen, setCompanionPanelOpen] = useState(() => {
     if (variant !== 'companion') return true;
+    if (initialGreetingMode === 'explain_task') return true;
     try {
       return localStorage.getItem(COMPANION_CHAT_OPEN_LS) === 'true';
     } catch {
@@ -178,6 +179,12 @@ export function AssignmentChatInterface({
     }
   });
   const companionLsHydrated = useRef(false);
+
+  useEffect(() => {
+    if (variant === 'companion' && initialGreetingMode === 'explain_task') {
+      setCompanionPanelOpen(true);
+    }
+  }, [variant, initialGreetingMode]);
 
   // File attachment state
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; url?: string; type?: string } | null>(null);
@@ -1049,7 +1056,7 @@ export function AssignmentChatInterface({
             {completing ? (
               <>
                 <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                {t('assignmentChat.generatingFeedback')}
+                {t('assignmentChat.completingActivity')}
               </>
             ) : (
               <>

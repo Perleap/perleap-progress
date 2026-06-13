@@ -1,4 +1,5 @@
 import { supabase } from '@/api/client';
+import { inferAudioExtension } from '@/lib/audioFormat';
 
 /**
  * Speech Service
@@ -49,18 +50,34 @@ export const synthesizeSpeech = async (text: string, voice: string = 'onyx'): Pr
  */
 export const transcribeAudio = async (audioBlob: Blob, language?: string): Promise<string> => {
   try {
+    if (audioBlob.size === 0) {
+      throw new Error('Recording is empty');
+    }
+
+    const ext = await inferAudioExtension(audioBlob);
+    const { data: { session } } = await supabase.auth.getSession();
     const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('file', audioBlob, `audio.${ext}`);
     if (language) {
       formData.append('language', language);
     }
 
-    const { data, error } = await supabase.functions.invoke('speech-to-text', {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/speech-to-text`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
       body: formData,
     });
 
-    if (error) throw error;
-    return data.text;
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return data.text ?? '';
   } catch (error) {
     console.error('Error transcribing audio:', error);
     throw error;

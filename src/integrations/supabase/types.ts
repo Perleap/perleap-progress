@@ -53,10 +53,8 @@ export type Database = {
       activity_list: {
         Row: {
           active: boolean
-          body_text: string | null
           created_at: string
           deleted_at: string | null
-          estimated_duration_minutes: number | null
           file_path: string | null
           file_size: number | null
           id: string
@@ -66,17 +64,14 @@ export type Database = {
           resource_type: string
           section_id: string
           status: string
-          summary: string | null
           title: string
           updated_at: string
           url: string | null
         }
         Insert: {
           active?: boolean
-          body_text?: string | null
           created_at?: string
           deleted_at?: string | null
-          estimated_duration_minutes?: number | null
           file_path?: string | null
           file_size?: number | null
           id?: string
@@ -86,17 +81,14 @@ export type Database = {
           resource_type?: string
           section_id: string
           status?: string
-          summary?: string | null
           title: string
           updated_at?: string
           url?: string | null
         }
         Update: {
           active?: boolean
-          body_text?: string | null
           created_at?: string
           deleted_at?: string | null
-          estimated_duration_minutes?: number | null
           file_path?: string | null
           file_size?: number | null
           id?: string
@@ -106,7 +98,6 @@ export type Database = {
           resource_type?: string
           section_id?: string
           status?: string
-          summary?: string | null
           title?: string
           updated_at?: string
           url?: string | null
@@ -148,27 +139,6 @@ export type Database = {
           entity_type?: string | null
           id?: string
           metadata?: Json | null
-        }
-        Relationships: []
-      }
-      observability_metric_snapshots: {
-        Row: {
-          id: string
-          recorded_at: string
-          source: string
-          payload: Json
-        }
-        Insert: {
-          id?: string
-          recorded_at?: string
-          source: string
-          payload?: Json
-        }
-        Update: {
-          id?: string
-          recorded_at?: string
-          source?: string
-          payload?: Json
         }
         Relationships: []
       }
@@ -279,6 +249,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_teacher_content_flags: {
+        Row: {
+          assignment_id: string | null
+          content_excerpt: string | null
+          content_type: string
+          created_at: string
+          flagger_id: string
+          id: string
+          opik_trace_id: string | null
+          submission_id: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          content_excerpt?: string | null
+          content_type: string
+          created_at?: string
+          flagger_id: string
+          id?: string
+          opik_trace_id?: string | null
+          submission_id?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          content_excerpt?: string | null
+          content_type?: string
+          created_at?: string
+          flagger_id?: string
+          id?: string
+          opik_trace_id?: string | null
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_teacher_content_flags_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_teacher_content_flags_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_admins: {
         Row: {
           created_at: string
@@ -331,55 +349,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      },
-      ai_teacher_content_flags: {
-        Row: {
-          assignment_id: string | null
-          content_excerpt: string | null
-          content_type: string
-          created_at: string
-          flagger_id: string
-          id: string
-          opik_trace_id: string | null
-          submission_id: string | null
-        }
-        Insert: {
-          assignment_id?: string | null
-          content_excerpt?: string | null
-          content_type: string
-          created_at?: string
-          flagger_id: string
-          id?: string
-          opik_trace_id?: string | null
-          submission_id?: string | null
-        }
-        Update: {
-          assignment_id?: string | null
-          content_excerpt?: string | null
-          content_type?: string
-          created_at?: string
-          flagger_id?: string
-          id?: string
-          opik_trace_id?: string | null
-          submission_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_teacher_content_flags_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "assignments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ai_teacher_content_flags_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "submissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      },
+      }
       assignment_chat_sentence_flags: {
         Row: {
           assignment_id: string
@@ -431,8 +401,10 @@ export type Database = {
       assignment_conversations: {
         Row: {
           assignment_id: string
+          completed_task_indexes: number[] | null
           created_at: string
           id: string
+          last_openai_response_id: string | null
           messages: Json
           student_id: string
           submission_id: string
@@ -440,8 +412,10 @@ export type Database = {
         }
         Insert: {
           assignment_id: string
+          completed_task_indexes?: number[] | null
           created_at?: string
           id?: string
+          last_openai_response_id?: string | null
           messages?: Json
           student_id: string
           submission_id: string
@@ -449,8 +423,10 @@ export type Database = {
         }
         Update: {
           assignment_id?: string
+          completed_task_indexes?: number[] | null
           created_at?: string
           id?: string
+          last_openai_response_id?: string | null
           messages?: Json
           student_id?: string
           submission_id?: string
@@ -479,36 +455,36 @@ export type Database = {
           conversation_context: Json | null
           created_at: string
           id: string
+          opik_trace_ids: Json
           student_feedback: string | null
           student_id: string
           submission_id: string
           teacher_feedback: string | null
           visible_to_student: boolean
-          opik_trace_ids: Json
         }
         Insert: {
           assignment_id: string
           conversation_context?: Json | null
           created_at?: string
           id?: string
+          opik_trace_ids?: Json
           student_feedback?: string | null
           student_id: string
           submission_id: string
           teacher_feedback?: string | null
           visible_to_student?: boolean
-          opik_trace_ids?: Json
         }
         Update: {
           assignment_id?: string
           conversation_context?: Json | null
           created_at?: string
           id?: string
+          opik_trace_ids?: Json
           student_feedback?: string | null
           student_id?: string
           submission_id?: string
           teacher_feedback?: string | null
           visible_to_student?: boolean
-          opik_trace_ids?: Json
         }
         Relationships: [
           {
@@ -530,78 +506,6 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "submissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      live_sessions: {
-        Row: {
-          assignment_id: string
-          audio_chunk_paths: Json
-          audio_path: string | null
-          classroom_id: string
-          created_at: string
-          duration_seconds: number | null
-          error: string | null
-          id: string
-          session_type: string
-          status: string
-          summary: string | null
-          syllabus_section_id: string | null
-          timestamps: Json
-          transcript: string | null
-          updated_at: string
-          video_temp_path: string | null
-        }
-        Insert: {
-          assignment_id: string
-          audio_chunk_paths?: Json
-          audio_path?: string | null
-          classroom_id: string
-          created_at?: string
-          duration_seconds?: number | null
-          error?: string | null
-          id?: string
-          session_type?: string
-          status?: string
-          summary?: string | null
-          syllabus_section_id?: string | null
-          timestamps?: Json
-          transcript?: string | null
-          updated_at?: string
-          video_temp_path?: string | null
-        }
-        Update: {
-          assignment_id?: string
-          audio_chunk_paths?: Json
-          audio_path?: string | null
-          classroom_id?: string
-          created_at?: string
-          duration_seconds?: number | null
-          error?: string | null
-          id?: string
-          session_type?: string
-          status?: string
-          summary?: string | null
-          syllabus_section_id?: string | null
-          timestamps?: Json
-          transcript?: string | null
-          updated_at?: string
-          video_temp_path?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "live_sessions_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: true
-            referencedRelation: "assignments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "live_sessions_classroom_id_fkey"
-            columns: ["classroom_id"]
-            isOneToOne: false
-            referencedRelation: "classrooms"
             referencedColumns: ["id"]
           },
         ]
@@ -658,13 +562,16 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           due_at: string | null
+          enable_ai_feedback: boolean
           grading_category_id: string | null
           hard_skill_domain: string | null
           hard_skills: string | null
           id: string
           instructions: string
           materials: Json | null
+          opik_trace_ids: Json
           personalization_flag: boolean | null
+          show_task_understanding_prompt: boolean
           status: Database["public"]["Enums"]["assignment_status"]
           student_facing_task: string | null
           syllabus_section_id: string | null
@@ -673,7 +580,6 @@ export type Database = {
           type: Database["public"]["Enums"]["assignment_type"]
           updated_at: string
           use_course_memory: boolean
-          opik_trace_ids: Json
         }
         Insert: {
           active?: boolean
@@ -684,13 +590,16 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           due_at?: string | null
+          enable_ai_feedback?: boolean
           grading_category_id?: string | null
           hard_skill_domain?: string | null
           hard_skills?: string | null
           id?: string
           instructions: string
           materials?: Json | null
+          opik_trace_ids?: Json
           personalization_flag?: boolean | null
+          show_task_understanding_prompt?: boolean
           status?: Database["public"]["Enums"]["assignment_status"]
           student_facing_task?: string | null
           syllabus_section_id?: string | null
@@ -699,7 +608,6 @@ export type Database = {
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
           use_course_memory?: boolean
-          opik_trace_ids?: Json
         }
         Update: {
           active?: boolean
@@ -710,13 +618,16 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           due_at?: string | null
+          enable_ai_feedback?: boolean
           grading_category_id?: string | null
           hard_skill_domain?: string | null
           hard_skills?: string | null
           id?: string
           instructions?: string
           materials?: Json | null
+          opik_trace_ids?: Json
           personalization_flag?: boolean | null
+          show_task_understanding_prompt?: boolean
           status?: Database["public"]["Enums"]["assignment_status"]
           student_facing_task?: string | null
           syllabus_section_id?: string | null
@@ -725,7 +636,6 @@ export type Database = {
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
           use_course_memory?: boolean
-          opik_trace_ids?: Json
         }
         Relationships: [
           {
@@ -1063,6 +973,85 @@ export type Database = {
           },
         ]
       }
+      live_sessions: {
+        Row: {
+          assignment_id: string
+          audio_chunk_paths: Json
+          audio_path: string | null
+          classroom_id: string
+          created_at: string
+          duration_seconds: number | null
+          error: string | null
+          id: string
+          session_type: string
+          status: string
+          summary: string | null
+          syllabus_section_id: string | null
+          timestamps: Json
+          transcript: string | null
+          updated_at: string
+          video_temp_path: string | null
+        }
+        Insert: {
+          assignment_id: string
+          audio_chunk_paths?: Json
+          audio_path?: string | null
+          classroom_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          session_type?: string
+          status?: string
+          summary?: string | null
+          syllabus_section_id?: string | null
+          timestamps?: Json
+          transcript?: string | null
+          updated_at?: string
+          video_temp_path?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          audio_chunk_paths?: Json
+          audio_path?: string | null
+          classroom_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          id?: string
+          session_type?: string
+          status?: string
+          summary?: string | null
+          syllabus_section_id?: string | null
+          timestamps?: Json
+          transcript?: string | null
+          updated_at?: string
+          video_temp_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_syllabus_section_id_fkey"
+            columns: ["syllabus_section_id"]
+            isOneToOne: false
+            referencedRelation: "syllabus_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_flow_steps: {
         Row: {
           activity_list_id: string | null
@@ -1156,6 +1145,86 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      observability_metric_snapshots: {
+        Row: {
+          id: string
+          payload: Json
+          recorded_at: string
+          source: string
+        }
+        Insert: {
+          id?: string
+          payload?: Json
+          recorded_at?: string
+          source: string
+        }
+        Update: {
+          id?: string
+          payload?: Json
+          recorded_at?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      pilot_report_snapshots: {
+        Row: {
+          classroom_id: string
+          cohort_summary: Json | null
+          created_at: string
+          data_hash: string
+          error_message: string | null
+          generated_at: string | null
+          id: string
+          language: string
+          participant_rows: Json
+          scope_assignment: string
+          scope_module: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          cohort_summary?: Json | null
+          created_at?: string
+          data_hash?: string
+          error_message?: string | null
+          generated_at?: string | null
+          id?: string
+          language: string
+          participant_rows?: Json
+          scope_assignment?: string
+          scope_module?: string
+          started_at?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          cohort_summary?: Json | null
+          created_at?: string
+          data_hash?: string
+          error_message?: string | null
+          generated_at?: string | null
+          id?: string
+          language?: string
+          participant_rows?: Json
+          scope_assignment?: string
+          scope_module?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_report_snapshots_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       section_comments: {
         Row: {
@@ -1275,6 +1344,44 @@ export type Database = {
           },
         ]
       }
+      student_classroom_course_memory: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          facts: Json
+          id: string
+          processed_submission_ids: Json
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          processed_submission_ids?: Json
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          processed_submission_ids?: Json
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_classroom_course_memory_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_module_flow_progress: {
         Row: {
           completed_at: string | null
@@ -1374,7 +1481,7 @@ export type Database = {
           student_id: string
           total_idle_time_ms: number | null
           total_session_duration_ms: number | null
-          understanding_cue_count: number | null
+          understanding_cue_count: number
         }
         Insert: {
           assignment_id: string
@@ -1391,7 +1498,7 @@ export type Database = {
           student_id: string
           total_idle_time_ms?: number | null
           total_session_duration_ms?: number | null
-          understanding_cue_count?: number | null
+          understanding_cue_count?: number
         }
         Update: {
           assignment_id?: string
@@ -1408,7 +1515,7 @@ export type Database = {
           student_id?: string
           total_idle_time_ms?: number | null
           total_session_duration_ms?: number | null
-          understanding_cue_count?: number | null
+          understanding_cue_count?: number
         }
         Relationships: [
           {
@@ -1543,44 +1650,6 @@ export type Database = {
           },
         ]
       }
-      student_classroom_course_memory: {
-        Row: {
-          classroom_id: string
-          created_at: string
-          facts: Json
-          id: string
-          processed_submission_ids: Json
-          student_id: string
-          updated_at: string
-        }
-        Insert: {
-          classroom_id: string
-          created_at?: string
-          facts?: Json
-          id?: string
-          processed_submission_ids?: Json
-          student_id: string
-          updated_at?: string
-        }
-        Update: {
-          classroom_id?: string
-          created_at?: string
-          facts?: Json
-          id?: string
-          processed_submission_ids?: Json
-          student_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_classroom_course_memory_classroom_id_fkey"
-            columns: ["classroom_id"]
-            isOneToOne: false
-            referencedRelation: "classrooms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       student_section_progress: {
         Row: {
           completed_at: string | null
@@ -1619,27 +1688,72 @@ export type Database = {
           },
         ]
       }
+      student_section_unit_memory: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          facts: Json
+          id: string
+          student_id: string
+          syllabus_section_id: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          student_id: string
+          syllabus_section_id: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          student_id?: string
+          syllabus_section_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_section_unit_memory_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_section_unit_memory_syllabus_section_id_fkey"
+            columns: ["syllabus_section_id"]
+            isOneToOne: false
+            referencedRelation: "syllabus_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submission_teacher_private_note_entries: {
         Row: {
-          id: string
-          submission_id: string
           body: string
           created_at: string
           created_by: string | null
+          id: string
+          submission_id: string
         }
         Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
           id?: string
           submission_id: string
-          body?: string
-          created_at?: string
-          created_by?: string | null
         }
         Update: {
-          id?: string
-          submission_id?: string
           body?: string
           created_at?: string
           created_by?: string | null
+          id?: string
+          submission_id?: string
         }
         Relationships: [
           {
@@ -1653,11 +1767,14 @@ export type Database = {
       }
       submissions: {
         Row: {
+          artifact_transcript: string | null
           assignment_id: string
           attempt_number: number
           awaiting_teacher_feedback_release: boolean
           conversation_complete_at_submit: boolean | null
+          evaluation_status: string | null
           file_url: string | null
+          file_urls: string[] | null
           id: string
           is_teacher_attempt: boolean
           status: Database["public"]["Enums"]["submission_status"]
@@ -1666,11 +1783,14 @@ export type Database = {
           text_body: string | null
         }
         Insert: {
+          artifact_transcript?: string | null
           assignment_id: string
           attempt_number?: number
           awaiting_teacher_feedback_release?: boolean
           conversation_complete_at_submit?: boolean | null
+          evaluation_status?: string | null
           file_url?: string | null
+          file_urls?: string[] | null
           id?: string
           is_teacher_attempt?: boolean
           status?: Database["public"]["Enums"]["submission_status"]
@@ -1679,11 +1799,14 @@ export type Database = {
           text_body?: string | null
         }
         Update: {
+          artifact_transcript?: string | null
           assignment_id?: string
           attempt_number?: number
           awaiting_teacher_feedback_release?: boolean
           conversation_complete_at_submit?: boolean | null
+          evaluation_status?: string | null
           file_url?: string | null
+          file_urls?: string[] | null
           id?: string
           is_teacher_attempt?: boolean
           status?: Database["public"]["Enums"]["submission_status"]
@@ -1698,13 +1821,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "assignments"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "submissions_student_id_fkey_profiles"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "student_profiles"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1986,8 +2102,10 @@ export type Database = {
       }
       test_questions: {
         Row: {
+          allow_multiple_selections: boolean
           assignment_id: string
           correct_option_id: string | null
+          correct_option_ids: Json
           created_at: string | null
           id: string
           options: Json | null
@@ -1996,8 +2114,10 @@ export type Database = {
           question_type: string
         }
         Insert: {
+          allow_multiple_selections?: boolean
           assignment_id: string
           correct_option_id?: string | null
+          correct_option_ids?: Json
           created_at?: string | null
           id?: string
           options?: Json | null
@@ -2006,8 +2126,10 @@ export type Database = {
           question_type: string
         }
         Update: {
+          allow_multiple_selections?: boolean
           assignment_id?: string
           correct_option_id?: string | null
+          correct_option_ids?: Json
           created_at?: string | null
           id?: string
           options?: Json | null
@@ -2031,6 +2153,7 @@ export type Database = {
           id: string
           question_id: string
           selected_option_id: string | null
+          selected_option_ids: Json
           submission_id: string
           text_answer: string | null
         }
@@ -2039,6 +2162,7 @@ export type Database = {
           id?: string
           question_id: string
           selected_option_id?: string | null
+          selected_option_ids?: Json
           submission_id: string
           text_answer?: string | null
         }
@@ -2047,6 +2171,7 @@ export type Database = {
           id?: string
           question_id?: string
           selected_option_id?: string | null
+          selected_option_ids?: Json
           submission_id?: string
           text_answer?: string | null
         }
@@ -2063,6 +2188,72 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_watch_progress: {
+        Row: {
+          classroom_id: string
+          completed: boolean
+          completion_count: number
+          duration_seconds: number
+          first_watched_at: string
+          id: string
+          last_position_seconds: number
+          last_watched_at: string
+          lesson_block_id: string | null
+          max_position_seconds: number
+          play_count: number
+          resource_id: string
+          student_user_id: string
+          total_watch_seconds: number
+        }
+        Insert: {
+          classroom_id: string
+          completed?: boolean
+          completion_count?: number
+          duration_seconds?: number
+          first_watched_at?: string
+          id?: string
+          last_position_seconds?: number
+          last_watched_at?: string
+          lesson_block_id?: string | null
+          max_position_seconds?: number
+          play_count?: number
+          resource_id: string
+          student_user_id: string
+          total_watch_seconds?: number
+        }
+        Update: {
+          classroom_id?: string
+          completed?: boolean
+          completion_count?: number
+          duration_seconds?: number
+          first_watched_at?: string
+          id?: string
+          last_position_seconds?: number
+          last_watched_at?: string
+          lesson_block_id?: string | null
+          max_position_seconds?: number
+          play_count?: number
+          resource_id?: string
+          student_user_id?: string
+          total_watch_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_watch_progress_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_watch_progress_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "activity_list"
             referencedColumns: ["id"]
           },
         ]
@@ -2096,10 +2287,6 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
-      replace_module_flow_steps: {
-        Args: { p_section_id: string; p_steps: Json }
-        Returns: undefined
-      }
       merge_course_package_v2: {
         Args: {
           p_classroom_id: string
@@ -2108,12 +2295,30 @@ export type Database = {
         }
         Returns: undefined
       }
-      report_assignment_chat_sentence: {
-        Args: { args: Json }
+      merge_raise: { Args: { p_ctx: Json }; Returns: undefined }
+      replace_module_flow_steps: {
+        Args: { p_section_id: string; p_steps: Json }
+        Returns: undefined
+      }
+      report_assignment_chat_sentence: { Args: { args: Json }; Returns: Json }
+      report_assignment_chat_sentence_impl: {
+        Args: {
+          p_message_index: number
+          p_sentence_index: number
+          p_sentence_text: string
+          p_submission_id: string
+        }
         Returns: Json
       }
-      report_teacher_ai_content_flag: {
-        Args: { args: Json }
+      report_teacher_ai_content_flag: { Args: { args: Json }; Returns: Json }
+      report_teacher_ai_content_flag_impl: {
+        Args: {
+          p_assignment_id: string
+          p_content_excerpt: string
+          p_content_type: string
+          p_opik_trace_id: string
+          p_submission_id: string
+        }
         Returns: Json
       }
       split_assistant_message_into_sentences: {
@@ -2127,6 +2332,19 @@ export type Database = {
       teacher_reset_student_assignment_progress: {
         Args: { _submission_id: string }
         Returns: string
+      }
+      upsert_video_watch_progress: {
+        Args: {
+          p_classroom_id: string
+          p_completion_count_delta?: number
+          p_duration_seconds: number
+          p_last_position_seconds: number
+          p_lesson_block_id: string
+          p_play_count_delta: number
+          p_resource_id: string
+          p_watch_seconds_delta: number
+        }
+        Returns: undefined
       }
     }
     Enums: {

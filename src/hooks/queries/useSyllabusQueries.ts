@@ -533,13 +533,14 @@ export const useSectionResourceById = (resourceId: string | undefined) => {
 export const useUploadResource = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, file, orderIndex, classroomId }: {
+    mutationFn: async ({ sectionId, file, orderIndex, classroomId, onProgress }: {
       sectionId: string;
       file: File;
       orderIndex: number;
       classroomId: string;
+      onProgress?: (loaded: number, total: number) => void;
     }) => {
-      const { data, error } = await uploadAndCreateResource(sectionId, file, orderIndex);
+      const { data, error } = await uploadAndCreateResource(sectionId, file, orderIndex, { onProgress });
       if (error) throw error;
       return data;
     },

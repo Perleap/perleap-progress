@@ -39,11 +39,16 @@ export type AssignmentWizardFormData = {
     action: boolean;
   };
   personalization_flag: boolean;
+  /** When true (default), AI feedback is generated automatically on student submit. */
+  enable_ai_feedback: boolean;
+  /** When true (default), students see AI feedback as soon as it is generated. */
   auto_publish_ai_feedback: boolean;
   materials: Array<{ type: 'pdf' | 'link'; url: string; name: string }>;
   attempt_mode: Database['public']['Enums']['assignment_attempt_mode'];
   /** When true, tutor may recall distilled facts from earlier units in this course. */
   use_course_memory: boolean;
+  /** When true, students must confirm they understand the task before beginning. */
+  show_task_understanding_prompt: boolean;
   /** Opik trace UUIDs for AI-generated fields (persisted on assignment create). */
   opik_trace_ids?: Record<string, string>;
 };
@@ -66,10 +71,12 @@ export function getDefaultAssignmentWizardFormData(): AssignmentWizardFormData {
       action: false,
     },
     personalization_flag: false,
+    enable_ai_feedback: true,
     auto_publish_ai_feedback: true,
     materials: [],
     attempt_mode: 'single',
     use_course_memory: true,
+    show_task_understanding_prompt: true,
     opik_trace_ids: {},
   };
 }

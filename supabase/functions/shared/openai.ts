@@ -4,6 +4,7 @@
  */
 
 import type { OpenAIConfig } from './types.ts';
+import { inferAudioUploadName } from './audioFormat.ts';
 
 /**
  * Get OpenAI configuration from environment
@@ -45,6 +46,20 @@ const modelSupportsStopParameter = (model: string): boolean => !/^gpt-5/i.test(m
  */
 const modelSupportsTemperature = (model: string): boolean => !/^gpt-5/i.test(model.trim());
 
+/** GPT-5 reasoning-class models support reasoning_effort; gpt-4o-mini does not. */
+const modelSupportsReasoningEffort = (model: string): boolean => /^gpt-5/i.test(model.trim());
+
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
+export interface JsonSchemaResponseFormat {
+  type: 'json_schema';
+  name: string;
+  strict?: boolean;
+  schema: Record<string, unknown>;
+}
+
+export type ChatResponseFormat = 'text' | 'json_object' | JsonSchemaResponseFormat;
+
 export interface ChatCompletionPayloadOptions {
   systemPrompt: string;
   messages: unknown[];
@@ -52,15 +67,39 @@ export interface ChatCompletionPayloadOptions {
   maxTokens?: number;
   modelTier?: 'fast' | 'smart';
   stream?: boolean;
-  responseFormat?: 'text' | 'json_object';
+  responseFormat?: ChatResponseFormat;
   /** Optional stop sequences (Chat Completions). Use to prevent the model from hallucinating an extra user turn. */
   stop?: string[];
+  /** Optional seed for more repeatable completions (when supported by the model). */
+  seed?: number;
+  /** Reasoning effort for gpt-5 family models only. Ignored for gpt-4o-mini. */
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**
  * Plain JSON body POSTed to `v1/chat/completions` (no secrets).
  * Mirrors `createChatCompletion` semantics so admins can introspect stored snapshots.
  */
+function applyResponseFormat(
+  requestBody: Record<string, unknown>,
+  responseFormat: ChatResponseFormat,
+): void {
+  if (responseFormat === 'json_object') {
+    requestBody.response_format = { type: 'json_object' };
+    return;
+  }
+  if (typeof responseFormat === 'object' && responseFormat.type === 'json_schema') {
+    requestBody.response_format = {
+      type: 'json_schema',
+      json_schema: {
+        name: responseFormat.name,
+        strict: responseFormat.strict ?? true,
+        schema: responseFormat.schema,
+      },
+    };
+  }
+}
+
 export const buildChatCompletionsPayload = (
   systemPrompt: string,
   messages: unknown[],
@@ -68,8 +107,10 @@ export const buildChatCompletionsPayload = (
   maxTokens = 2000,
   modelTier: 'fast' | 'smart' = 'smart',
   stream = false,
-  responseFormat: 'text' | 'json_object' = 'text',
+  responseFormat: ChatResponseFormat = 'text',
   stop?: string[],
+  seed?: number,
+  reasoningEffort?: ReasoningEffort,
 ): Record<string, unknown> => {
   const config = getOpenAIConfig();
   const model = modelTier === 'fast' ? 'gpt-4o-mini' : config.model;
@@ -87,11 +128,15 @@ export const buildChatCompletionsPayload = (
   } else {
     requestBody.max_tokens = maxTokens;
   }
-  if (responseFormat === 'json_object') {
-    requestBody.response_format = { type: 'json_object' };
-  }
+  applyResponseFormat(requestBody, responseFormat);
   if (stop && stop.length > 0 && modelSupportsStopParameter(model)) {
     requestBody.stop = stop;
+  }
+  if (typeof seed === 'number' && Number.isFinite(seed)) {
+    requestBody.seed = Math.floor(seed);
+  }
+  if (reasoningEffort && modelSupportsReasoningEffort(model)) {
+    requestBody.reasoning_effort = reasoningEffort;
   }
   if (stream && Deno.env.get('PERLEAP_CHAT_STREAM_USAGE') !== 'false') {
     requestBody.stream_options = { include_usage: true };
@@ -142,7 +187,9 @@ export const createChatCompletion = async (
   maxTokens = 2000,
   modelTier: 'fast' | 'smart' = 'smart',
   stream = false,
-  responseFormat: 'text' | 'json_object' = 'text',
+  responseFormat: ChatResponseFormat = 'text',
+  seed?: number,
+  reasoningEffort?: ReasoningEffort,
 ): Promise<{ content: string; usage?: unknown } | Response> => {
   const config = getOpenAIConfig();
   const requestBody = buildChatCompletionsPayload(
@@ -153,6 +200,9 @@ export const createChatCompletion = async (
     modelTier,
     stream,
     responseFormat,
+    undefined,
+    seed,
+    reasoningEffort,
   );
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -344,7 +394,8 @@ export const createTranscription = async (
 ): Promise<string> => {
   const config = getOpenAIConfig();
   const formData = new FormData();
-  formData.append('file', audioFile, 'audio.webm');
+  const uploadName = await inferAudioUploadName(audioFile);
+  formData.append('file', audioFile, uploadName);
   formData.append('model', model);
   if (language) {
     formData.append('language', language);
@@ -390,7 +441,8 @@ export const createVerboseTranscription = async (
 ): Promise<VerboseTranscription> => {
   const config = getOpenAIConfig();
   const formData = new FormData();
-  formData.append('file', audioFile, 'audio.m4a');
+  const uploadName = await inferAudioUploadName(audioFile);
+  formData.append('file', audioFile, uploadName);
   formData.append('model', model);
   formData.append('response_format', 'verbose_json');
   if (language) {

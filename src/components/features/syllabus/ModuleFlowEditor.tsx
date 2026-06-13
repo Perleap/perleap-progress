@@ -32,6 +32,16 @@ import { CSS } from '@dnd-kit/utilities';
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { Button } from '@/components/ui/button';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -206,6 +216,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
     const [createAssignmentOpen, setCreateAssignmentOpen] = useState(false);
     const [createLiveSessionOpen, setCreateLiveSessionOpen] = useState(false);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
+    const [deleteConfirmIndex, setDeleteConfirmIndex] = useState<number | null>(null);
 
     const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -361,6 +372,48 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       });
       return m;
     }, [sectionAssignments]);
+
+    const pendingDeleteStep =
+      deleteConfirmIndex != null ? localSteps[deleteConfirmIndex] : null;
+
+    const deleteConfirmCopy = useMemo(() => {
+      if (!pendingDeleteStep) return null;
+      if (pendingDeleteStep.kind === 'resource') {
+        const name =
+          resourceById[pendingDeleteStep.resourceId]?.title ?? pendingDeleteStep.resourceId;
+        return {
+          title: t('classroomDetail.activities.deleteTitle'),
+          description: t('classroomDetail.activities.deleteDescription', { name }),
+          confirmLabel: t('classroomDetail.activities.deleteConfirm'),
+        };
+      }
+      const assignment = assignmentById[pendingDeleteStep.assignmentId];
+      const name = assignment?.title ?? pendingDeleteStep.assignmentId;
+      if (assignment?.type === 'live_session') {
+        return {
+          title: t('classroomDetail.activitiesFlow.deleteLiveSessionTitle'),
+          description: t('classroomDetail.activitiesFlow.deleteLiveSessionDescription', { name }),
+          confirmLabel: t('common.delete'),
+        };
+      }
+      return {
+        title: t('classroomDetail.activitiesFlow.deleteAssignmentTitle'),
+        description: t('classroomDetail.activitiesFlow.deleteAssignmentDescription', { name }),
+        confirmLabel: t('common.delete'),
+      };
+    }, [pendingDeleteStep, resourceById, assignmentById, t]);
+
+    const deletePending =
+      replaceMutation.isPending ||
+      deleteAssignmentMutation.isPending ||
+      deleteResourceMutation.isPending;
+
+    const handleConfirmDelete = useCallback(() => {
+      if (deleteConfirmIndex === null) return;
+      const index = deleteConfirmIndex;
+      setDeleteConfirmIndex(null);
+      void remove(index);
+    }, [deleteConfirmIndex, remove]);
 
     const appendStep = useCallback(
       async (kind: 'resource' | 'assignment', id: string) => {
@@ -609,7 +662,8 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 shrink-0 text-destructive"
-                              onClick={() => void remove(index)}
+                              aria-label={t('common.delete')}
+                              onClick={() => setDeleteConfirmIndex(index)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -691,6 +745,32 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
             navigate(buildRoute.teacherLiveSession(classroomId, assignmentId));
           }}
         />
+
+        <AlertDialog
+          open={deleteConfirmIndex !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteConfirmIndex(null);
+          }}
+        >
+          <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'} className="rounded-xl">
+            <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+              <AlertDialogTitle>{deleteConfirmCopy?.title}</AlertDialogTitle>
+              <AlertDialogDescription>{deleteConfirmCopy?.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className={isRTL ? 'flex-row-reverse sm:space-x-reverse' : ''}>
+              <AlertDialogCancel disabled={deletePending} className="mt-0">
+                {t('common.cancel')}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deletePending}
+                onClick={handleConfirmDelete}
+              >
+                {deleteConfirmCopy?.confirmLabel}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   },

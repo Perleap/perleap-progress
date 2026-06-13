@@ -37,6 +37,16 @@ export const SUBMISSION_STATUS = {
   COMPLETED: 'completed',
 } as const;
 
+/** Async AI evaluation lifecycle on submissions (null = no AI eval requested). */
+export const EVALUATION_STATUS = {
+  PENDING: 'pending',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
+
+export type EvaluationStatus = (typeof EVALUATION_STATUS)[keyof typeof EVALUATION_STATUS];
+
 // 5D Snapshot Sources
 export const SNAPSHOT_SOURCES = {
   ONBOARDING: 'onboarding',
@@ -91,6 +101,8 @@ export const DEFAULT_SCORE = 5;
 export const MIN_MESSAGE_COUNT_FOR_COMPLETION = 2;
 export const CHAT_SCROLL_AREA_HEIGHT = 400; // pixels
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+/** Max size for syllabus / lesson resource uploads (videos, files). */
+export const MAX_RESOURCE_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 // Pagination
 export const DEFAULT_PAGE_SIZE = 20;

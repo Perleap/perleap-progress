@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -7,37 +8,42 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { RouteLoadingFallback } from './components/common/RouteLoadingFallback';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import AuthCallback from './pages/AuthCallback';
-import TeacherOnboarding from './pages/onboarding/TeacherOnboarding';
-import StudentOnboarding from './pages/onboarding/StudentOnboarding';
-import RoleSelection from './pages/RoleSelection';
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import ClassroomDetail from './pages/teacher/ClassroomDetail';
-import LessonBriefPage from './pages/teacher/LessonBriefPage';
-import LiveSessionPage from './pages/teacher/LiveSessionPage';
-import SubmissionDetail from './pages/teacher/SubmissionDetail';
-import TeacherSettings from './pages/teacher/TeacherSettings';
-import Planner from './pages/teacher/Planner';
-import AdminMonitoringLayout from './pages/admin/monitoring/AdminMonitoringLayout';
-import MonitoringOverviewPage from './pages/admin/monitoring/MonitoringOverviewPage';
-import MonitoringLogsPage from './pages/admin/monitoring/MonitoringLogsPage';
-import MonitoringHealthPage from './pages/admin/monitoring/MonitoringHealthPage';
-import MonitoringTrafficPage from './pages/admin/monitoring/MonitoringTrafficPage';
-import AdminAiPromptsPage from './pages/admin/AdminAiPromptsPage';
-import StudentDashboard from './pages/student/StudentDashboard';
-import StudentClassroomDetail from './pages/student/StudentClassroomDetail';
-import AssignmentDetail from './pages/student/AssignmentDetail';
-import StudentSettings from './pages/student/StudentSettings';
-import ClassroomActivityPage from './pages/ClassroomActivityPage';
-import Pricing from './pages/Pricing';
-import ContactUs from './pages/ContactUs';
-import AboutUs from './pages/AboutUs';
-import Product from './pages/Product';
-import Solutions from './pages/Solutions';
-import NotFound from './pages/NotFound';
+import {
+  AboutUs,
+  AdminAiPromptsPage,
+  AdminMonitoringLayout,
+  AssignmentDetail,
+  ClassroomActivityPage,
+  ClassroomDetail,
+  ContactUs,
+  LessonBriefPage,
+  LiveSessionPage,
+  MonitoringHealthPage,
+  MonitoringLogsPage,
+  MonitoringOverviewPage,
+  MonitoringTrafficPage,
+  NotFound,
+  PilotReportPage,
+  Planner,
+  Pricing,
+  Product,
+  RoleSelection,
+  Solutions,
+  StudentClassroomDetail,
+  StudentDashboard,
+  StudentOnboarding,
+  StudentSettings,
+  SubmissionDetail,
+  TeacherDashboard,
+  TeacherOnboarding,
+  TeacherSettings,
+} from './routes/lazyPages';
 import { TeacherAssistantProvider } from './components/ai/TeacherAssistant';
+import { LiveSessionProcessingProvider } from './contexts/LiveSessionProcessingContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +71,8 @@ const App = () => (
           <AuthProvider>
             <LanguageProvider>
               <TeacherAssistantProvider>
+              <LiveSessionProcessingProvider>
+              <Suspense fallback={<RouteLoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/product" element={<Product />} />
@@ -118,6 +126,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredRole="teacher">
                       <LessonBriefPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/classroom/:id/pilot-report"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <PilotReportPage />
                     </ProtectedRoute>
                   }
                 />
@@ -248,6 +264,8 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
+              </LiveSessionProcessingProvider>
               </TeacherAssistantProvider>
             </LanguageProvider>
           </AuthProvider>

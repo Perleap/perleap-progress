@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import {
   Dialog,
   DialogContent,
@@ -19,21 +17,12 @@ import { LiveSessionCreateProgress } from '@/components/features/liveSession/Liv
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useLiveSessionProcessing } from '@/contexts/LiveSessionProcessingContext';
 import { LIVE_SESSION_TYPES, type LiveSessionType } from '@/types/liveSession';
 import {
-  mapExtractProgressToPercent,
-  prepareAudioBlobsForUpload,
   probeVideoFileForWarning,
   shouldShowLongRecordingWarning,
 } from '@/lib/liveSessionExtractAudio';
-import {
-  createLiveSession,
-  startLiveSessionTranscriptionWithProgress,
-  uploadLiveSessionAudio,
-  type TranscriptionProgressUpdate,
-} from '@/services/liveSessionService';
-
-export type LiveSessionUploadMode = 'video' | 'audio';
 
 interface CreateLiveSessionDialogProps {
   open: boolean;
@@ -55,43 +44,31 @@ export function CreateLiveSessionDialog({
 }: CreateLiveSessionDialogProps) {
   const { t } = useTranslation();
   const { isRTL, language } = useLanguage();
-  const queryClient = useQueryClient();
+  const { startJob, minimizeJob, activeJob, isRunning } = useLiveSessionProcessing();
 
   const [title, setTitle] = useState('');
   const [sessionType, setSessionType] = useState<LiveSessionType>('workshop');
-  const [uploadMode, setUploadMode] = useState<LiveSessionUploadMode>('video');
+  const [uploadMode, setUploadMode] = useState<'video' | 'audio'>('video');
   const [file, setFile] = useState<File | null>(null);
   const [longRecordingWarning, setLongRecordingWarning] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [progressLabel, setProgressLabel] = useState('');
-  const [progressPercent, setProgressPercent] = useState(0);
-  const [transcriptionPhase, setTranscriptionPhase] = useState<
-    TranscriptionProgressUpdate['phase'] | null
-  >(null);
   const [videoProbeMeta, setVideoProbeMeta] = useState<{
     durationSeconds: number;
     fileSizeMb: number;
   } | null>(null);
 
-  const setOverallProgress = (percent: number, label: string) => {
-    setProgressPercent(Math.min(100, Math.max(0, Math.round(percent))));
-    setProgressLabel(label);
-  };
+  const isProcessingInDialog =
+    open && isRunning && activeJob !== null && !activeJob.minimized;
 
   useEffect(() => {
-    if (open) {
+    if (open && !isRunning) {
       setTitle('');
       setSessionType('workshop');
       setUploadMode('video');
       setFile(null);
       setLongRecordingWarning(false);
-      setSubmitting(false);
-      setProgressLabel('');
-      setProgressPercent(0);
-      setTranscriptionPhase(null);
       setVideoProbeMeta(null);
     }
-  }, [open]);
+  }, [open, isRunning]);
 
   useEffect(() => {
     if (!file || uploadMode !== 'video') {
@@ -112,6 +89,18 @@ export function CreateLiveSessionDialog({
     return () => ac.abort();
   }, [file, uploadMode]);
 
+  const handleDialogOpenChange = (next: boolean) => {
+    if (!next && isRunning && activeJob && !activeJob.minimized) {
+      minimizeJob();
+    }
+    onOpenChange(next);
+  };
+
+  const handleRunInBackground = () => {
+    minimizeJob();
+    onOpenChange(false);
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error(t('liveSession.create.titleRequired'));
@@ -122,103 +111,29 @@ export function CreateLiveSessionDialog({
       return;
     }
 
-    setSubmitting(true);
-    setProgressPercent(0);
-    setTranscriptionPhase(null);
-    try {
-      setOverallProgress(3, t('liveSession.create.creating'));
-      const created = await createLiveSession({
-        classroomId,
-        syllabusSectionId: syllabusSectionId ?? null,
-        title: title.trim(),
-        sessionType,
-      });
-      if ('error' in created) {
-        throw new Error(created.error.message);
-      }
+    const result = await startJob({
+      classroomId,
+      syllabusSectionId,
+      title,
+      sessionType,
+      file,
+      uploadMode,
+      language: language === 'he' ? 'he' : 'en',
+      knownDurationSeconds: videoProbeMeta?.durationSeconds,
+      onAssignmentCreated,
+    });
 
-      await queryClient.invalidateQueries({
-        queryKey: assignmentKeys.classroomAssignmentLists(classroomId),
-        exact: false,
-      });
-      onAssignmentCreated?.(created.assignmentId);
-
-      let blobs: Blob[];
-      let durationSeconds: number | null = null;
-
-      if (uploadMode === 'video') {
-        setOverallProgress(5, t('liveSession.create.converting'));
-        const extracted = await prepareAudioBlobsForUpload(
-          file,
-          'video',
-          (p) => {
-            const extractPct = mapExtractProgressToPercent(p);
-            setOverallProgress(5 + extractPct * 0.7, t('liveSession.create.converting'));
-          },
-          { knownDurationSeconds: videoProbeMeta?.durationSeconds }
-        );
-        blobs = extracted.blobs;
-        durationSeconds = extracted.durationSeconds > 0 ? extracted.durationSeconds : null;
-      } else {
-        setOverallProgress(10, t('liveSession.create.preparing'));
-        const prepared = await prepareAudioBlobsForUpload(file, 'audio', (p) => {
-          const extractPct = mapExtractProgressToPercent(p);
-          setOverallProgress(5 + extractPct * 0.7, t('liveSession.create.preparing'));
-        });
-        blobs = prepared.blobs;
-        durationSeconds = prepared.durationSeconds > 0 ? prepared.durationSeconds : null;
-      }
-
-      setOverallProgress(82, t('liveSession.create.uploading'));
-      const uploaded = await uploadLiveSessionAudio(created.liveSessionId, blobs, durationSeconds);
-      if ('error' in uploaded) {
-        throw new Error(uploaded.error.message);
-      }
-
-      const lang = language === 'he' ? 'he' : 'en';
-      const { error: transcribeError } = await startLiveSessionTranscriptionWithProgress(
-        created.liveSessionId,
-        lang,
-        {
-          audioChunkCount: blobs.length,
-          durationSeconds,
-          onProgress: (update) => {
-            setTranscriptionPhase(update.phase);
-            const label =
-              update.phase === 'transcribing'
-                ? t('liveSession.create.transcribing')
-                : update.phase === 'summarizing'
-                  ? t('liveSession.create.summarizing')
-                  : update.phase === 'finishing'
-                    ? t('liveSession.create.transcriptReady')
-                    : t('liveSession.create.transcribing');
-            setOverallProgress(update.percent, label);
-          },
-        }
-      );
-      if (transcribeError) {
-        throw new Error(transcribeError.message);
-      }
-
-      setTranscriptionPhase('finishing');
-      setOverallProgress(100, t('liveSession.create.transcriptReady'));
-      toast.success(t('liveSession.create.success'));
-      onCreated(created.assignmentId);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('createLiveSession error', error);
-      const message = error instanceof Error ? error.message : '';
-      toast.error(
-        message.toLowerCase().includes('ffmpeg') || message.toLowerCase().includes('load')
-          ? t('liveSession.create.conversionError')
-          : t('liveSession.create.error')
-      );
-    } finally {
-      setSubmitting(false);
-      setProgressLabel('');
-      setProgressPercent(0);
-      setTranscriptionPhase(null);
+    if ('error' in result) {
+      return;
     }
+
+    if (result.minimized) {
+      return;
+    }
+
+    toast.success(t('liveSession.create.success'));
+    onCreated(result.assignmentId);
+    onOpenChange(false);
   };
 
   const fileAccept = uploadMode === 'video' ? 'video/*' : 'audio/*';
@@ -232,7 +147,7 @@ export function CreateLiveSessionDialog({
       : t('liveSession.create.fileHintAudio');
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (submitting ? undefined : onOpenChange(next))}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         className={cn(
           'min-w-0 max-h-[min(90vh,720px)] overflow-x-hidden overflow-y-auto',
@@ -252,7 +167,7 @@ export function CreateLiveSessionDialog({
               id="live-session-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              disabled={submitting}
+              disabled={isProcessingInDialog}
               dir={isRTL ? 'rtl' : 'ltr'}
             />
           </div>
@@ -266,7 +181,7 @@ export function CreateLiveSessionDialog({
                   type="button"
                   variant={sessionType === type ? 'default' : 'outline'}
                   className="h-auto min-w-0 w-full whitespace-normal px-2 py-2 text-xs sm:text-sm"
-                  disabled={submitting}
+                  disabled={isProcessingInDialog}
                   onClick={() => setSessionType(type)}
                 >
                   {t(`liveSession.types.${type}`)}
@@ -282,7 +197,7 @@ export function CreateLiveSessionDialog({
                 type="button"
                 variant={uploadMode === 'video' ? 'default' : 'outline'}
                 className="h-auto min-w-0 w-full gap-2 whitespace-normal px-2 py-2 text-xs sm:text-sm"
-                disabled={submitting}
+                disabled={isProcessingInDialog}
                 onClick={() => {
                   setUploadMode('video');
                   setFile(null);
@@ -295,7 +210,7 @@ export function CreateLiveSessionDialog({
                 type="button"
                 variant={uploadMode === 'audio' ? 'default' : 'outline'}
                 className="h-auto min-w-0 w-full gap-2 whitespace-normal px-2 py-2 text-xs sm:text-sm"
-                disabled={submitting}
+                disabled={isProcessingInDialog}
                 onClick={() => {
                   setUploadMode('audio');
                   setFile(null);
@@ -313,7 +228,7 @@ export function CreateLiveSessionDialog({
               htmlFor="live-session-file"
               className={cn(
                 'flex min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground hover:bg-muted/50',
-                submitting && 'pointer-events-none opacity-60'
+                isProcessingInDialog && 'pointer-events-none opacity-60'
               )}
             >
               {file ? (
@@ -333,7 +248,7 @@ export function CreateLiveSessionDialog({
               type="file"
               accept={fileAccept}
               className="hidden"
-              disabled={submitting}
+              disabled={isProcessingInDialog}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
             <p className="text-xs text-muted-foreground">{fileHint}</p>
@@ -350,23 +265,33 @@ export function CreateLiveSessionDialog({
           </div>
         </div>
 
-        {submitting ? (
+        {isProcessingInDialog && activeJob ? (
           <LiveSessionCreateProgress
-            percent={progressPercent}
-            label={progressLabel || t('liveSession.create.creating')}
-            transcriptionPhase={transcriptionPhase}
+            percent={activeJob.percent}
+            label={activeJob.progressLabel}
+            transcriptionPhase={activeJob.transcriptionPhase}
           />
         ) : null}
 
         <DialogFooter className={cn(isRTL && 'sm:flex-row-reverse')}>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={() => void handleSubmit()} disabled={submitting} className="gap-2">
-            {submitting ? (
+          {isProcessingInDialog ? (
+            <Button variant="outline" onClick={handleRunInBackground}>
+              {t('liveSession.create.runInBackground')}
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t('common.cancel')}
+            </Button>
+          )}
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={isProcessingInDialog}
+            className="gap-2"
+          >
+            {isProcessingInDialog ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {progressLabel || t('liveSession.create.creating')}
+                {activeJob?.progressLabel ?? t('liveSession.create.creating')}
               </>
             ) : (
               t('liveSession.create.submit')

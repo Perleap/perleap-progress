@@ -5,8 +5,8 @@
 
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { CreateAssignmentInput, UpdateAssignmentInput } from '@/types';
-import { USER_ROLES } from '@/config/constants';
 import { useAuth } from '@/contexts/useAuth';
+import { USER_ROLES, EVALUATION_STATUS, SUBMISSION_STATUS } from '@/config/constants';
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import {
@@ -18,6 +18,7 @@ import {
   updateAssignment,
   deleteAssignment,
 } from '@/services/assignmentService';
+import { getSubmissionEvaluationStatus } from '@/services/submissionService';
 
 /** Default matches App QueryClient staleness (mutations invalidate classroom assignment lists). */
 export const CLASSROOM_ASSIGNMENTS_STALE_MS = 2 * 60 * 1000;
@@ -140,14 +141,18 @@ export const useStudentAssignmentDetails = (
   opts?: { isTeacherTry?: boolean }
 ) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const isTeacherTry = !!opts?.isTeacherTry;
 
-  return useQuery({
-    queryKey: [
-      ...assignmentKeys.detail(assignmentId || ''),
-      'student',
-      user?.id,
-      !!opts?.isTeacherTry,
-    ],
+  const detailQueryKey = [
+    ...assignmentKeys.detail(assignmentId || ''),
+    'student',
+    user?.id,
+    isTeacherTry,
+  ] as const;
+
+  const detailQuery = useQuery({
+    queryKey: detailQueryKey,
     queryFn: async () => {
       if (!assignmentId || !user) throw new Error('Missing assignment ID or user');
       const { data, error } = await getStudentAssignmentDetails(assignmentId, user.id, opts);
@@ -157,6 +162,53 @@ export const useStudentAssignmentDetails = (
     enabled: !!assignmentId && !!user,
     staleTime: 2 * 60 * 1000,
   });
+
+  const submissionId = detailQuery.data?.submission?.id as string | undefined;
+  const cachedEvalStatus = detailQuery.data?.submission?.evaluation_status;
+  const hasFeedback = !!detailQuery.data?.feedback;
+  const submissionCompleted =
+    detailQuery.data?.submission?.status === SUBMISSION_STATUS.COMPLETED;
+  const shouldPollEval =
+    cachedEvalStatus === EVALUATION_STATUS.PENDING ||
+    cachedEvalStatus === EVALUATION_STATUS.PROCESSING ||
+    (cachedEvalStatus === EVALUATION_STATUS.COMPLETED && submissionCompleted && !hasFeedback);
+
+  useQuery({
+    queryKey: [...detailQueryKey, 'evaluationStatus', submissionId],
+    queryFn: async () => {
+      if (!submissionId) throw new Error('Missing submission ID');
+      const { data, error } = await getSubmissionEvaluationStatus(submissionId);
+      if (error) throw error;
+
+      const cached = queryClient.getQueryData(detailQueryKey) as typeof detailQuery.data;
+      const prevStatus = cached?.submission?.evaluation_status;
+      const statusChanged = data !== prevStatus;
+      const cachedHasFeedback = !!cached?.feedback;
+
+      if (statusChanged && data != null) {
+        queryClient.setQueryData(detailQueryKey, (old) => {
+          if (!old?.submission) return old;
+          return {
+            ...old,
+            submission: { ...old.submission, evaluation_status: data },
+          };
+        });
+        const isTerminal =
+          data === EVALUATION_STATUS.COMPLETED || data === EVALUATION_STATUS.FAILED;
+        if (isTerminal) {
+          void queryClient.invalidateQueries({ queryKey: detailQueryKey, exact: true });
+        }
+      } else if (data === EVALUATION_STATUS.COMPLETED && !cachedHasFeedback) {
+        void queryClient.invalidateQueries({ queryKey: detailQueryKey, exact: true });
+      }
+      return data;
+    },
+    enabled: !!assignmentId && !!user && !!submissionId && shouldPollEval,
+    staleTime: 0,
+    refetchInterval: shouldPollEval ? 4000 : false,
+  });
+
+  return detailQuery;
 };
 
 /**
