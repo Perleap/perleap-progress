@@ -120,8 +120,12 @@ export interface Assignment {
   /** JSON string or legacy string[]; may contain `{ domain, skill }[]` pairs */
   hard_skills?: string | unknown[] | null;
   hard_skill_domain?: string | null;
+  /** When true (default), AI feedback is generated automatically on student submit. */
+  enable_ai_feedback?: boolean;
   /** When true (default), students see AI feedback as soon as it is generated. */
   auto_publish_ai_feedback?: boolean;
+  /** When true (default), students confirm task understanding in a Before you start dialog. */
+  show_task_understanding_prompt?: boolean;
   use_course_memory?: boolean;
   syllabus_section_id?: string | null;
   grading_category_id?: string | null;
@@ -151,6 +155,8 @@ export interface Submission {
   submitted_at: string | null;
   /** True when AI feedback exists but teacher has not released it to the student. */
   awaiting_teacher_feedback_release?: boolean;
+  /** Async AI evaluation lifecycle (null when no AI eval was requested). */
+  evaluation_status?: 'pending' | 'processing' | 'completed' | 'failed' | null;
   created_at: string;
   updated_at: string;
 }
@@ -196,11 +202,11 @@ export interface AssignmentConversation {
 }
 
 export interface FiveDScores {
-  vision: number;
-  values: number;
-  thinking: number;
-  connection: number;
-  action: number;
+  vision: number | null;
+  values: number | null;
+  thinking: number | null;
+  connection: number | null;
+  action: number | null;
 }
 
 export interface FiveDSnapshot {
@@ -232,6 +238,8 @@ export interface TestQuestion {
   question_type: 'multiple_choice' | 'open_ended';
   options: TestQuestionOption[] | null;
   correct_option_id: string | null;
+  correct_option_ids: string[];
+  allow_multiple_selections: boolean;
   order_index: number;
   created_at: string;
 }
@@ -241,6 +249,7 @@ export interface TestResponse {
   submission_id: string;
   question_id: string;
   selected_option_id: string | null;
+  selected_option_ids: string[];
   text_answer: string | null;
   created_at: string;
 }

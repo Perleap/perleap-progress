@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatCourseDuration } from '@/lib/dateUtils';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -46,6 +46,8 @@ import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { CourseOutlineSection, CoursePackageCard } from '@/components/features/syllabus';
+import { pilotReportKeys } from '@/hooks/queries';
+import { invalidatePilotReportSnapshots } from '@/services/pilotReportCacheService';
 import {
   classroomKeys,
   useClassroom,
@@ -125,6 +127,16 @@ const ClassroomDetail = () => {
   const queryClient = useQueryClient();
 
   const { data: rawClassroom, isLoading: classroomLoading, refetch: refetchClassroom } = useClassroom(id);
+
+  const handleRegenerateComplete = useCallback(async () => {
+    if (id) {
+      await invalidatePilotReportSnapshots(id);
+      await queryClient.invalidateQueries({
+        queryKey: [...pilotReportKeys.all, 'snapshot', id],
+      });
+    }
+    await refetchClassroom();
+  }, [id, refetchClassroom, queryClient]);
   const { data: rawAssignments = [], isLoading: assignmentsLoading, refetch: refetchAssignments } = useClassroomAssignments(id);
   const { data: students = [], isLoading: studentsLoading } = useClassroomStudents(id);
   const deleteAssignmentMutation = useDeleteAssignment();
@@ -715,7 +727,7 @@ const ClassroomDetail = () => {
             <ClassroomAnalytics
               classroomId={id!}
               classroomName={classroom?.name}
-              onRegenerateComplete={refetchClassroom}
+              onRegenerateComplete={handleRegenerateComplete}
             />
           </div>
         )}

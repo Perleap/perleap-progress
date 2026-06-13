@@ -111,6 +111,7 @@ serve(async (req) => {
       typeof body.evidenceSourceCount === 'number' && Number.isFinite(body.evidenceSourceCount)
         ? body.evidenceSourceCount
         : undefined;
+    const brief = body.brief === true;
 
     const scores = parseScores(body.scores);
     const peerScores = body.peerScores != null ? parseScores(body.peerScores) : null;
@@ -168,12 +169,22 @@ ${evidenceSourceNote ? `Source tags: ${evidenceSourceNote}.` : ''}
 No supporting text evidence is available for this request; explain using the numeric means and filter only. If numbers look incomplete, state that the evidence is thin.
 `;
 
-    const systemPrompt = `${roleLine}
-Dimensions: vision, values, thinking, connection, action. Scores are on a 0–10 scale (aggregated means). The JSON scores and filter are authoritative for magnitudes; supporting prose is for grounding only.
-${evidenceBlock}
-${langLine}
-Return ONLY valid JSON with this exact shape (no markdown):
-{
+    const jsonSchema = brief
+      ? `{
+  "explanations": {
+    "vision": "1 short sentence interpreting this dimension.",
+    "values": "...",
+    "thinking": "...",
+    "connection": "...",
+    "action": "..."
+  },
+  "scopeSummary": "2-3 concise sentences summarizing the overall 5D pattern for this scope and filter: ${filterSummary || '(no extra filter)'}.",
+  "strengths": ["One strength, max 15 words"],
+  "weaknesses": ["One area for improvement, max 15 words"],
+  "nextSteps": ["One actionable next step for the teacher, max 15 words"]
+}
+Be telegraphic. No filler. Exactly 1 bullet per list unless a second is essential. Every word must earn its place.`
+      : `{
   "explanations": {
     "vision": "1-2 sentences interpreting this dimension for the current scope.",
     "values": "...",
@@ -187,6 +198,15 @@ Return ONLY valid JSON with this exact shape (no markdown):
   "nextSteps": ["Actionable recommendation 1 for the teacher", "Recommendation 2..."]
 }
 Be specific to the numbers; avoid generic filler.`;
+
+    const systemPrompt = `${roleLine}
+Dimensions: vision, values, thinking, connection, action. Scores are on a 0–10 scale (aggregated means). The JSON scores and filter are authoritative for magnitudes; supporting prose is for grounding only.
+${evidenceBlock}
+${langLine}
+Return ONLY valid JSON with this exact shape (no markdown):
+${jsonSchema}`;
+
+    const maxTokens = brief ? 800 : 1800;
 
     const userContent = `Filter / scope: ${filterSummary || '—'}
 Mean scores (0–10) for THIS view: ${JSON.stringify(scores)}${
@@ -202,6 +222,7 @@ ${evidenceText}`
       context,
       classroomId,
       language,
+      brief,
       evidenceTextLength: evidenceText.length,
       evidenceSourceCount: evidenceSourceCount ?? null,
       evidenceNearTotalCap: evidenceText.length >= EVIDENCE_MAX_TOTAL_CHARS * 0.95,
@@ -214,7 +235,7 @@ ${evidenceText}`
       systemPrompt,
       [{ role: 'user', content: userContent }],
       0.4,
-      1800,
+      maxTokens,
       'fast',
       false,
       'json_object',

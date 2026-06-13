@@ -24,6 +24,7 @@ import {
   LessonTextSlidesBlock,
 } from '@/components/features/syllabus/content-blocks';
 import type { SectionResource } from '@/types/syllabus';
+import type { VideoWatchTrackingBase } from '@/types/videoWatch';
 
 interface ResourceViewerProps {
   resources: SectionResource[];
@@ -33,6 +34,22 @@ interface ResourceViewerProps {
   hideListHeader?: boolean;
   /** When `compact`, `list` uses a single divided container instead of bordered cards per row. */
   compactVariant?: 'card' | 'list';
+  /** When set (student activity page), video plays are tracked. */
+  videoTracking?: VideoWatchTrackingBase;
+}
+
+function buildVideoTracking(
+  base: VideoWatchTrackingBase | undefined,
+  resourceId: string,
+  lessonBlockId?: string | null,
+) {
+  if (!base) return undefined;
+  return {
+    resourceId,
+    lessonBlockId: lessonBlockId ?? null,
+    classroomId: base.classroomId,
+    studentUserId: base.studentUserId,
+  };
 }
 
 const resourceTypeConfig: Record<string, { icon: React.ElementType; color: string }> = {
@@ -105,12 +122,14 @@ export function LessonResourceBody({
   className,
   variant = 'embedded',
   isRTL = false,
+  videoTracking,
 }: {
   resource: SectionResource;
   className?: string;
   /** `reading`: single shell, plain prose, framed video (activity page). `embedded`: compact cards (syllabus preview). */
   variant?: LessonResourceBodyVariant;
   isRTL?: boolean;
+  videoTracking?: VideoWatchTrackingBase;
 }) {
   const { t } = useTranslation();
   const reading = variant === 'reading';
@@ -161,6 +180,7 @@ export function LessonResourceBody({
               videoUrl={videoUrl}
               source={source}
               presentation={videoPresentation}
+              tracking={buildVideoTracking(videoTracking, resource.id, block.id)}
             />
           </div>
         );
@@ -198,7 +218,13 @@ export function LessonResourceBody({
           presentation={textPresentation}
         />
       ) : null}
-      {showLessonVideo ? <ContentVideoBlock videoUrl={videoUrl} presentation={videoPresentation} /> : null}
+      {showLessonVideo ? (
+        <ContentVideoBlock
+          videoUrl={videoUrl}
+          presentation={videoPresentation}
+          tracking={buildVideoTracking(videoTracking, resource.id)}
+        />
+      ) : null}
     </>
   );
   if (reading) {
@@ -207,7 +233,13 @@ export function LessonResourceBody({
   return <div className={cn('space-y-3', className)}>{legacyInner}</div>;
 }
 
-function ResourcePreview({ resource }: { resource: SectionResource }) {
+function ResourcePreview({
+  resource,
+  videoTracking,
+}: {
+  resource: SectionResource;
+  videoTracking?: VideoWatchTrackingBase;
+}) {
   const url = resource.url || '';
   const mime = resource.mime_type || '';
 
@@ -218,7 +250,7 @@ function ResourcePreview({ resource }: { resource: SectionResource }) {
   }
 
   if (resource.resource_type === 'lesson') {
-    return <LessonResourceBody resource={resource} />;
+    return <LessonResourceBody resource={resource} videoTracking={videoTracking} />;
   }
 
   if (resource.resource_type === 'image' || mime.startsWith('image/')) {
@@ -236,7 +268,11 @@ function ResourcePreview({ resource }: { resource: SectionResource }) {
   if (resource.resource_type === 'video' || mime.startsWith('video/')) {
     return (
       <div className="mb-2">
-        <ContentVideoBlock videoUrl={url} presentation="compact" />
+        <ContentVideoBlock
+          videoUrl={url}
+          presentation="compact"
+          tracking={buildVideoTracking(videoTracking, resource.id)}
+        />
       </div>
     );
   }
@@ -256,11 +292,18 @@ function ResourcePreview({ resource }: { resource: SectionResource }) {
   return null;
 }
 
-function ResourceCard({ resource, isRTL, compact, compactVariant = 'card' }: {
+function ResourceCard({
+  resource,
+  isRTL,
+  compact,
+  compactVariant = 'card',
+  videoTracking,
+}: {
   resource: SectionResource;
   isRTL: boolean;
   compact: boolean;
   compactVariant?: 'card' | 'list';
+  videoTracking?: VideoWatchTrackingBase;
 }) {
   const { t } = useTranslation();
   const [videoRevealed, setVideoRevealed] = useState(false);
@@ -341,7 +384,7 @@ function ResourceCard({ resource, isRTL, compact, compactVariant = 'card' }: {
               <X className="h-4 w-4" />
             </Button>
           )}
-          <ResourcePreview resource={resource} />
+          <ResourcePreview resource={resource} videoTracking={videoTracking} />
         </div>
       )}
       <div className={cn('flex items-center gap-3 px-4 py-3', isRTL && 'flex-row-reverse')}>
@@ -389,6 +432,7 @@ export const ResourceViewer = ({
   compact = false,
   hideListHeader = false,
   compactVariant = 'card',
+  videoTracking,
 }: ResourceViewerProps) => {
   const { t } = useTranslation();
 
@@ -424,6 +468,7 @@ export const ResourceViewer = ({
             isRTL={isRTL}
             compact={compact}
             compactVariant={compact ? compactVariant : 'card'}
+            videoTracking={videoTracking}
           />
         ))}
       </div>

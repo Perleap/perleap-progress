@@ -624,6 +624,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         due_at: a.due_at,
         target_dimensions: a.target_dimensions as never,
         personalization_flag: a.personalization_flag,
+        enable_ai_feedback: a.enable_ai_feedback !== false,
         auto_publish_ai_feedback: a.auto_publish_ai_feedback,
         attempt_mode: a.attempt_mode as Parameters<typeof updateAssignment>[1]['attempt_mode'],
         materials: a.materials as unknown as Parameters<typeof updateAssignment>[1]['materials'],

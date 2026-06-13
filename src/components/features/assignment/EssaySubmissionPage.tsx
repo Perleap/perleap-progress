@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { generateFeedback, completeSubmission } from '@/services/submissionService';
+import { submitWithBackgroundAiFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
@@ -20,8 +20,10 @@ interface EssaySubmissionPageProps {
   assignmentId: string;
   submissionId: string;
   assignmentInstructions: string;
-  /** When false, student submit does not run AI; teacher runs evaluation later. */
-  autoPublishAiFeedback?: boolean;
+  /** When false, student submit does not run AI; teacher can generate evaluation later. */
+  enableAiFeedback?: boolean;
+  /** When false after generation, student waits for teacher to release feedback. */
+  showAiFeedbackToStudents?: boolean;
   /** Teacher "Try assignment" — skip AI feedback (edge function writes assume student_profiles). */
   isTeacherTry?: boolean;
   initialText?: string | null;
@@ -32,7 +34,8 @@ export function EssaySubmissionPage({
   assignmentId,
   submissionId,
   assignmentInstructions,
-  autoPublishAiFeedback = true,
+  enableAiFeedback = true,
+  showAiFeedbackToStudents = true,
   isTeacherTry = false,
   initialText,
   onComplete,
@@ -112,29 +115,27 @@ export function EssaySubmissionPage({
         return;
       }
 
-      if (!autoPublishAiFeedback) {
-        const { error: completeError } = await completeSubmission(submissionId, {
-          awaitingTeacherFeedbackRelease: true,
-        });
+      if (!enableAiFeedback) {
+        const { error: completeError } = await completeSubmission(submissionId);
         if (completeError) throw completeError;
 
-        await onComplete('awaitingTeacher');
+        await onComplete('activityCompleted');
         return;
       }
 
       const language = getAssignmentLanguage(assignmentInstructions, uiLanguage);
-      const { error: feedbackError } = await generateFeedback({
+      const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback({
         submissionId,
         studentId: user.id,
         assignmentId,
         language,
       });
-      if (feedbackError) throw feedbackError;
+      if (submitError) throw submitError;
+      if (evaluationInvokeFailed) {
+        toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
+      }
 
-      const { error: completeError } = await completeSubmission(submissionId);
-      if (completeError) throw completeError;
-
-      await onComplete('activityCompleted');
+      await onComplete(showAiFeedbackToStudents ? 'activityCompleted' : 'awaitingTeacher');
     } catch (e) {
       console.error('Essay submit error:', e);
       toast.error(t('common.error'));

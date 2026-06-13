@@ -77,6 +77,13 @@ export {
   analytics5dNarrativeKeys,
   useAnalytics5dNarrative,
 } from './useAnalytics5dNarrative';
+export {
+  pilotReportKeys,
+  usePilotReportSnapshot,
+  useEnsurePilotReportSnapshot,
+  useInvalidatePilotReportSnapshots,
+  useDeletePilotReportSnapshot,
+} from './usePilotReportQueries';
 
 // Activity Queries
 export {
@@ -121,6 +128,18 @@ export type {
   NuanceInsightsResponse,
   NuanceUnderstandingCueEventRow,
 } from './useNuanceQueries';
+
+// Video Watch Queries
+export {
+  videoWatchKeys,
+  useVideoWatchAnalytics,
+  formatWatchPosition,
+} from './useVideoWatchQueries';
+
+export type {
+  VideoWatchProgressRow,
+  VideoEngagementSummary,
+} from './useVideoWatchQueries';
 
 // Syllabus Queries
 export {

@@ -54,6 +54,7 @@ interface SubmissionTabsProps {
     /** When true, student is still waiting for teacher to publish feedback. */
     awaiting_teacher_feedback_release?: boolean;
     file_url?: string | null;
+    file_urls?: string[] | null;
     text_body?: string | null;
     assignments: {
       id: string;
@@ -223,6 +224,12 @@ export const SubmissionTabs = ({
         assignmentId: submission.assignments.id,
         assignmentTitle: submission.assignments.title,
         teacherId: submission.assignments.classrooms?.teacher_id ?? user?.id ?? null,
+        notification: {
+          title: t('notifications.titles.feedbackReceived'),
+          message: t('notifications.messages.feedbackReady', {
+            title: submission.assignments.title,
+          }),
+        },
       });
       if (error || !success) throw error ?? new Error('release failed');
       toast.success(t('submissionDetail.releaseFeedback.success'));
@@ -497,7 +504,13 @@ export const SubmissionTabs = ({
                 </div>
               );
             case 'project':
-              return <ProjectSubmissionView fileUrl={submission.file_url} {...evalProps} />;
+              return (
+                <ProjectSubmissionView
+                  fileUrl={submission.file_url}
+                  fileUrls={submission.file_urls}
+                  {...evalProps}
+                />
+              );
             case 'presentation':
               return <PresentationSubmissionView fileUrl={submission.file_url} {...evalProps} />;
             case 'langchain':

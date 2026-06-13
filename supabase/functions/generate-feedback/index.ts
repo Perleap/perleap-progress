@@ -1,11 +1,14 @@
 /**
  * Generate Feedback - OpenAI Integration
- * Refactored with shared utilities and modules
+ * Uses shared rubric-based evaluation pipeline.
+ * Supports synchronous (teacher retry) and background (student submit) modes.
  */
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { handleOpenAIError } from '../shared/openai.ts';
 import {
   createSupabaseClient,
   getAssignmentModuleActivityContextText,
@@ -16,249 +19,134 @@ import {
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { notifyStudentFeedbackReceived } from '../_shared/notifyStudentFeedbackReceived.ts';
 import {
   domainForSkillComponent,
-  formatHardSkillPairsForPrompt,
   parseHardSkillsFromDb,
 } from '../_shared/hardSkillsFormat.ts';
+import { buildStudentWorkContext } from '../_shared/evaluationContext.ts';
+import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
+
+declare const EdgeRuntime: {
+  waitUntil(promise: Promise<unknown>): void;
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+type EvaluationStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+interface FeedbackRequestBody {
+  submissionId: string;
+  studentId: string;
+  assignmentId: string;
+  language?: string;
+  background?: boolean;
+}
+
+interface FeedbackPipelineResult {
+  studentFeedback: string;
+  teacherFeedback: string;
+}
+
+async function setEvaluationStatus(
+  supabase: SupabaseClient,
+  submissionId: string,
+  status: EvaluationStatus,
+): Promise<void> {
+  const { error } = await supabase
+    .from('submissions')
+    .update({ evaluation_status: status })
+    .eq('id', submissionId);
+  if (error) {
+    logError('Error updating evaluation_status', error);
+    throw error;
   }
+}
 
-  try {
-    const { submissionId, studentId, assignmentId, language = 'en' } = await req.json();
-    const supabase = createSupabaseClient();
-    const startTime = Date.now();
+async function runFeedbackPipeline(
+  supabase: SupabaseClient,
+  params: FeedbackRequestBody,
+): Promise<FeedbackPipelineResult> {
+  const { submissionId, studentId, assignmentId, language = 'en' } = params;
+  const startTime = Date.now();
 
-    // Fetch context data in parallel
-    const [studentName, teacherName, assignmentResult] = await Promise.all([
-      getStudentName(studentId),
-      getTeacherNameByAssignment(assignmentId),
-      supabase
-        .from('assignments')
-        .select('classroom_id, title, instructions, hard_skills, hard_skill_domain, type, auto_publish_ai_feedback, classrooms(teacher_id)')
-        .eq('id', assignmentId)
-        .single()
-    ]);
+  const [studentName, teacherName, assignmentResult] = await Promise.all([
+    getStudentName(studentId),
+    getTeacherNameByAssignment(assignmentId),
+    supabase
+      .from('assignments')
+      .select(
+        'classroom_id, title, instructions, hard_skills, hard_skill_domain, type, enable_ai_feedback, auto_publish_ai_feedback, classrooms(teacher_id)',
+      )
+      .eq('id', assignmentId)
+      .single(),
+  ]);
 
-    const assignmentData = assignmentResult.data;
-    const teacherId = (assignmentData?.classrooms as any)?.teacher_id;
-    const classroomId = assignmentData?.classroom_id;
-    const assignmentType = assignmentData?.type;
-    const autoPublishAiFeedback = assignmentData?.auto_publish_ai_feedback !== false;
+  const assignmentData = assignmentResult.data;
+  const teacherId = (assignmentData?.classrooms as { teacher_id?: string })?.teacher_id;
+  const classroomId = assignmentData?.classroom_id;
+  const assignmentType = assignmentData?.type;
+  const autoPublishAiFeedback = assignmentData?.auto_publish_ai_feedback !== false;
 
-    let conversationText: string;
-    let conversationMessages: any[] = [];
-    let contextType: string;
+  const [workContext, moduleActivityContextText] = await Promise.all([
+    buildStudentWorkContext(
+      supabase,
+      submissionId,
+      assignmentId,
+      assignmentType,
+    ),
+    getAssignmentModuleActivityContextText(assignmentId),
+  ]);
 
-    if (assignmentType === 'test') {
-      // For test-type assignments, build context from test questions and responses
-      const [questionsResult, responsesResult] = await Promise.all([
-        supabase
-          .from('test_questions')
-          .select('*')
-          .eq('assignment_id', assignmentId)
-          .order('order_index', { ascending: true }),
-        supabase
-          .from('test_responses')
-          .select('*')
-          .eq('submission_id', submissionId),
-      ]);
+  logInfo('Starting rubric evaluation...');
+  const aiStartTime = Date.now();
 
-      const questions = questionsResult.data || [];
-      const responses = responsesResult.data || [];
+  const skillPairs = parseHardSkillsFromDb(
+    assignmentData?.hard_skills,
+    assignmentData?.hard_skill_domain,
+  );
 
-      if (questions.length === 0) {
-        throw new Error('No test questions found for this assignment.');
-      }
+  const opikThreadId = typeof submissionId === 'string' && submissionId
+    ? submissionId
+    : crypto.randomUUID();
+  const feedbackTraceId = uuidv7();
+  const hardSkillsTraceId = uuidv7();
 
-      const responseMap = new Map(responses.map((r: any) => [r.question_id, r]));
-
-      conversationText = questions.map((q: any, i: number) => {
-        const response = responseMap.get(q.id);
-        const parts = [`Question ${i + 1} (${q.question_type}): ${q.question_text}`];
-
-        if (q.question_type === 'multiple_choice' && q.options) {
-          const options = q.options as { id: string; text: string }[];
-          parts.push('Options: ' + options.map((o: any) => `${o.id}) ${o.text}`).join(', '));
-          if (q.correct_option_id) {
-            const correctOption = options.find((o: any) => o.id === q.correct_option_id);
-            parts.push(`Correct Answer: ${correctOption?.text || q.correct_option_id}`);
-          }
-          const selectedOption = response?.selected_option_id
-            ? options.find((o: any) => o.id === response.selected_option_id)
-            : null;
-          parts.push(`Student Answer: ${selectedOption?.text || response?.selected_option_id || 'No answer'}`);
-        } else {
-          parts.push(`Student Answer: ${response?.text_answer || 'No answer'}`);
-        }
-
-        return parts.join('\n');
-      }).join('\n\n');
-
-      conversationMessages = [{ role: 'user', content: `Test submission with ${questions.length} questions` }];
-      contextType = 'test responses';
-    } else if (assignmentType === 'text_essay') {
-      const { data: subRow, error: subErr } = await supabase
-        .from('submissions')
-        .select('text_body')
-        .eq('id', submissionId)
-        .single();
-
-      if (subErr || !subRow?.text_body?.trim()) {
-        throw new Error(
-          'No essay text found for this submission. Please write your essay before submitting.',
-        );
-      }
-
-      const body = subRow.text_body.trim();
-      conversationMessages = [{ role: 'user', content: body }];
-      conversationText = `Essay submission:\n\n${body}`;
-      contextType = 'essay';
-    } else {
-      // For conversation-based assignments, load chat messages
-      const { data: conversations, error: convError } = await supabase
-        .from('assignment_conversations')
-        .select('*')
-        .eq('submission_id', submissionId)
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      if (convError || !conversations || conversations.length === 0) {
-        throw new Error(
-          'No conversation found for this submission. Please chat with Perleap before completing.',
-        );
-      }
-
-      const conversation = conversations[0];
-
-      if (!conversation.messages || conversation.messages.length === 0) {
-        throw new Error('No conversation messages found. Please chat with Perleap first.');
-      }
-
-      conversationMessages = conversation.messages;
-      conversationText = conversation.messages
-        .map((msg: { role: string; content: string }) =>
-          `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`
-        )
-        .join('\n\n');
-      contextType = 'conversation';
-    }
-
-    // **OPTIMIZATION: Parallelize AI calls and background tasks**
-    logInfo('Starting parallel AI calls...');
-    const aiStartTime = Date.now();
-
-    const moduleActivityContextText = await getAssignmentModuleActivityContextText(assignmentId);
-
-    const skillPairs = parseHardSkillsFromDb(
-      assignmentData?.hard_skills,
-      assignmentData?.hard_skill_domain,
-    );
-    const skillsAssessText = formatHardSkillPairsForPrompt(
+  const evaluation = await runEvaluation(
+    {
+      language,
+      studentName,
+      teacherName,
+      assignmentTitle: assignmentData?.title || '',
+      assignmentType: assignmentType || 'questions',
+      assignmentInstructions: assignmentData?.instructions || '',
+      moduleActivityContextText,
+      studentWorkText: workContext.studentWorkText,
+      mode: 'student_work',
       skillPairs,
-      assignmentData?.hard_skill_domain,
-    );
-
-    const feedbackPrompt = `You are an expert pedagogical AI assistant. Analyze the student's ${contextType === 'essay' ? 'written essay' : contextType} and provide feedback and 5D scores.
-    
-    Student: ${studentName}
-    Teacher: ${teacherName}
-    Assignment: ${assignmentData?.title}
-    Assignment Type: ${assignmentType || 'questions'}
-    Instructions: ${assignmentData?.instructions}
-    ${moduleActivityContextText ? `\n\nModule learning context:\n${moduleActivityContextText}` : ''}
-    
-    Provide your response in the following JSON format:
+      hardSkillDomain: assignmentData?.hard_skill_domain,
+      seed: seedFromSubmissionId(submissionId),
+    },
     {
-      "studentFeedback": "Supportive feedback directly to the student in ${language === 'he' ? 'Hebrew' : 'English'}.",
-      "teacherFeedback": "Pedagogical insights for the teacher in ${language === 'he' ? 'Hebrew' : 'English'}.",
-      "scores": {
-        "vision": number (1-10),
-        "values": number (1-10),
-        "thinking": number (1-10),
-        "connection": number (1-10),
-        "action": number (1-10)
-      },
-      "scoreExplanations": {
-        "vision": "Brief explanation",
-        "values": "Brief explanation",
-        "thinking": "Brief explanation",
-        "connection": "Brief explanation",
-        "action": "Brief explanation"
-      }
-    }
-
-    Rules:
-    - Respond in ${language === 'he' ? 'Hebrew' : 'English'}.
-    - Be concise but insightful.
-    - Focus on growth mindset.`;
-
-    const hardSkillsPrompt = `Analyze the student's ${contextType === 'essay' ? 'essay' : 'conversation'} and assess their performance on specific hard skills.
-
-    Primary subject area (if single): ${assignmentData?.hard_skill_domain || 'N/A'}
-    Skills to assess (with subject area when listed): ${skillsAssessText || '(none specified)'}
-    
-    Provide your response in the following JSON format:
-    {
-      "hardSkillsAssessment": [
-        {
-          "skill_component": "Skill name",
-          "current_level_percent": number (0-100),
-          "proficiency_description": "Brief description of current proficiency in ${language === 'he' ? 'Hebrew' : 'English'}",
-          "actionable_challenge": "One specific actionable challenge for growth in ${language === 'he' ? 'Hebrew' : 'English'}"
-        }
-      ]
-    }
-
-    Rules:
-    - Respond in ${language === 'he' ? 'Hebrew' : 'English'}.
-    - Only assess the requested skills.
-    - Be objective and specific.`;
-
-    const opikThreadId = typeof submissionId === 'string' && submissionId
-      ? submissionId
-      : crypto.randomUUID();
-
-    const feedbackTraceId = uuidv7();
-    const hardSkillsTraceId = uuidv7();
-
-    const [feedbackResult, hardSkillsResult] = await Promise.all([
-      (async () => {
-        const traceStartMs = Date.now();
-        const r = await createChatCompletion(
-          feedbackPrompt,
-          [{ role: 'user', content: `Analyze this ${contextType}:\n\n${conversationText}` }],
-          0.4,
-          2000,
-          'smart',
-          false,
-          'json_object',
-        ) as { content: string; usage?: unknown };
-        const traceEndMs = Date.now();
+      onMainTrace: (t) => {
         void queueOpikTrace({
           traceName: 'generate-feedback.main',
           tags: ['generate-feedback', 'edge-function'],
           threadId: opikThreadId,
           clientTraceId: feedbackTraceId,
-          traceStartMs,
-          traceEndMs,
+          traceStartMs: t.traceStartMs,
+          traceEndMs: t.traceEndMs,
           input: {
-            context_type: contextType,
-            language,
-            conversation_chars: conversationText.length,
-            assignment_type: assignmentType,
+            ...t.input,
+            context_type: workContext.contextLabel,
+            conversation_chars: workContext.studentWorkText.length,
           },
-          output: { raw_json: r.content },
-          openaiUsage: r.usage,
-          llmModel: resolveChatModel('smart'),
+          output: t.output,
+          openaiUsage: t.usage,
+          llmModel: t.model,
           metadata: {
             edge_function: 'generate-feedback',
             model_tier: 'smart',
@@ -268,39 +156,23 @@ serve(async (req) => {
             classroom_id: classroomId,
           },
         }).catch(() => undefined);
-        return r;
-      })(),
-      (async () => {
-        if (skillPairs.length === 0) {
-          return { content: JSON.stringify({ hardSkillsAssessment: [] }) };
-        }
-        const traceStartMs = Date.now();
-        const r = await createChatCompletion(
-          hardSkillsPrompt,
-          [{ role: 'user', content: `Analyze this ${contextType} for hard skills:\n\n${conversationText}` }],
-          0.3,
-          1500,
-          'fast',
-          false,
-          'json_object',
-        ) as { content: string; usage?: unknown };
-        const traceEndMs = Date.now();
+      },
+      onHardSkillsTrace: (t) => {
         void queueOpikTrace({
           traceName: 'generate-feedback.hard-skills',
           tags: ['generate-feedback', 'edge-function'],
           threadId: opikThreadId,
           clientTraceId: hardSkillsTraceId,
-          traceStartMs,
-          traceEndMs,
+          traceStartMs: t.traceStartMs,
+          traceEndMs: t.traceEndMs,
           input: {
-            context_type: contextType,
-            language,
-            conversation_chars: conversationText.length,
-            skill_pair_count: skillPairs.length,
+            ...t.input,
+            context_type: workContext.contextLabel,
+            conversation_chars: workContext.studentWorkText.length,
           },
-          output: { raw_json: r.content },
-          openaiUsage: r.usage,
-          llmModel: resolveChatModel('fast'),
+          output: t.output,
+          openaiUsage: t.usage,
+          llmModel: t.model,
           metadata: {
             edge_function: 'generate-feedback',
             model_tier: 'fast',
@@ -310,198 +182,305 @@ serve(async (req) => {
             classroom_id: classroomId,
           },
         }).catch(() => undefined);
-        return r;
-      })(),
-    ]);
+      },
+    },
+  );
 
-    const feedbackData = JSON.parse((feedbackResult as { content: string }).content);
-    const skillsData = JSON.parse((hardSkillsResult as { content: string }).content);
-    
-    logInfo(`AI calls completed in ${Date.now() - aiStartTime}ms`);
+  const { studentFeedback, teacherFeedback, scores, scoreExplanations, hardSkillsAssessment } =
+    evaluation;
 
-    let { studentFeedback, teacherFeedback, scores, scoreExplanations } = feedbackData;
-    const { hardSkillsAssessment } = skillsData;
+  logInfo(`AI calls completed in ${Date.now() - aiStartTime}ms`);
 
-    // Additional safety clean: Remove any framework terminology
-    const removeFrameworkTerms = (text: string): string => {
-      if (!text) return text;
-      let cleaned = text;
-      cleaned = cleaned.replace(/Quantum Education Doctrine/gi, '');
-      cleaned = cleaned.replace(/Student Wave Function/gi, '');
-      cleaned = cleaned.replace(/\bSWF\b/g, '');
-      cleaned = cleaned.replace(/\s+/g, ' ').trim();
-      return cleaned;
-    };
+  logInfo('Saving essential data to database...');
+  const dbStartTime = Date.now();
+  const visibleToStudent = autoPublishAiFeedback;
 
-    studentFeedback = removeFrameworkTerms(studentFeedback);
-    teacherFeedback = removeFrameworkTerms(teacherFeedback);
+  const [snapshotResult, feedbackSaveResult] = await Promise.all([
+    supabase.from('five_d_snapshots').insert({
+      user_id: studentId,
+      scores,
+      score_explanations: scoreExplanations,
+      source: 'assignment',
+      submission_id: submissionId,
+      classroom_id: classroomId,
+    }),
+    supabase.from('assignment_feedback').insert({
+      submission_id: submissionId,
+      student_id: studentId,
+      assignment_id: assignmentId,
+      student_feedback: studentFeedback,
+      teacher_feedback: teacherFeedback,
+      conversation_context: workContext.conversationMessages,
+      visible_to_student: visibleToStudent,
+      opik_trace_ids: {
+        feedback_main: feedbackTraceId,
+        hard_skills: hardSkillsTraceId,
+      },
+    }),
+    hardSkillsAssessment.length > 0
+      ? (async () => {
+          try {
+            const assessmentRecords = hardSkillsAssessment.map((assessment) => ({
+              submission_id: submissionId,
+              assignment_id: assignmentId,
+              student_id: studentId,
+              domain: domainForSkillComponent(
+                skillPairs,
+                assessment.skill_component,
+                assignmentData?.hard_skill_domain,
+              ),
+              skill_component: assessment.skill_component,
+              current_level_percent: assessment.current_level_percent,
+              proficiency_description: assessment.proficiency_description,
+              actionable_challenge: assessment.actionable_challenge,
+            }));
+            const { error: err } = await supabase
+              .from('hard_skill_assessments')
+              .insert(assessmentRecords);
+            if (err) logError('Error saving hard skills', err);
+          } catch (e) {
+            logError('Error processing hard skills', e);
+          }
+        })()
+      : Promise.resolve({ error: null }),
+  ]);
 
-    // **CRITICAL FIX: Background tasks should NOT block the response**
-    // We only await the essential database saves
-    logInfo('Saving essential data to database...');
-    const dbStartTime = Date.now();
+  if (snapshotResult.error) {
+    logError('Error saving 5D snapshot', snapshotResult.error);
+    throw snapshotResult.error;
+  }
+  if (feedbackSaveResult.error) {
+    logError('Error saving assignment feedback', feedbackSaveResult.error);
+    throw feedbackSaveResult.error;
+  }
 
-    const visibleToStudent = autoPublishAiFeedback;
+  const { error: submissionFlagError } = await supabase
+    .from('submissions')
+    .update({
+      awaiting_teacher_feedback_release: !visibleToStudent,
+      evaluation_status: 'completed',
+    })
+    .eq('id', submissionId);
 
-    const [snapshotResult, feedbackSaveResult] = await Promise.all([
-      // 1. Save 5D snapshot
-      supabase.from('five_d_snapshots').insert({
-        user_id: studentId,
-        scores,
-        score_explanations: scoreExplanations,
-        source: 'assignment',
-        submission_id: submissionId,
-        classroom_id: classroomId,
-      }),
+  if (submissionFlagError) {
+    logError('Error updating submission release flags', submissionFlagError);
+    throw submissionFlagError;
+  }
 
-      // 2. Save feedback
-      supabase.from('assignment_feedback').insert({
-        submission_id: submissionId,
-        student_id: studentId,
-        assignment_id: assignmentId,
-        student_feedback: studentFeedback,
-        teacher_feedback: teacherFeedback,
-        conversation_context: conversationMessages,
-        visible_to_student: visibleToStudent,
-        opik_trace_ids: {
-          feedback_main: feedbackTraceId,
-          hard_skills: hardSkillsTraceId,
+  logInfo(`Essential database operations completed in ${Date.now() - dbStartTime}ms`);
+
+  void runPostEvaluationSideEffects({
+    supabase,
+    studentId,
+    studentName,
+    submissionId,
+    assignmentId,
+    teacherId,
+    assignmentData,
+    workContext,
+    visibleToStudent,
+  });
+
+  logInfo(`Total feedback generation time (excluding background tasks): ${Date.now() - startTime}ms`);
+
+  return { studentFeedback, teacherFeedback };
+}
+
+function runPostEvaluationSideEffects(args: {
+  supabase: SupabaseClient;
+  studentId: string;
+  studentName: string;
+  submissionId: string;
+  assignmentId: string;
+  teacherId?: string;
+  assignmentData: { title?: string } | null | undefined;
+  workContext: Awaited<ReturnType<typeof buildStudentWorkContext>>;
+  visibleToStudent: boolean;
+}): void {
+  const {
+    supabase,
+    studentId,
+    studentName,
+    submissionId,
+    assignmentId,
+    teacherId,
+    assignmentData,
+    workContext,
+    visibleToStudent,
+  } = args;
+
+  (async () => {
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const wellbeingUrl = `${supabaseUrl}/functions/v1/analyze-student-wellbeing`;
+      const serviceKey = getServiceRoleKey();
+
+      fetch(wellbeingUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${serviceKey}`,
         },
-      }),
+        body: JSON.stringify({
+          studentId,
+          studentName,
+          submissionId,
+          assignmentId,
+          teacherId,
+          assignmentTitle: assignmentData?.title,
+          conversationMessages: workContext.conversationMessages,
+        }),
+      }).catch((err) => logError('Wellbeing call error', err));
 
-      // 3. Save hard skills assessment
-      hardSkillsAssessment && hardSkillsAssessment.length > 0 ? (async () => {
-        try {
-          const assessmentRecords = hardSkillsAssessment.map((assessment: any) => ({
-            submission_id: submissionId,
-            assignment_id: assignmentId,
-            student_id: studentId,
-            domain: domainForSkillComponent(
-              skillPairs,
-              assessment.skill_component,
-              assignmentData?.hard_skill_domain,
-            ),
-            skill_component: assessment.skill_component,
-            current_level_percent: Math.min(100, Math.max(0, assessment.current_level_percent)),
-            proficiency_description: assessment.proficiency_description,
-            actionable_challenge: assessment.actionable_challenge,
-          }));
-          const { error: err } = await supabase.from('hard_skill_assessments').insert(assessmentRecords);
-          if (err) logError('Error saving hard skills', err);
-        } catch (e) {
-          logError('Error processing hard skills', e);
-        }
-      })() : Promise.resolve({ error: null }),
-    ]);
-
-    if (snapshotResult.error) {
-      logError('Error saving 5D snapshot', snapshotResult.error);
-      throw snapshotResult.error;
-    }
-    if (feedbackSaveResult.error) {
-      logError('Error saving assignment feedback', feedbackSaveResult.error);
-      throw feedbackSaveResult.error;
-    }
-
-    const { error: submissionFlagError } = await supabase
-      .from('submissions')
-      .update({ awaiting_teacher_feedback_release: !visibleToStudent })
-      .eq('id', submissionId);
-
-    if (submissionFlagError) {
-      logError('Error updating submission release flags', submissionFlagError);
-      throw submissionFlagError;
-    }
-
-    logInfo(`Essential database operations completed in ${Date.now() - dbStartTime}ms`);
-
-    // 4. TRULY background tasks (don't await them)
-    (async () => {
-      try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const wellbeingUrl = `${supabaseUrl}/functions/v1/analyze-student-wellbeing`;
-        const serviceKey = getServiceRoleKey();
-        
-        // Fire and forget calls
-        fetch(wellbeingUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({
-            studentId,
-            studentName,
-            submissionId,
-            assignmentId,
-            teacherId,
-            assignmentTitle: assignmentData?.title,
-            conversationMessages,
-          }),
-        }).catch(err => logError('Wellbeing call error', err));
-
-        const unitMemoryUrl = `${supabaseUrl}/functions/v1/extract-unit-memory`;
-        fetch(unitMemoryUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({ submissionId }),
-        }).catch(err => logError('Unit memory extract call error', err));
-
-        if (assignmentData) {
-          const assignmentTitle = assignmentData.title;
-          const notifications: PromiseLike<unknown>[] = [];
-          if (teacherId) {
-            notifications.push(
-              supabase.from('notifications').insert({
+      if (assignmentData) {
+        const assignmentTitle = assignmentData.title;
+        const notifications: PromiseLike<unknown>[] = [];
+        if (teacherId) {
+          notifications.push(
+            supabase.from('notifications').insert({
               user_id: teacherId,
               type: 'student_completed_activity',
               title: 'Activity Completed',
               message: `${studentName} completed "${assignmentTitle}"`,
               link: `/teacher/submission/${submissionId}`,
               actor_id: studentId,
-              metadata: { assignment_id: assignmentId, assignment_title: assignmentTitle, student_id: studentId, student_name: studentName, submission_id: submissionId },
+              metadata: {
+                assignment_id: assignmentId,
+                assignment_title: assignmentTitle,
+                student_id: studentId,
+                student_name: studentName,
+                submission_id: submissionId,
+              },
               is_read: false,
             }),
-            );
-          }
-          await Promise.all(notifications).catch(err => logError('Notifications error', err));
+          );
         }
-      } catch (err) {
-        logError('Background tasks execution error', err);
+        if (visibleToStudent && assignmentTitle) {
+          notifications.push(
+            notifyStudentFeedbackReceived(supabase, {
+              studentId,
+              assignmentId,
+              assignmentTitle,
+              submissionId,
+              teacherId,
+            }),
+          );
+        }
+        await Promise.all(notifications).catch((err) => logError('Notifications error', err));
       }
-    })();
+    } catch (err) {
+      logError('Background tasks execution error', err);
+    }
+  })();
+}
 
-    logInfo(`Total feedback generation time (excluding background tasks): ${Date.now() - startTime}ms`);
+async function handlePipelineFailure(
+  supabase: SupabaseClient,
+  submissionId: string | undefined,
+  error: unknown,
+  req: Request,
+): Promise<Response> {
+  const errorMessage = handleOpenAIError(error);
+  logError('Error in generate-feedback', error);
+
+  if (submissionId) {
+    await supabase
+      .from('submissions')
+      .update({ evaluation_status: 'failed' })
+      .eq('id', submissionId)
+      .then(({ error: statusErr }) => {
+        if (statusErr) logError('Error marking evaluation_status failed', statusErr);
+      });
+  }
+
+  await persistEdgeFunctionLog(
+    {
+      functionName: 'generate-feedback',
+      level: 'error',
+      httpStatus: 500,
+      message: errorMessage,
+      stack: errorToStack(error),
+    },
+    req,
+  );
+
+  return new Response(JSON.stringify({ error: errorMessage }), {
+    status: 500,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  let submissionId: string | undefined;
+  const supabase = createSupabaseClient();
+
+  try {
+    const body = (await req.json()) as FeedbackRequestBody;
+    submissionId = body.submissionId;
+    const { studentId, assignmentId, language = 'en', background = false } = body;
+
+    if (!submissionId || !studentId || !assignmentId) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const pipelineParams: FeedbackRequestBody = {
+      submissionId,
+      studentId,
+      assignmentId,
+      language,
+    };
+
+    if (background) {
+      await setEvaluationStatus(supabase, submissionId, 'processing');
+
+      const backgroundTask = runFeedbackPipeline(supabase, pipelineParams).catch(async (err) => {
+        logError('Background feedback pipeline failed', err);
+        await supabase
+          .from('submissions')
+          .update({ evaluation_status: 'failed' })
+          .eq('id', submissionId!)
+          .then(({ error: statusErr }) => {
+            if (statusErr) logError('Error marking evaluation_status failed', statusErr);
+          });
+        await persistEdgeFunctionLog(
+          {
+            functionName: 'generate-feedback',
+            level: 'error',
+            httpStatus: 500,
+            message: handleOpenAIError(err),
+            stack: errorToStack(err),
+          },
+          req,
+        );
+      });
+
+      EdgeRuntime.waitUntil(backgroundTask);
+
+      return new Response(JSON.stringify({ accepted: true }), {
+        status: 202,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const result = await runFeedbackPipeline(supabase, pipelineParams);
 
     return new Response(
       JSON.stringify({
-        studentFeedback,
-        teacherFeedback,
+        studentFeedback: result.studentFeedback,
+        teacherFeedback: result.teacherFeedback,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     );
   } catch (error) {
-    const errorMessage = handleOpenAIError(error);
-    logError('Error in generate-feedback', error);
-    await persistEdgeFunctionLog(
-      {
-        functionName: 'generate-feedback',
-        level: 'error',
-        httpStatus: 500,
-        message: errorMessage,
-        stack: errorToStack(error),
-      },
-      req,
-    );
-
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return handlePipelineFailure(supabase, submissionId, error, req);
   }
 });

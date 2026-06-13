@@ -272,6 +272,7 @@ export async function applyCoursePackageContentToClassroom(
         status: a.status,
         target_dimensions: a.target_dimensions as unknown as CreateAssignmentInput['target_dimensions'],
         personalization_flag: a.personalization_flag,
+        enable_ai_feedback: a.enable_ai_feedback !== false,
         auto_publish_ai_feedback: a.auto_publish_ai_feedback,
         attempt_mode: (a.attempt_mode ?? undefined) as CreateAssignmentInput['attempt_mode'],
       };

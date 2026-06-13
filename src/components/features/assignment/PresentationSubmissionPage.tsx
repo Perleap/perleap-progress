@@ -6,9 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Upload, Video, Square, Circle, RotateCcw, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { completeSubmission } from '@/services/submissionService';
+import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/submissionService';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import type { AssignmentCompletionTone } from '@/types/submission';
 import { cn } from '@/lib/utils';
+import { extractAudioFromVideo } from '@/lib/liveSessionExtractAudio';
 import { DeviceSelector, NO_AUDIO, type DeviceSelection } from './DeviceSelector';
 import { VideoEditor } from './VideoEditor';
 
@@ -20,6 +24,10 @@ function scheduleRevokeObjectURL(url: string, delayMs = 750) {
 interface PresentationSubmissionPageProps {
   assignmentId: string;
   submissionId: string;
+  assignmentInstructions: string;
+  enableAiFeedback?: boolean;
+  showAiFeedbackToStudents?: boolean;
+  isTeacherTry?: boolean;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
@@ -28,9 +36,15 @@ type RecordPhase = 'idle' | 'recording' | 'editing' | 'ready';
 export function PresentationSubmissionPage({
   assignmentId,
   submissionId,
+  assignmentInstructions,
+  enableAiFeedback = true,
+  showAiFeedbackToStudents = true,
+  isTeacherTry = false,
   onComplete,
 }: PresentationSubmissionPageProps) {
   const { t } = useTranslation();
+  const { language: uiLanguage = 'en' } = useLanguage();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -326,6 +340,22 @@ export function PresentationSubmissionPage({
     }
   };
 
+  const uploadPresentationAudio = async (videoSource: File | Blob, fileName: string) => {
+    const videoFile =
+      videoSource instanceof File
+        ? videoSource
+        : new File([videoSource], fileName, { type: videoSource.type || 'video/webm' });
+
+    const { playbackBlob } = await extractAudioFromVideo(videoFile);
+    const audioPath = `${assignmentId}/${submissionId}/presentation-audio.m4a`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('submission-files')
+      .upload(audioPath, playbackBlob, { upsert: true, contentType: 'audio/mp4' });
+
+    if (uploadError) throw uploadError;
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -345,10 +375,51 @@ export function PresentationSubmissionPage({
         return;
       }
 
-      const { error } = await completeSubmission(submissionId);
-      if (error) throw error;
+      let videoSource: File | Blob | null = null;
+      let videoFileName = 'presentation.webm';
+      if (mode === 'upload' && selectedFile) {
+        videoSource = selectedFile;
+        videoFileName = selectedFile.name;
+      } else if (mode === 'record' && recordedBlob) {
+        videoSource = recordedBlob;
+      }
 
-      await onComplete('awaitingReview');
+      if (videoSource && enableAiFeedback && !isTeacherTry) {
+        await uploadPresentationAudio(videoSource, videoFileName);
+      }
+
+      if (isTeacherTry) {
+        const { error } = await completeSubmission(submissionId);
+        if (error) throw error;
+        await onComplete('activityCompleted');
+        return;
+      }
+
+      if (!enableAiFeedback) {
+        const { error } = await completeSubmission(submissionId);
+        if (error) throw error;
+        await onComplete('awaitingReview');
+        return;
+      }
+
+      if (!user?.id) {
+        toast.error(t('common.error'));
+        return;
+      }
+
+      const language = getAssignmentLanguage(assignmentInstructions, uiLanguage);
+      const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback({
+        submissionId,
+        studentId: user.id,
+        assignmentId,
+        language,
+      });
+      if (submitError) throw submitError;
+      if (evaluationInvokeFailed) {
+        toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
+      }
+
+      await onComplete(showAiFeedbackToStudents ? 'activityCompleted' : 'awaitingTeacher');
     } catch (error) {
       console.error('Submit error:', error);
       toast.error(t('common.error'));

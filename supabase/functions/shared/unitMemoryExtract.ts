@@ -3,6 +3,7 @@
  */
 
 import { createSupabaseClient } from './supabase.ts';
+import { optionLabelsForIds, parseOptionIds } from './testMcq.ts';
 import { createChatCompletion, resolveChatModel } from './openai.ts';
 import {
   hasFactsForSubmission,
@@ -49,12 +50,12 @@ export async function buildSubmissionSourceText(
     const [questionsResult, responsesResult] = await Promise.all([
       supabase
         .from('test_questions')
-        .select('id, question_text, question_type, options, correct_option_id')
+        .select('id, question_text, question_type, options, correct_option_id, correct_option_ids')
         .eq('assignment_id', assignmentId)
         .order('order_index', { ascending: true }),
       supabase
         .from('test_responses')
-        .select('question_id, selected_option_id, text_answer')
+        .select('question_id, selected_option_id, selected_option_ids, text_answer')
         .eq('submission_id', submissionId),
     ]);
 
@@ -77,12 +78,18 @@ export async function buildSubmissionSourceText(
         continue;
       }
 
-      const optId = response?.selected_option_id != null ? String(response.selected_option_id) : '';
-      if (optId && Array.isArray(q.options)) {
+      const selectedIds = parseOptionIds(
+        response?.selected_option_ids,
+        response?.selected_option_id,
+      );
+      if (selectedIds.length > 0 && Array.isArray(q.options)) {
         const opts = q.options as { id?: unknown; text?: unknown }[];
-        const opt = opts.find((o) => String(o?.id ?? '') === optId);
-        const label = typeof opt?.text === 'string' ? opt.text.trim() : optId;
-        lines.push(`Student selected: ${label}`);
+        const normalizedOptions = opts.map((o) => ({
+          id: String(o?.id ?? ''),
+          text: typeof o?.text === 'string' ? o.text : String(o?.id ?? ''),
+        }));
+        const labels = optionLabelsForIds(normalizedOptions, selectedIds);
+        lines.push(`Student selected: ${labels.join('; ')}`);
       }
     }
 

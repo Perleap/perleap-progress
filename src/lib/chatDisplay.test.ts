@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createChatStreamEmission,
   formatInlineListsForChatMarkdown,
   isPerleapAssistantIntro,
   normalizePerleapIntroParagraphBreaks,
@@ -11,6 +12,22 @@ import {
 
 const SCREENSHOT_LIKE =
   "Hey, I need your help with something. Don't overthink it, just answer 3 things: 1) What should it do? 2) What should it not do? 3) What's one thing you'd want to ask me before building anything?";
+
+describe('createChatStreamEmission', () => {
+  it('preserves leading space on held-back tail when stream ends', () => {
+    const message = `great ${'x'.repeat(20)}`;
+    const emission = createChatStreamEmission();
+    const parts: string[] = [];
+    const track = (t: string) => {
+      parts.push(t);
+    };
+
+    emission.feed(message, track);
+    emission.end(track);
+
+    expect(parts.join('')).toBe(message);
+  });
+});
 
 describe('formatInlineListsForChatMarkdown', () => {
   it('splits run-in 1) 2) 3) after a colon (screenshot case)', () => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +6,7 @@ import { ClassroomLayout } from '@/components/layouts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import { generateFeedback, completeSubmission, startNewSubmissionAttempt } from '@/services/submissionService';
+import { completeSubmission, submitWithBackgroundAiFeedback, startNewSubmissionAttempt } from '@/services/submissionService';
 import { ensureStudentFacingTask } from '@/services/assignmentService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -31,7 +31,7 @@ import {
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
 import { studentModuleFlowStepOptions, type AssignmentRow } from '@/lib/moduleFlow';
-import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight, ChevronDown, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -51,9 +51,8 @@ import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
-import { TaskExplanationPanel } from '@/components/features/assignment/TaskExplanationPanel';
 import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
-import { assignmentHasChatUi } from '@/lib/assignmentHasChatUi';
+import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
   getTaskUnderstandingChoice,
   markTaskUnderstanding,
@@ -64,7 +63,7 @@ import {
   readAssignmentContextCarryover,
   writeAssignmentContextCarryover,
 } from '@/lib/assignmentContextCarryover';
-import { SUBMISSION_STATUS } from '@/config/constants';
+import { SUBMISSION_STATUS, EVALUATION_STATUS } from '@/config/constants';
 import type { DbAssignmentType } from '@/types/models';
 
 const AssignmentDetail = () => {
@@ -81,10 +80,12 @@ const AssignmentDetail = () => {
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
   const [referenceMaterialsOpen, setReferenceMaterialsOpen] = useState(false);
+  const [taskCardOpen, setTaskCardOpen] = useState(false);
   const [introWizardOpen, setIntroWizardOpen] = useState(false);
   const [assignmentIntroStorageTick, setAssignmentIntroStorageTick] = useState(0);
   const [taskUnderstandingStorageTick, setTaskUnderstandingStorageTick] = useState(0);
-  const [taskExplanationDismissed, setTaskExplanationDismissed] = useState(false);
+  const [companionScrollTick, setCompanionScrollTick] = useState(0);
+  const companionChatAnchorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isTeacherTry || !assignmentId || !user?.id) return;
@@ -118,10 +119,6 @@ const AssignmentDetail = () => {
     assignmentId || undefined,
     { isTeacherTry },
   );
-
-  useEffect(() => {
-    setTaskExplanationDismissed(false);
-  }, [assignmentData?.submission?.id]);
 
   const needsAutoStudentTask = Boolean(
     !isTeacherTry &&
@@ -444,7 +441,9 @@ const AssignmentDetail = () => {
       conversationHasMessages === false,
   );
 
-  const shouldShowIntroWizard = taskUnderstandingEligible && !isStudentTaskLoading;
+  const promptEnabled = assignment?.show_task_understanding_prompt !== false;
+  const shouldShowIntroWizard =
+    promptEnabled && taskUnderstandingEligible && !isStudentTaskLoading;
 
   useEffect(() => {
     if (shouldShowIntroWizard) {
@@ -473,8 +472,8 @@ const AssignmentDetail = () => {
       if (!user?.id || !submission?.id) return;
       markTaskUnderstanding(user.id, submission.id, understood ? 'yes' : 'no');
       setTaskUnderstandingStorageTick((n) => n + 1);
-      if (!understood && assignment && !assignmentHasChatUi(assignment.type)) {
-        setTaskExplanationDismissed(false);
+      if (!understood && assignment && !isChatLikeAssignmentType(assignment.type)) {
+        setCompanionScrollTick((n) => n + 1);
       }
     },
     [user?.id, submission?.id, assignment],
@@ -485,6 +484,7 @@ const AssignmentDetail = () => {
       !submission ||
       feedback ||
       submission.status !== SUBMISSION_STATUS.IN_PROGRESS ||
+      assignment?.show_task_understanding_prompt === false ||
       storedTaskUnderstandingChoice !== null ||
       (conversationQueryReady && conversationHasMessages === true),
   );
@@ -492,18 +492,18 @@ const AssignmentDetail = () => {
   const initialGreetingMode: 'default' | 'explain_task' =
     storedTaskUnderstandingChoice === 'no' ? 'explain_task' : 'default';
 
-  const showPageTaskCard = Boolean(assignment && !assignmentHasChatUi(assignment.type));
-
-  const showTaskExplanationPanel = Boolean(
-    !isTeacherTry &&
-      assignment &&
-      submission &&
-      !feedback &&
-      submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
-      storedTaskUnderstandingChoice === 'no' &&
-      !assignmentHasChatUi(assignment.type) &&
-      !taskExplanationDismissed,
+  const showPageTaskCard = Boolean(
+    assignment && assignment.type !== 'chatbot' && assignment.type !== 'questions',
   );
+
+  useEffect(() => {
+    if (!assignment || isChatLikeAssignmentType(assignment.type)) return;
+    if (storedTaskUnderstandingChoice !== 'no') return;
+    const frameId = requestAnimationFrame(() => {
+      companionChatAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [assignment?.type, storedTaskUnderstandingChoice, companionScrollTick]);
 
   const syllabusSectionTitle = useMemo(() => {
     const sectionId = assignment?.syllabus_section_id;
@@ -529,7 +529,7 @@ const AssignmentDetail = () => {
   });
 
   const handleAssignmentCompleted = useCallback(
-    async (_tone?: AssignmentCompletionTone) => {
+    async (tone?: AssignmentCompletionTone) => {
       if (
         !isTeacherTry &&
         user?.id &&
@@ -548,7 +548,12 @@ const AssignmentDetail = () => {
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
       invalidateStudentTimelineCurriculaQueries(queryClient);
-      await refetch();
+      void refetch();
+      if (tone === 'activityCompleted') {
+        toast.success(t('assignmentDetail.success.completed'));
+      } else if (tone === 'awaitingTeacher') {
+        toast.success(t('assignmentDetail.success.submittedAwaitingTeacher'));
+      }
     },
     [
       queryClient,
@@ -601,49 +606,39 @@ const AssignmentDetail = () => {
           return;
         }
 
-        const autoPublish = assignment.auto_publish_ai_feedback !== false;
+        const enableAiFeedback = assignment.enable_ai_feedback !== false;
+        const showAiFeedbackToStudents = assignment.auto_publish_ai_feedback !== false;
 
-        if (!autoPublish) {
-          const { error: completeError } = await completeSubmission(submission.id, {
-            awaitingTeacherFeedbackRelease: true,
-            ...flowFlag,
-          });
+        if (!enableAiFeedback) {
+          const { error: completeError } = await completeSubmission(submission.id, flowFlag);
           if (completeError) {
             console.error('Error completing submission:', completeError);
             toast.error(t('common.error'));
           } else {
-            await handleAssignmentCompleted('awaitingTeacher');
+            await handleAssignmentCompleted('activityCompleted');
           }
           return;
         }
 
         const language = getAssignmentLanguage(assignment.instructions, uiLanguage);
-        const { error: feedbackError } = await generateFeedback({
+        const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback({
           submissionId: submission.id,
           studentId: user.id,
           assignmentId: assignment.id,
           language,
+          completeOptions: flowFlag,
         });
 
-        if (feedbackError) {
-          console.error('Error generating feedback:', feedbackError);
-          const { error: completeError } = await completeSubmission(submission.id, flowFlag);
-          if (completeError) {
-            console.error('Error completing submission:', completeError);
-            toast.error(t('common.error'));
-          } else {
-            toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
-            await handleAssignmentCompleted('activityCompleted');
-          }
+        if (submitError) {
+          console.error('Error completing submission:', submitError);
+          toast.error(t('common.error'));
         } else {
-          const { error: completeError } = await completeSubmission(submission.id, flowFlag);
-
-          if (completeError) {
-            console.error('Error completing submission:', completeError);
-            toast.error(t('common.error'));
-          } else {
-            await handleAssignmentCompleted('activityCompleted');
+          if (evaluationInvokeFailed) {
+            toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
           }
+          await handleAssignmentCompleted(
+            showAiFeedbackToStudents ? 'activityCompleted' : 'awaitingTeacher',
+          );
         }
       }
     } catch (error) {
@@ -791,16 +786,35 @@ const AssignmentDetail = () => {
           </div>
 
           {showPageTaskCard ? (
-            <Card className="border-border/80 bg-muted/20">
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">{t('assignmentDetail.studentTaskTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 text-sm">
-              {resolvedStudentFacingTask ? (
-                <p className="whitespace-pre-wrap text-foreground leading-relaxed" dir="auto">
-                  {resolvedStudentFacingTask}
-                </p>
-              ) : isStudentTaskLoading ? (
+            <Collapsible
+              open={taskCardOpen}
+              onOpenChange={setTaskCardOpen}
+              className="overflow-hidden rounded-lg border border-border/60 bg-muted/5"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
+              <CollapsibleTrigger
+                className={cn(
+                  'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
+                  isRTL ? 'text-end' : 'text-start',
+                )}
+              >
+                <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                  {t('assignmentDetail.studentTaskTitle')}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                    taskCardOpen && 'rotate-180',
+                  )}
+                  aria-hidden
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-2 text-sm">
+                {resolvedStudentFacingTask ? (
+                  <p className="whitespace-pre-wrap text-foreground leading-relaxed" dir="auto">
+                    {resolvedStudentFacingTask}
+                  </p>
+                ) : isStudentTaskLoading ? (
                   <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
                     <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
                     {t('assignmentDetail.loadingStudentTask')}
@@ -810,8 +824,8 @@ const AssignmentDetail = () => {
                     {t('assignmentDetail.studentTaskNotSetYet')}
                   </p>
                 )}
-              </CardContent>
-            </Card>
+              </CollapsibleContent>
+            </Collapsible>
           ) : null}
 
           {unitOutlineMaterials.length > 0 ? (
@@ -956,7 +970,23 @@ const AssignmentDetail = () => {
               );
             }
 
-            if (isManualEvalType && isCompleted) {
+            const evalStatus = submission.evaluation_status;
+
+            if (isCompleted && evalStatus === EVALUATION_STATUS.FAILED && !feedback) {
+              return (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <Clock className="h-10 w-10 text-primary mb-4" />
+                    <p className="text-sm font-medium text-primary">
+                      {t('assignmentDetail.aiFeedbackFailed')}
+                    </p>
+                    {flowContinueRow}
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            if (isManualEvalType && isCompleted && assignment.enable_ai_feedback === false) {
               const awaitingKey = `assignmentDetail.${assignment.type}.awaitingReview`;
               return (
                 <Card className="border-primary/20 bg-primary/5">
@@ -964,6 +994,28 @@ const AssignmentDetail = () => {
                     <Clock className="h-10 w-10 text-primary mb-4" />
                     <p className="text-sm font-medium text-primary">
                       {t(awaitingKey)}
+                    </p>
+                    {flowContinueRow}
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            if (
+              isCompleted &&
+              !feedback &&
+              assignment.enable_ai_feedback !== false &&
+              !submission.awaiting_teacher_feedback_release
+            ) {
+              return (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                    <CheckCircle className="h-10 w-10 text-primary mb-2" />
+                    <p className="text-sm font-medium text-primary">
+                      {t('assignmentDetail.success.completed')}
+                    </p>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      {t('assignmentDetail.assessmentInProgress')}
                     </p>
                     {flowContinueRow}
                   </CardContent>
@@ -996,7 +1048,7 @@ const AssignmentDetail = () => {
             );
 
             const companionBlock = (
-              <div className="space-y-2">
+              <div ref={companionChatAnchorRef} className="space-y-2">
                 <p className="text-xs text-muted-foreground px-0.5" dir={isRTL ? 'rtl' : 'ltr'}>
                   {t('assignmentDetail.contextChatHint')}
                 </p>
@@ -1008,22 +1060,16 @@ const AssignmentDetail = () => {
               case 'test':
                 return (
                   <div className="space-y-6">
-                    {showTaskExplanationPanel ? (
-                      <TaskExplanationPanel
-                        studentFacingTask={resolvedStudentFacingTask || assignment.student_facing_task}
-                        taskLoading={isStudentTaskLoading}
-                        onContinue={() => setTaskExplanationDismissed(true)}
-                      />
-                    ) : (
-                      <TestTakingPage
-                        assignmentId={assignment.id}
-                        assignmentInstructions={assignment.instructions}
-                        submissionId={submission.id}
-                        autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
-                        isTeacherTry={isTeacherTry}
-                        onComplete={handleAssignmentCompleted}
-                      />
-                    )}
+                    <TestTakingPage
+                      assignmentId={assignment.id}
+                      assignmentInstructions={assignment.instructions}
+                      submissionId={submission.id}
+                      enableAiFeedback={assignment.enable_ai_feedback !== false}
+                      showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
+                      isTeacherTry={isTeacherTry}
+                      onComplete={handleAssignmentCompleted}
+                    />
+                    {companionBlock}
                   </div>
                 );
               case 'text_essay':
@@ -1033,7 +1079,8 @@ const AssignmentDetail = () => {
                       assignmentId={assignment.id}
                       submissionId={submission.id}
                       assignmentInstructions={assignment.instructions}
-                      autoPublishAiFeedback={assignment.auto_publish_ai_feedback !== false}
+                      enableAiFeedback={assignment.enable_ai_feedback !== false}
+                      showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
                       isTeacherTry={isTeacherTry}
                       initialText={submission.text_body}
                       onComplete={handleAssignmentCompleted}
@@ -1047,6 +1094,10 @@ const AssignmentDetail = () => {
                     <ProjectSubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
+                      assignmentInstructions={assignment.instructions}
+                      enableAiFeedback={assignment.enable_ai_feedback !== false}
+                      showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
+                      isTeacherTry={isTeacherTry}
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
@@ -1058,6 +1109,10 @@ const AssignmentDetail = () => {
                     <PresentationSubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
+                      assignmentInstructions={assignment.instructions}
+                      enableAiFeedback={assignment.enable_ai_feedback !== false}
+                      showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
+                      isTeacherTry={isTeacherTry}
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
@@ -1069,6 +1124,10 @@ const AssignmentDetail = () => {
                     <LangchainBuilderPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
+                      assignmentInstructions={assignment.instructions}
+                      enableAiFeedback={assignment.enable_ai_feedback !== false}
+                      showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
+                      isTeacherTry={isTeacherTry}
                       initialPipelineText={submission.text_body}
                       onComplete={handleAssignmentCompleted}
                     />

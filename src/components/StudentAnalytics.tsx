@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import type { FiveDScores, FiveDSnapshot } from '@/types/models';
 import { selectBestSubmissionIdForAggregate } from '@/lib/bestSubmission';
+import { averageFiveDScoresAcrossSnapshots } from '@/lib/fiveDScores';
 
 interface StudentAnalyticsProps {
   studentId: string;
@@ -127,33 +128,18 @@ export function StudentAnalytics({
         }
 
         if (bestForAverage.length) {
-          const totals: FiveDScores = {
-            vision: 0,
-            values: 0,
-            thinking: 0,
-            connection: 0,
-            action: 0,
-          };
-
-          bestForAverage.forEach((snapshot) => {
-            const scores = snapshot.scores as unknown as FiveDScores;
-            (Object.keys(totals) as Array<keyof FiveDScores>).forEach((key) => {
-              totals[key] += scores[key] || 0;
-            });
-          });
-
-          const avgScores = (Object.keys(totals) as Array<keyof FiveDScores>).reduce(
-            (acc, key) => ({
-              ...acc,
-              [key]: totals[key] / bestForAverage.length,
-            }),
-            {} as FiveDScores
+          const avgScores = averageFiveDScoresAcrossSnapshots(
+            bestForAverage.map((snapshot) => ({
+              scores: snapshot.scores as unknown as FiveDScores,
+            })),
           );
 
-          setAverageScores({
-            scores: avgScores,
-            score_explanations: null,
-          });
+          if (avgScores) {
+            setAverageScores({
+              scores: avgScores,
+              score_explanations: null,
+            });
+          }
         }
       }
     } catch (error) {

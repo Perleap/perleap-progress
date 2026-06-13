@@ -16,6 +16,7 @@ import RoleSelection from './pages/RoleSelection';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import ClassroomDetail from './pages/teacher/ClassroomDetail';
 import LessonBriefPage from './pages/teacher/LessonBriefPage';
+import PilotReportPage from './pages/teacher/PilotReportPage';
 import LiveSessionPage from './pages/teacher/LiveSessionPage';
 import SubmissionDetail from './pages/teacher/SubmissionDetail';
 import TeacherSettings from './pages/teacher/TeacherSettings';
@@ -38,6 +39,7 @@ import Product from './pages/Product';
 import Solutions from './pages/Solutions';
 import NotFound from './pages/NotFound';
 import { TeacherAssistantProvider } from './components/ai/TeacherAssistant';
+import { LiveSessionProcessingProvider } from './contexts/LiveSessionProcessingContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +67,7 @@ const App = () => (
           <AuthProvider>
             <LanguageProvider>
               <TeacherAssistantProvider>
+              <LiveSessionProcessingProvider>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/product" element={<Product />} />
@@ -118,6 +121,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredRole="teacher">
                       <LessonBriefPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teacher/classroom/:id/pilot-report"
+                  element={
+                    <ProtectedRoute requiredRole="teacher">
+                      <PilotReportPage />
                     </ProtectedRoute>
                   }
                 />
@@ -248,6 +259,7 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </LiveSessionProcessingProvider>
               </TeacherAssistantProvider>
             </LanguageProvider>
           </AuthProvider>

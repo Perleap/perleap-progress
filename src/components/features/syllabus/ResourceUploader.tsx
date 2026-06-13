@@ -53,6 +53,8 @@ import {
   useReorderSectionResources,
 } from '@/hooks/queries';
 import type { SectionResource } from '@/types/syllabus';
+import { formatResourceFileSize, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
+import { Progress, ProgressValue } from '@/components/ui/progress';
 
 interface ResourceUploaderProps {
   sectionId: string;
@@ -74,10 +76,7 @@ const resourceTypeIcon: Record<string, React.ElementType> = {
 };
 
 function formatFileSize(bytes: number | null): string {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return formatResourceFileSize(bytes);
 }
 
 function sanitizeDownloadFilename(name: string): string {
@@ -181,6 +180,7 @@ export const ResourceUploader = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ fileName: string; percent: number } | null>(null);
   const [addMode, setAddMode] = useState<AddMode>('none');
   const [linkTitle, setLinkTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -248,16 +248,37 @@ export const ResourceUploader = ({
       let successCount = 0;
 
       for (const file of fileArray) {
+        if (!isResourceFileWithinSizeLimit(file)) {
+          toast.error(t('syllabus.resources.fileTooLarge', { name: file.name }));
+          continue;
+        }
+
         try {
+          setUploadProgress({ fileName: file.name, percent: 0 });
           await uploadMutation.mutateAsync({
             sectionId,
             file,
             orderIndex: baseOrderIndex + successCount,
             classroomId,
+            onProgress: (loaded, total) => {
+              if (total <= 0) return;
+              setUploadProgress({
+                fileName: file.name,
+                percent: Math.round((loaded / total) * 100),
+              });
+            },
           });
           successCount++;
-        } catch {
-          toast.error(`Failed to upload ${file.name}`);
+        } catch (err) {
+          const msg =
+            err && typeof err === 'object' && 'message' in err
+              ? String((err as { message: string }).message)
+              : '';
+          if (msg === 'STORAGE_GLOBAL_LIMIT_EXCEEDED') {
+            toast.error(t('syllabus.resources.uploadGlobalLimitExceeded'));
+          } else {
+            toast.error(t('syllabus.resources.uploadFailed', { name: file.name }));
+          }
         }
       }
 
@@ -265,6 +286,7 @@ export const ResourceUploader = ({
         toast.success(t('syllabus.resources.uploaded', { count: successCount }));
         setAddMode('none');
       }
+      setUploadProgress(null);
       setUploading(false);
     },
     [sectionId, classroomId, baseOrderIndex, uploadMutation, t],
@@ -489,9 +511,18 @@ export const ResourceUploader = ({
             role="presentation"
           >
             {uploading ? (
-              <div className="flex flex-col items-center gap-2 py-2">
+              <div className="flex flex-col items-center gap-2 py-2 w-full px-2">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-xs text-muted-foreground">{t('syllabus.resources.uploading')}</span>
+                <span className="text-xs text-muted-foreground">
+                  {uploadProgress
+                    ? t('syllabus.resources.uploadingFile', { name: uploadProgress.fileName })
+                    : t('syllabus.resources.uploading')}
+                </span>
+                {uploadProgress ? (
+                  <Progress value={uploadProgress.percent} className="w-full">
+                    <ProgressValue />
+                  </Progress>
+                ) : null}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-1.5 py-1">

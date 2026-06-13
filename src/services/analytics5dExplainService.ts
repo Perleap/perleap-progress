@@ -17,6 +17,8 @@ export interface Analytics5dNarrativeInput {
   peerScores?: FiveDScores;
   evidenceText?: string;
   evidenceSourceCount?: number;
+  /** When true, returns shorter lesson-brief style narratives. */
+  brief?: boolean;
 }
 
 export interface Analytics5dNarrativeResult {
@@ -51,6 +53,7 @@ export async function invokeExplainAnalytics5d(
       compareLabelA: input.compareLabelA,
       compareLabelB: input.compareLabelB,
       peerScores: input.peerScores,
+      ...(input.brief ? { brief: true } : {}),
       ...(input.evidenceText && input.evidenceText.trim()
         ? {
             evidenceText: input.evidenceText,

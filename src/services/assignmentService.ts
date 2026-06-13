@@ -149,11 +149,17 @@ export const getStudentAssignmentDetails = async (
     if (assignError) throw assignError;
     if (!assignment) return { data: null, error: null };
 
-    // 2. Active submission + attempt policy
+    // 2. Active submission + attempt policy (reuse assignment row from step 1)
     const { data: ctx, error: subError } = await getStudentSubmissionContext(
       assignmentId,
       studentId,
       opts?.isTeacherTry ? { isTeacherTry: true } : undefined,
+      {
+        id: assignment.id,
+        attempt_mode: assignment.attempt_mode,
+        due_at: assignment.due_at,
+        status: assignment.status,
+      },
     );
     if (subError) throw subError;
 
@@ -343,6 +349,7 @@ export const createAssignment = async (
       status: assignment.status,
       target_dimensions: assignment.target_dimensions as unknown as Json,
       personalization_flag: assignment.personalization_flag,
+      enable_ai_feedback: assignment.enable_ai_feedback,
       auto_publish_ai_feedback: assignment.auto_publish_ai_feedback,
       attempt_mode: assignment.attempt_mode,
     };

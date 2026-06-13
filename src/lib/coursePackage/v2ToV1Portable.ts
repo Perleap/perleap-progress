@@ -159,6 +159,7 @@ export function coursePackageV2ToV1Portable(pkg: PerleapCoursePackageV2): Perlea
       due_at: a.due_at,
       target_dimensions: a.target_dimensions,
       personalization_flag: a.personalization_flag,
+      enable_ai_feedback: a.enable_ai_feedback !== false,
       auto_publish_ai_feedback: a.auto_publish_ai_feedback,
       attempt_mode: a.attempt_mode,
       materials: a.materials,

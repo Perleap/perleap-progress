@@ -132,7 +132,15 @@ export function AssignmentReviewStep({
         },
         {
           label: t('createAssignment.metadata.aiFeedback'),
+          value: formData.enable_ai_feedback ? t('common.yes') : t('common.no'),
+        },
+        {
+          label: t('createAssignment.metadata.showFeedback'),
           value: formData.auto_publish_ai_feedback ? t('common.yes') : t('common.no'),
+        },
+        {
+          label: t('createAssignment.taskUnderstandingPrompt.label'),
+          value: formData.show_task_understanding_prompt ? t('common.yes') : t('common.no'),
         },
       ],
     },

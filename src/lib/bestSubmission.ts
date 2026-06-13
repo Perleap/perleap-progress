@@ -1,22 +1,12 @@
 import type { FiveDScores } from '@/types/models';
-
-const DIMENSION_KEYS: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
+import { meanNonNullFiveDScores } from '@/lib/fiveDScores';
 
 /**
  * Mean of the five soft-skill dimensions; used to compare attempts for aggregates.
+ * Skips null / missing dimensions.
  */
 export function meanFiveDScore(scores: FiveDScores | null | undefined): number | null {
-  if (!scores) return null;
-  let sum = 0;
-  let n = 0;
-  for (const k of DIMENSION_KEYS) {
-    const v = scores[k];
-    if (typeof v === 'number' && !Number.isNaN(v)) {
-      sum += v;
-      n++;
-    }
-  }
-  return n === 0 ? null : sum / n;
+  return meanNonNullFiveDScores(scores);
 }
 
 export interface SubmissionAttemptForBest {

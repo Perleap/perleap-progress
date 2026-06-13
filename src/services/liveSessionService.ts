@@ -8,6 +8,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { contentTypeForAudioExtension, inferAudioExtension } from '@/lib/audioFormat';
 import { createAssignment } from './assignmentService';
 import type { ApiError } from '@/types';
 import type { LiveSession, LiveSessionType } from '@/types/liveSession';
@@ -99,15 +100,33 @@ export const createLiveSession = async (input: {
 export const uploadLiveSessionAudio = async (
   liveSessionId: string,
   blobs: Blob[],
-  durationSeconds: number | null = null
-): Promise<{ audioChunkPaths: string[] } | { error: ApiError }> => {
+  durationSeconds: number | null = null,
+  playbackBlob?: Blob
+): Promise<{ audioChunkPaths: string[]; playbackPath: string | null } | { error: ApiError }> => {
   const uploadedChunkPaths: string[] = [];
+  let playbackPath: string | null = null;
+
+  if (playbackBlob && playbackBlob.size > 0) {
+    const playbackKey = `${liveSessionId}/playback.m4a`;
+    const { error: playbackError } = await supabase.storage
+      .from(AUDIO_BUCKET)
+      .upload(playbackKey, playbackBlob, { upsert: true, contentType: 'audio/mp4' });
+
+    if (playbackError) {
+      return { error: handleSupabaseError(playbackError) };
+    }
+    playbackPath = playbackKey;
+  }
 
   for (let i = 0; i < blobs.length; i++) {
-    const storageKey = `${liveSessionId}/chunk-${String(i).padStart(3, '0')}.m4a`;
+    const ext = await inferAudioExtension(blobs[i]);
+    const storageKey = `${liveSessionId}/chunk-${String(i).padStart(3, '0')}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(AUDIO_BUCKET)
-      .upload(storageKey, blobs[i], { upsert: true, contentType: 'audio/mp4' });
+      .upload(storageKey, blobs[i], {
+        upsert: true,
+        contentType: contentTypeForAudioExtension(ext),
+      });
 
     if (uploadError) {
       return { error: handleSupabaseError(uploadError) };
@@ -118,7 +137,7 @@ export const uploadLiveSessionAudio = async (
   const { error: updateError } = await supabase
     .from('live_sessions')
     .update({
-      audio_path: uploadedChunkPaths[0] ?? null,
+      audio_path: playbackPath ?? uploadedChunkPaths[0] ?? null,
       audio_chunk_paths: uploadedChunkPaths,
       duration_seconds: durationSeconds ?? null,
       video_temp_path: null,
@@ -132,20 +151,83 @@ export const uploadLiveSessionAudio = async (
     return { error: handleSupabaseError(updateError) };
   }
 
-  return { audioChunkPaths: uploadedChunkPaths };
+  return { audioChunkPaths: uploadedChunkPaths, playbackPath };
 };
+
+type TranscribeLiveSessionBody = {
+  liveSessionId: string;
+  language: 'en' | 'he';
+  chunkIndex?: number;
+  finalize?: boolean;
+};
+
+async function invokeTranscribeLiveSession(body: TranscribeLiveSessionBody): Promise<{
+  ok: boolean;
+  status: number;
+  data: { error?: string; status?: string; chunkIndex?: number; chunkTotal?: number };
+}> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-live-session`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  const data = await response.json().catch(() => ({} as { error?: string }));
+
+  return { ok: response.ok, status: response.status, data };
+}
 
 /**
  * Run transcription + summary (Whisper + LLM) via edge function.
  */
 export const startLiveSessionTranscription = async (
   liveSessionId: string,
-  language: 'en' | 'he' = 'en'
+  language: 'en' | 'he' = 'en',
+  audioChunkCount = 1
 ): Promise<{ error: ApiError | null }> => {
-  const { error } = await supabase.functions.invoke('transcribe-live-session', {
-    body: { liveSessionId, language },
+  const chunkTotal = Math.max(1, audioChunkCount);
+
+  for (let chunkIndex = 0; chunkIndex < chunkTotal; chunkIndex++) {
+    const { ok, status, data } = await invokeTranscribeLiveSession({
+      liveSessionId,
+      language,
+      chunkIndex,
+    });
+    if (!ok) {
+      return {
+        error: handleSupabaseError(
+          new Error(data.error || `Transcription failed (${status})`)
+        ),
+      };
+    }
+  }
+
+  const { ok, status, data } = await invokeTranscribeLiveSession({
+    liveSessionId,
+    language,
+    finalize: true,
   });
-  return { error: error ? handleSupabaseError(error) : null };
+
+  if (!ok) {
+    return {
+      error: handleSupabaseError(
+        new Error(data.error || `Transcription finalize failed (${status})`)
+      ),
+    };
+  }
+
+  return { error: null };
 };
 
 export type TranscriptionProgressUpdate = {
@@ -168,52 +250,57 @@ export const startLiveSessionTranscriptionWithProgress = async (
   }
 ): Promise<{ error: ApiError | null }> => {
   const chunkTotal = Math.max(1, options.audioChunkCount);
-  const duration =
-    options.durationSeconds && options.durationSeconds > 0 ? options.durationSeconds : 600;
-  const estimatedMs = Math.max(45_000, duration * 350 + chunkTotal * 40_000);
+  const transcribeSpan = 88;
+  const summarizeSpan = 10;
 
-  let stopped = false;
-  const startedAt = Date.now();
+  for (let chunkIndex = 0; chunkIndex < chunkTotal; chunkIndex++) {
+    options.onProgress({
+      percent: Math.round(transcribeSpan * (chunkIndex / chunkTotal)),
+      phase: 'transcribing',
+      chunkIndex: chunkIndex + 1,
+      chunkTotal,
+    });
 
-  const tick = () => {
-    if (stopped) return;
-    const elapsed = Date.now() - startedAt;
-    const ratio = Math.min(0.97, elapsed / estimatedMs);
-    const transcribePortion = 0.82;
-    if (ratio < transcribePortion) {
-      const chunkRatio = ratio / transcribePortion;
-      const chunkIndex = Math.min(chunkTotal, Math.max(1, Math.ceil(chunkRatio * chunkTotal)));
-      options.onProgress({
-        percent: Math.round(88 + ratio * 9),
-        phase: 'transcribing',
-        chunkIndex,
-        chunkTotal,
-      });
-      return;
+    const { ok, status, data } = await invokeTranscribeLiveSession({
+      liveSessionId,
+      language,
+      chunkIndex,
+    });
+
+    if (!ok) {
+      return {
+        error: handleSupabaseError(
+          new Error(data.error || `Transcription failed (${status})`)
+        ),
+      };
     }
-    if (ratio < 0.94) {
-      options.onProgress({
-        percent: Math.round(97 + (ratio - transcribePortion) * 20),
-        phase: 'summarizing',
-      });
-      return;
-    }
-    options.onProgress({ percent: 99, phase: 'finishing' });
-  };
 
-  const intervalId = window.setInterval(tick, 450);
-  tick();
-
-  try {
-    const result = await startLiveSessionTranscription(liveSessionId, language);
-    if (!result.error) {
-      options.onProgress({ percent: 100, phase: 'finishing' });
-    }
-    return result;
-  } finally {
-    stopped = true;
-    window.clearInterval(intervalId);
+    options.onProgress({
+      percent: Math.round(transcribeSpan * ((chunkIndex + 1) / chunkTotal)),
+      phase: 'transcribing',
+      chunkIndex: chunkIndex + 1,
+      chunkTotal,
+    });
   }
+
+  options.onProgress({ percent: transcribeSpan + summarizeSpan / 2, phase: 'summarizing' });
+
+  const { ok, status, data } = await invokeTranscribeLiveSession({
+    liveSessionId,
+    language,
+    finalize: true,
+  });
+
+  if (!ok) {
+    return {
+      error: handleSupabaseError(
+        new Error(data.error || `Transcription finalize failed (${status})`)
+      ),
+    };
+  }
+
+  options.onProgress({ percent: 100, phase: 'finishing' });
+  return { error: null };
 };
 
 /** @deprecated Use startLiveSessionTranscription */

@@ -1,6 +1,7 @@
 import type { Json } from '@/integrations/supabase/types';
 import type { FiveDScores } from '@/types/models';
 import type { SyllabusStructureType } from '@/types/syllabus';
+import { averageFiveDScoresAcrossSnapshots } from '@/lib/fiveDScores';
 
 export type AnalyticsModuleFilter = 'all' | 'unplaced' | string;
 
@@ -67,43 +68,15 @@ export function structureTypeToLabelKey(
   return 'modules';
 }
 
-const DIMS = ['vision', 'values', 'thinking', 'connection', 'action'] as const;
-
 export function meanScoreRecords(rows: { scores: Json }[]): FiveDScores | null {
   if (rows.length === 0) return null;
-  const totals: FiveDScores = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
-  for (const r of rows) {
-    const sc = r.scores as Record<string, number>;
-    for (const k of DIMS) {
-      totals[k] += sc[k] || 0;
-    }
-  }
-  const n = rows.length;
-  return {
-    vision: totals.vision / n,
-    values: totals.values / n,
-    thinking: totals.thinking / n,
-    connection: totals.connection / n,
-    action: totals.action / n,
-  };
+  return averageFiveDScoresAcrossSnapshots(
+    rows.map((r) => ({ scores: r.scores as Record<string, number | null> })),
+  );
 }
 
 function meanOfStudentMeans(arr: FiveDScores[]): FiveDScores | null {
-  if (arr.length === 0) return null;
-  const totals: FiveDScores = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
-  for (const r of arr) {
-    for (const k of DIMS) {
-      totals[k] += r[k] || 0;
-    }
-  }
-  const n = arr.length;
-  return {
-    vision: totals.vision / n,
-    values: totals.values / n,
-    thinking: totals.thinking / n,
-    connection: totals.connection / n,
-    action: totals.action / n,
-  };
+  return averageFiveDScoresAcrossSnapshots(arr.map((scores) => ({ scores })));
 }
 
 type SnapshotRow = {

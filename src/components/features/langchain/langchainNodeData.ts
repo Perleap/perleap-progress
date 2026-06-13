@@ -13,11 +13,12 @@ export type LangchainNodeType =
   | 'inputNode'
   | 'outputNode'
   | 'llmNode'
-  | 'promptNode'
-  | 'chainNode'
-  | 'memoryNode';
+  | 'triggerNode'
+  | 'emailNode';
 
-export type MemoryStrategy = 'buffer' | 'summary' | 'other';
+export type TriggerMode = 'incoming_mail' | 'manual' | 'webhook' | 'form_submit';
+
+export const TRIGGER_MODES: TriggerMode[] = ['incoming_mail', 'manual', 'webhook', 'form_submit'];
 
 export type LangchainInputNodeData = {
   label: string;
@@ -31,56 +32,76 @@ export type LangchainOutputNodeData = {
 
 export type LangchainLlmNodeData = {
   label: string;
-  model: string;
-  systemOrRoleNote: string;
-  /** Optional; empty string = unset */
-  temperature: string;
+  systemPrompt: string;
 };
 
-export type LangchainPromptNodeData = {
+export type LangchainTriggerNodeData = {
   label: string;
-  template: string;
-  variablesHint: string;
+  mode: TriggerMode;
 };
 
-export type LangchainChainNodeData = {
+export type LangchainEmailNodeData = {
   label: string;
-  description: string;
-  orderingNote: string;
-};
-
-export type LangchainMemoryNodeData = {
-  label: string;
-  strategy: MemoryStrategy;
-  description: string;
+  sendTo: string;
 };
 
 export type LangchainNodeDataByType = {
   inputNode: LangchainInputNodeData;
   outputNode: LangchainOutputNodeData;
   llmNode: LangchainLlmNodeData;
-  promptNode: LangchainPromptNodeData;
-  chainNode: LangchainChainNodeData;
-  memoryNode: LangchainMemoryNodeData;
+  triggerNode: LangchainTriggerNodeData;
+  emailNode: LangchainEmailNodeData;
 };
 
 const DEFAULT_LABELS: Record<LangchainNodeType, string> = {
   inputNode: 'User Input',
   outputNode: 'Output',
   llmNode: 'LLM',
-  promptNode: 'Prompt Template',
-  chainNode: 'Chain',
-  memoryNode: 'Memory',
+  triggerNode: 'Trigger',
+  emailNode: 'Email',
 };
+
+/** Removed node types kept for legacy pipeline normalization. */
+const LEGACY_NODE_TYPES = new Set(['promptNode', 'chainNode', 'memoryNode']);
+
+const LEGACY_TYPE_PREFIX: Record<string, string> = {
+  promptNode: 'Legacy Prompt',
+  chainNode: 'Legacy Chain',
+  memoryNode: 'Legacy Memory',
+};
+
+function isTriggerMode(v: unknown): v is TriggerMode {
+  return v === 'incoming_mail' || v === 'manual' || v === 'webhook' || v === 'form_submit';
+}
+
+function legacyTextFromRaw(type: string, raw: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (typeof raw.template === 'string' && raw.template.trim()) parts.push(raw.template);
+  if (typeof raw.variablesHint === 'string' && raw.variablesHint.trim()) {
+    parts.push(`Variables: ${raw.variablesHint}`);
+  }
+  if (typeof raw.description === 'string' && raw.description.trim()) parts.push(raw.description);
+  if (typeof raw.orderingNote === 'string' && raw.orderingNote.trim()) {
+    parts.push(`Order: ${raw.orderingNote}`);
+  }
+  if (typeof raw.strategy === 'string' && raw.strategy.trim()) {
+    parts.push(`Strategy: ${raw.strategy}`);
+  }
+  if (typeof raw.systemOrRoleNote === 'string' && raw.systemOrRoleNote.trim()) {
+    parts.push(raw.systemOrRoleNote);
+  }
+  if (typeof raw.systemPrompt === 'string' && raw.systemPrompt.trim()) parts.push(raw.systemPrompt);
+  if (parts.length > 0) return parts.join('\n\n');
+  return `[${type}]`;
+}
 
 export function isLangchainNodeType(t: string | undefined): t is LangchainNodeType {
   return (
     t === 'inputNode' ||
     t === 'outputNode' ||
     t === 'llmNode' ||
-    t === 'promptNode' ||
-    t === 'chainNode' ||
-    t === 'memoryNode'
+    t === 'triggerNode' ||
+    t === 'emailNode'
   );
 }
 
@@ -92,13 +113,11 @@ export function defaultDataForLangchainNodeType(type: LangchainNodeType): Langch
     case 'outputNode':
       return { label, description: '' };
     case 'llmNode':
-      return { label, model: 'gpt-4', systemOrRoleNote: '', temperature: '' };
-    case 'promptNode':
-      return { label, template: '', variablesHint: '' };
-    case 'chainNode':
-      return { label, description: '', orderingNote: '' };
-    case 'memoryNode':
-      return { label, strategy: 'buffer', description: '' };
+      return { label, systemPrompt: '' };
+    case 'triggerNode':
+      return { label, mode: 'incoming_mail' };
+    case 'emailNode':
+      return { label, sendTo: '' };
     default: {
       const _exhaustive: never = type;
       return _exhaustive;
@@ -120,13 +139,43 @@ export function ensureLangchainNodeData<T extends LangchainNodeLike>(node: T): T
   const base = defaultDataForLangchainNodeType(t);
   const raw = (node.data || {}) as Record<string, unknown>;
   const merged = { ...base, ...raw } as LangchainNodeDataByType[typeof t];
-  if (t === 'memoryNode') {
-    const s = raw.strategy;
-    if (s === 'buffer' || s === 'summary' || s === 'other') {
-      (merged as LangchainMemoryNodeData).strategy = s;
+
+  if (t === 'llmNode') {
+    const llm = merged as LangchainLlmNodeData;
+    if (!String(llm.systemPrompt ?? '').trim() && typeof raw.systemOrRoleNote === 'string') {
+      llm.systemPrompt = raw.systemOrRoleNote;
     }
   }
+
+  if (t === 'triggerNode') {
+    const trigger = merged as LangchainTriggerNodeData;
+    if (!isTriggerMode(trigger.mode)) {
+      trigger.mode = 'incoming_mail';
+    }
+  }
+
   return { ...node, data: merged };
+}
+
+function normalizeLegacyNodeForFlow(node: Node, type: string): Node {
+  const raw =
+    node.data !== null && typeof node.data === 'object'
+      ? (node.data as Record<string, unknown>)
+      : {};
+
+  const baseLabel =
+    typeof raw.label === 'string' && raw.label.trim() ? String(raw.label) : type;
+  const prefix = LEGACY_TYPE_PREFIX[type] ?? 'Legacy';
+  const systemPrompt = legacyTextFromRaw(type, raw);
+
+  return ensureLangchainNodeData({
+    ...node,
+    type: 'llmNode',
+    data: {
+      label: `[${prefix}] ${baseLabel}`,
+      systemPrompt,
+    },
+  });
 }
 
 /**
@@ -135,29 +184,18 @@ export function ensureLangchainNodeData<T extends LangchainNodeLike>(node: T): T
  * otherwise skip `ensureLangchainNodeData` and crash with "Component is not a function".
  */
 export function normalizeLangchainNodeForFlow(node: Node): Node {
+  const type = node.type ?? 'unset';
+
+  if (LEGACY_NODE_TYPES.has(type)) {
+    return normalizeLegacyNodeForFlow(node, type);
+  }
+
   const merged = ensureLangchainNodeData(node);
   if (isLangchainNodeType(merged.type)) {
     return merged;
   }
-  const stray = merged.type ?? 'unset';
-  const raw =
-    merged.data !== null && typeof merged.data === 'object'
-      ? (merged.data as Record<string, unknown>)
-      : {};
 
-  const baseLabel =
-    typeof raw.label === 'string' && raw.label.trim() ? String(raw.label) : DEFAULT_LABELS.chainNode;
-
-  return ensureLangchainNodeData({
-    ...merged,
-    type: 'chainNode',
-    data: {
-      ...raw,
-      label: `${baseLabel} (${String(stray)})`,
-      description: typeof raw.description === 'string' ? raw.description : '',
-      orderingNote: typeof raw.orderingNote === 'string' ? raw.orderingNote : '',
-    },
-  });
+  return normalizeLegacyNodeForFlow(merged, String(type));
 }
 
 export function parsePipelineJson(text: string | null | undefined): { nodes: Node[]; edges: Edge[] } {
@@ -184,7 +222,9 @@ export function parsePipelineJson(text: string | null | undefined): { nodes: Nod
     }
 
     const nodes = (nodesRaw as Node[]).map(normalizeLangchainNodeForFlow);
-    const edges = Array.isArray(edgesRaw) ? (edgesRaw as Edge[]) : [];
+    const edges = Array.isArray(edgesRaw)
+      ? (edgesRaw as Edge[]).map((e) => ({ ...e, type: e.type ?? 'deletable' }))
+      : [];
     return { nodes, edges };
   } catch {
     return { nodes: [], edges: [] };
@@ -200,17 +240,16 @@ export function serializePipeline(nodes: Node[], edges: Edge[]): string {
   return JSON.stringify(envelope);
 }
 
-/** When true, submit/save requires non-empty template on prompt nodes and model on LLM nodes. */
-export const LANGCHAIN_STRICT_FIELD_VALIDATION = false;
-
-export function hasPathFromInputToOutput(nodes: Node[], edges: Edge[]): boolean {
-  const inputIds = new Set(
-    nodes.filter((n) => n.type === 'inputNode').map((n) => n.id)
+export function hasPathFromStartToOutput(nodes: Node[], edges: Edge[]): boolean {
+  const startIds = new Set(
+    nodes
+      .filter((n) => n.type === 'inputNode' || n.type === 'triggerNode')
+      .map((n) => n.id)
   );
   const outputIds = new Set(
     nodes.filter((n) => n.type === 'outputNode').map((n) => n.id)
   );
-  if (inputIds.size === 0 || outputIds.size === 0) return false;
+  if (startIds.size === 0 || outputIds.size === 0) return false;
 
   const adj = new Map<string, string[]>();
   for (const e of edges) {
@@ -220,7 +259,7 @@ export function hasPathFromInputToOutput(nodes: Node[], edges: Edge[]): boolean 
     else adj.set(e.source, [e.target]);
   }
 
-  for (const start of inputIds) {
+  for (const start of startIds) {
     const seen = new Set<string>([start]);
     const q = [start];
     while (q.length) {
@@ -237,18 +276,20 @@ export function hasPathFromInputToOutput(nodes: Node[], edges: Edge[]): boolean 
   return false;
 }
 
+/** @deprecated Use hasPathFromStartToOutput */
+export function hasPathFromInputToOutput(nodes: Node[], edges: Edge[]): boolean {
+  return hasPathFromStartToOutput(nodes, edges);
+}
+
 export type LangchainPipelineValidationIssue =
   | 'emptyGraph'
-  | 'noInputToOutputPath'
-  | 'promptTemplateRequired'
-  | 'llmModelRequired';
+  | 'noStartToOutputPath'
+  | 'emailSendToRequired';
 
 export function validateLangchainPipeline(
   nodes: Node[],
-  edges: Edge[],
-  options: { strictFields?: boolean } = {}
+  edges: Edge[]
 ): { ok: boolean; issues: LangchainPipelineValidationIssue[] } {
-  const strict = options.strictFields ?? LANGCHAIN_STRICT_FIELD_VALIDATION;
   const issues: LangchainPipelineValidationIssue[] = [];
 
   if (nodes.length === 0) {
@@ -256,20 +297,14 @@ export function validateLangchainPipeline(
     return { ok: false, issues };
   }
 
-  if (!hasPathFromInputToOutput(nodes, edges)) {
-    issues.push('noInputToOutputPath');
+  if (!hasPathFromStartToOutput(nodes, edges)) {
+    issues.push('noStartToOutputPath');
   }
 
-  if (strict) {
-    for (const n of nodes) {
-      if (n.type === 'promptNode') {
-        const d = n.data as LangchainPromptNodeData;
-        if (!String(d?.template ?? '').trim()) issues.push('promptTemplateRequired');
-      }
-      if (n.type === 'llmNode') {
-        const d = n.data as LangchainLlmNodeData;
-        if (!String(d?.model ?? '').trim()) issues.push('llmModelRequired');
-      }
+  for (const n of nodes) {
+    if (n.type === 'emailNode') {
+      const d = n.data as LangchainEmailNodeData;
+      if (!String(d?.sendTo ?? '').trim()) issues.push('emailSendToRequired');
     }
   }
 

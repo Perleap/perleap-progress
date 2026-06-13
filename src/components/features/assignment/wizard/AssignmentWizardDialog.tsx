@@ -30,7 +30,12 @@ import {
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { testKeys } from '@/hooks/queries/useTestQueries';
 import { WizardStepIndicator, type WizardStep } from '@/components/features/syllabus/WizardStepIndicator';
-import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
+import { normalizeTestQuestionDraft, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
+import {
+  deriveAllowMultipleSelections,
+  legacySingleOptionId,
+  parseOptionIds,
+} from '@/lib/testMcq';
 import { AssignmentBasicsStep } from './steps/AssignmentBasicsStep';
 import { AssignmentFormatStep } from './steps/AssignmentFormatStep';
 import { AssignmentCourseReleaseStep } from './steps/AssignmentCourseReleaseStep';
@@ -93,16 +98,38 @@ function dbRowToTestDraft(row: {
   question_type: string;
   options: unknown;
   correct_option_id: string | null;
+  correct_option_ids?: unknown;
+  allow_multiple_selections?: boolean | null;
   order_index: number;
 }): TestQuestionDraft {
   const opts = row.options as { id: string; text: string }[] | null;
+  const correct_option_ids = parseOptionIds(row.correct_option_ids, row.correct_option_id);
   return {
     id: row.id,
     question_text: row.question_text,
     question_type: row.question_type as 'multiple_choice' | 'open_ended',
     options: Array.isArray(opts) ? opts : [],
-    correct_option_id: row.correct_option_id || '',
+    correct_option_ids,
+    allow_multiple_selections:
+      row.allow_multiple_selections ?? deriveAllowMultipleSelections(correct_option_ids),
     order_index: row.order_index,
+  };
+}
+
+function testQuestionToInsertRow(q: TestQuestionDraft, assignmentId: string) {
+  const correct_option_ids =
+    q.question_type === 'multiple_choice' ? q.correct_option_ids : [];
+  return {
+    assignment_id: assignmentId,
+    question_text: q.question_text,
+    question_type: q.question_type,
+    options: q.question_type === 'multiple_choice' ? q.options : null,
+    correct_option_ids,
+    allow_multiple_selections:
+      q.question_type === 'multiple_choice' ? q.allow_multiple_selections : false,
+    correct_option_id:
+      q.question_type === 'multiple_choice' ? legacySingleOptionId(correct_option_ids) : null,
+    order_index: q.order_index,
   };
 }
 
@@ -284,7 +311,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           return merged;
         });
       }
-      if (Array.isArray(draft.testQuestions)) setTestQuestions(draft.testQuestions);
+      if (Array.isArray(draft.testQuestions)) {
+        setTestQuestions(draft.testQuestions.map((q) => normalizeTestQuestionDraft(q)));
+      }
       if (typeof draft.gradingCategoryId === 'string') setGradingCategoryId(draft.gradingCategoryId);
       if (Array.isArray(draft.linkedModuleActivityIds)) setLinkedModuleActivityIds(draft.linkedModuleActivityIds);
       if (draft.aiMetadata && typeof draft.aiMetadata === 'object') setAiMetadata(draft.aiMetadata);
@@ -315,7 +344,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           return merged;
         });
       }
-      if (Array.isArray(draft.testQuestions)) setTestQuestions(draft.testQuestions);
+      if (Array.isArray(draft.testQuestions)) {
+        setTestQuestions(draft.testQuestions.map((q) => normalizeTestQuestionDraft(q)));
+      }
       if (typeof draft.gradingCategoryId === 'string') setGradingCategoryId(draft.gradingCategoryId);
       if (Array.isArray(draft.linkedModuleActivityIds)) setLinkedModuleActivityIds(draft.linkedModuleActivityIds);
       if (draft.aiMetadata && typeof draft.aiMetadata === 'object') setAiMetadata(draft.aiMetadata);
@@ -527,15 +558,19 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       const { data } = await supabase
         .from('assignments')
         .select(
-          'hard_skills, hard_skill_domain, materials, auto_publish_ai_feedback, use_course_memory, syllabus_section_id, grading_category_id, student_facing_task',
+          'hard_skills, hard_skill_domain, materials, enable_ai_feedback, auto_publish_ai_feedback, use_course_memory, show_task_understanding_prompt, syllabus_section_id, grading_category_id, student_facing_task',
         )
         .eq('id', assignment.id)
         .single();
 
       setFormData((prev) => ({
         ...prev,
+        enable_ai_feedback: (data as { enable_ai_feedback?: boolean })?.enable_ai_feedback !== false,
         auto_publish_ai_feedback: data?.auto_publish_ai_feedback !== false,
         use_course_memory: (data as { use_course_memory?: boolean }).use_course_memory !== false,
+        show_task_understanding_prompt:
+          (data as { show_task_understanding_prompt?: boolean }).show_task_understanding_prompt !==
+          false,
         student_facing_task: (data as { student_facing_task?: string | null })?.student_facing_task?.trim() || prev.student_facing_task,
       }));
       setSyllabusSectionId((data as { syllabus_section_id?: string | null })?.syllabus_section_id || '');
@@ -989,8 +1024,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           materials: (formData.materials ?? null) as unknown as Json | null,
           target_dimensions: formData.target_dimensions as unknown as Json,
           personalization_flag: formData.personalization_flag,
+          enable_ai_feedback: formData.enable_ai_feedback,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
           use_course_memory: formData.use_course_memory,
+          show_task_understanding_prompt: formData.show_task_understanding_prompt,
           assigned_student_id: assignedStudentId || null,
           syllabus_section_id: syllabusSectionId || null,
           grading_category_id: gradingCategoryId || null,
@@ -1026,14 +1063,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         }
 
         if (formData.type === 'test' && testQuestions.length > 0 && assignmentRow) {
-          const questionsToInsert = testQuestions.map((q) => ({
-            assignment_id: assignmentRow.id,
-            question_text: q.question_text,
-            question_type: q.question_type,
-            options: q.question_type === 'multiple_choice' ? q.options : null,
-            correct_option_id: q.question_type === 'multiple_choice' ? q.correct_option_id : null,
-            order_index: q.order_index,
-          }));
+          const questionsToInsert = testQuestions.map((q) =>
+            testQuestionToInsertRow(q, assignmentRow.id),
+          );
           const { error: questionsError } = await supabase.from('test_questions').insert(questionsToInsert);
           if (questionsError) console.error('Error inserting test questions:', questionsError);
         }
@@ -1147,8 +1179,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           hard_skills: JSON.stringify(formData.hard_skills),
           hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
           materials: (formData.materials ?? null) as unknown as Json | null,
+          enable_ai_feedback: formData.enable_ai_feedback,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
           use_course_memory: formData.use_course_memory,
+          show_task_understanding_prompt: formData.show_task_understanding_prompt,
           syllabus_section_id: syllabusSectionId || null,
           grading_category_id: gradingCategoryId || null,
         };
@@ -1195,18 +1229,13 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           const { error: delErr } = await supabase.from('test_questions').delete().eq('assignment_id', assignment.id);
           if (delErr) console.error(delErr);
           if (testQuestions.length > 0) {
-            const questionsToInsert = testQuestions.map((q) => ({
-              assignment_id: assignment.id,
-              question_text: q.question_text,
-              question_type: q.question_type,
-              options: q.question_type === 'multiple_choice' ? q.options : null,
-              correct_option_id: q.question_type === 'multiple_choice' ? q.correct_option_id : null,
-              order_index: q.order_index,
-            }));
+            const questionsToInsert = testQuestions.map((q) =>
+              testQuestionToInsertRow(q, assignment.id),
+            );
             const { error: insErr } = await supabase.from('test_questions').insert(questionsToInsert);
             if (insErr) console.error(insErr);
           }
-          await queryClient.invalidateQueries({ queryKey: testKeys.questions(assignment.id) });
+          await queryClient.invalidateQueries({ queryKey: [...testKeys.all, 'questions', assignment.id] });
         }
 
         if (wasPublished) {

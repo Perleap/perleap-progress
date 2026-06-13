@@ -54,6 +54,10 @@ export interface CourseResumeProgressCardProps {
   percent: number;
   headlinePrefix: string;
   headlineHighlight: string | null;
+  /** Course unit title — shown on its own line in smaller text when resuming. */
+  headlineUnitTitle?: string | null;
+  /** Activity or assignment name — shown on its own line below the unit title. */
+  headlineStepTitle?: string | null;
   buttonLabel: string;
   onContinue: () => void;
   isRTL: boolean;
@@ -68,6 +72,8 @@ export const CourseResumeProgressCard = ({
   percent,
   headlinePrefix,
   headlineHighlight,
+  headlineUnitTitle = null,
+  headlineStepTitle = null,
   buttonLabel,
   onContinue,
   isRTL,
@@ -75,6 +81,9 @@ export const CourseResumeProgressCard = ({
   className,
   buttonClassName,
 }: CourseResumeProgressCardProps) => {
+  const useSplitHeadline = Boolean(headlineUnitTitle?.trim() || headlineStepTitle?.trim());
+  const textAlign = isRTL ? 'text-right' : 'text-left';
+
   return (
     <Card
       role="region"
@@ -95,20 +104,36 @@ export const CourseResumeProgressCard = ({
         >
           <ProgressDonut percent={percent} />
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <p
-              className={cn(
-                'text-base leading-snug text-foreground sm:text-lg sm:leading-snug',
-                isRTL ? 'text-right' : 'text-left'
-              )}
-            >
-              <span className="font-normal">{headlinePrefix}</span>
-              {headlineHighlight ? (
-                <>
-                  {' '}
-                  <span className="font-bold">{headlineHighlight}</span>
-                </>
-              ) : null}
-            </p>
+            {useSplitHeadline ? (
+              <div className={cn('flex flex-col gap-0.5', textAlign)}>
+                <p className="text-base leading-snug text-foreground sm:text-lg sm:leading-snug">
+                  <span className="font-normal">{headlinePrefix}</span>
+                </p>
+                {headlineUnitTitle?.trim() ? (
+                  <p className="text-sm leading-snug text-muted-foreground">{headlineUnitTitle.trim()}</p>
+                ) : null}
+                {headlineStepTitle?.trim() ? (
+                  <p className="text-base font-bold leading-snug text-foreground sm:text-lg sm:leading-snug">
+                    {headlineStepTitle.trim()}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p
+                className={cn(
+                  'text-base leading-snug text-foreground sm:text-lg sm:leading-snug',
+                  textAlign,
+                )}
+              >
+                <span className="font-normal">{headlinePrefix}</span>
+                {headlineHighlight ? (
+                  <>
+                    {' '}
+                    <span className="font-bold">{headlineHighlight}</span>
+                  </>
+                ) : null}
+              </p>
+            )}
             <Button
               type="button"
               size="lg"

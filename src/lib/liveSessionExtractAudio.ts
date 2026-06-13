@@ -28,12 +28,25 @@ export const WHISPER_MAX_CHUNK_BYTES = 24 * 1024 * 1024;
 
 const AUDIO_BITRATE = '64k';
 
-const CHUNK_SECONDS = Math.floor((WHISPER_MAX_CHUNK_BYTES * 8) / (64 * 1000));
+/** Max seconds per chunk — keeps each Whisper call within edge gateway timeouts. */
+const CHUNK_MAX_SECONDS = 600;
+
+const CHUNK_SECONDS = Math.min(
+  CHUNK_MAX_SECONDS,
+  Math.floor((WHISPER_MAX_CHUNK_BYTES * 8) / (64 * 1000)),
+);
 
 export type ExtractProgress = {
   phase: 'loading' | 'writing' | 'converting' | 'chunking';
 
   ratio: number;
+};
+
+export type PreparedAudioUpload = {
+  blobs: Blob[];
+  durationSeconds: number;
+  /** Full recording for playback in the UI (Whisper uses `blobs` chunks). */
+  playbackBlob: Blob;
 };
 
 let ffmpegInstance: FFmpeg | null = null;
@@ -213,6 +226,33 @@ async function splitAudioIfNeeded(
 
  */
 
+function releaseAudioProbeElement(media: HTMLMediaElement, objectUrl: string): void {
+  media.onloadedmetadata = null;
+  media.onerror = null;
+  media.removeAttribute('src');
+  media.load();
+  URL.revokeObjectURL(objectUrl);
+}
+
+export async function probeAudioFileDuration(file: File): Promise<number> {
+  const url = URL.createObjectURL(file);
+  const audio = document.createElement('audio');
+  audio.preload = 'metadata';
+
+  return new Promise((resolve) => {
+    audio.onloadedmetadata = () => {
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      releaseAudioProbeElement(audio, url);
+      resolve(duration);
+    };
+    audio.onerror = () => {
+      releaseAudioProbeElement(audio, url);
+      resolve(0);
+    };
+    audio.src = url;
+  });
+}
+
 function releaseVideoProbeElement(video: HTMLVideoElement, objectUrl: string): void {
   video.onloadedmetadata = null;
   video.onerror = null;
@@ -286,7 +326,7 @@ export async function extractAudioFromVideo(
   file: File,
   onProgress?: (p: ExtractProgress) => void,
   knownDurationSeconds?: number
-): Promise<{ blobs: Blob[]; durationSeconds: number }> {
+): Promise<PreparedAudioUpload> {
   const ffmpeg = await getFfmpeg(onProgress);
 
   const inputName = `input.${file.name.split('.').pop() || 'mp4'}`;
@@ -310,9 +350,11 @@ export async function extractAudioFromVideo(
 
   await ffmpeg.deleteFile(inputName);
 
+  const playbackData = await ffmpeg.readFile(outputName);
+  const playbackBlob = blobFromFfmpegFile(playbackData as Uint8Array);
   const blobs = await splitAudioIfNeeded(ffmpeg, outputName, onProgress);
 
-  return { blobs, durationSeconds };
+  return { blobs, durationSeconds, playbackBlob };
 }
 
 /**
@@ -326,13 +368,15 @@ export async function prepareAudioBlobsForUpload(
   mode: 'video' | 'audio',
   onProgress?: (p: ExtractProgress) => void,
   options?: { knownDurationSeconds?: number }
-): Promise<{ blobs: Blob[]; durationSeconds: number }> {
+): Promise<PreparedAudioUpload> {
   if (mode === 'video') {
     return extractAudioFromVideo(file, onProgress, options?.knownDurationSeconds);
   }
 
+  const durationSeconds = await probeAudioFileDuration(file);
+
   if (file.size <= WHISPER_MAX_CHUNK_BYTES) {
-    return { blobs: [file], durationSeconds: 0 };
+    return { blobs: [file], durationSeconds, playbackBlob: file };
   }
 
   const ffmpeg = await getFfmpeg(onProgress);
@@ -345,7 +389,17 @@ export async function prepareAudioBlobsForUpload(
 
   onProgress?.({ phase: 'writing', ratio: 1 });
 
-  const blobs = await splitAudioIfNeeded(ffmpeg, inputName, onProgress);
+  onProgress?.({ phase: 'converting', ratio: 0 });
 
-  return { blobs, durationSeconds: 0 };
+  const outputName = 'audio.m4a';
+
+  await ffmpeg.exec(['-i', inputName, '-vn', '-ac', '1', '-b:a', AUDIO_BITRATE, outputName]);
+
+  await ffmpeg.deleteFile(inputName);
+
+  const playbackData = await ffmpeg.readFile(outputName);
+  const playbackBlob = blobFromFfmpegFile(playbackData as Uint8Array);
+  const blobs = await splitAudioIfNeeded(ffmpeg, outputName, onProgress);
+
+  return { blobs, durationSeconds, playbackBlob };
 }

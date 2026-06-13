@@ -14,6 +14,7 @@ import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import { defaultAutoPublishForAssignmentType } from '@/lib/artifactAssignmentTypes';
 
 interface AssignmentFormatStepProps {
   formData: AssignmentWizardFormData;
@@ -57,7 +58,13 @@ export function AssignmentFormatStep({
               </Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => onFormChange((prev) => ({ ...prev, type: value }))}
+                onValueChange={(value) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    type: value,
+                    auto_publish_ai_feedback: defaultAutoPublishForAssignmentType(value),
+                  }))
+                }
               >
                 <SelectTrigger
                   id="wiz-type"

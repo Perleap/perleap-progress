@@ -16,6 +16,7 @@ import {
   rankPriorSubmissionCandidates,
   type PriorSubmissionCandidate,
 } from './courseRecall.ts';
+import { optionLabelsForIds, parseOptionIds } from './testMcq.ts';
 
 /**
  * Resolve elevated API key: prefer hosted `SUPABASE_SECRET_KEYS` (sb_secret_...)
@@ -917,7 +918,7 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
 
   const { data: testRows, error: eTr } = await supabase
     .from('test_responses')
-    .select('question_id, selected_option_id, text_answer')
+    .select('question_id, selected_option_id, selected_option_ids, text_answer')
     .eq('submission_id', priorSubmissionId);
 
   if (!eTr && testRows?.length) {
@@ -941,20 +942,29 @@ export const getValidatedPriorAssignmentChatExcerpt = async (
         testLines.push(`${qtext}\nAnswer: ${stripChatContentForPriorContext(ta)}`);
         continue;
       }
-      const optIdRaw = tr.selected_option_id;
-      const optId = optIdRaw != null && optIdRaw !== '' ? String(optIdRaw).trim() : '';
-      if (!optId) continue;
+      const selectedIds = parseOptionIds(tr.selected_option_ids, tr.selected_option_id);
+      if (selectedIds.length === 0) continue;
 
-      let label = '';
+      let labels: string[] = [];
       if (q?.options && Array.isArray(q.options)) {
         const opts = q.options as { id?: unknown; text?: unknown }[];
-        const opt = opts.find((o) => String(o?.id ?? '') === optId);
-        label = typeof opt?.text === 'string' ? opt.text.trim() : '';
+        const normalizedOptions = opts.map((o) => ({
+          id: String(o?.id ?? ''),
+          text: typeof o?.text === 'string' ? o.text : String(o?.id ?? ''),
+        }));
+        labels = optionLabelsForIds(normalizedOptions, selectedIds).map((label) =>
+          stripChatContentForPriorContext(label),
+        );
       }
-      if (label) {
-        testLines.push(`${qtext}\nSelected: ${stripChatContentForPriorContext(label)}`);
+
+      if (labels.length > 0) {
+        testLines.push(
+          `${qtext}\nSelected: ${labels.length > 1 ? labels.join('; ') : labels[0]}`,
+        );
       } else {
-        testLines.push(`${qtext}\nSelected: (multiple-choice; stored option id: ${optId})`);
+        testLines.push(
+          `${qtext}\nSelected: (multiple-choice; stored option ids: ${selectedIds.join(', ')})`,
+        );
       }
     }
 

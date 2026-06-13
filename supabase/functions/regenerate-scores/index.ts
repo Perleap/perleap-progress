@@ -1,16 +1,25 @@
 /**
- * Regenerate Scores - OpenAI Integration
- * Refactored to use shared utilities and database prompts
+ * Regenerate Scores - uses shared rubric-based evaluation pipeline
  */
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createSupabaseClient } from '../shared/supabase.ts';
-import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
-import { generateScoresPrompt, generateScoreExplanationsPrompt } from '../_shared/prompts.ts';
+import 'https://deno.land/x/xhr@0.1.0/mod.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import {
+  createSupabaseClient,
+  getAssignmentModuleActivityContextText,
+  getStudentName,
+  getTeacherNameByAssignment,
+} from '../shared/supabase.ts';
+import { handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { parseHardSkillsFromDb } from '../_shared/hardSkillsFormat.ts';
+import {
+  buildStudentWorkContext,
+  detectLanguageFromText,
+} from '../_shared/evaluationContext.ts';
+import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,192 +37,105 @@ serve(async (req) => {
 
     const supabase = createSupabaseClient();
 
-    // Get conversation context - get the most recent one if multiple exist
-    const { data: conversations, error: convError } = await supabase
-      .from('assignment_conversations')
-      .select('*, submissions!inner(student_id)')
-      .eq('submission_id', submissionId)
-      .order('updated_at', { ascending: false })
-      .limit(1);
-
-    if (convError) {
-      logError('Error fetching conversation', convError);
-      throw convError;
-    }
-
-    if (!conversations || conversations.length === 0) {
-      throw new Error('No conversation found for this submission.');
-    }
-
-    const conversation = conversations[0];
-    const studentId = (conversation.submissions as any).student_id;
-
-    // Get classroom_id from the submission
-    const { data: submissionData } = await supabase
+    const { data: submissionData, error: subErr } = await supabase
       .from('submissions')
-      .select('assignment_id')
+      .select('student_id, assignment_id')
       .eq('id', submissionId)
       .single();
 
+    if (subErr || !submissionData) {
+      throw new Error('Submission not found.');
+    }
+
+    const studentId = submissionData.student_id;
+    const assignmentId = submissionData.assignment_id;
+
     const { data: assignmentData } = await supabase
       .from('assignments')
-      .select('classroom_id')
-      .eq('id', submissionData?.assignment_id)
+      .select('classroom_id, title, instructions, hard_skills, hard_skill_domain, type')
+      .eq('id', assignmentId)
       .single();
 
     const classroomId = assignmentData?.classroom_id;
+    const assignmentType = assignmentData?.type;
 
-    const conversationText = conversation.messages
-      .map((msg: any) => `${msg.role === 'user' ? 'Student' : 'Agent'}: ${msg.content}`)
-      .join('\n\n');
+    const [workContext, moduleActivityContextText, studentName, teacherName] = await Promise.all([
+      buildStudentWorkContext(supabase, submissionId, assignmentId, assignmentType),
+      getAssignmentModuleActivityContextText(assignmentId),
+      getStudentName(studentId),
+      getTeacherNameByAssignment(assignmentId),
+    ]);
 
-    // Detect language from conversation content (check for Hebrew characters)
-    const hebrewPattern = /[\u0590-\u05FF]/;
-    const detectedLanguage = hebrewPattern.test(conversationText) ? 'he' : 'en';
+    const detectedLanguage = detectLanguageFromText(workContext.studentWorkText);
     logInfo('Detected language', { detectedLanguage });
 
-    // Generate scores prompt from database
-    const scoresPrompt = await generateScoresPrompt('the student', detectedLanguage);
-    
+    const skillPairs = parseHardSkillsFromDb(
+      assignmentData?.hard_skills,
+      assignmentData?.hard_skill_domain,
+    );
+
     const opikThreadId = typeof submissionId === 'string' && submissionId
       ? submissionId
       : crypto.randomUUID();
-    const conversationChars = conversationText.length;
 
-    // Call OpenAI for 5D scores analysis
-    const scoresTraceStart = Date.now();
-    const { content: scoresText, usage: scoresUsage } = await createChatCompletion(
-      scoresPrompt,
-      [{ role: 'user', content: conversationText }],
-      0.5,
-      500,
-      'smart'
-    ) as { content: string; usage?: unknown };
-    const scoresTraceEnd = Date.now();
-    void queueOpikTrace({
-      traceName: 'regenerate-scores.scores',
-      tags: ['regenerate-scores', 'edge-function'],
-      threadId: opikThreadId,
-      clientTraceId: uuidv7(),
-      traceStartMs: scoresTraceStart,
-      traceEndMs: scoresTraceEnd,
-      input: {
-        detected_language: detectedLanguage,
-        conversation_chars: conversationChars,
+    const evaluation = await runEvaluation(
+      {
+        language: detectedLanguage,
+        studentName,
+        teacherName,
+        assignmentTitle: assignmentData?.title || '',
+        assignmentType: assignmentType || 'questions',
+        assignmentInstructions: assignmentData?.instructions || '',
+        moduleActivityContextText,
+        studentWorkText: workContext.studentWorkText,
+        mode: 'student_work',
+        skillPairs,
+        hardSkillDomain: assignmentData?.hard_skill_domain,
+        seed: seedFromSubmissionId(submissionId),
       },
-      output: { raw_json: scoresText },
-      openaiUsage: scoresUsage,
-      llmModel: resolveChatModel('smart'),
-      metadata: {
-        edge_function: 'regenerate-scores',
-        model_tier: 'smart',
-        submission_id: submissionId,
-        classroom_id: classroomId,
-        student_id: studentId,
+      {
+        onMainTrace: (t) => {
+          void queueOpikTrace({
+            traceName: 'regenerate-scores.main',
+            tags: ['regenerate-scores', 'edge-function'],
+            threadId: opikThreadId,
+            clientTraceId: uuidv7(),
+            traceStartMs: t.traceStartMs,
+            traceEndMs: t.traceEndMs,
+            input: {
+              ...t.input,
+              detected_language: detectedLanguage,
+              conversation_chars: workContext.studentWorkText.length,
+            },
+            output: t.output,
+            openaiUsage: t.usage,
+            llmModel: t.model,
+            metadata: {
+              edge_function: 'regenerate-scores',
+              model_tier: 'smart',
+              submission_id: submissionId,
+              assignment_id: assignmentId,
+              classroom_id: classroomId,
+              student_id: studentId,
+            },
+          }).catch(() => undefined);
+        },
       },
-    }).catch(() => undefined);
-
-    // Parse scores
-    let scores = { vision: 5, values: 5, thinking: 5, connection: 5, action: 5 };
-    try {
-      scores = JSON.parse(scoresText.replace(/```json\n?|\n?```/g, '').trim());
-    } catch (e) {
-      logError('Failed to parse scores', e);
-    }
-
-    // Generate explanations for scores using shared prompt
-    const scoresContext = `- Vision: ${scores.vision}/10
-- Values: ${scores.values}/10  
-- Thinking: ${scores.thinking}/10
-- Connection: ${scores.connection}/10
-- Action: ${scores.action}/10`;
-
-    const explanationsPrompt = await generateScoreExplanationsPrompt(
-      conversationText,
-      scoresContext,
-      detectedLanguage
     );
 
-    const explanationsTraceStart = Date.now();
-    const { content: explanationsText, usage: explanationsUsage } = await createChatCompletion(
-      explanationsPrompt,
-      [],
-      0.6,
-      1500, // Increased token limit for Hebrew explanations which can be longer
-      'smart'
-    ) as { content: string; usage?: unknown };
-    const explanationsTraceEnd = Date.now();
-    void queueOpikTrace({
-      traceName: 'regenerate-scores.explanations',
-      tags: ['regenerate-scores', 'edge-function'],
-      threadId: opikThreadId,
-      clientTraceId: uuidv7(),
-      traceStartMs: explanationsTraceStart,
-      traceEndMs: explanationsTraceEnd,
-      input: {
-        detected_language: detectedLanguage,
-        conversation_chars: conversationChars,
-        scores_snapshot: scoresContext,
-      },
-      output: { raw_text: explanationsText },
-      openaiUsage: explanationsUsage,
-      llmModel: resolveChatModel('smart'),
-      metadata: {
-        edge_function: 'regenerate-scores',
-        model_tier: 'smart',
-        submission_id: submissionId,
-        classroom_id: classroomId,
-        student_id: studentId,
-      },
-    }).catch(() => undefined);
+    const scores = evaluation.scores;
+    const scoreExplanations = evaluation.scoreExplanations;
 
-    let scoreExplanations = null;
-    try {
-      // Clean up the response: remove code blocks, normalize whitespace
-      let cleanedText = explanationsText
-        .replace(/```json\n?|\n?```/g, '')
-        .trim();
-      
-      // Log the raw response for debugging
-      logInfo('Raw explanations response length', { length: explanationsText.length });
-      
-      // Try to extract JSON object if there's extra text
-      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanedText = jsonMatch[0];
-      }
-      
-      scoreExplanations = JSON.parse(cleanedText);
-    } catch (e) {
-      logError('Failed to parse score explanations', e);
-      logError('Raw explanations text', { text: explanationsText.substring(0, 500) });
-      // Create a fallback with empty explanations rather than failing
-      scoreExplanations = {
-        vision: '',
-        values: '',
-        thinking: '',
-        connection: '',
-        action: ''
-      };
-    }
+    await supabase.from('five_d_snapshots').delete().eq('submission_id', submissionId);
 
-    // Delete old snapshot for this submission if exists
-    await supabase
-      .from('five_d_snapshots')
-      .delete()
-      .eq('submission_id', submissionId);
-
-    // Save 5D snapshot with explanations
-    const { error: snapshotError } = await supabase
-      .from('five_d_snapshots')
-      .insert({
-        user_id: studentId,
-        scores,
-        score_explanations: scoreExplanations,
-        source: 'assignment',
-        submission_id: submissionId,
-        classroom_id: classroomId,
-      });
+    const { error: snapshotError } = await supabase.from('five_d_snapshots').insert({
+      user_id: studentId,
+      scores,
+      score_explanations: scoreExplanations,
+      source: 'assignment',
+      submission_id: submissionId,
+      classroom_id: classroomId,
+    });
 
     if (snapshotError) {
       logError('Error saving snapshot', snapshotError);

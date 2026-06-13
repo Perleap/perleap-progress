@@ -1,12 +1,18 @@
 /**
  * Transcribe Live Session
- * Pulls extracted audio chunks, transcribes each with Whisper (verbose_json for timestamps),
- * stitches a full transcript, then generates a summary + key-moment timestamps via an LLM.
- * Writes everything back to `live_sessions` and flips status to `ready`.
+ * Processes one audio chunk per request (avoids edge gateway timeouts on long recordings),
+ * then a finalize step builds summary + key-moment timestamps.
  */
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import {
+  buildFallbackKeyMoments,
+  buildSummaryOutline,
+  buildSummaryPrompt,
+  keyMomentsCoverSession,
+  parseKeyMoments,
+} from '../shared/liveSessionSummary.ts';
 import {
   createChatCompletion,
   createVerboseTranscription,
@@ -26,11 +32,109 @@ const corsHeaders = {
 
 const AUDIO_BUCKET = 'live-session-audio';
 
-function formatTime(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return `${m}:${String(rem).padStart(2, '0')}`;
+function isTranscriptionSegment(item: unknown): item is TranscriptionSegment {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    'start' in item &&
+    'end' in item &&
+    'text' in item
+  );
+}
+
+function parseStoredSegments(timestamps: unknown): TranscriptionSegment[] {
+  if (!Array.isArray(timestamps)) return [];
+  return timestamps.filter(isTranscriptionSegment);
+}
+
+async function generateSummaryAndKeyMoments(
+  allSegments: TranscriptionSegment[],
+  transcriptText: string,
+  sessionEnd: number,
+  language: string,
+  liveSessionId: string,
+): Promise<{ summary: string; timestamps: Array<{ time: number; label: string }> }> {
+  const langLabel = language === 'he' ? 'Hebrew' : 'English';
+  const { outline } = buildSummaryOutline(allSegments, sessionEnd);
+  const summaryPrompt = buildSummaryPrompt(langLabel, sessionEnd);
+
+  let summary = '';
+  let timestamps: Array<{ time: number; label: string }> = [];
+
+  const runSummary = async (strictSpread = false) => {
+    const prompt = strictSpread
+      ? `${summaryPrompt}\n\nIMPORTANT: Your previous attempt did not span the full session. Include moments after the midpoint and in the final third of the ${sessionEnd}s recording.`
+      : summaryPrompt;
+
+    const summaryTraceStartMs = Date.now();
+    const summaryResult = (await createChatCompletion(
+      prompt,
+      [{ role: 'user', content: `Timestamped transcript:\n\n${outline}` }],
+      0.4,
+      1500,
+      'smart',
+      false,
+      'json_object',
+    )) as { content: string; usage?: unknown };
+    const summaryTraceEndMs = Date.now();
+    const parsed = JSON.parse(summaryResult.content);
+    const nextSummary = typeof parsed.summary === 'string' ? parsed.summary : '';
+    const nextTimestamps = parseKeyMoments(parsed.timestamps, sessionEnd);
+
+    void queueOpikTrace({
+      traceName: 'transcribe-live-session.summary',
+      tags: ['transcribe-live-session', 'edge-function'],
+      threadId: liveSessionId,
+      clientTraceId: uuidv7(),
+      traceStartMs: summaryTraceStartMs,
+      traceEndMs: summaryTraceEndMs,
+      input: {
+        language,
+        transcript_chars: transcriptText.length,
+        segment_count: allSegments.length,
+        session_end_seconds: sessionEnd,
+        strict_spread: strictSpread,
+      },
+      output: { raw_json: summaryResult.content },
+      openaiUsage: summaryResult.usage,
+      llmModel: resolveChatModel('smart'),
+      metadata: {
+        edge_function: 'transcribe-live-session',
+        model_tier: 'smart',
+        live_session_id: liveSessionId,
+      },
+    }).catch(() => undefined);
+
+    return { summary: nextSummary, timestamps: nextTimestamps };
+  };
+
+  try {
+    const first = await runSummary(false);
+    summary = first.summary;
+    timestamps = first.timestamps;
+
+    if (!keyMomentsCoverSession(timestamps, sessionEnd)) {
+      logInfo('Live session key moments sparse; retrying summary with stricter spread rules');
+      const retry = await runSummary(true);
+      if (retry.timestamps.length > 0) {
+        summary = retry.summary || summary;
+        timestamps = retry.timestamps;
+      }
+    }
+
+    if (!keyMomentsCoverSession(timestamps, sessionEnd)) {
+      logInfo('Using fallback evenly-spread key moments for long session');
+      const fallback = buildFallbackKeyMoments(allSegments, sessionEnd);
+      if (fallback.length > 0) {
+        timestamps = fallback;
+      }
+    }
+  } catch (e) {
+    logError('Live session summary generation failed', e);
+    timestamps = buildFallbackKeyMoments(allSegments, sessionEnd);
+  }
+
+  return { summary, timestamps };
 }
 
 serve(async (req) => {
@@ -38,8 +142,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let liveSessionId: string | undefined;
+
   try {
-    const { liveSessionId, language = 'en' } = await req.json();
+    const body = await req.json();
+    liveSessionId = body.liveSessionId;
+    const language = body.language ?? 'en';
+    const chunkIndex = body.chunkIndex;
+    const finalize = body.finalize === true;
+
     if (!liveSessionId) {
       throw new Error('Missing required field: liveSessionId');
     }
@@ -49,7 +160,7 @@ serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('live_sessions')
-      .select('id, audio_chunk_paths, audio_path')
+      .select('id, audio_chunk_paths, audio_path, transcript, timestamps, duration_seconds')
       .eq('id', liveSessionId)
       .single();
 
@@ -67,118 +178,112 @@ serve(async (req) => {
       throw new Error('Live session has no extracted audio to transcribe');
     }
 
-    await supabase
+    if (finalize) {
+      const allSegments = parseStoredSegments(session.timestamps);
+      const transcriptText = typeof session.transcript === 'string' ? session.transcript : '';
+      const durationSeconds =
+        typeof session.duration_seconds === 'number' ? session.duration_seconds : null;
+
+      const segmentEndMax =
+        allSegments.length > 0 ? Math.max(...allSegments.map((s) => s.end)) : 0;
+      const sessionEnd =
+        durationSeconds && durationSeconds > 0
+          ? Math.max(durationSeconds, segmentEndMax)
+          : segmentEndMax;
+
+      const { summary, timestamps } = await generateSummaryAndKeyMoments(
+        allSegments,
+        transcriptText,
+        sessionEnd,
+        language,
+        liveSessionId,
+      );
+
+      const { error: updateError } = await supabase
+        .from('live_sessions')
+        .update({
+          summary,
+          timestamps,
+          status: 'ready',
+          error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', liveSessionId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      logInfo(`transcribe-live-session finalize completed in ${Date.now() - startTime}ms`);
+
+      return new Response(
+        JSON.stringify({ status: 'ready', segments: allSegments.length, timestamps: timestamps.length }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (typeof chunkIndex !== 'number' || !Number.isInteger(chunkIndex) || chunkIndex < 0) {
+      throw new Error('Missing or invalid chunkIndex (use per-chunk requests + finalize)');
+    }
+
+    if (chunkIndex >= chunkPaths.length) {
+      throw new Error(`chunkIndex ${chunkIndex} out of range (${chunkPaths.length} chunks)`);
+    }
+
+    if (chunkIndex === 0) {
+      await supabase
+        .from('live_sessions')
+        .update({
+          status: 'transcribing',
+          transcript: '',
+          timestamps: [],
+          summary: null,
+          error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', liveSessionId);
+    }
+
+    const chunkPath = chunkPaths[chunkIndex];
+    const { data: blob, error: dlError } = await supabase.storage
+      .from(AUDIO_BUCKET)
+      .download(chunkPath);
+    if (dlError || !blob) {
+      throw new Error(`Failed to download audio chunk ${chunkPath}: ${dlError?.message ?? 'unknown'}`);
+    }
+
+    const { data: current, error: currentError } = await supabase
       .from('live_sessions')
-      .update({ status: 'transcribing', error: null, updated_at: new Date().toISOString() })
-      .eq('id', liveSessionId);
+      .select('transcript, timestamps')
+      .eq('id', liveSessionId)
+      .single();
 
-    // Transcribe each chunk in order, offsetting timestamps by accumulated duration.
-    const allSegments: TranscriptionSegment[] = [];
-    let transcriptText = '';
-    let offset = 0;
-
-    for (const chunkPath of chunkPaths) {
-      const { data: blob, error: dlError } = await supabase.storage
-        .from(AUDIO_BUCKET)
-        .download(chunkPath);
-      if (dlError || !blob) {
-        throw new Error(`Failed to download audio chunk ${chunkPath}: ${dlError?.message ?? 'unknown'}`);
-      }
-
-      const result = await createVerboseTranscription(blob, language);
-      for (const seg of result.segments) {
-        allSegments.push({
-          start: seg.start + offset,
-          end: seg.end + offset,
-          text: seg.text,
-        });
-      }
-      transcriptText += (transcriptText ? '\n' : '') + result.text.trim();
-      offset += result.duration || (result.segments.at(-1)?.end ?? 0);
+    if (currentError || !current) {
+      throw new Error(`Failed to load session state: ${currentError?.message ?? 'unknown'}`);
     }
 
-    // Build a compact, timestamped outline for the summary model.
-    const langLabel = language === 'he' ? 'Hebrew' : 'English';
-    const outline = allSegments
-      .map((s) => `[${formatTime(s.start)}] ${s.text}`)
-      .join('\n')
-      .slice(0, 12000);
+    const existingSegments = parseStoredSegments(current.timestamps);
+    const offset =
+      existingSegments.length > 0 ? Math.max(...existingSegments.map((s) => s.end)) : 0;
 
-    const summaryPrompt = `You are summarizing a recorded teaching session for the teacher who ran it.
-Using the timestamped transcript, produce a concise summary and a list of key moments.
+    const result = await createVerboseTranscription(blob, language);
+    const newSegments: TranscriptionSegment[] = result.segments.map((seg) => ({
+      start: seg.start + offset,
+      end: seg.end + offset,
+      text: seg.text,
+    }));
 
-Respond in ${langLabel} as JSON:
-{
-  "summary": "A concise 4-8 sentence summary of what happened in the session.",
-  "timestamps": [
-    { "time": number_of_seconds_from_start, "label": "Short description of this moment" }
-  ]
-}
-
-Rules:
-- Respond in ${langLabel}.
-- Pick 5-10 meaningful key moments spread across the session.
-- "time" must be an integer number of seconds, taken from the [m:ss] markers in the transcript.
-- Keep labels short (a few words).`;
-
-    let summary = '';
-    let timestamps: Array<{ time: number; label: string }> = [];
-    try {
-      const summaryTraceStartMs = Date.now();
-      const summaryResult = (await createChatCompletion(
-        summaryPrompt,
-        [{ role: 'user', content: `Timestamped transcript:\n\n${outline}` }],
-        0.4,
-        1500,
-        'smart',
-        false,
-        'json_object',
-      )) as { content: string; usage?: unknown };
-      const summaryTraceEndMs = Date.now();
-      const parsed = JSON.parse(summaryResult.content);
-      summary = typeof parsed.summary === 'string' ? parsed.summary : '';
-      if (Array.isArray(parsed.timestamps)) {
-        timestamps = parsed.timestamps
-          .filter((tp: unknown) => tp && typeof tp === 'object')
-          .map((tp: { time?: unknown; label?: unknown }) => ({
-            time: Math.max(0, Math.floor(Number(tp.time) || 0)),
-            label: String(tp.label ?? '').trim(),
-          }))
-          .filter((tp: { label: string }) => tp.label.length > 0);
-      }
-
-      void queueOpikTrace({
-        traceName: 'transcribe-live-session.summary',
-        tags: ['transcribe-live-session', 'edge-function'],
-        threadId: liveSessionId,
-        clientTraceId: uuidv7(),
-        traceStartMs: summaryTraceStartMs,
-        traceEndMs: summaryTraceEndMs,
-        input: {
-          language,
-          transcript_chars: transcriptText.length,
-          segment_count: allSegments.length,
-        },
-        output: { raw_json: summaryResult.content },
-        openaiUsage: summaryResult.usage,
-        llmModel: resolveChatModel('smart'),
-        metadata: {
-          edge_function: 'transcribe-live-session',
-          model_tier: 'smart',
-          live_session_id: liveSessionId,
-        },
-      }).catch(() => undefined);
-    } catch (e) {
-      logError('Live session summary generation failed', e);
-    }
+    const transcriptText =
+      (typeof current.transcript === 'string' ? current.transcript : '') +
+      (current.transcript ? '\n' : '') +
+      result.text.trim();
 
     const { error: updateError } = await supabase
       .from('live_sessions')
       .update({
         transcript: transcriptText,
-        summary,
-        timestamps,
-        status: 'ready',
+        timestamps: [...existingSegments, ...newSegments],
+        status: 'transcribing',
         error: null,
         updated_at: new Date().toISOString(),
       })
@@ -188,27 +293,33 @@ Rules:
       throw updateError;
     }
 
-    logInfo(`transcribe-live-session completed in ${Date.now() - startTime}ms`);
+    logInfo(
+      `transcribe-live-session chunk ${chunkIndex + 1}/${chunkPaths.length} in ${Date.now() - startTime}ms`,
+    );
 
     return new Response(
-      JSON.stringify({ status: 'ready', segments: allSegments.length, timestamps: timestamps.length }),
+      JSON.stringify({
+        status: 'transcribing',
+        chunkIndex,
+        chunkTotal: chunkPaths.length,
+        segments: newSegments.length,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
     const message = handleOpenAIError(error);
     logError('Error in transcribe-live-session', error);
 
-    try {
-      const body = await req.clone().json().catch(() => ({}));
-      if (body?.liveSessionId) {
+    if (liveSessionId) {
+      try {
         const supabase = createSupabaseClient();
         await supabase
           .from('live_sessions')
           .update({ status: 'failed', error: message, updated_at: new Date().toISOString() })
-          .eq('id', body.liveSessionId);
+          .eq('id', liveSessionId);
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
 
     await persistEdgeFunctionLog(

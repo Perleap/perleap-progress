@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import type { Node } from '@xyflow/react';
+import { PanelRightClose } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -14,24 +16,67 @@ import { cn } from '@/lib/utils';
 import {
   ensureLangchainNodeData,
   isLangchainNodeType,
+  TRIGGER_MODES,
   type LangchainNodeType,
-  type LangchainChainNodeData,
   type LangchainInputNodeData,
   type LangchainLlmNodeData,
-  type LangchainMemoryNodeData,
   type LangchainOutputNodeData,
-  type LangchainPromptNodeData,
-  type MemoryStrategy,
+  type LangchainTriggerNodeData,
+  type LangchainEmailNodeData,
+  type TriggerMode,
 } from './langchainNodeData';
 
-const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'prompt' | 'chain' | 'memory'> = {
+const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email'> = {
   inputNode: 'input',
   outputNode: 'output',
   llmNode: 'llm',
-  promptNode: 'prompt',
-  chainNode: 'chain',
-  memoryNode: 'memory',
+  triggerNode: 'trigger',
+  emailNode: 'email',
 };
+
+function InspectorHeader({
+  title,
+  subtitle,
+  isRTL,
+  dir,
+  onToggleCollapse,
+  collapseLabel,
+}: {
+  title: string;
+  subtitle: string | null;
+  isRTL: boolean;
+  dir: 'rtl' | 'ltr';
+  onToggleCollapse?: () => void;
+  collapseLabel: string;
+}) {
+  return (
+    <div className="flex shrink-0 items-start justify-between gap-2 border-b px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <h3 className={cn('text-sm font-semibold', isRTL && 'text-end')} dir={dir}>
+          {title}
+        </h3>
+        {subtitle ? (
+          <p className={cn('text-xs text-muted-foreground mt-0.5', isRTL && 'text-end')} dir={dir}>
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      {onToggleCollapse ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={onToggleCollapse}
+          title={collapseLabel}
+          aria-label={collapseLabel}
+        >
+          <PanelRightClose className="h-4 w-4" />
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 function ReadRow({ label, value, isRTL }: { label: string; value: string; isRTL: boolean }) {
   return (
@@ -55,6 +100,7 @@ export interface LangchainInspectorProps {
   readOnly: boolean;
   isRTL: boolean;
   onPatchData: (nodeId: string, partial: Record<string, unknown>) => void;
+  onToggleCollapse?: () => void;
   className?: string;
 }
 
@@ -63,6 +109,7 @@ export function LangchainInspector({
   readOnly,
   isRTL,
   onPatchData,
+  onToggleCollapse,
   className,
 }: LangchainInspectorProps) {
   const { t } = useTranslation();
@@ -76,11 +123,14 @@ export function LangchainInspector({
           className
         )}
       >
-        <div className="border-b px-3 py-2">
-          <h3 className={cn('text-sm font-semibold', isRTL && 'text-end')}>
-            {t('assignmentDetail.langchain.inspector.title')}
-          </h3>
-        </div>
+        <InspectorHeader
+          title={t('assignmentDetail.langchain.inspector.title')}
+          subtitle={null}
+          isRTL={isRTL}
+          dir={dir}
+          onToggleCollapse={onToggleCollapse}
+          collapseLabel={t('assignmentDetail.langchain.actions.collapseInspector')}
+        />
         <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-muted-foreground">
           {t('assignmentDetail.langchain.inspector.selectNode')}
         </div>
@@ -95,17 +145,16 @@ export function LangchainInspector({
 
   return (
     <div className={cn('flex flex-col border-border bg-card overflow-hidden min-h-0', className)}>
-      <div className="border-b px-3 py-2 shrink-0">
-        <h3 className={cn('text-sm font-semibold', isRTL && 'text-end')} dir={dir}>
-          {title}
-        </h3>
-        <p className={cn('text-xs text-muted-foreground mt-0.5', isRTL && 'text-end')} dir={dir}>
-          {t(`assignmentDetail.langchain.nodes.${NODE_I18N_KEY[n.type]}`)}
-        </p>
-      </div>
+      <InspectorHeader
+        title={title}
+        subtitle={t(`assignmentDetail.langchain.nodes.${NODE_I18N_KEY[n.type]}`)}
+        isRTL={isRTL}
+        dir={dir}
+        onToggleCollapse={onToggleCollapse}
+        collapseLabel={t('assignmentDetail.langchain.actions.collapseInspector')}
+      />
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4 min-h-0" dir={dir}>
-        {/* Common: label/title */}
         {readOnly ? (
           <ReadRow
             label={t('assignmentDetail.langchain.inspector.fields.label')}
@@ -151,16 +200,12 @@ export function LangchainInspector({
           <LlmSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainLlmNodeData} onPatch={patch} t={t} />
         )}
 
-        {n.type === 'promptNode' && (
-          <PromptSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainPromptNodeData} onPatch={patch} t={t} />
+        {n.type === 'triggerNode' && (
+          <TriggerSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainTriggerNodeData} onPatch={patch} t={t} />
         )}
 
-        {n.type === 'chainNode' && (
-          <ChainSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainChainNodeData} onPatch={patch} t={t} />
-        )}
-
-        {n.type === 'memoryNode' && (
-          <MemorySection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainMemoryNodeData} onPatch={patch} t={t} />
+        {n.type === 'emailNode' && (
+          <EmailSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainEmailNodeData} onPatch={patch} t={t} />
         )}
       </div>
     </div>
@@ -212,38 +257,18 @@ function LlmSection({
 }) {
   if (readOnly) {
     return (
-      <>
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.model')} value={data.model} isRTL={isRTL} />
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.systemOrRole')} value={data.systemOrRoleNote} isRTL={isRTL} />
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.temperature')} value={data.temperature} isRTL={isRTL} />
-      </>
+      <ReadRow label={t('assignmentDetail.langchain.inspector.fields.systemPrompt')} value={data.systemPrompt} isRTL={isRTL} />
     );
   }
   return (
-    <>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.model')}</Label>
-        <Input dir={dir} value={data.model} onChange={(e) => onPatch({ model: e.target.value })} />
-      </div>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.systemOrRole')}</Label>
-        <Textarea dir={dir} value={data.systemOrRoleNote} onChange={(e) => onPatch({ systemOrRoleNote: e.target.value })} rows={3} />
-      </div>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.temperature')}</Label>
-        <Input
-          dir={dir}
-          inputMode="decimal"
-          placeholder={t('assignmentDetail.langchain.inspector.placeholders.temperature')}
-          value={data.temperature}
-          onChange={(e) => onPatch({ temperature: e.target.value })}
-        />
-      </div>
-    </>
+    <div className="space-y-1.5">
+      <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.systemPrompt')}</Label>
+      <Textarea dir={dir} value={data.systemPrompt} onChange={(e) => onPatch({ systemPrompt: e.target.value })} rows={5} />
+    </div>
   );
 }
 
-function PromptSection({
+function TriggerSection({
   readOnly,
   isRTL,
   dir,
@@ -254,33 +279,44 @@ function PromptSection({
   readOnly: boolean;
   isRTL: boolean;
   dir: 'rtl' | 'ltr';
-  data: LangchainPromptNodeData;
+  data: LangchainTriggerNodeData;
   onPatch: (p: Record<string, unknown>) => void;
   t: (k: string) => string;
 }) {
   if (readOnly) {
     return (
-      <>
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.template')} value={data.template} isRTL={isRTL} />
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.variablesHint')} value={data.variablesHint} isRTL={isRTL} />
-      </>
+      <ReadRow
+        label={t('assignmentDetail.langchain.inspector.fields.triggerMode')}
+        value={t(`assignmentDetail.langchain.inspector.triggerMode.${data.mode}`)}
+        isRTL={isRTL}
+      />
     );
   }
   return (
-    <>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.template')}</Label>
-        <Textarea dir={dir} value={data.template} onChange={(e) => onPatch({ template: e.target.value })} rows={6} />
-      </div>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.variablesHint')}</Label>
-        <Input dir={dir} value={data.variablesHint} onChange={(e) => onPatch({ variablesHint: e.target.value })} />
-      </div>
-    </>
+    <div className="space-y-1.5">
+      <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.triggerMode')}</Label>
+      <Select
+        value={data.mode}
+        onValueChange={(v) => onPatch({ mode: v as TriggerMode })}
+      >
+        <SelectTrigger className="w-full" dir={dir}>
+          <SelectValue placeholder={t('assignmentDetail.langchain.inspector.fields.triggerMode')}>
+            {(v) => (v ? t(`assignmentDetail.langchain.inspector.triggerMode.${v}`) : null)}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent dir={dir}>
+          {TRIGGER_MODES.map((key) => (
+            <SelectItem key={key} value={key}>
+              {t(`assignmentDetail.langchain.inspector.triggerMode.${key}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
-function ChainSection({
+function EmailSection({
   readOnly,
   isRTL,
   dir,
@@ -291,85 +327,19 @@ function ChainSection({
   readOnly: boolean;
   isRTL: boolean;
   dir: 'rtl' | 'ltr';
-  data: LangchainChainNodeData;
+  data: LangchainEmailNodeData;
   onPatch: (p: Record<string, unknown>) => void;
   t: (k: string) => string;
 }) {
   if (readOnly) {
     return (
-      <>
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.description')} value={data.description} isRTL={isRTL} />
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.orderingNote')} value={data.orderingNote} isRTL={isRTL} />
-      </>
+      <ReadRow label={t('assignmentDetail.langchain.inspector.fields.sendTo')} value={data.sendTo} isRTL={isRTL} />
     );
   }
   return (
-    <>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.description')}</Label>
-        <Textarea dir={dir} value={data.description} onChange={(e) => onPatch({ description: e.target.value })} rows={4} />
-      </div>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.orderingNote')}</Label>
-        <Textarea dir={dir} value={data.orderingNote} onChange={(e) => onPatch({ orderingNote: e.target.value })} rows={3} />
-      </div>
-    </>
-  );
-}
-
-const STRATEGY_KEYS: MemoryStrategy[] = ['buffer', 'summary', 'other'];
-
-function MemorySection({
-  readOnly,
-  isRTL,
-  dir,
-  data,
-  onPatch,
-  t,
-}: {
-  readOnly: boolean;
-  isRTL: boolean;
-  dir: 'rtl' | 'ltr';
-  data: LangchainMemoryNodeData;
-  onPatch: (p: Record<string, unknown>) => void;
-  t: (k: string) => string;
-}) {
-  if (readOnly) {
-    return (
-      <>
-        <ReadRow
-          label={t('assignmentDetail.langchain.inspector.fields.strategy')}
-          value={t(`assignmentDetail.langchain.inspector.strategy.${data.strategy}`)}
-          isRTL={isRTL}
-        />
-        <ReadRow label={t('assignmentDetail.langchain.inspector.fields.description')} value={data.description} isRTL={isRTL} />
-      </>
-    );
-  }
-  return (
-    <>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.strategy')}</Label>
-        <Select
-          value={data.strategy}
-          onValueChange={(v) => onPatch({ strategy: v as MemoryStrategy })}
-        >
-          <SelectTrigger className="w-full" dir={dir}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent dir={dir}>
-            {STRATEGY_KEYS.map((key) => (
-              <SelectItem key={key} value={key}>
-                {t(`assignmentDetail.langchain.inspector.strategy.${key}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.description')}</Label>
-        <Textarea dir={dir} value={data.description} onChange={(e) => onPatch({ description: e.target.value })} rows={4} />
-      </div>
-    </>
+    <div className="space-y-1.5">
+      <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.sendTo')}</Label>
+      <Input dir={dir} value={data.sendTo} onChange={(e) => onPatch({ sendTo: e.target.value })} placeholder={t('assignmentDetail.langchain.inspector.placeholders.sendTo')} />
+    </div>
   );
 }

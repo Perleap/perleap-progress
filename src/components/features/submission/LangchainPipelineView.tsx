@@ -51,14 +51,13 @@ export function LangchainPipelineView({
         </CardContent>
       </Card>
 
-      {!hasFeedback && (
-        <TeacherEvaluationForm
-          submissionId={submissionId}
-          studentId={studentId}
-          assignmentId={assignmentId}
-          onEvaluationComplete={onEvaluationComplete}
-        />
-      )}
+      <TeacherEvaluationForm
+        submissionId={submissionId}
+        studentId={studentId}
+        assignmentId={assignmentId}
+        onEvaluationComplete={onEvaluationComplete}
+        isOverride={hasFeedback}
+      />
     </div>
   );
 }
