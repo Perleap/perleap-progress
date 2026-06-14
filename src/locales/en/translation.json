@@ -797,7 +797,14 @@
       "publicationStatus": "Publication status",
       "publicationStatusHelper": "Draft is hidden from students until you publish. Published assignments are visible to the class.",
       "aiFeedback": "AI feedback",
-      "aiFeedbackHelper": "When on, students can see AI-generated feedback on eligible work."
+      "aiFeedbackHelper": "When on, students can see AI-generated feedback on eligible work.",
+      "showFeedback": "Show feedback to students",
+      "showFeedbackHelper": "When on, students see AI feedback as soon as it is ready. When off, you release feedback manually before they can see it.",
+      "artifactFeedbackHint": "For projects, presentations, and pipelines, this is usually off so you can review submissions before students see feedback."
+    },
+    "taskUnderstandingPrompt": {
+      "label": "Before you start prompt",
+      "helper": "When on, students confirm they understand the task in a short dialog before they begin."
     },
     "wizard": {
       "steps": {
@@ -834,7 +841,9 @@
       "openEnded": "Open Ended",
       "optionPlaceholder": "Option {{index}}",
       "addOption": "Add Option",
+      "markCorrectOptions": "Mark the correct option(s)",
       "correctAnswer": "Correct Answer",
+      "correctAnswers": "Correct answers",
       "selectCorrectAnswer": "Select the correct answer",
       "removeQuestion": "Remove question",
       "removeOption": "Remove option",
@@ -1453,12 +1462,14 @@
       "generatingFeedbackButCompleted": "We couldn't generate AI feedback right now, but your activity was marked complete so you can continue."
     },
     "awaitingTeacherFeedback": "Your teacher has not released the AI feedback yet. You will be notified when it is available.",
+    "assessmentInProgress": "We're preparing your AI feedback. It will appear here when ready.",
     "testTaking": {
       "title": "Test",
       "submitTest": "Submit Test",
       "submitting": "Submitting...",
       "question": "Question {{number}}",
       "selectAnswer": "Select your answer",
+      "selectAllThatApply": "Select all that apply",
       "typeAnswer": "Type your answer here...",
       "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submitting.",
       "allQuestionsRequired": "Please answer all questions before submitting.",

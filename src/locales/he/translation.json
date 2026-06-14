@@ -797,7 +797,14 @@
       "publicationStatus": "סטטוס פרסום",
       "publicationStatusHelper": "טיוטה מוסתרת מהתלמידים עד שתפרסמו. משימה מפורסמת נראית לכיתה.",
       "aiFeedback": "משוב AI",
-      "aiFeedbackHelper": "כשהאפשרות פעילה, תלמידים יראו משוב שנוצר ב-AI על עבודות רלוונטיות."
+      "aiFeedbackHelper": "כשהאפשרות פעילה, תלמידים יראו משוב שנוצר ב-AI על עבודות רלוונטיות.",
+      "showFeedback": "הצגת משוב לתלמידים",
+      "showFeedbackHelper": "כשהאפשרות פעילה, תלמידים רואים משוב AI ברגע שהוא מוכן. כשהיא כבויה, אתם משחררים את המשוב ידנית לפני שהם יכולים לראות אותו.",
+      "artifactFeedbackHint": "בפרויקטים, מצגות וצינורות עבודה, האפשרות בדרך כלל כבויה כדי שתוכלו לעבור על ההגשות לפני שהתלמידים רואים משוב."
+    },
+    "taskUnderstandingPrompt": {
+      "label": "שאלת ״לפני שמתחילים״",
+      "helper": "כשהאפשרות פעילה, התלמידים מאשרים שהם מבינים את המשימה בדיאלוג קצר לפני תחילת העבודה."
     },
     "wizard": {
       "steps": {
@@ -834,7 +841,9 @@
       "openEnded": "שאלה פתוחה",
       "optionPlaceholder": "אפשרות {{index}}",
       "addOption": "הוסף אפשרות",
+      "markCorrectOptions": "סמנו את התשובות הנכונות",
       "correctAnswer": "תשובה נכונה",
+      "correctAnswers": "תשובות נכונות",
       "selectCorrectAnswer": "בחר את התשובה הנכונה",
       "removeQuestion": "הסר שאלה",
       "removeOption": "הסר אפשרות",
@@ -1431,12 +1440,14 @@
       "generatingFeedbackButCompleted": "לא הצלחנו ליצור משוב AI כרגע, אבל הפעילות סומנה כהושלמה כדי שתוכל/י להמשיך."
     },
     "awaitingTeacherFeedback": "המורה עדיין לא שחרר את משוב הבינה המלאכותית. תקבל התראה כשיהיה זמין.",
+    "assessmentInProgress": "אנחנו מכינים את משוב הבינה המלאכותית. הוא יופיע כאן כשיהיה מוכן.",
     "testTaking": {
       "title": "מבחן",
       "submitTest": "הגש מבחן",
       "submitting": "מגיש...",
       "question": "שאלה {{number}}",
       "selectAnswer": "בחר תשובה",
+      "selectAllThatApply": "בחרו את כל התשובות הנכונות",
       "typeAnswer": "הקלד את תשובתך כאן...",
       "confirmSubmit": "האם אתה בטוח שברצונך להגיש? לא ניתן לשנות תשובות לאחר ההגשה.",
       "allQuestionsRequired": "אנא ענה על כל השאלות לפני ההגשה.",
