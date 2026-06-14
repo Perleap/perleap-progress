@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getOrderedActivityCenterFlowSteps } from './moduleFlow';
+import {
+  filterStudentVisibleAssignments,
+  filterStudentVisibleSectionResources,
+  getOrderedActivityCenterFlowSteps,
+} from './moduleFlow';
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
 const ts = '2020-01-01T00:00:00.000Z';
@@ -83,5 +87,25 @@ describe('getOrderedActivityCenterFlowSteps student assignment visibility', () =
   it('does not filter assignment steps when assignmentsById is omitted (teacher paths)', () => {
     const ordered = getOrderedActivityCenterFlowSteps(steps, [resource]);
     expect(ordered.map((s) => s.id)).toEqual(['step-res', 'step-published', 'step-draft']);
+  });
+});
+
+describe('filterStudentVisibleAssignments', () => {
+  it('keeps published assignments only', () => {
+    const out = filterStudentVisibleAssignments([
+      { id: 'a', status: 'published' },
+      { id: 'b', status: 'draft' },
+      { id: 'c', status: 'archived' },
+    ]);
+    expect(out.map((a) => a.id)).toEqual(['a']);
+  });
+});
+
+describe('filterStudentVisibleSectionResources', () => {
+  it('omits draft activity_list rows per section', () => {
+    const published = lessonResource('pub');
+    const draft: SectionResource = { ...lessonResource('draft'), status: 'draft' };
+    const out = filterStudentVisibleSectionResources({ [sid]: [published, draft] });
+    expect(out[sid].map((r) => r.id)).toEqual(['pub']);
   });
 });
