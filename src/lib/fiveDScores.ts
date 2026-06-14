@@ -75,6 +75,25 @@ export function averageFiveDScoresAcrossSnapshots(
   return hasAny ? result : null;
 }
 
+/** Stable cache-key fragment for one dimension (null-safe). */
+export function formatFiveDScoreForStableKey(v: number | null): string {
+  return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(2) : 'null';
+}
+
+/** UI-safe score label (null / missing dimensions show em dash). */
+export function formatFiveDScoreDisplay(
+  v: number | null | undefined,
+  decimals = 1,
+): string {
+  return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(decimals) : '—';
+}
+
+/** Stable cache-key string for a full 5D score object (null-safe). */
+export function stableFiveDScoresKey(scores: FiveDScores | null | undefined): string {
+  if (!scores) return 'no-scores';
+  return FIVE_D_DIMENSION_KEYS.map((k) => formatFiveDScoreForStableKey(scores[k])).join(',');
+}
+
 /** Chart-safe numeric value (null dimensions render as 0). */
 export function fiveDScoreForChart(
   scores: Partial<FiveDScores> | null | undefined,

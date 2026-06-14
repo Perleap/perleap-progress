@@ -47,7 +47,9 @@ const CustomTooltip = ({ active, payload, explanations }: CustomTooltipProps) =>
       <p className="font-semibold text-sm mb-1">{t(`dimensions.${dimension}.label`)}</p>
       <p className="text-xs text-muted-foreground mb-2">
         {t('dimensions.score')}:{' '}
-        <span className="font-bold text-foreground">{value.toFixed(1)}/10</span>
+        <span className="font-bold text-foreground">
+          {typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(1)}/10` : '—'}
+        </span>
       </p>
       <p className="text-xs text-muted-foreground border-t pt-2 mt-2 leading-relaxed">
         {blurb}

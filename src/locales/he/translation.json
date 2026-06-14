@@ -1542,17 +1542,19 @@
         "input": "קלט",
         "output": "פלט",
         "llm": "LLM",
-        "prompt": "תבנית פרומפט",
-        "chain": "שרשרת",
-        "memory": "זיכרון"
+        "trigger": "טריגר",
+        "email": "דוא״ל"
       },
       "nodeDescriptions": {
         "input": "נקודת כניסת קלט משתמש",
         "output": "צומת פלט סופי",
         "llm": "מודל שפה גדול",
-        "prompt": "תבנית לפרומפטים",
-        "chain": "שרשרת עיבוד רציפה",
-        "memory": "זיכרון שיחה"
+        "trigger": "מפעיל את הצינור כשמתרחש אירוע",
+        "email": "שולח פלט בדוא״ל"
+      },
+      "actions": {
+        "collapseInspector": "כווץ את חלונית המאפיינים",
+        "expandInspector": "הרחב את חלונית המאפיינים"
       },
       "inspector": {
         "title": "מאפייני הצומת",
@@ -1560,28 +1562,24 @@
         "fields": {
           "label": "כותרת",
           "description": "תיאור",
-          "model": "מודל",
-          "systemOrRole": "מערכת / תפקיד",
-          "temperature": "טמפרטורה (אופציונלי)",
-          "template": "תבנית פרומפט",
-          "variablesHint": "רמז למשתנים",
-          "orderingNote": "סדר / רצף",
-          "strategy": "אסטרטגיית זיכרון"
+          "systemPrompt": "פרומפט מערכת",
+          "triggerMode": "מצב טריגר",
+          "sendTo": "שלח אל"
         },
         "placeholders": {
-          "temperature": "למשל ‎0.7"
+          "sendTo": "למשל teacher@school.edu"
         },
-        "strategy": {
-          "buffer": "חלון חוצץ",
-          "summary": "זיכרון סיכום",
-          "other": "אחר"
+        "triggerMode": {
+          "incoming_mail": "דואר נכנס",
+          "manual": "ידני",
+          "webhook": "Webhook",
+          "form_submit": "שליחת טופס"
         }
       },
       "validation": {
         "emptyGraph": "הוסיפו צומת אחד לפחות לפני ההגשה.",
-        "noInputToOutputPath": "חברו צמתים כך שיש מסלול מקלט לפלט.",
-        "promptTemplateRequired": "כל צומת פרומפט זקוק לתבנית פרומפט מלאה.",
-        "llmModelRequired": "כל צומת LLM זקוק למזהה מודל."
+        "noStartToOutputPath": "חברו צמתים כך שיש מסלול מצומת התחלה (קלט או טריגר) לפלט.",
+        "emailSendToRequired": "לכל צומת דוא״ל נדרשת כתובת נמען."
       }
     }
   },

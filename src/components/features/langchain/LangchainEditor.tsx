@@ -41,10 +41,19 @@ import {
   defaultDataForLangchainNodeType,
   ensureLangchainNodeData,
   isLangchainNodeType,
+  type LangchainNodeType,
 } from './langchainNodeData';
 import { NodePalette } from './NodePalette';
 import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode } from './nodes';
 import { cn } from '@/lib/utils';
+
+const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email'> = {
+  inputNode: 'input',
+  outputNode: 'output',
+  llmNode: 'llm',
+  triggerNode: 'trigger',
+  emailNode: 'email',
+};
 
 const nodeTypes: NodeTypes = {
   inputNode: InputNode,
@@ -240,6 +249,7 @@ const LangchainEditorInner = ({
       if (!position) return;
 
       const data = defaultDataForLangchainNodeType(type);
+      data.label = t(`assignmentDetail.langchain.nodes.${NODE_I18N_KEY[type]}`);
 
       const newNode: Node = {
         id: `${type}_${Date.now()}`,
@@ -251,7 +261,7 @@ const LangchainEditorInner = ({
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(newNode.id);
     },
-    [setNodes]
+    [setNodes, t]
   );
 
   const editorContextValue = useMemo(

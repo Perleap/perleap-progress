@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 import { FileOutput } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NodeDeleteButton } from '../NodeDeleteButton';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainOutputNodeData } from '../langchainNodeData';
 import {
@@ -12,6 +13,7 @@ import {
 } from './langchainNodeShell';
 
 function OutputNodeComponent({ id, selected, ...node }: NodeProps) {
+  const { t } = useTranslation();
   const data = ensureLangchainNodeData({ id, selected, ...node }).data as LangchainOutputNodeData;
   const preview = truncateLangchainPreview(data.description || data.label, 48);
 
@@ -22,7 +24,7 @@ function OutputNodeComponent({ id, selected, ...node }: NodeProps) {
         <div className="flex items-center gap-2 mb-1">
           <FileOutput className="h-4 w-4 text-green-600 shrink-0" />
           <span className="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">
-            Output
+            {t('assignmentDetail.langchain.nodes.output')}
           </span>
         </div>
         <p className={`text-green-600/90 dark:text-green-400/90 ${LANGCHAIN_NODE_LABEL_CLASS}`}>{data.label}</p>

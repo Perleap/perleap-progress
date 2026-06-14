@@ -7,13 +7,12 @@ import {
   type Analytics5dNarrativeResult,
 } from '@/services/analytics5dExplainService';
 import type { FiveDScores } from '@/types/models';
+import { stableFiveDScoresKey } from '@/lib/fiveDScores';
 
 export type { Analytics5dNarrativeContext, Analytics5dNarrativeInput, Analytics5dNarrativeResult };
 
-const FIVED_KEYS: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
-
 function stableScoreKey(s: FiveDScores): string {
-  return FIVED_KEYS.map((k) => s[k].toFixed(2)).join(',');
+  return stableFiveDScoresKey(s);
 }
 
 export const analytics5dNarrativeKeys = {

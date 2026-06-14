@@ -1564,17 +1564,19 @@
         "input": "Input",
         "output": "Output",
         "llm": "LLM",
-        "prompt": "Prompt Template",
-        "chain": "Chain",
-        "memory": "Memory"
+        "trigger": "Trigger",
+        "email": "Email"
       },
       "nodeDescriptions": {
         "input": "User input entry point",
         "output": "Final output node",
         "llm": "Large Language Model",
-        "prompt": "Template for prompts",
-        "chain": "Sequential processing chain",
-        "memory": "Conversation memory"
+        "trigger": "Starts the pipeline when an event occurs",
+        "email": "Sends output by email"
+      },
+      "actions": {
+        "collapseInspector": "Collapse inspector",
+        "expandInspector": "Expand inspector"
       },
       "inspector": {
         "title": "Node properties",
@@ -1582,28 +1584,24 @@
         "fields": {
           "label": "Title",
           "description": "Description",
-          "model": "Model",
-          "systemOrRole": "System / role",
-          "temperature": "Temperature (optional)",
-          "template": "Prompt template",
-          "variablesHint": "Variables hint",
-          "orderingNote": "Ordering / sequence note",
-          "strategy": "Memory strategy"
+          "systemPrompt": "System prompt",
+          "triggerMode": "Trigger mode",
+          "sendTo": "Send to"
         },
         "placeholders": {
-          "temperature": "e.g. 0.7"
+          "sendTo": "e.g. teacher@school.edu"
         },
-        "strategy": {
-          "buffer": "Buffer window",
-          "summary": "Summary memory",
-          "other": "Other"
+        "triggerMode": {
+          "incoming_mail": "Incoming mail",
+          "manual": "Manual",
+          "webhook": "Webhook",
+          "form_submit": "Form submit"
         }
       },
       "validation": {
         "emptyGraph": "Add at least one node before submitting.",
-        "noInputToOutputPath": "Connect nodes so there is a path from Input to Output.",
-        "promptTemplateRequired": "Every Prompt node needs a filled-in prompt template.",
-        "llmModelRequired": "Every LLM node needs a model identifier."
+        "noStartToOutputPath": "Connect nodes so there is a path from a start node (Input or Trigger) to Output.",
+        "emailSendToRequired": "Every Email node needs a recipient address."
       }
     }
   },

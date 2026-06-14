@@ -27,7 +27,7 @@ function TriggerNodeComponent({ id, selected, ...node }: NodeProps) {
         <div className="flex items-center gap-2 mb-1">
           <Zap className="h-4 w-4 text-orange-600 shrink-0" />
           <span className="text-xs font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wide">
-            Trigger
+            {t('assignmentDetail.langchain.nodes.trigger')}
           </span>
         </div>
         <p className={`text-orange-600/90 dark:text-orange-400/90 ${LANGCHAIN_NODE_LABEL_CLASS}`}>{data.label}</p>
