@@ -1,4 +1,5 @@
 import type { FiveDScores } from '@/types/models';
+import { formatFiveDScoreForStableKey } from '@/lib/fiveDScores';
 
 const DIMS: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
 
@@ -60,7 +61,7 @@ export function buildClassroomAnalyticsCsv(input: {
     lines.push(csvRow(['5D_aggregate', '']));
     lines.push(csvRow(['dimension', 'score']));
     for (const k of DIMS) {
-      lines.push(csvRow([k, input.classAverage5D[k].toFixed(2)]));
+      lines.push(csvRow([k, formatFiveDScoreForStableKey(input.classAverage5D[k])]));
     }
   }
 
@@ -70,7 +71,7 @@ export function buildClassroomAnalyticsCsv(input: {
     lines.push(header.map(escapeCsvField).join(','));
     for (const row of input.perStudentRows) {
       lines.push(
-        csvRow([row.name, ...DIMS.map((d) => row.scores[d].toFixed(2))]),
+        csvRow([row.name, ...DIMS.map((d) => formatFiveDScoreForStableKey(row.scores[d]))]),
       );
     }
   }

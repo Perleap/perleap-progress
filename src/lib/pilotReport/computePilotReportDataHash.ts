@@ -11,13 +11,11 @@ import {
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
 import { countCompletedAssignmentsInScope } from '@/lib/pilotReport/buildPilotReportData';
+import { stableFiveDScoresKey } from '@/lib/fiveDScores';
 import type { FiveDScores } from '@/types/models';
 
-const FIVED_KEYS: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
-
 function stableScoreKey(scores: FiveDScores | null): string {
-  if (!scores) return 'no-scores';
-  return FIVED_KEYS.map((k) => scores[k].toFixed(2)).join(',');
+  return stableFiveDScoresKey(scores);
 }
 
 export type PilotReportAnalyticsStudent = {

@@ -54,6 +54,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatFiveDScoreDisplay } from '@/lib/fiveDScores';
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
@@ -1019,21 +1020,23 @@ export const ClassroomAnalytics = ({
                         (dim) => {
                           const a = compareAvgA[dim];
                           const b = compareAvgB[dim];
-                          const d = b - a;
+                          const d =
+                            typeof a === 'number' && typeof b === 'number' ? b - a : null;
                           return (
                             <TableRow key={dim}>
                               <TableCell className="font-medium">
                                 {t(`submissionDetail.dimensions.${dim}`)}
                               </TableCell>
                               <TableCell className="text-center tabular-nums">
-                                {a.toFixed(2)}
+                                {formatFiveDScoreDisplay(a, 2)}
                               </TableCell>
                               <TableCell className="text-center tabular-nums">
-                                {b.toFixed(2)}
+                                {formatFiveDScoreDisplay(b, 2)}
                               </TableCell>
                               <TableCell className="text-center tabular-nums text-muted-foreground">
-                                {d >= 0 ? '+' : ''}
-                                {d.toFixed(2)}
+                                {d == null
+                                  ? '—'
+                                  : `${d >= 0 ? '+' : ''}${formatFiveDScoreDisplay(d, 2)}`}
                               </TableCell>
                             </TableRow>
                           );
@@ -1433,7 +1436,8 @@ export const ClassroomAnalytics = ({
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(classAverage).map(([dimension, score]) => {
-                      const numeric = Number(score);
+                      const numeric =
+                        typeof score === 'number' && !Number.isNaN(score) ? score : null;
                       return (
                         <div key={dimension} className="flex items-center justify-between">
                           <span
@@ -1445,11 +1449,11 @@ export const ClassroomAnalytics = ({
                             <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-primary rounded-full"
-                                style={{ width: `${(numeric / 10) * 100}%` }}
+                                style={{ width: `${numeric != null ? (numeric / 10) * 100 : 0}%` }}
                               />
                             </div>
                             <span className="text-sm font-bold text-foreground w-8 text-right">
-                              {numeric.toFixed(1)}
+                              {formatFiveDScoreDisplay(numeric, 1)}
                             </span>
                           </div>
                         </div>
