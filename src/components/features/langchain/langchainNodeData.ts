@@ -115,7 +115,7 @@ export function defaultDataForLangchainNodeType(type: LangchainNodeType): Langch
     case 'llmNode':
       return { label, systemPrompt: '' };
     case 'triggerNode':
-      return { label, mode: 'incoming_mail' };
+      return { label, mode: 'manual' };
     case 'emailNode':
       return { label, sendTo: '' };
     default: {
@@ -150,7 +150,7 @@ export function ensureLangchainNodeData<T extends LangchainNodeLike>(node: T): T
   if (t === 'triggerNode') {
     const trigger = merged as LangchainTriggerNodeData;
     if (!isTriggerMode(trigger.mode)) {
-      trigger.mode = 'incoming_mail';
+      trigger.mode = 'manual';
     }
   }
 
