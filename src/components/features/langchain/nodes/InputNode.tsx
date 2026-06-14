@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 import { MessageSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NodeDeleteButton } from '../NodeDeleteButton';
 import { ensureLangchainNodeData, truncateLangchainPreview, type LangchainInputNodeData } from '../langchainNodeData';
 import {
@@ -12,6 +13,7 @@ import {
 } from './langchainNodeShell';
 
 function InputNodeComponent({ id, selected, ...node }: NodeProps) {
+  const { t } = useTranslation();
   const data = ensureLangchainNodeData({ id, selected, ...node }).data as LangchainInputNodeData;
   const preview = truncateLangchainPreview(data.description || data.label, 48);
 
@@ -22,7 +24,7 @@ function InputNodeComponent({ id, selected, ...node }: NodeProps) {
         <div className="flex items-center gap-2 mb-1">
           <MessageSquare className="h-4 w-4 text-blue-600 shrink-0" />
           <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
-            Input
+            {t('assignmentDetail.langchain.nodes.input')}
           </span>
         </div>
         <p className={`text-blue-600/90 dark:text-blue-400/90 ${LANGCHAIN_NODE_LABEL_CLASS}`}>{data.label}</p>
