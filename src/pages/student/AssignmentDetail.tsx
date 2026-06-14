@@ -51,6 +51,7 @@ import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
+import { AssignmentTypeHelpHint } from '@/components/features/assignment/AssignmentTypeHelpHint';
 import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
@@ -497,13 +498,13 @@ const AssignmentDetail = () => {
   );
 
   useEffect(() => {
+    if (companionScrollTick === 0) return;
     if (!assignment || isChatLikeAssignmentType(assignment.type)) return;
-    if (storedTaskUnderstandingChoice !== 'no') return;
     const frameId = requestAnimationFrame(() => {
       companionChatAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     return () => cancelAnimationFrame(frameId);
-  }, [assignment?.type, storedTaskUnderstandingChoice, companionScrollTick]);
+  }, [companionScrollTick, assignment?.type]);
 
   const syllabusSectionTitle = useMemo(() => {
     const sectionId = assignment?.syllabus_section_id;
@@ -792,23 +793,33 @@ const AssignmentDetail = () => {
               className="overflow-hidden rounded-lg border border-border/60 bg-muted/5"
               dir={isRTL ? 'rtl' : 'ltr'}
             >
-              <CollapsibleTrigger
+              <div
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
-                  isRTL ? 'text-end' : 'text-start',
+                  'flex w-full items-center gap-2 px-3 py-2.5',
+                  isRTL ? 'flex-row-reverse' : 'flex-row',
                 )}
               >
-                <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-                  {t('assignmentDetail.studentTaskTitle')}
-                </span>
-                <ChevronDown
+                <CollapsibleTrigger
                   className={cn(
-                    'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-                    taskCardOpen && 'rotate-180',
+                    'flex min-w-0 flex-1 items-center justify-between gap-2 text-start outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
+                    isRTL ? 'text-end' : 'text-start',
                   )}
-                  aria-hidden
-                />
-              </CollapsibleTrigger>
+                >
+                  <span className="text-sm font-medium text-foreground">
+                    {t('assignmentDetail.studentTaskTitle')}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                      taskCardOpen && 'rotate-180',
+                    )}
+                    aria-hidden
+                  />
+                </CollapsibleTrigger>
+                {!isTeacherTry ? (
+                  <AssignmentTypeHelpHint assignmentType={assignment.type as DbAssignmentType} />
+                ) : null}
+              </div>
               <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-2 text-sm">
                 {resolvedStudentFacingTask ? (
                   <p className="whitespace-pre-wrap text-foreground leading-relaxed" dir="auto">
@@ -862,6 +873,19 @@ const AssignmentDetail = () => {
                 />
               </CollapsibleContent>
             </Collapsible>
+          ) : null}
+
+          {!showPageTaskCard && !isTeacherTry && assignment ? (
+            <div
+              className={cn(
+                'flex items-center gap-1.5 text-sm font-medium text-foreground',
+                isRTL && 'flex-row-reverse',
+              )}
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
+              {t('assignmentDetail.studentTaskTitle')}
+              <AssignmentTypeHelpHint assignmentType={assignment.type as DbAssignmentType} />
+            </div>
           ) : null}
 
           {!feedback && !submission && (
@@ -956,7 +980,7 @@ const AssignmentDetail = () => {
                 </div>
               ) : null;
 
-            if (isCompleted && submission.awaiting_teacher_feedback_release) {
+            if (!isTeacherTry && isCompleted && submission.awaiting_teacher_feedback_release) {
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -972,7 +996,7 @@ const AssignmentDetail = () => {
 
             const evalStatus = submission.evaluation_status;
 
-            if (isCompleted && evalStatus === EVALUATION_STATUS.FAILED && !feedback) {
+            if (!isTeacherTry && isCompleted && evalStatus === EVALUATION_STATUS.FAILED && !feedback) {
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -986,7 +1010,7 @@ const AssignmentDetail = () => {
               );
             }
 
-            if (isManualEvalType && isCompleted && assignment.enable_ai_feedback === false) {
+            if (!isTeacherTry && isManualEvalType && isCompleted && assignment.enable_ai_feedback === false) {
               const awaitingKey = `assignmentDetail.${assignment.type}.awaitingReview`;
               return (
                 <Card className="border-primary/20 bg-primary/5">
@@ -1002,6 +1026,7 @@ const AssignmentDetail = () => {
             }
 
             if (
+              !isTeacherTry &&
               isCompleted &&
               !feedback &&
               assignment.enable_ai_feedback !== false &&

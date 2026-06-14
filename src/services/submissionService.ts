@@ -112,21 +112,65 @@ export const getStudentSubmissionContext = async (
     const list = (rows ?? []) as unknown as Submission[];
     const now = new Date();
 
-    const inProgress = list.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
-    if (inProgress) {
-      /** Teacher try can reuse an existing draft row missing is_teacher_attempt; align flag for RLS, feeds, and triggers. */
-      if (
-        opts?.isTeacherTry === true &&
-        !(inProgress as { is_teacher_attempt?: boolean }).is_teacher_attempt
-      ) {
-        const { error: patchErr } = await supabase
-          .from('submissions')
-          .update({ is_teacher_attempt: true })
-          .eq('id', inProgress.id);
-        if (!patchErr) {
-          (inProgress as { is_teacher_attempt?: boolean }).is_teacher_attempt = true;
+    if (opts?.isTeacherTry === true) {
+      const teacherAttempts = list.filter(
+        (s) => (s as { is_teacher_attempt?: boolean }).is_teacher_attempt,
+      );
+
+      let inProgress = teacherAttempts.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
+      if (!inProgress) {
+        const legacyInProgress = list.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
+        if (legacyInProgress) {
+          const { error: patchErr } = await supabase
+            .from('submissions')
+            .update({ is_teacher_attempt: true })
+            .eq('id', legacyInProgress.id);
+          if (!patchErr) {
+            (legacyInProgress as { is_teacher_attempt?: boolean }).is_teacher_attempt = true;
+            inProgress = legacyInProgress;
+          }
         }
       }
+
+      if (inProgress) {
+        const allAttempts = teacherAttempts.some((s) => s.id === inProgress!.id)
+          ? teacherAttempts
+          : [...teacherAttempts, inProgress];
+        return {
+          data: {
+            submission: inProgress,
+            allAttempts,
+            canRetry: false,
+          },
+          error: null,
+        };
+      }
+
+      const nextNum =
+        teacherAttempts.length > 0
+          ? Math.max(...teacherAttempts.map((s) => s.attempt_number ?? 1)) + 1
+          : 1;
+      const { data: created, error: insErr } = await insertSubmissionRow(
+        assignmentId,
+        studentId,
+        nextNum,
+        { isTeacherAttempt: true },
+      );
+      if (insErr || !created) {
+        return { data: { submission: null, allAttempts: teacherAttempts, canRetry: false }, error: insErr };
+      }
+      return {
+        data: {
+          submission: created,
+          allAttempts: [...teacherAttempts, created],
+          canRetry: false,
+        },
+        error: null,
+      };
+    }
+
+    const inProgress = list.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
+    if (inProgress) {
       return {
         data: {
           submission: inProgress,
@@ -138,8 +182,7 @@ export const getStudentSubmissionContext = async (
     }
 
     if (list.length === 0) {
-      const allowFirst =
-        opts?.isTeacherTry === true || canStartFirstAttempt(assignment as any, now);
+      const allowFirst = canStartFirstAttempt(assignment as any, now);
       if (!allowFirst) {
         return {
           data: { submission: null, allAttempts: [], canRetry: false },
@@ -150,7 +193,6 @@ export const getStudentSubmissionContext = async (
         assignmentId,
         studentId,
         1,
-        opts?.isTeacherTry ? { isTeacherAttempt: true } : undefined,
       );
       if (insErr || !created) {
         return { data: { submission: null, allAttempts: [], canRetry: false }, error: insErr };

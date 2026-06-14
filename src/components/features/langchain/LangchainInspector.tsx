@@ -23,15 +23,17 @@ import {
   type LangchainOutputNodeData,
   type LangchainTriggerNodeData,
   type LangchainEmailNodeData,
+  type LangchainDatabaseNodeData,
   type TriggerMode,
 } from './langchainNodeData';
 
-const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email'> = {
+const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'> = {
   inputNode: 'input',
   outputNode: 'output',
   llmNode: 'llm',
   triggerNode: 'trigger',
   emailNode: 'email',
+  databaseNode: 'database',
 };
 
 function InspectorHeader({
@@ -207,6 +209,17 @@ export function LangchainInspector({
         {n.type === 'emailNode' && (
           <EmailSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainEmailNodeData} onPatch={patch} t={t} />
         )}
+
+        {n.type === 'databaseNode' && (
+          <InputSection
+            readOnly={readOnly}
+            isRTL={isRTL}
+            dir={dir}
+            data={n.data as LangchainDatabaseNodeData}
+            descriptionLabel={t('assignmentDetail.langchain.inspector.fields.description')}
+            onPatch={patch}
+          />
+        )}
       </div>
     </div>
   );
@@ -223,7 +236,7 @@ function InputSection({
   readOnly: boolean;
   isRTL: boolean;
   dir: 'rtl' | 'ltr';
-  data: LangchainInputNodeData | LangchainOutputNodeData;
+  data: LangchainInputNodeData | LangchainOutputNodeData | LangchainDatabaseNodeData;
   descriptionLabel: string;
   onPatch: (p: Record<string, unknown>) => void;
 }) {

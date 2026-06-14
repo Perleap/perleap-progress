@@ -460,6 +460,7 @@
     "conversationComplete": "Conversation complete! You can now finish the activity. If you didn't understand something or want to continue asking questions, feel free to do so. Once you are done, click the 'Complete Activity' button.",
     "conversationEndedPlaceholder": "Conversation ended - please complete the activity",
     "completeActivity": "Complete Activity",
+    "completeNotReady": "Waiting for the conversation to load. Please wait a moment or refresh.",
     "generatingFeedback": "Generating feedback...",
     "errors": {
       "startingConversation": "Error starting conversation",
@@ -473,6 +474,7 @@
       "fileTooLarge": "File is too large (max 10 MB).",
       "fileTypeNotAllowed": "This file type is not supported. Use PDF, PNG, JPG, or text files.",
       "completing": "Error completing activity",
+      "sessionExpired": "Your session has expired. Please refresh the page and sign in again.",
       "flag": "Could not send your report. Please try again."
     },
     "success": {
@@ -1473,6 +1475,9 @@
       "typeAnswer": "Type your answer here...",
       "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submitting.",
       "allQuestionsRequired": "Please answer all questions before submitting.",
+      "sessionExpired": "Your session has expired. Please refresh the page and sign in again.",
+      "questionsNotLoaded": "Questions are still loading. Please wait a moment and try again.",
+      "questionsLoadError": "Could not load test questions. Please try again.",
       "submitSuccess": "Test submitted successfully!",
       "submitError": "Error submitting test. Please try again."
     },
@@ -1565,14 +1570,16 @@
         "output": "Output",
         "llm": "LLM",
         "trigger": "Trigger",
-        "email": "Email"
+        "email": "Email",
+        "database": "Database"
       },
       "nodeDescriptions": {
         "input": "User input entry point",
         "output": "Final output node",
         "llm": "Large Language Model",
         "trigger": "Starts the pipeline when an event occurs",
-        "email": "Sends output by email"
+        "email": "Sends output by email",
+        "database": "Query or store data in a database"
       },
       "actions": {
         "collapseInspector": "Collapse inspector",
@@ -2092,6 +2099,7 @@
     "active": "Active",
     "finished": "Finished",
     "completed": "Completed",
+    "retry": "Retry",
     "error": "Error",
     "areYouSure": "Are you sure?",
     "upcoming": "Upcoming",

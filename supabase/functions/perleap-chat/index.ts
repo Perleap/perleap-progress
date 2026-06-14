@@ -29,6 +29,8 @@ import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
 import {
   explainTaskAppend,
   postExplainTutorAppend,
+  companionExplainTaskAppend,
+  companionPostExplainAppend,
 } from '../_shared/composeSystemPrompt.ts';
 import { mergeStreamingTextChunk, normalizeAssistantDashes } from './typography.ts';
 import {
@@ -228,6 +230,8 @@ serve(async (req) => {
 
     const postExplainTutoring =
       body.postExplainTutoring === true || body.postExplainTutoring === 'true';
+
+    const companionMode = body.companionMode === true || body.companionMode === 'true';
 
     const debugChatRequested = body.debugChat === true || body.debugChat === 'true';
     const allowAdminDebug = Boolean(
@@ -504,7 +508,11 @@ serve(async (req) => {
     );
 
     if (isExplainTaskGreeting) {
-      systemPrompt += '\n\n' + (await explainTaskAppend(language)).trim();
+      systemPrompt += '\n\n' + (
+        companionMode
+          ? companionExplainTaskAppend(language)
+          : (await explainTaskAppend(language))
+      ).trim();
     }
 
     const hasPriorAssistantTurn = messages.some((m) => m.role === 'assistant');
@@ -513,7 +521,11 @@ serve(async (req) => {
       !isExplainTaskGreeting &&
       (hasPriorAssistantTurn || !isInitialGreeting);
     if (applyPostExplainTutor) {
-      systemPrompt += '\n\n' + (await postExplainTutorAppend(language)).trim();
+      systemPrompt += '\n\n' + (
+        companionMode
+          ? companionPostExplainAppend(language)
+          : (await postExplainTutorAppend(language))
+      ).trim();
     }
 
     if (courseRecall) {

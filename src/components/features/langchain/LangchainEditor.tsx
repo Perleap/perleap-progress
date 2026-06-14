@@ -44,15 +44,16 @@ import {
   type LangchainNodeType,
 } from './langchainNodeData';
 import { NodePalette } from './NodePalette';
-import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode } from './nodes';
+import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode, DatabaseNode } from './nodes';
 import { cn } from '@/lib/utils';
 
-const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email'> = {
+const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'> = {
   inputNode: 'input',
   outputNode: 'output',
   llmNode: 'llm',
   triggerNode: 'trigger',
   emailNode: 'email',
+  databaseNode: 'database',
 };
 
 const nodeTypes: NodeTypes = {
@@ -61,6 +62,7 @@ const nodeTypes: NodeTypes = {
   llmNode: LLMNode,
   triggerNode: TriggerNode,
   emailNode: EmailNode,
+  databaseNode: DatabaseNode,
 };
 
 const edgeTypes: EdgeTypes = {

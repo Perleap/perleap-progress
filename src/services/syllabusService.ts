@@ -677,7 +677,8 @@ export const getAssignmentSubmittedOrCompletedMap = async (
       .from('submissions')
       .select('assignment_id, status')
       .in('assignment_id', assignmentIds)
-      .eq('student_id', studentId);
+      .eq('student_id', studentId)
+      .eq('is_teacher_attempt', false);
     if (error) return { data: {}, error: handleSupabaseError(error) };
     const map: Record<string, boolean> = {};
     assignmentIds.forEach((id) => {
