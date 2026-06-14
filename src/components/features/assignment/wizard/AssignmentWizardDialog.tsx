@@ -485,7 +485,8 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       const { count } = await supabase
         .from('submissions')
         .select('id', { count: 'exact', head: true })
-        .eq('assignment_id', assignment.id);
+        .eq('assignment_id', assignment.id)
+        .eq('is_teacher_attempt', false);
       if (!cancelled) setHasSubmissions((count ?? 0) > 0);
     })();
     return () => {

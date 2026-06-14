@@ -97,6 +97,12 @@ export function getOrderedActivityCenterFlowSteps(
   options?: OrderedActivityCenterFlowStepsOptions,
 ): ModuleFlowStep[] {
   let filtered = filterActivityCenterModuleFlowSteps(steps, sectionResources);
+  if (options?.assignmentsById) {
+    filtered = filtered.filter((step) => {
+      if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
+      return step.assignment_id in options.assignmentsById!;
+    });
+  }
   if (options?.hideLiveSessions && options.assignmentsById) {
     filtered = filtered.filter((step) => {
       if (step.step_kind !== 'assignment' || !step.assignment_id) return true;

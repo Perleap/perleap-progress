@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, GripVertical, CircleDot, AlignLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -193,35 +193,35 @@ export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuesti
                       <Label className="text-xs text-muted-foreground">
                         {t('createAssignment.testBuilder.questionType')}:
                       </Label>
-                      <ToggleGroup
-                        variant="outline"
-                        size="sm"
-                        spacing={0}
-                        value={[question.question_type]}
-                        onValueChange={(vals) => {
-                          const v = vals[0];
-                          if (v === 'multiple_choice' || v === 'open_ended') {
-                            toggleQuestionType(qIndex, v);
-                          }
-                        }}
-                      >
-                        <ToggleGroupItem
-                          value="multiple_choice"
-                          aria-label={t('createAssignment.testBuilder.multipleChoice')}
-                          className="h-7 gap-1 px-2.5 text-xs min-h-7 [&_svg:not([class*='size-'])]:size-3"
+                      <div className="inline-flex rounded-lg bg-muted/50 p-1">
+                        <Tabs
+                          value={question.question_type}
+                          onValueChange={(v) => {
+                            if (v === 'multiple_choice' || v === 'open_ended') {
+                              toggleQuestionType(qIndex, v);
+                            }
+                          }}
                         >
-                          <CircleDot className="h-3 w-3 shrink-0" />
-                          {t('createAssignment.testBuilder.multipleChoice')}
-                        </ToggleGroupItem>
-                        <ToggleGroupItem
-                          value="open_ended"
-                          aria-label={t('createAssignment.testBuilder.openEnded')}
-                          className="h-7 gap-1 px-2.5 text-xs min-h-7 [&_svg:not([class*='size-'])]:size-3"
-                        >
-                          <AlignLeft className="h-3 w-3 shrink-0" />
-                          {t('createAssignment.testBuilder.openEnded')}
-                        </ToggleGroupItem>
-                      </ToggleGroup>
+                          <TabsList className="h-8 gap-1 border-none bg-transparent p-0">
+                            <TabsTrigger
+                              value="multiple_choice"
+                              aria-label={t('createAssignment.testBuilder.multipleChoice')}
+                              className="h-7 gap-1.5 rounded-md border-none px-3 text-xs text-muted-foreground transition-all hover:text-foreground data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm"
+                            >
+                              <CircleDot className="size-3.5 shrink-0" />
+                              {t('createAssignment.testBuilder.multipleChoice')}
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="open_ended"
+                              aria-label={t('createAssignment.testBuilder.openEnded')}
+                              className="h-7 gap-1.5 rounded-md border-none px-3 text-xs text-muted-foreground transition-all hover:text-foreground data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm"
+                            >
+                              <AlignLeft className="size-3.5 shrink-0" />
+                              {t('createAssignment.testBuilder.openEnded')}
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
                     </div>
 
                     {question.question_type === 'multiple_choice' && (
