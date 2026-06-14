@@ -14,7 +14,8 @@ export type LangchainNodeType =
   | 'outputNode'
   | 'llmNode'
   | 'triggerNode'
-  | 'emailNode';
+  | 'emailNode'
+  | 'databaseNode';
 
 export type TriggerMode = 'incoming_mail' | 'manual' | 'webhook' | 'form_submit';
 
@@ -45,12 +46,18 @@ export type LangchainEmailNodeData = {
   sendTo: string;
 };
 
+export type LangchainDatabaseNodeData = {
+  label: string;
+  description: string;
+};
+
 export type LangchainNodeDataByType = {
   inputNode: LangchainInputNodeData;
   outputNode: LangchainOutputNodeData;
   llmNode: LangchainLlmNodeData;
   triggerNode: LangchainTriggerNodeData;
   emailNode: LangchainEmailNodeData;
+  databaseNode: LangchainDatabaseNodeData;
 };
 
 const DEFAULT_LABELS: Record<LangchainNodeType, string> = {
@@ -59,6 +66,7 @@ const DEFAULT_LABELS: Record<LangchainNodeType, string> = {
   llmNode: 'LLM',
   triggerNode: 'Trigger',
   emailNode: 'Email',
+  databaseNode: 'Database',
 };
 
 /** Removed node types kept for legacy pipeline normalization. */
@@ -101,7 +109,8 @@ export function isLangchainNodeType(t: string | undefined): t is LangchainNodeTy
     t === 'outputNode' ||
     t === 'llmNode' ||
     t === 'triggerNode' ||
-    t === 'emailNode'
+    t === 'emailNode' ||
+    t === 'databaseNode'
   );
 }
 
@@ -115,9 +124,11 @@ export function defaultDataForLangchainNodeType(type: LangchainNodeType): Langch
     case 'llmNode':
       return { label, systemPrompt: '' };
     case 'triggerNode':
-      return { label, mode: 'incoming_mail' };
+      return { label, mode: 'manual' };
     case 'emailNode':
       return { label, sendTo: '' };
+    case 'databaseNode':
+      return { label, description: '' };
     default: {
       const _exhaustive: never = type;
       return _exhaustive;
@@ -150,7 +161,7 @@ export function ensureLangchainNodeData<T extends LangchainNodeLike>(node: T): T
   if (t === 'triggerNode') {
     const trigger = merged as LangchainTriggerNodeData;
     if (!isTriggerMode(trigger.mode)) {
-      trigger.mode = 'incoming_mail';
+      trigger.mode = 'manual';
     }
   }
 

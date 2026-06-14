@@ -463,6 +463,17 @@ export function AssignmentChatInterface({
   };
 
   const handleComplete = async () => {
+    if (!user) {
+      if (!authLoading) {
+        toast.error(t('assignmentChat.errors.sessionExpired'));
+      }
+      return;
+    }
+    if (messages.length === 0) {
+      toast.error(t('assignmentChat.completeNotReady'));
+      return;
+    }
+
     setCompleting(true);
     try {
       await onComplete({ conversationComplete: conversationEnded });
@@ -1047,12 +1058,18 @@ export function AssignmentChatInterface({
         </div>
 
         {variant === 'primary' ? (
-          <Button
-            onClick={handleComplete}
-            disabled={!canComplete}
-            className="w-full mt-auto"
-            variant={conversationEnded ? 'default' : 'secondary'}
-          >
+          <>
+            {!canComplete && !loading && !sending ? (
+              <p className="text-sm text-muted-foreground mb-2" dir={isRTL ? 'rtl' : 'ltr'}>
+                {t('assignmentChat.completeNotReady')}
+              </p>
+            ) : null}
+            <Button
+              onClick={handleComplete}
+              disabled={completing || loading || sending}
+              className="w-full mt-auto"
+              variant={conversationEnded ? 'default' : 'secondary'}
+            >
             {completing ? (
               <>
                 <Loader2 className="me-2 h-4 w-4 animate-spin" />
@@ -1065,6 +1082,7 @@ export function AssignmentChatInterface({
               </>
             )}
           </Button>
+          </>
         ) : null}
       </div>
 

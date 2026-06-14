@@ -90,6 +90,8 @@ export interface ChatRequest {
   initialGreetingMode?: InitialGreetingMode;
   /** When true (student chose "don't understand"), lighter tutoring after the explain turn. */
   postExplainTutoring?: boolean;
+  /** Help panel alongside another assignment UI (test, essay, etc.) — not the primary submission surface. */
+  companionMode?: boolean;
   language?: string;
   fileContext?: { name: string; content: string; url?: string; type?: string };
   /** App admins only; Edge Function verifies `is_app_admin`. */

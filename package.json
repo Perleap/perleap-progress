@@ -95,6 +95,7 @@
     "ghostmark": "^2.2.0",
     "globals": "^15.15.0",
     "lovable-tagger": "^1.0.20",
+    "playwright": "^1.51.0",
     "postcss": "^8.5.10",
     "prettier": "^3.8.3",
     "supabase": "^2.92.1",

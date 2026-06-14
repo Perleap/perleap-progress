@@ -137,6 +137,14 @@ const StudentClassroomDetail = () => {
       !(syllabusSectionIds.length > 0 && moduleFlowBulkPending) &&
       !studentProgressPending);
 
+  /** Curriculum overview shares the same async deps; avoid spinner + policies/grading split layout. */
+  const curriculumOverviewLoading =
+    hasPublishedSyllabus &&
+    Boolean(user?.id) &&
+    (curriculumFlowProgressLoading ||
+      (syllabusSectionIds.length > 0 && moduleFlowBulkPending) ||
+      studentProgressPending);
+
   const studentProgressMap = useMemo(() => {
     const map: Record<string, StudentProgressStatus> = {};
     if (studentProgressData) {
@@ -807,6 +815,13 @@ const StudentClassroomDetail = () => {
                 onBack={handleSectionBack}
                 onNavigateSection={goToSection}
               />
+            ) : curriculumOverviewLoading ? (
+              <div className="flex min-h-[40vh] items-center justify-center py-20">
+                <Loader2
+                  className="h-8 w-8 animate-spin text-muted-foreground"
+                  aria-label={t('common.loading')}
+                />
+              </div>
             ) : (
               <>
                 <GradingBreakdownView categories={syllabus.grading_categories} isRTL={isRTL} />

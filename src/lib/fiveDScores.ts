@@ -8,6 +8,19 @@ export const FIVE_D_DIMENSION_KEYS: (keyof FiveDScores)[] = [
   'action',
 ];
 
+/** True when a dimension has a numeric score (not null / NaN). */
+export function isFiveDScoreAssessed(v: number | null | undefined): v is number {
+  return typeof v === 'number' && !Number.isNaN(v);
+}
+
+/** Dimensions with numeric scores, in stable display order. */
+export function getAssessedFiveDDimensions(
+  scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined,
+): (keyof FiveDScores)[] {
+  if (!scores) return [];
+  return FIVE_D_DIMENSION_KEYS.filter((key) => isFiveDScoreAssessed(scores[key]));
+}
+
 /** Mean of non-null dimension values. */
 export function meanNonNullFiveDScores(
   scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined,
@@ -17,7 +30,7 @@ export function meanNonNullFiveDScores(
   let n = 0;
   for (const key of FIVE_D_DIMENSION_KEYS) {
     const v = scores[key];
-    if (typeof v === 'number' && !Number.isNaN(v)) {
+    if (isFiveDScoreAssessed(v)) {
       sum += v;
       n++;
     }
@@ -50,7 +63,7 @@ export function averageFiveDScoresAcrossSnapshots(
     const scores = snapshot.scores as Partial<FiveDScores>;
     for (const key of FIVE_D_DIMENSION_KEYS) {
       const v = scores[key];
-      if (typeof v === 'number' && !Number.isNaN(v)) {
+      if (isFiveDScoreAssessed(v)) {
         totals[key] += v;
         counts[key]++;
       }
@@ -85,7 +98,7 @@ export function formatFiveDScoreDisplay(
   v: number | null | undefined,
   decimals = 1,
 ): string {
-  return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(decimals) : '—';
+  return isFiveDScoreAssessed(v) ? v.toFixed(decimals) : '—';
 }
 
 /** Stable cache-key string for a full 5D score object (null-safe). */
@@ -100,5 +113,5 @@ export function fiveDScoreForChart(
   key: keyof FiveDScores,
 ): number {
   const v = scores?.[key];
-  return typeof v === 'number' && !Number.isNaN(v) ? v : 0;
+  return isFiveDScoreAssessed(v) ? v : 0;
 }

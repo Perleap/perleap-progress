@@ -82,6 +82,40 @@ export async function postExplainTutorAppend(language: string): Promise<string> 
   }
 }
 
+const COMPANION_EXPLAIN_TASK_EN = `COMPANION_EXPLAIN_TASK (overrides TASK_EXPLANATION for this turn)
+- This chat is a help panel only. The student completes and submits the assignment in the UI section ABOVE this chat.
+- The student said they do NOT understand the assignment yet.
+- In at most 2 short sentences, explain what they must do using <assignment>, and point them to the section above on the page.
+- For test/quiz assignments: all questions are already displayed above — do NOT ask the student to paste, share, or read out quiz questions.
+- Do NOT start tutoring or ask them to answer sub-tasks in chat; end with one brief check-for-understanding question about the process (e.g. "Does that make sense?").`;
+
+const COMPANION_EXPLAIN_TASK_HE = `COMPANION_EXPLAIN_TASK (גובר על TASK_EXPLANATION לתור זה)
+- הצ'אט הזה הוא פאנל עזרה בלבד. התלמיד/ה משלים/ה ומגיש/ה את המטלה באזור שמעל הצ'אט.
+- התלמיד/ה ציין/ה שעדיין לא הבין/ה את המטלה.
+- במשפטיים קצרים לכל היותר, הסבירו מה נדרש לפי <assignment>, והפנו לאזור שמעל בעמוד.
+- במבחן/חידון: כל השאלות כבר מוצגות למעלה — אל תבקשו להדביק, לשתף או לקרוא שאלות.
+- אל תתחילו הוראה או שאלות תשובה בצ'אט; סיימו בשאלת הבנה קצרה אחת על התהליך (למשל "זה ברור?").`;
+
+const COMPANION_POST_EXPLAIN_EN = `COMPANION_HELP (overrides POST_EXPLAIN_TUTOR for this chat)
+- This is a help panel alongside the main assignment UI above — not where the student submits work.
+- Answer questions about the assignment process or specific content when asked; do NOT walk through each sub-task in chat.
+- Do NOT ask the student to paste or share content already visible above (especially test/quiz questions).
+- Keep replies short (at most 3 sentences). Do not append <<<PROGRESS:[...]>>> or end the activity from this chat.`;
+
+const COMPANION_POST_EXPLAIN_HE = `COMPANION_HELP (גובר על POST_EXPLAIN_TUTOR לצ'אט זה)
+- זהו פאנל עזרה לצד ממשק המטלה הראשי למעלה — לא מקום ההגשה.
+- ענו על שאלות על התהליך או תוכן ספציפי כשמבקשים; אל תעברו משימה-משימה בצ'אט.
+- אל תבקשו להדביק או לשתף תוכן שכבר גלוי למעלה (במיוחד שאלות מבחן/חידון).
+- שמרו על תשובות קצרות (עד 3 משפטים). אל תוסיפו <<<PROGRESS:[...]>>> ואל תסיימו את הפעילות מצ'אט זה.`;
+
+export function companionExplainTaskAppend(language: string): string {
+  return (language ?? 'en').toLowerCase() === 'he' ? COMPANION_EXPLAIN_TASK_HE : COMPANION_EXPLAIN_TASK_EN;
+}
+
+export function companionPostExplainAppend(language: string): string {
+  return (language ?? 'en').toLowerCase() === 'he' ? COMPANION_POST_EXPLAIN_HE : COMPANION_POST_EXPLAIN_EN;
+}
+
 export interface TaskProgressItem {
   /** 1-based index matching the order returned by parseAssignmentTasks. */
   index: number;
