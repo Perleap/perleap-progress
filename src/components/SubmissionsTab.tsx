@@ -321,24 +321,11 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((s) => {
-        // Search in conversation context
-        const conversationText =
-          s.conversation_context
-            ?.map((msg: any) => msg.content)
-            .join(' ')
-            .toLowerCase() || '';
-
-        // Search in teacher feedback
+        // Search in teacher feedback and metadata (conversation text loads on submission detail only)
         const feedbackText = s.teacher_feedback?.toLowerCase() || '';
-
-        // Search in student name and assignment title
         const metaText = `${s.student_name} ${s.assignment_title}`.toLowerCase();
 
-        return (
-          conversationText.includes(query) ||
-          feedbackText.includes(query) ||
-          metaText.includes(query)
-        );
+        return feedbackText.includes(query) || metaText.includes(query);
       });
     }
 

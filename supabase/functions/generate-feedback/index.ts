@@ -44,6 +44,7 @@ interface FeedbackRequestBody {
   assignmentId: string;
   language?: string;
   background?: boolean;
+  regenerate?: boolean;
 }
 
 interface FeedbackPipelineResult {
@@ -66,12 +67,25 @@ async function setEvaluationStatus(
   }
 }
 
+async function clearPriorEvaluation(
+  supabase: SupabaseClient,
+  submissionId: string,
+): Promise<void> {
+  await Promise.all([
+    supabase.from('five_d_snapshots').delete().eq('submission_id', submissionId),
+    supabase.from('assignment_feedback').delete().eq('submission_id', submissionId),
+    supabase.from('hard_skill_assessments').delete().eq('submission_id', submissionId),
+  ]);
+}
+
 async function runFeedbackPipeline(
   supabase: SupabaseClient,
   params: FeedbackRequestBody,
 ): Promise<FeedbackPipelineResult> {
   const { submissionId, studentId, assignmentId, language = 'en' } = params;
   const startTime = Date.now();
+
+  await clearPriorEvaluation(supabase, submissionId);
 
   const [studentName, teacherName, assignmentResult] = await Promise.all([
     getStudentName(studentId),

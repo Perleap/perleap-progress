@@ -45,7 +45,7 @@ export function AssignmentTypeIntroContent({
           </h3>
           <DialogDescription
             className={cn(
-              'text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground',
+              'text-sm leading-relaxed whitespace-pre-wrap text-foreground',
               textAlign,
             )}
           >
@@ -74,7 +74,7 @@ export function AssignmentTypeIntroContent({
         </h4>
         <p
           className={cn(
-            'text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground',
+            'text-sm leading-relaxed whitespace-pre-wrap text-foreground',
             textAlign,
           )}
         >

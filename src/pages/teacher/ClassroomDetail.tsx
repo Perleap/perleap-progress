@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatCourseDuration } from '@/lib/dateUtils';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +37,7 @@ import {
   ChevronRight,
   Info,
   Map,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EditClassroomDialog } from '@/components/EditClassroomDialog';
@@ -54,6 +57,8 @@ import {
   useClassroomAssignments,
   useClassroomStudents,
   useDeleteAssignment,
+  useClassroomResetPreview,
+  useResetClassroom,
 } from '@/hooks/queries';
 import type { ClassroomLocationState } from '@/types/navigation';
 
@@ -145,7 +150,13 @@ const ClassroomDetail = () => {
   const [editAssignmentDialogOpen, setEditAssignmentDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [resetConfirmDialogOpen, setResetConfirmDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const { data: resetPreview, isLoading: resetPreviewLoading, isError: resetPreviewError } =
+    useClassroomResetPreview(id, !!id);
+  const resetClassroomMutation = useResetClassroom();
   const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
   const [activeSection, setActiveSection] = useState(() => {
     const raw = (location.state as ClassroomLocationState | null)?.activeSection;
@@ -187,6 +198,46 @@ const ClassroomDetail = () => {
 
   // GSAP stagger animation refs - only trigger on section/tab change or data length changes
   const studentsRef = useStaggerAnimation(':scope > div', 0.04, [activeSection, students.length]);
+
+  const hasResettableData =
+    (resetPreview?.active_enrollments ?? students.length) > 0 ||
+    (resetPreview?.submissions ?? 0) > 0;
+
+  const resetTextMatches = resetConfirmText.trim().toLowerCase() === 'confirm';
+
+  const handleResetDialogOpenChange = (open: boolean) => {
+    setResetDialogOpen(open);
+    if (!open) setResetConfirmText('');
+  };
+
+  const handleResetClassroom = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    if (!id || !classroom || !resetTextMatches) return;
+
+    try {
+      const { result } = await resetClassroomMutation.mutateAsync(id);
+
+      if (isAppAdmin) {
+        void logAdminEvent({
+          action: 'classroom_reset',
+          entityType: 'classroom',
+          entityId: id,
+          metadata: { deleted: result.deleted },
+        });
+      }
+
+      toast.success(
+        t('classroomDetail.resetDialog.success', {
+          students: result.deleted.enrollments_unenrolled,
+          submissions: result.deleted.submissions,
+        }),
+      );
+      handleResetDialogOpenChange(false);
+    } catch (error) {
+      console.error('Error resetting classroom:', error);
+      toast.error(t('classroomDetail.resetDialog.error'));
+    }
+  };
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
@@ -576,6 +627,23 @@ const ClassroomDetail = () => {
                 </Button>
                 <Button
                   type="button"
+                  onClick={() => setResetConfirmDialogOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    resetPreviewLoading ||
+                    !(
+                      (resetPreview?.active_enrollments ?? students.length) > 0 ||
+                      (resetPreview?.submissions ?? 0) > 0
+                    )
+                  }
+                  className="h-9 w-full gap-1.5 rounded-full border-amber-500/50 text-amber-700 shadow-xs hover:bg-amber-500/10 dark:text-amber-400 sm:w-auto"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {t('classroomDetail.resetDialog.button')}
+                </Button>
+                <Button
+                  type="button"
                   onClick={() => setDeleteDialogOpen(true)}
                   variant="destructive"
                   size="sm"
@@ -778,6 +846,128 @@ const ClassroomDetail = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? t('classroomDetail.deleteDialog.deleting') : t('classroomDetail.deleteDialog.deleteButton')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resetConfirmDialogOpen} onOpenChange={setResetConfirmDialogOpen}>
+        <AlertDialogContent className="rounded-xl max-w-md" dir={isRTL ? 'rtl' : 'ltr'}>
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('classroomDetail.resetDialog.confirmPrompt.title')}</AlertDialogTitle>
+            <AlertDialogDescription className={isRTL ? 'text-right' : 'text-left'}>
+              {t('classroomDetail.resetDialog.confirmPrompt.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}>
+            <AlertDialogCancel className="mt-0">
+              {t('classroomDetail.resetDialog.confirmPrompt.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                setResetConfirmDialogOpen(false);
+                setResetDialogOpen(true);
+              }}
+              className="bg-amber-600 text-white hover:bg-amber-600/90"
+            >
+              {t('classroomDetail.resetDialog.confirmPrompt.continue')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={resetDialogOpen} onOpenChange={handleResetDialogOpenChange}>
+        <AlertDialogContent className="rounded-xl max-w-lg" dir={isRTL ? 'rtl' : 'ltr'}>
+          <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+            <AlertDialogTitle>{t('classroomDetail.resetDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'} text-sm text-muted-foreground`}>
+                <p>{t('classroomDetail.resetDialog.description')}</p>
+
+                {resetPreviewLoading ? (
+                  <p>{t('classroomDetail.resetDialog.previewLoading')}</p>
+                ) : resetPreviewError ? (
+                  <p className="text-destructive">{t('classroomDetail.resetDialog.previewError')}</p>
+                ) : (
+                  <>
+                    <div>
+                      <p className="font-medium text-foreground mb-1">
+                        {t('classroomDetail.resetDialog.willRemoveTitle')}
+                      </p>
+                      <ul className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
+                        <li>
+                          {t('classroomDetail.resetDialog.willRemoveStudents', {
+                            count: resetPreview?.active_enrollments ?? students.length,
+                          })}
+                        </li>
+                        <li>
+                          {t('classroomDetail.resetDialog.willRemoveSubmissions', {
+                            count: resetPreview?.submissions ?? 0,
+                          })}
+                        </li>
+                        <li>{t('classroomDetail.resetDialog.willRemoveProgress')}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground mb-1">
+                        {t('classroomDetail.resetDialog.willKeepTitle')}
+                      </p>
+                      <ul className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
+                        <li>{t('classroomDetail.resetDialog.willKeepCourse')}</li>
+                        <li>
+                          {t('classroomDetail.resetDialog.willKeepAssignments', {
+                            count: resetPreview?.assignments_preserved ?? assignments.length,
+                          })}
+                        </li>
+                        <li>{t('classroomDetail.resetDialog.willKeepOutline')}</li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="reset-confirm-text">
+                    {t('classroomDetail.resetDialog.typeToConfirm')}
+                  </Label>
+                  <Input
+                    id="reset-confirm-text"
+                    value={resetConfirmText}
+                    onChange={(e) => setResetConfirmText(e.target.value)}
+                    placeholder={t('classroomDetail.resetDialog.confirmPlaceholder')}
+                    autoComplete="off"
+                    disabled={resetClassroomMutation.isPending}
+                  />
+                  {resetConfirmText.trim().length > 0 && !resetTextMatches && (
+                    <p className="text-xs text-destructive">
+                      {t('classroomDetail.resetDialog.confirmMismatch')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}>
+            <AlertDialogCancel
+              disabled={resetClassroomMutation.isPending}
+              className="mt-0"
+            >
+              {t('classroomDetail.resetDialog.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetClassroom}
+              disabled={
+                resetClassroomMutation.isPending ||
+                resetPreviewLoading ||
+                resetPreviewError ||
+                !resetTextMatches ||
+                !hasResettableData
+              }
+              className="bg-amber-600 text-white hover:bg-amber-600/90"
+            >
+              {resetClassroomMutation.isPending
+                ? t('classroomDetail.resetDialog.resetting')
+                : t('classroomDetail.resetDialog.confirmButton')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

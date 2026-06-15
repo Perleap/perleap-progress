@@ -462,6 +462,7 @@
     "completeActivity": "השלם פעילות",
     "completeNotReady": "ממתינים לטעינת השיחה. אנא המתן רגע או רענן את הדף.",
     "generatingFeedback": "מייצר משוב...",
+    "completingActivity": "משלים את הפעילות...",
     "errors": {
       "startingConversation": "שגיאה בהתחלת השיחה",
       "loadingConversation": "שגיאה בטעינת השיחה",
@@ -1133,6 +1134,35 @@
       "deleteButton": "מחק כיתה",
       "deleting": "מוחק...",
       "cancel": "ביטול"
+    },
+    "resetDialog": {
+      "button": "איפוס קורס",
+      "confirmPrompt": {
+        "title": "לאפס את הקורס?",
+        "description": "את/ה עומד/ת לאפס את הקורס. כל התלמידים הרשומים וכל העבודה שלהם יוסרו. תתבקש/י לאשר שוב לפני שמתבצעת מחיקה.",
+        "continue": "המשך",
+        "cancel": "ביטול"
+      },
+      "title": "איפוס קורס",
+      "description": "פעולה זו מסירה את כל התלמידים הרשומים ואת כל העבודה שלהם מהקורס. מבנה הקורס, המשימות והפעילויות יישארו ללא שינוי.",
+      "willRemoveTitle": "יוסר",
+      "willRemoveStudents": "{{count}} תלמיד/ים רשומ/ים",
+      "willRemoveSubmissions": "{{count}} הגשות",
+      "willRemoveProgress": "כל הציונים, היסטוריית הצ'אט, ההתקדמות והניתוחים",
+      "willKeepTitle": "יישמר",
+      "willKeepCourse": "שם הקורס, קוד ההזמנה וההגדרות",
+      "willKeepAssignments": "כל המשימות ({{count}})",
+      "willKeepOutline": "תוכנית הלימודים, מודולים ופעילויות",
+      "typeToConfirm": "הקלד/י confirm כדי להמשיך:",
+      "confirmPlaceholder": "confirm",
+      "confirmMismatch": "יש להקליד confirm בדיוק כדי להמשיך",
+      "confirmButton": "אפס קורס",
+      "resetting": "מאפס...",
+      "cancel": "ביטול",
+      "previewLoading": "טוען תצוגה מקדימה…",
+      "previewError": "לא ניתן לטעון תצוגה מקדימה של האיפוס",
+      "success": "איפוס הקורס הושלם. {{students}} תלמיד/ים הוסרו, {{submissions}} הגשות נמחקו.",
+      "error": "לא ניתן לאפס את הקורס. נסה/י שוב."
     }
   },
   "submissionsTab": {
@@ -1227,7 +1257,7 @@
     "noStudentFacingTask": "לא נשמר תקציר קצר למשימה עבור התלמידים במטלה זו. ניתן ליצור או לערוך אותו בעורך המטלה (שלב סקירה).",
     "fullAssignmentInstructions": "הנחיות מלאות",
     "feedbackEmpty": {
-      "chatPrompt": "עדיין אין משוב בינה מלאכותית. פתח את לשונית המשימה כדי לקרוא את הצ'אט של התלמיד וליצור משוב בינה מלאכותית."
+      "chatPrompt": "עדיין אין משוב בינה מלאכותית. השתמש/י ב\"יצירת הערכת בינה מלאכותית\" בלשונית זו לאחר שתעיין/י בצ'אט של התלמיד בלשונית המשימה."
     },
     "noFeedbackDesc": "התלמיד טרם השלים את המטלה, או שהמשוב עדיין בתהליך יצירה.",
     "tabs": {
@@ -1248,20 +1278,25 @@
       "noAnswer": "לא ניתנה תשובה",
       "summary": "{{correct}} מתוך {{total}} נכונות",
       "mcqScore": "ציון רב ברירה",
+      "averageScore": "{{percent}}%",
+      "partial": "חלקי ({{percent}}%)",
+      "missedCorrect": "נכון (לא נבחר)",
       "openEndedCount": "שאלות פתוחות"
     },
     "teacherEvaluation": {
       "writeEvaluation": "כתוב הערכה",
+      "overrideEvaluation": "עדכן הערכה",
       "placeholder": "כתוב את ההערכה והמשוב שלך להגשת התלמיד...",
       "submit": "הגש הערכה",
       "submitting": "מעריך...",
       "success": "ההערכה הוגשה בהצלחה! הציונים נוצרו.",
       "error": "שגיאה בהגשת ההערכה. אנא נסה שוב.",
-      "awaitingEvaluation": "ממתין להערכתך בלשונית המשימה"
+      "awaitingEvaluation": "עדיין אין משוב בינה מלאכותית. השתמש/י ב\"יצירת הערכת בינה מלאכותית\" בלשונית זו כשאת/ה מוכן/ה."
     },
     "projectView": {
       "title": "הגשת פרויקט",
       "download": "הורד קובץ",
+      "downloadFailed": "לא ניתן להוריד את הקובץ. נפתח בלשונית חדשה.",
       "preview": "תצוגה מקדימה",
       "noFile": "לא הוגש קובץ"
     },
@@ -2395,6 +2430,7 @@
       "markingRead": "שגיאה בסימון התראות כנקראו"
     },
     "messages": {
+      "feedbackReady": "המשוב שלך עבור \"{{title}}\" מוכן לצפייה.",
       "feedbackUpdated": "המשוב שלך עבור \"{{title}}\" עודכן על ידי המורה."
     },
     "titles": {

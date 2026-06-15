@@ -18,6 +18,15 @@ import type {
 } from '@/types';
 import { SUBMISSION_STATUS, EVALUATION_STATUS, type EvaluationStatus } from '@/config/constants';
 import { createNotification } from '@/lib/notificationService';
+
+export const studentAssignmentDetailLink = (
+  assignmentId: string,
+  submissionId?: string | null,
+): string => {
+  const base = `/student/assignment/${assignmentId}`;
+  if (!submissionId) return base;
+  return `${base}?submission=${encodeURIComponent(submissionId)}`;
+};
 import { rehydrateMessages } from '@/lib/conversationMessages';
 import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
 import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
@@ -69,7 +78,7 @@ async function insertSubmissionRow(
 export const getStudentSubmissionContext = async (
   assignmentId: string,
   studentId: string,
-  opts?: { isTeacherTry?: boolean },
+  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string },
   prefetchedAssignment?: SubmissionContextAssignment | null,
 ): Promise<{ data: StudentSubmissionContext; error: ApiError | null }> => {
   try {
@@ -111,6 +120,21 @@ export const getStudentSubmissionContext = async (
 
     const list = (rows ?? []) as unknown as Submission[];
     const now = new Date();
+
+    if (opts?.isTeacherTry !== true && opts?.preferredSubmissionId) {
+      const preferred = list.find((s) => s.id === opts.preferredSubmissionId);
+      if (preferred) {
+        const retry = canRetryAfterCompleting(assignment as any, now);
+        return {
+          data: {
+            submission: preferred,
+            allAttempts: list,
+            canRetry: retry,
+          },
+          error: null,
+        };
+      }
+    }
 
     if (opts?.isTeacherTry === true) {
       const teacherAttempts = list.filter(
@@ -356,6 +380,8 @@ export const getFullSubmissionDetails = async (
         .from('assignment_feedback')
         .select('*')
         .eq('submission_id', submissionId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase
         .from('student_alerts')
@@ -564,10 +590,10 @@ export const getEnrichedClassroomSubmissions = async (
 
     const submissionIds = (submissions || []).map((s) => s.id);
 
-    // 3. Bulk fetch feedback
+    // 3. Bulk fetch feedback (list view only — skip conversation_context; loaded on submission detail)
     const { data: feedback } = await supabase
       .from('assignment_feedback')
-      .select('submission_id, teacher_feedback, conversation_context')
+      .select('submission_id, teacher_feedback')
       .in('submission_id', submissionIds);
 
     const flagCountBySubmissionId = new Map<string, number>();
@@ -601,7 +627,7 @@ export const getEnrichedClassroomSubmissions = async (
         syllabus_section_id: assignment?.syllabus_section_id ?? null,
         has_feedback: !!fb,
         teacher_feedback: fb?.teacher_feedback,
-        conversation_context: (fb?.conversation_context as unknown as Message[]) || [],
+        conversation_context: [],
         chat_sentence_flag_count: flagCountBySubmissionId.get(sub.id) ?? 0,
       };
     });
@@ -765,6 +791,8 @@ export const getSubmissionFeedback = async (
       .from('assignment_feedback')
       .select('*')
       .eq('submission_id', submissionId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
@@ -1196,7 +1224,7 @@ export const updateAssignmentFeedbackText = async (params: {
             'feedback_updated',
             n.title,
             n.message,
-            `/student/assignment/${n.assignmentId}`,
+            studentAssignmentDetailLink(n.assignmentId, submissionId),
             {
               assignment_id: n.assignmentId,
               assignment_title: n.assignmentTitle,
@@ -1260,7 +1288,7 @@ export const releaseAiFeedbackToStudent = async (params: {
           'feedback_received',
           notification.title,
           notification.message,
-          `/student/assignment/${assignmentId}`,
+          studentAssignmentDetailLink(assignmentId, submissionId),
           {
             assignment_id: assignmentId,
             assignment_title: assignmentTitle,

@@ -12,6 +12,7 @@ import type {
   ApiError,
   CreateAssignmentInput,
 } from '@/types';
+import type { ClassroomResetResult, ClassroomResetScopeCounts } from '@/types/api.types';
 
 /**
  * Fetch all classrooms for a teacher with enrollment counts.
@@ -326,6 +327,84 @@ export const getStudentClassrooms = async (
     }
 
     return { data: data as unknown as Classroom[], error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+function parseClassroomResetScopeCounts(raw: unknown): ClassroomResetScopeCounts | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const num = (k: string) => (typeof o[k] === 'number' ? o[k] : Number(o[k] ?? 0));
+  return {
+    active_enrollments: num('active_enrollments'),
+    submissions: num('submissions'),
+    module_flow_progress: num('module_flow_progress'),
+    section_progress: num('section_progress'),
+    memory_and_nuance_rows: num('memory_and_nuance_rows'),
+    assignments_preserved: num('assignments_preserved'),
+  };
+}
+
+/**
+ * Preview what a classroom reset would remove (read-only).
+ */
+export const previewClassroomReset = async (
+  classroomId: string,
+): Promise<{ data: ClassroomResetScopeCounts | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase.rpc('teacher_preview_classroom_reset', {
+      p_classroom_id: classroomId,
+    });
+    if (error) return { data: null, error: handleSupabaseError(error) };
+    return { data: parseClassroomResetScopeCounts(data), error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Reset a classroom: remove all students and their work; preserve course structure.
+ */
+export const resetClassroom = async (
+  classroomId: string,
+): Promise<{ data: ClassroomResetResult | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase.rpc('teacher_reset_classroom', {
+      p_classroom_id: classroomId,
+    });
+    if (error) return { data: null, error: handleSupabaseError(error) };
+
+    if (!data || typeof data !== 'object') {
+      return { data: null, error: { message: 'Invalid reset response' } };
+    }
+
+    const payload = data as Record<string, unknown>;
+    const before = parseClassroomResetScopeCounts(payload.before);
+    const after = parseClassroomResetScopeCounts(payload.after);
+    const deletedRaw = payload.deleted;
+    if (!before || !after || !deletedRaw || typeof deletedRaw !== 'object') {
+      return { data: null, error: { message: 'Invalid reset response shape' } };
+    }
+    const d = deletedRaw as Record<string, unknown>;
+    const n = (k: string) => (typeof d[k] === 'number' ? d[k] : Number(d[k] ?? 0));
+
+    return {
+      data: {
+        before,
+        after,
+        deleted: {
+          submissions: n('submissions'),
+          nuance_events: n('nuance_events'),
+          module_flow_progress: n('module_flow_progress'),
+          section_progress: n('section_progress'),
+          section_comments: n('section_comments'),
+          enrollments_unenrolled: n('enrollments_unenrolled'),
+          assignments_student_target_cleared: n('assignments_student_target_cleared'),
+        },
+      },
+      error: null,
+    };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
