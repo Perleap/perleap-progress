@@ -2333,6 +2333,14 @@ export type Database = {
         Args: { _submission_id: string }
         Returns: string
       }
+      teacher_preview_classroom_reset: {
+        Args: { p_classroom_id: string }
+        Returns: Json
+      }
+      teacher_reset_classroom: {
+        Args: { p_classroom_id: string }
+        Returns: Json
+      }
       upsert_video_watch_progress: {
         Args: {
           p_classroom_id: string

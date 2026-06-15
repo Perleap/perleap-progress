@@ -6,8 +6,13 @@
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/useAuth';
 import { enrollInClassroom, unenrollFromClassroom, isEnrolled } from '@/services/enrollmentService';
-import { getEnrolledStudents } from '@/services/classroomService';
+import { getEnrolledStudents, previewClassroomReset, resetClassroom } from '@/services/classroomService';
 import { classroomKeys } from './useClassroomQueries';
+import { assignmentKeys } from './useAssignmentQueries';
+import { submissionKeys } from './useSubmissionQueries';
+import { moduleFlowKeys } from './useModuleFlowQueries';
+import { syllabusKeys } from './useSyllabusQueries';
+import { pilotReportKeys } from './usePilotReportQueries';
 
 // Query Keys
 export const enrollmentKeys = {
@@ -124,6 +129,57 @@ export const useUnenrollFromClassroom = () => {
       queryClient.invalidateQueries({
         queryKey: enrollmentKeys.listByClassroom(classroomId),
       });
+    },
+  });
+};
+
+/**
+ * Preview counts for classroom reset (read-only).
+ */
+export const useClassroomResetPreview = (
+  classroomId: string | undefined,
+  enabled: boolean,
+) => {
+  return useQuery({
+    queryKey: [...enrollmentKeys.all, 'reset-preview', classroomId ?? ''] as const,
+    queryFn: async () => {
+      if (!classroomId) throw new Error('Missing classroom ID');
+      const { data, error } = await previewClassroomReset(classroomId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!classroomId && enabled,
+    staleTime: 0,
+  });
+};
+
+/**
+ * Reset classroom: remove all students and their work; preserve course structure.
+ */
+export const useResetClassroom = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (classroomId: string) => {
+      const { data, error } = await resetClassroom(classroomId);
+      if (error) throw error;
+      if (!data) throw new Error('Reset failed');
+      return { classroomId, result: data };
+    },
+    onSuccess: ({ classroomId }) => {
+      queryClient.invalidateQueries({ queryKey: classroomKeys.detail(classroomId) });
+      queryClient.invalidateQueries({ queryKey: classroomKeys.students(classroomId) });
+      queryClient.invalidateQueries({ queryKey: enrollmentKeys.listByClassroom(classroomId) });
+      queryClient.invalidateQueries({
+        queryKey: assignmentKeys.classroomAssignmentLists(classroomId),
+      });
+      queryClient.invalidateQueries({ queryKey: submissionKeys.listByClassroom(classroomId) });
+      queryClient.invalidateQueries({ queryKey: moduleFlowKeys.all });
+      queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
+      queryClient.invalidateQueries({
+        queryKey: [...pilotReportKeys.all, 'snapshot', classroomId],
+      });
+      queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
     },
   });
 };

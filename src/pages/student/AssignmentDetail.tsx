@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
@@ -76,6 +76,8 @@ const AssignmentDetail = () => {
   const isTeacherTry = Boolean(teacherRouteClassroomId && params.assignmentId);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const preferredSubmissionId = searchParams.get('submission') ?? undefined;
   const { user } = useAuth();
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
@@ -118,7 +120,7 @@ const AssignmentDetail = () => {
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(
     assignmentId || undefined,
-    { isTeacherTry },
+    { isTeacherTry, preferredSubmissionId },
   );
 
   const needsAutoStudentTask = Boolean(
@@ -360,6 +362,7 @@ const AssignmentDetail = () => {
   const submissionContext = assignmentData?.submissionContext as
     | { allAttempts: unknown[]; canRetry: boolean }
     | undefined;
+
   const canRetry = submissionContext?.canRetry ?? false;
   const attemptMode = (assignment as { attempt_mode?: string } | undefined)?.attempt_mode ?? 'single';
 
@@ -549,7 +552,7 @@ const AssignmentDetail = () => {
       queryClient.invalidateQueries({ queryKey: assignmentFlowCompleteKeys.all });
       queryClient.invalidateQueries({ queryKey: assignmentSubmittedFlagsKeys.all });
       invalidateStudentTimelineCurriculaQueries(queryClient);
-      void refetch();
+      await refetch();
       if (tone === 'activityCompleted') {
         toast.success(t('assignmentDetail.success.completed'));
       } else if (tone === 'awaitingTeacher') {
@@ -1010,12 +1013,15 @@ const AssignmentDetail = () => {
               );
             }
 
-            if (!isTeacherTry && isManualEvalType && isCompleted && assignment.enable_ai_feedback === false) {
-              const awaitingKey = `assignmentDetail.${assignment.type}.awaitingReview`;
+            if (!isTeacherTry && isCompleted && !feedback && assignment.enable_ai_feedback === false) {
+              const awaitingKey = isManualEvalType
+                ? `assignmentDetail.${assignment.type}.awaitingReview`
+                : 'assignmentDetail.success.completed';
+              const CompletedIcon = isManualEvalType ? Clock : CheckCircle;
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <Clock className="h-10 w-10 text-primary mb-4" />
+                    <CompletedIcon className="h-10 w-10 text-primary mb-4" />
                     <p className="text-sm font-medium text-primary">
                       {t(awaitingKey)}
                     </p>

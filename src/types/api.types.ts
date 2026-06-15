@@ -19,6 +19,30 @@ export interface ClassroomWithEnrollmentCount extends Classroom {
   _count?: { enrollments: number };
 }
 
+/** Counts returned by teacher_preview_classroom_reset / teacher_reset_classroom */
+export interface ClassroomResetScopeCounts {
+  active_enrollments: number;
+  submissions: number;
+  module_flow_progress: number;
+  section_progress: number;
+  memory_and_nuance_rows: number;
+  assignments_preserved: number;
+}
+
+export interface ClassroomResetResult {
+  before: ClassroomResetScopeCounts;
+  deleted: {
+    submissions: number;
+    nuance_events: number;
+    module_flow_progress: number;
+    section_progress: number;
+    section_comments: number;
+    enrollments_unenrolled: number;
+    assignments_student_target_cleared: number;
+  };
+  after: ClassroomResetScopeCounts;
+}
+
 export interface ClassroomWithTeacher extends Classroom {
   teacher_profiles: TeacherProfile | null;
 }
@@ -118,6 +142,8 @@ export interface FeedbackRequest {
   language?: string;
   /** When true, edge function returns 202 immediately and runs evaluation in the background. */
   background?: boolean;
+  /** When true, delete prior feedback/snapshots before generating (teacher regenerate). */
+  regenerate?: boolean;
 }
 
 export interface FeedbackResponse {

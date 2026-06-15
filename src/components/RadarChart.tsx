@@ -1,5 +1,4 @@
 import {
-  LabelList,
   Radar,
   RadarChart as RechartsRadarChart,
   PolarGrid,
@@ -226,30 +225,7 @@ export const RadarChart = ({ scores, explanations, showLabels = true, height = 4
                   fillOpacity={0.6}
                 />
               )}
-            >
-              <LabelList
-                dataKey="value"
-                content={({ x, y, index, value }) => {
-                  if (x == null || y == null || index == null || value == null) return null;
-                  const dimension = chartData[index]?.dimension;
-                  if (!dimension || !isFiveDScoreAssessed(scores[dimension])) return null;
-                  const color = DIMENSION_CONFIG[dimension].color;
-                  return (
-                    <text
-                      x={x}
-                      y={y}
-                      dy={-8}
-                      textAnchor="middle"
-                      fill={color}
-                      fontSize={12}
-                      fontWeight="bold"
-                    >
-                      {Number(value).toFixed(1)}
-                    </text>
-                  );
-                }}
-              />
-            </Radar>
+            />
             <Tooltip
               content={({ active, payload }) => (
                 <CustomTooltip

@@ -462,6 +462,7 @@
     "completeActivity": "Complete Activity",
     "completeNotReady": "Waiting for the conversation to load. Please wait a moment or refresh.",
     "generatingFeedback": "Generating feedback...",
+    "completingActivity": "Completing activity...",
     "errors": {
       "startingConversation": "Error starting conversation",
       "loadingConversation": "Error loading conversation",
@@ -1146,6 +1147,35 @@
       "deleteButton": "Delete Classroom",
       "deleting": "Deleting...",
       "cancel": "Cancel"
+    },
+    "resetDialog": {
+      "button": "Reset Course",
+      "confirmPrompt": {
+        "title": "Reset this course?",
+        "description": "You are about to reset this course. All enrolled students and their work will be removed. You will be asked to confirm again before anything is deleted.",
+        "continue": "Continue",
+        "cancel": "Cancel"
+      },
+      "title": "Reset Course",
+      "description": "This removes all enrolled students and their work from this course. The course structure, assignments, and activities will stay exactly as they are.",
+      "willRemoveTitle": "Will be removed",
+      "willRemoveStudents": "{{count}} enrolled student(s)",
+      "willRemoveSubmissions": "{{count}} submission(s)",
+      "willRemoveProgress": "All scores, chat history, progress, and analytics",
+      "willKeepTitle": "Will be kept",
+      "willKeepCourse": "Course name, invite code, and settings",
+      "willKeepAssignments": "All assignments ({{count}})",
+      "willKeepOutline": "Syllabus, modules, and activities",
+      "typeToConfirm": "Type confirm to proceed:",
+      "confirmPlaceholder": "confirm",
+      "confirmMismatch": "Type confirm exactly to proceed",
+      "confirmButton": "Reset Course",
+      "resetting": "Resetting...",
+      "cancel": "Cancel",
+      "previewLoading": "Loading preview…",
+      "previewError": "Could not load reset preview",
+      "success": "Course reset complete. {{students}} student(s) removed, {{submissions}} submission(s) cleared.",
+      "error": "Could not reset course. Please try again."
     }
   },
   "submissionsTab": {
@@ -1240,7 +1270,7 @@
     "noStudentFacingTask": "No short student-facing task summary was saved for this assignment. You can generate or edit it in the assignment editor (Review step).",
     "fullAssignmentInstructions": "Full instructions",
     "feedbackEmpty": {
-      "chatPrompt": "No AI feedback yet. Open the Assignment tab to read the student’s chat and generate AI feedback."
+      "chatPrompt": "No AI feedback yet. Use Generate AI evaluation on this tab after reviewing the student's chat on the Assignment tab."
     },
     "noFeedbackDesc": "This student hasn't completed the assignment yet, or feedback is still being generated.",
     "tabs": {
@@ -1261,20 +1291,25 @@
       "noAnswer": "No answer provided",
       "summary": "{{correct}} of {{total}} correct",
       "mcqScore": "Multiple Choice Score",
+      "averageScore": "{{percent}}%",
+      "partial": "Partial ({{percent}}%)",
+      "missedCorrect": "Correct (missed)",
       "openEndedCount": "Open-ended Questions"
     },
     "teacherEvaluation": {
       "writeEvaluation": "Write Evaluation",
+      "overrideEvaluation": "Override Evaluation",
       "placeholder": "Write your evaluation and feedback for this student's submission...",
       "submit": "Submit Evaluation",
       "submitting": "Evaluating...",
       "success": "Evaluation submitted successfully! Scores have been generated.",
       "error": "Error submitting evaluation. Please try again.",
-      "awaitingEvaluation": "Awaiting your evaluation in the Assignment tab"
+      "awaitingEvaluation": "No AI feedback yet. Use Generate AI evaluation on this tab when you are ready."
     },
     "projectView": {
       "title": "Project Submission",
       "download": "Download File",
+      "downloadFailed": "Could not download the file. Opened in a new tab instead.",
       "preview": "File Preview",
       "noFile": "No file submitted"
     },
@@ -2415,6 +2450,7 @@
       "markingRead": "Error marking notifications as read"
     },
     "messages": {
+      "feedbackReady": "Your feedback for \"{{title}}\" is ready to view.",
       "feedbackUpdated": "Your feedback for \"{{title}}\" was updated by your teacher."
     },
     "titles": {
