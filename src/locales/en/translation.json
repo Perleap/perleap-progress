@@ -1434,7 +1434,7 @@
     },
     "langchain": {
       "title": "Pipeline builder",
-      "body": "Build or document your pipeline in the builder. Save your work, then submit when it matches the assignment.",
+      "body": "Build your pipeline in the builder. Save your work, then submit when it matches the assignment.",
       "tutorial": "Use “Add Node” on the left to place nodes on the canvas. Drag nodes to arrange them and connect handles to wire your flow. Click a node to edit “Node properties” on the right. Press “Save Pipeline” while you work, then “Submit Pipeline” when it matches the assignment."
     },
     "chatbot": {
@@ -2730,6 +2730,10 @@
       "addFile": "Add File",
       "uploaded": "{{count}} file(s) uploaded",
       "uploading": "Uploading...",
+      "uploadingFile": "Uploading {{name}}...",
+      "uploadFailed": "Failed to upload {{name}}.",
+      "uploadGlobalLimitExceeded": "This file exceeds the maximum upload size (1 GB). Try a smaller file.",
+      "fileTooLarge": "{{name}} is too large. Maximum size is 1 GB.",
       "dropzone": "Drop files here or click to upload",
       "linkTitlePlaceholder": "Link title",
       "linkFieldsRequired": "Title and URL are required",
