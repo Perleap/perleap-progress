@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ interface ProjectSubmissionViewProps {
   assignmentId: string;
   hasFeedback: boolean;
   onEvaluationComplete: () => void;
+  headerAction?: ReactNode;
 }
 
 function resolveProjectFileUrls(fileUrl?: string | null, fileUrls?: string[] | null): string[] {
@@ -33,6 +35,7 @@ export function ProjectSubmissionView({
   assignmentId,
   hasFeedback,
   onEvaluationComplete,
+  headerAction,
 }: ProjectSubmissionViewProps) {
   const { t } = useTranslation();
   const urls = resolveProjectFileUrls(fileUrl, fileUrls);
@@ -40,8 +43,9 @@ export function ProjectSubmissionView({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle className="text-base">{t('submissionDetail.projectView.title')}</CardTitle>
+          {headerAction}
         </CardHeader>
         <CardContent>
           {urls.length > 0 ? (

@@ -43,13 +43,18 @@ interface NuanceInsightsTableProps {
   onAssignmentChange: (value: string) => void;
 }
 
-type SortField = 'name' | 'latency' | 'idle' | 'completion' | 'sessions' | 'cues';
+type SortField = 'name' | 'latency' | 'idle' | 'completion' | 'sessions' | 'cues' | 'duration';
 type SortDir = 'asc' | 'desc';
 
 function formatLatency(ms: number | null): string {
   if (ms === null) return '—';
   if (ms > 60000) return `${(ms / 60000).toFixed(1)}m`;
   return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null) return '—';
+  return formatLatency(seconds * 1000);
 }
 
 function formatPercent(ratio: number): string {
@@ -66,6 +71,7 @@ interface AggregatedRow {
   completionRate: number;
   sessionCount: number;
   understandingCueCount: number;
+  assignmentDurationSeconds: number | null;
   recommendation?: NuanceRecommendation;
 }
 
@@ -166,6 +172,7 @@ export function NuanceInsightsTable({
         completionRate: m.completion_status === 'completed' ? 1 : 0,
         sessionCount: m.session_count,
         understandingCueCount: m.understanding_cue_count ?? 0,
+        assignmentDurationSeconds: m.assignment_duration_seconds ?? null,
         recommendation: recMap.get(m.student_id),
       }));
     }
@@ -190,6 +197,10 @@ export function NuanceInsightsTable({
         .map((m) => m.avg_response_latency_ms)
         .filter((v): v is number => v !== null);
 
+      const durations = mets
+        .map((m) => m.assignment_duration_seconds)
+        .filter((v): v is number => v != null && v >= 0);
+
       const completed = mets.filter((m) => m.completion_status === 'completed').length;
       const denominator = Math.max(totalAssignments, mets.length);
 
@@ -204,6 +215,10 @@ export function NuanceInsightsTable({
         understandingCueCount: Math.round(
           mets.reduce((s, m) => s + (m.understanding_cue_count ?? 0), 0) / mets.length,
         ),
+        assignmentDurationSeconds:
+          durations.length > 0
+            ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+            : null,
         recommendation: recMap.get(sid),
       });
     }
@@ -242,6 +257,9 @@ export function NuanceInsightsTable({
           break;
         case 'cues':
           cmp = a.understandingCueCount - b.understandingCueCount;
+          break;
+        case 'duration':
+          cmp = (a.assignmentDurationSeconds ?? 0) - (b.assignmentDurationSeconds ?? 0);
           break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
@@ -474,13 +492,22 @@ export function NuanceInsightsTable({
                     {t('nuance.columns.responseTime', 'Avg Response')}
                   </SortableHeader>
                   <SortableHeader field="idle" tooltip={t('nuance.tooltips.idleRatio')}>
-                    {t('nuance.columns.idleRatio', 'Idle Ratio')}
+                    {t('nuance.columns.idleRatio', 'Time away from tab')}
                   </SortableHeader>
                   <SortableHeader field="completion" tooltip={t('nuance.tooltips.completion')}>
                     {t('nuance.columns.completion', 'Completion')}
                   </SortableHeader>
                   <SortableHeader field="sessions" tooltip={t('nuance.tooltips.sessions')}>
                     {t('nuance.columns.sessions', 'Sessions')}
+                  </SortableHeader>
+                  <SortableHeader
+                    field="duration"
+                    tooltip={t(
+                      'nuance.tooltips.timeOnAssignment',
+                      'Wall-clock time from when the student started the assignment until they submitted.',
+                    )}
+                  >
+                    {t('nuance.columns.timeOnAssignment', 'Time on assignment')}
                   </SortableHeader>
                   <SortableHeader
                     field="cues"
@@ -527,6 +554,9 @@ export function NuanceInsightsTable({
                         {formatPercent(row.completionRate)}
                       </TableCell>
                       <TableCell className="px-2 py-3 text-center tabular-nums">{row.sessionCount}</TableCell>
+                      <TableCell className="px-2 py-3 text-center tabular-nums">
+                        {formatDuration(row.assignmentDurationSeconds)}
+                      </TableCell>
                       <TableCell className="px-2 py-3 text-center tabular-nums text-xs">
                         {row.understandingCueCount}
                       </TableCell>
@@ -559,7 +589,7 @@ export function NuanceInsightsTable({
                     </TableRow>
                     {expandedRow === row.key && (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={8} className="p-0">
+                        <TableCell colSpan={9} className="p-0">
                           <div className="px-4 py-3 bg-muted/20 border-t border-border w-0 min-w-full overflow-hidden space-y-1">
                             {row.recommendation ? (
                               <StudentInsightCard recommendation={row.recommendation} />

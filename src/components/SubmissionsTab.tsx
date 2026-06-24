@@ -36,6 +36,7 @@ import {
 import {
   SubmissionCard,
   formatSubmissionAssignmentTitle,
+  SubmissionClipboardActivityBadge,
   SubmissionFlaggedSentencesBadge,
   type SubmissionCardVariant,
 } from './SubmissionCard';
@@ -733,6 +734,10 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 const teacherTry = !pending && Boolean((submission as { is_teacher_attempt?: boolean }).is_teacher_attempt);
                 const flaggedCount =
                   (submission as { chat_sentence_flag_count?: number }).chat_sentence_flag_count ?? 0;
+                const clipboardHasCopy =
+                  (submission as { clipboard_has_copy?: boolean }).clipboard_has_copy ?? false;
+                const clipboardHasPaste =
+                  (submission as { clipboard_has_paste?: boolean }).clipboard_has_paste ?? false;
                 if (pending) {
                   feedbackText = '—';
                 } else if (!submission.has_feedback) {
@@ -767,6 +772,11 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                         <SubmissionFlaggedSentencesBadge
                           count={flaggedCount}
                           assignmentType={assignmentType}
+                          size="compact"
+                        />
+                        <SubmissionClipboardActivityBadge
+                          hasCopy={clipboardHasCopy}
+                          hasPaste={clipboardHasPaste}
                           size="compact"
                         />
                         {teacherTry ? (

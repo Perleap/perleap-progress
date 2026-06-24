@@ -11,3 +11,7 @@ export function formatResourceFileSize(bytes: number | null): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
+
+export function getMaxResourceFileSizeLabel(): string {
+  return formatResourceFileSize(MAX_RESOURCE_FILE_SIZE);
+}

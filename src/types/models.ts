@@ -153,6 +153,10 @@ export interface Submission {
   file_urls: string[] | null;
   status: 'in_progress' | 'completed';
   submitted_at: string | null;
+  /** When the student started this attempt (row creation). */
+  started_at?: string | null;
+  /** Wall-clock seconds from started_at to submit. */
+  duration_seconds?: number | null;
   /** True when AI feedback exists but teacher has not released it to the student. */
   awaiting_teacher_feedback_release?: boolean;
   /** Async AI evaluation lifecycle (null when no AI eval was requested). */

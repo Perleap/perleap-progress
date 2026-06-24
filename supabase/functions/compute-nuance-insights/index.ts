@@ -5,6 +5,13 @@ import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../sh
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import {
+  computeMetricsForAssignment,
+  resolveAssignmentDurationSeconds,
+  type NuanceEvent,
+  type StudentMetrics,
+  type SubmissionTimingRow,
+} from './computeMetrics.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,32 +19,6 @@ const corsHeaders = {
 };
 
 // ── Types ───────────────────────────────────────────────────────────
-
-interface NuanceEvent {
-  id: string;
-  student_id: string;
-  assignment_id: string;
-  submission_id: string | null;
-  event_type: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-}
-
-interface StudentMetrics {
-  student_id: string;
-  assignment_id: string;
-  classroom_id: string;
-  avg_response_latency_ms: number | null;
-  total_idle_time_ms: number;
-  idle_ratio: number;
-  completion_status: string;
-  focus_loss_count: number;
-  resume_count: number;
-  session_count: number;
-  total_session_duration_ms: number;
-  first_interaction_latency_ms: number | null;
-  understanding_cue_count: number;
-}
 
 interface Recommendation {
   student_id: string;
@@ -54,113 +35,6 @@ interface StudentBaseline {
   avg_idle_ratio: number;
   avg_completion_rate: number;
   assignment_count: number;
-}
-
-// ── Metric Computation ──────────────────────────────────────────────
-
-function computeMetricsForAssignment(
-  events: NuanceEvent[],
-  classroomId: string,
-  submissionStatus: string,
-): StudentMetrics {
-  const studentId = events[0].student_id;
-  const assignmentId = events[0].assignment_id;
-
-  const responseTimes: number[] = [];
-  let totalIdleMs = 0;
-  let focusLossCount = 0;
-  let resumeCount = 0;
-  let sessionCount = 0;
-  let totalSessionMs = 0;
-  let firstInteractionMs: number | null = null;
-  let understandingCueCount = 0;
-
-  let activityOpenedAt: number | null = null;
-  let lastSessionStart: number | null = null;
-  let lastBlurAt: number | null = null;
-
-  const sorted = [...events].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
-
-  for (const evt of sorted) {
-    const ts = new Date(evt.created_at).getTime();
-
-    switch (evt.event_type) {
-      case 'activity_opened':
-        if (activityOpenedAt === null) activityOpenedAt = ts;
-        break;
-
-      case 'session_started':
-        sessionCount++;
-        lastSessionStart = ts;
-        break;
-
-      case 'session_ended':
-        if (lastSessionStart !== null) {
-          totalSessionMs += ts - lastSessionStart;
-          lastSessionStart = null;
-        }
-        break;
-
-      case 'page_blur':
-        focusLossCount++;
-        lastBlurAt = ts;
-        break;
-
-      case 'page_focus':
-        resumeCount++;
-        if (lastBlurAt !== null) {
-          totalIdleMs += ts - lastBlurAt;
-          lastBlurAt = null;
-        }
-        break;
-
-      case 'response_submitted': {
-        const rt = evt.metadata?.response_time_ms;
-        if (typeof rt === 'number' && rt > 0) {
-          responseTimes.push(rt);
-        }
-        if (firstInteractionMs === null && activityOpenedAt !== null) {
-          firstInteractionMs = ts - activityOpenedAt;
-        }
-        break;
-      }
-
-      case 'understanding_cue':
-        understandingCueCount += 1;
-        break;
-    }
-  }
-
-  // If session was never explicitly ended, estimate from last event
-  if (lastSessionStart !== null) {
-    const lastEventTs = new Date(sorted[sorted.length - 1].created_at).getTime();
-    totalSessionMs += lastEventTs - lastSessionStart;
-  }
-
-  const avgLatency =
-    responseTimes.length > 0
-      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
-      : null;
-
-  const idleRatio = totalSessionMs > 0 ? totalIdleMs / totalSessionMs : 0;
-
-  return {
-    student_id: studentId,
-    assignment_id: assignmentId,
-    classroom_id: classroomId,
-    avg_response_latency_ms: avgLatency,
-    total_idle_time_ms: totalIdleMs,
-    idle_ratio: Math.min(idleRatio, 1),
-    completion_status: submissionStatus,
-    focus_loss_count: focusLossCount,
-    resume_count: resumeCount,
-    session_count: Math.max(sessionCount, 1),
-    total_session_duration_ms: totalSessionMs,
-    first_interaction_latency_ms: firstInteractionMs,
-    understanding_cue_count: understandingCueCount,
-  };
 }
 
 // ── Baseline Computation ────────────────────────────────────────────
@@ -224,7 +98,7 @@ function applyRules(
 
     candidates.push({
       type: 'engagement_support',
-      reason: `Idle ratio elevated in ${highIdleSessions.length} of last ${last5.length} sessions (avg ${(avgIdle * 100).toFixed(0)}% vs baseline ${(baseline.avg_idle_ratio * 100).toFixed(0)}%)`,
+      reason: `Time away from tab elevated in ${highIdleSessions.length} of last ${last5.length} sessions (avg ${(avgIdle * 100).toFixed(0)}% vs baseline ${(baseline.avg_idle_ratio * 100).toFixed(0)}%)`,
       confidence: Math.min(0.5 + deviation * 0.5, 0.95),
       metrics: {
         idle_ratio: +(avgIdle.toFixed(3)),
@@ -472,16 +346,39 @@ serve(async (req) => {
       });
     }
 
-    // Fetch submission statuses
+    // Fetch submission statuses and timing
     const { data: submissions } = await supabase
       .from('submissions')
-      .select('id, student_id, assignment_id, status')
+      .select(
+        'student_id, assignment_id, status, attempt_number, is_teacher_attempt, started_at, duration_seconds, submitted_at',
+      )
       .in('assignment_id', assignmentIds);
 
-    const submissionMap = new Map<string, string>();
-    (submissions || []).forEach((s: { student_id: string; assignment_id: string; status: string }) => {
-      submissionMap.set(`${s.student_id}:${s.assignment_id}`, s.status);
+    const submissionsByKey = new Map<string, SubmissionTimingRow[]>();
+    (submissions || []).forEach((s: SubmissionTimingRow) => {
+      const key = `${s.student_id}:${s.assignment_id}`;
+      if (!submissionsByKey.has(key)) submissionsByKey.set(key, []);
+      submissionsByKey.get(key)!.push(s);
     });
+
+    const submissionStatusMap = new Map<string, string>();
+    for (const [key, rows] of submissionsByKey) {
+      const eligible = rows.filter((r) => !r.is_teacher_attempt);
+      const completed = eligible.filter((r) => r.status === 'completed');
+      const inProgress = eligible.filter((r) => r.status === 'in_progress');
+      if (completed.length > 0) {
+        submissionStatusMap.set(key, 'completed');
+      } else if (inProgress.length > 0) {
+        submissionStatusMap.set(key, 'in_progress');
+      } else if (eligible.length > 0) {
+        submissionStatusMap.set(key, eligible[0].status);
+      }
+    }
+
+    const durationMap = new Map<string, number | null>();
+    for (const [key, rows] of submissionsByKey) {
+      durationMap.set(key, resolveAssignmentDurationSeconds(rows));
+    }
 
     // Fetch student names
     const studentIds = [...new Set(events.map((e: NuanceEvent) => e.student_id))];
@@ -506,9 +403,9 @@ serve(async (req) => {
     // Compute metrics
     const allMetrics: StudentMetrics[] = [];
     for (const [key, evts] of grouped) {
-      const [sid, aid] = key.split(':');
-      const status = submissionMap.get(key) || 'incomplete';
+      const status = submissionStatusMap.get(key) || 'incomplete';
       const metrics = computeMetricsForAssignment(evts, classroom_id, status);
+      metrics.assignment_duration_seconds = durationMap.get(key) ?? null;
       allMetrics.push(metrics);
     }
 

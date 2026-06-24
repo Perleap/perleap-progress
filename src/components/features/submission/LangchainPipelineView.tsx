@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Workflow } from 'lucide-react';
@@ -13,6 +13,7 @@ interface LangchainPipelineViewProps {
   assignmentId: string;
   hasFeedback: boolean;
   onEvaluationComplete: () => void;
+  headerAction?: ReactNode;
 }
 
 export function LangchainPipelineView({
@@ -22,6 +23,7 @@ export function LangchainPipelineView({
   assignmentId,
   hasFeedback,
   onEvaluationComplete,
+  headerAction,
 }: LangchainPipelineViewProps) {
   const { t } = useTranslation();
 
@@ -30,8 +32,9 @@ export function LangchainPipelineView({
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle className="text-base">{t('submissionDetail.langchainView.title')}</CardTitle>
+          {headerAction}
         </CardHeader>
         <CardContent className="p-0">
           {nodes.length > 0 ? (

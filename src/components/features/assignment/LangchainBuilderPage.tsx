@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Send, Save } from 'lucide-react';
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useLayoutEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { AssignmentCompletionTone } from '@/types/submission';
@@ -24,6 +24,8 @@ import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/s
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
+import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 
 function toastValidationIssues(t: TFunction, issues: LangchainPipelineValidationIssue[]) {
   const order: LangchainPipelineValidationIssue[] = [
@@ -51,6 +53,8 @@ interface LangchainBuilderPageProps {
   showAiFeedbackToStudents?: boolean;
   /** Teacher "Try assignment" — skip AI feedback. */
   isTeacherTry?: boolean;
+  nuanceTracking?: NuanceTrackingCallbacks;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
@@ -62,6 +66,8 @@ export const LangchainBuilderPage = ({
   enableAiFeedback = true,
   showAiFeedbackToStudents = true,
   isTeacherTry = false,
+  nuanceTracking,
+  clipboardTracking,
   onComplete,
 }: LangchainBuilderPageProps) => {
   const { t } = useTranslation();
@@ -69,6 +75,13 @@ export const LangchainBuilderPage = ({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const editorRef = useRef<LangchainEditorHandle | null>(null);
+  const hasTrackedFirstInteraction = useRef(false);
+
+  const trackFirstGraphActivity = useCallback(() => {
+    if (hasTrackedFirstInteraction.current || !nuanceTracking) return;
+    hasTrackedFirstInteraction.current = true;
+    nuanceTracking.trackResponseStarted(0);
+  }, [nuanceTracking]);
 
   const [initialNodes, setInitialNodes] = useState<Node[]>([]);
   const [initialEdges, setInitialEdges] = useState<Edge[]>([]);
@@ -216,6 +229,8 @@ export const LangchainBuilderPage = ({
             initialNodes={initialNodes}
             initialEdges={initialEdges}
             onNodeCountChange={setNodeCount}
+            onUserActivity={trackFirstGraphActivity}
+            clipboardTracking={clipboardTracking}
           />
         </div>
       </CardContent>

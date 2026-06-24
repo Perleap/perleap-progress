@@ -12,7 +12,12 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import type { DbAssignmentType } from '@/types/models';
-import { Loader2 } from 'lucide-react';
+import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
+import {
+  getAssignmentTypeIntroBody,
+  getAssignmentTypeIntroTitle,
+  getAssignmentTypeTutorial,
+} from '@/lib/assignmentTypeIntroCopy';
 
 type WizardStep = 'type' | 'task';
 
@@ -50,16 +55,10 @@ export function AssignmentTypeIntroDialog({
     }
   }, [open, skipTypeStep]);
 
-  const titleKey = `assignmentTypeIntro.${assignmentType}.title`;
-  const bodyKey = `assignmentTypeIntro.${assignmentType}.body`;
-  const tutorialKey = `assignmentTypeIntro.${assignmentType}.tutorial`;
-  const title = i18n.exists(titleKey) ? t(titleKey) : t('assignmentTypeIntro.fallback.title');
-  const body = i18n.exists(bodyKey) ? t(bodyKey) : t('assignmentTypeIntro.fallback.body');
-  const tutorial = i18n.exists(tutorialKey)
-    ? t(tutorialKey)
-    : t('assignmentTypeIntro.fallback.tutorial');
+  const title = getAssignmentTypeIntroTitle(t, i18n, assignmentType);
+  const body = getAssignmentTypeIntroBody(t, i18n, assignmentType);
+  const tutorial = getAssignmentTypeTutorial(t, i18n, assignmentType);
 
-  const taskText = studentFacingTask?.trim() ?? '';
   const taskReady = !taskLoading;
 
   const handleOpenChange = (next: boolean) => {
@@ -138,29 +137,13 @@ export function AssignmentTypeIntroDialog({
             </DialogHeader>
 
             <div className={cn('space-y-3', isRTL && 'text-end')}>
-              <h3 className="text-sm font-medium text-foreground">
-                {t('assignmentDetail.studentTaskTitle')}
-              </h3>
-              {taskLoading ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground" dir="auto">
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                  {t('assignmentDetail.loadingStudentTask')}
-                </p>
-              ) : taskText ? (
-                <p
-                  className={cn(
-                    'text-sm leading-relaxed whitespace-pre-wrap text-foreground',
-                    isRTL ? 'text-end' : 'text-start',
-                  )}
-                  dir="auto"
-                >
-                  {taskText}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground leading-relaxed" dir="auto">
-                  {t('assignmentDetail.studentTaskNotSetYet')}
-                </p>
-              )}
+              <StudentFacingTaskSection
+                assignmentType={assignmentType}
+                taskText={studentFacingTask}
+                taskLoading={taskLoading}
+                variant="plain"
+                showHelp={false}
+              />
               <p className="text-sm font-medium text-foreground">{t('taskUnderstanding.question')}</p>
             </div>
 

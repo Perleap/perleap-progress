@@ -43,6 +43,7 @@ export {
   useFullSubmissionDetails,
   useTeacherConversationMessages,
   useTeacherChatSentenceFlags,
+  useTeacherClipboardEvents,
   useSubmissionTeacherPrivateNoteEntries,
   useCreateSubmissionTeacherPrivateNoteEntry,
   useTeacherResetStudentAssignmentProgress,

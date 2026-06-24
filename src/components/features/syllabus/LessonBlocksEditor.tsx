@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { FileText, GripVertical, Loader2, Plus, Trash2, Video } from 'lucide-react';
+import { FileText, GripVertical, Plus, Trash2, Video } from 'lucide-react';
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -38,9 +38,9 @@ import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
 import { inferLessonVideoSource } from '@/lib/lessonContent';
 import { parseYoutubeUrl } from '@/lib/youtube';
-import { uploadResourceFile } from '@/services/syllabusResourceService';
-import { isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
-import { Progress, ProgressValue } from '@/components/ui/progress';
+import { uploadResourceFile, UPLOAD_CANCELLED_ERROR } from '@/services/syllabusResourceService';
+import { getMaxResourceFileSizeLabel, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
+import { FileUploadProgress } from '@/components/ui/file-upload-progress';
 import { SortableLessonTextSlides } from '@/components/features/syllabus/SortableLessonTextSlides';
 
 const SortableLessonBlock = ({
@@ -108,6 +108,8 @@ export const LessonBlocksEditor = ({
   const { t } = useTranslation();
   /** Editor-only: when switching to single text, remember full `slides` so re-enabling multi-slide can restore. */
   const textSlidesBackupRef = useRef(new Map<string, string[]>());
+  const videoUploadAbortRef = useRef<AbortController | null>(null);
+  const videoUploadGenerationRef = useRef(0);
   const [uploadTarget, setUploadTarget] = useState<{ blockId: string; fileName: string } | null>(
     null
   );
@@ -290,26 +292,44 @@ export const LessonBlocksEditor = ({
     );
   };
 
+  const cancelVideoUpload = () => {
+    videoUploadGenerationRef.current += 1;
+    videoUploadAbortRef.current?.abort();
+    videoUploadAbortRef.current = null;
+    setUploadTarget(null);
+    setUploadProgress(null);
+  };
+
   const handleVideoFile = async (blockId: string, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !sectionId) return;
 
     if (!isResourceFileWithinSizeLimit(file)) {
-      toast.error(t('classroomDetail.activities.videoFileTooLarge', { name: file.name }));
+      toast.error(t('classroomDetail.activities.videoFileTooLarge', {
+        name: file.name,
+        maxSize: getMaxResourceFileSizeLabel(),
+      }));
       return;
     }
+
+    const generation = ++videoUploadGenerationRef.current;
+    const abortController = new AbortController();
+    videoUploadAbortRef.current = abortController;
 
     setUploadTarget({ blockId, fileName: file.name });
     setUploadProgress(0);
     try {
       const up = await uploadResourceFile(sectionId, file, {
+        signal: abortController.signal,
         onProgress: (loaded, total) => {
           if (total <= 0) return;
           setUploadProgress(Math.round((loaded / total) * 100));
         },
       });
+      if (generation !== videoUploadGenerationRef.current) return;
       if ('error' in up) {
+        if (up.error === UPLOAD_CANCELLED_ERROR) return;
         if (up.error === 'STORAGE_GLOBAL_LIMIT_EXCEEDED') {
           toast.error(t('syllabus.resources.uploadGlobalLimitExceeded'));
         } else {
@@ -333,8 +353,13 @@ export const LessonBlocksEditor = ({
         )
       );
     } finally {
-      setUploadTarget(null);
-      setUploadProgress(null);
+      if (videoUploadAbortRef.current === abortController) {
+        videoUploadAbortRef.current = null;
+      }
+      if (generation === videoUploadGenerationRef.current) {
+        setUploadTarget(null);
+        setUploadProgress(null);
+      }
     }
   };
 
@@ -570,78 +595,26 @@ export const LessonBlocksEditor = ({
                                     </Tabs>
                                     {videoSource === 'upload' ? (
                                       <>
-                              <input
-                                id={`lesson-video-${block.id}`}
-                                type="file"
+                              <FileUploadProgress
+                                inputId={`lesson-video-${block.id}`}
                                 accept="video/*"
-                                className="sr-only"
-                                tabIndex={-1}
-                                disabled={disabled || uploadingHere}
-                                onChange={(e) => void handleVideoFile(block.id, e)}
+                                disabled={disabled}
+                                isRTL={isRTL}
+                                uploading={uploadingHere && !!uploadTarget}
+                                fileName={uploadTarget?.fileName}
+                                progress={uploadProgress}
+                                selectedFileName={
+                                  block.display_name ||
+                                  block.file_path?.split('/').pop() ||
+                                  block.url ||
+                                  null
+                                }
+                                chooseLabel={t('classroomDetail.activities.chooseVideoFile')}
+                                uploadingAriaLabel={t('classroomDetail.activities.videoUploading')}
+                                cancelAriaLabel={t('common.cancel')}
+                                onCancel={cancelVideoUpload}
+                                onFileChange={(e) => void handleVideoFile(block.id, e)}
                               />
-                              <div
-                                className={cn(
-                                  'flex flex-wrap items-center gap-x-3 gap-y-2',
-                                  isRTL && 'flex-row-reverse'
-                                )}
-                              >
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={disabled || uploadingHere}
-                                  onClick={() =>
-                                    document.getElementById(`lesson-video-${block.id}`)?.click()
-                                  }
-                                >
-                                  {t('classroomDetail.activities.chooseVideoFile')}
-                                </Button>
-                                <div
-                                  className={cn(
-                                    'flex min-w-0 max-w-full items-center gap-2 text-sm text-muted-foreground',
-                                    isRTL && 'flex-row-reverse'
-                                  )}
-                                >
-                                  {uploadingHere && uploadTarget ? (
-                                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                                      <div
-                                        className={cn(
-                                          'flex min-w-0 items-center gap-2 text-sm text-muted-foreground',
-                                          isRTL && 'flex-row-reverse',
-                                        )}
-                                      >
-                                        <span
-                                          className="min-w-0 truncate"
-                                          title={uploadTarget.fileName}
-                                        >
-                                          {uploadTarget.fileName}
-                                        </span>
-                                        <Loader2
-                                          className="h-3.5 w-3.5 shrink-0 animate-spin"
-                                          aria-hidden
-                                        />
-                                      </div>
-                                      {uploadProgress != null ? (
-                                        <Progress value={uploadProgress} className="w-full max-w-xs">
-                                          <ProgressValue />
-                                        </Progress>
-                                      ) : null}
-                                      <span className="sr-only">
-                                        {t('classroomDetail.activities.videoUploading')}
-                                      </span>
-                                    </div>
-                                  ) : block.url || block.file_path ? (
-                                    <span
-                                      className="min-w-0 truncate"
-                                      title={block.display_name || undefined}
-                                    >
-                                      {block.display_name ||
-                                        block.file_path?.split('/').pop() ||
-                                        block.url}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
                               <p className="text-xs text-muted-foreground">
                                 {t('classroomDetail.activities.activityVideoFileHint')}
                               </p>
