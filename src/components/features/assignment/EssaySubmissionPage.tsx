@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { TrackedTextarea } from '@/components/ui/tracked-textarea';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import { Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,7 @@ interface EssaySubmissionPageProps {
   /** Teacher "Try assignment" — skip AI feedback (edge function writes assume student_profiles). */
   isTeacherTry?: boolean;
   initialText?: string | null;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
@@ -38,6 +40,7 @@ export function EssaySubmissionPage({
   showAiFeedbackToStudents = true,
   isTeacherTry = false,
   initialText,
+  clipboardTracking,
   onComplete,
 }: EssaySubmissionPageProps) {
   const { t } = useTranslation();
@@ -155,12 +158,15 @@ export function EssaySubmissionPage({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Textarea
+        <TrackedTextarea
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
           placeholder={t('essaySubmission.placeholder')}
           className="min-h-[28rem] text-base leading-relaxed resize-y rounded-xl border-muted-foreground/20"
           disabled={submitting}
+          clipboardTracking={clipboardTracking}
+          pasteSourceKind="essay"
+          copySourceKind="essay"
         />
         <div className="flex justify-end">
           <Button

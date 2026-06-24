@@ -7,14 +7,10 @@ import {
 } from '@/services/nuanceEventService';
 import type { UnderstandingCueResult } from '@/lib/understandingCueDetection';
 
-interface UseNuanceTrackingParams {
-  studentId: string | undefined;
-  assignmentId: string | undefined;
-  submissionId: string | undefined;
-  enabled?: boolean;
-}
+/** No mouse/keyboard activity for this long while tab is visible counts as in-tab idle. */
+export const IN_TAB_IDLE_THRESHOLD_MS = 30_000;
 
-interface UseNuanceTrackingReturn {
+export interface NuanceTrackingCallbacks {
   trackResponseSubmitted: (responseTimeMs: number, messageIndex: number) => void;
   trackResponseStarted: (messageIndex: number) => void;
   recordAiMessageArrival: () => void;
@@ -22,9 +18,15 @@ interface UseNuanceTrackingReturn {
   trackUnderstandingCue: (
     result: UnderstandingCueResult,
     messageLength: number,
-    /** 0-based index in the full message list for the outgoing user message (matches response_submitted). */
     messageIndex: number,
   ) => void;
+}
+
+interface UseNuanceTrackingParams {
+  studentId: string | undefined;
+  assignmentId: string | undefined;
+  submissionId: string | undefined;
+  enabled?: boolean;
 }
 
 export function useNuanceTracking({
@@ -32,10 +34,12 @@ export function useNuanceTracking({
   assignmentId,
   submissionId,
   enabled = true,
-}: UseNuanceTrackingParams): UseNuanceTrackingReturn {
+}: UseNuanceTrackingParams): NuanceTrackingCallbacks {
   const lastAiMessageTimestamp = useRef<number | null>(null);
   const sessionActive = useRef(false);
   const hasTrackedOpen = useRef(false);
+  const inTabIdleActive = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canTrack = enabled && !!studentId && !!assignmentId;
 
@@ -53,6 +57,38 @@ export function useNuanceTracking({
     [canTrack, studentId, assignmentId, submissionId],
   );
 
+  const clearIdleTimer = useCallback(() => {
+    if (idleTimerRef.current !== null) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+  }, []);
+
+  const endInTabIdle = useCallback(() => {
+    if (inTabIdleActive.current) {
+      emit('in_tab_idle_end');
+      inTabIdleActive.current = false;
+    }
+  }, [emit]);
+
+  const scheduleIdleTimer = useCallback(() => {
+    clearIdleTimer();
+    if (document.visibilityState !== 'visible') return;
+
+    idleTimerRef.current = setTimeout(() => {
+      idleTimerRef.current = null;
+      if (document.visibilityState !== 'visible' || inTabIdleActive.current) return;
+      inTabIdleActive.current = true;
+      emit('in_tab_idle_start');
+    }, IN_TAB_IDLE_THRESHOLD_MS);
+  }, [clearIdleTimer, emit]);
+
+  const noteUserActivity = useCallback(() => {
+    if (document.visibilityState !== 'visible') return;
+    endInTabIdle();
+    scheduleIdleTimer();
+  }, [endInTabIdle, scheduleIdleTimer]);
+
   // -- Activity opened + session started on mount --
   useEffect(() => {
     if (!canTrack) return;
@@ -64,20 +100,32 @@ export function useNuanceTracking({
 
     emit('session_started');
     sessionActive.current = true;
+    scheduleIdleTimer();
+
+    const activityEvents = ['keydown', 'pointerdown', 'scroll', 'touchstart'] as const;
+    const handleActivity = () => noteUserActivity();
 
     // -- Visibility change (blur / focus) --
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
+        clearIdleTimer();
+        endInTabIdle();
         emit('page_blur');
       } else {
         emit('page_focus');
+        scheduleIdleTimer();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
+    for (const eventName of activityEvents) {
+      document.addEventListener(eventName, handleActivity, { passive: true });
+    }
 
     // -- Page unload (best-effort beacon flush) --
     const handleBeforeUnload = () => {
       if (sessionActive.current) {
+        clearIdleTimer();
+        endInTabIdle();
         emit('session_ended');
         flushNuanceEventsBeacon();
       }
@@ -86,7 +134,12 @@ export function useNuanceTracking({
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
+      for (const eventName of activityEvents) {
+        document.removeEventListener(eventName, handleActivity);
+      }
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearIdleTimer();
+      endInTabIdle();
 
       if (sessionActive.current) {
         emit('session_ended');
@@ -94,23 +147,25 @@ export function useNuanceTracking({
         flushNuanceEvents();
       }
     };
-  }, [canTrack, emit]);
+  }, [canTrack, emit, clearIdleTimer, endInTabIdle, noteUserActivity, scheduleIdleTimer]);
 
   const trackResponseSubmitted = useCallback(
     (responseTimeMs: number, messageIndex: number) => {
+      noteUserActivity();
       emit('response_submitted', {
         response_time_ms: responseTimeMs,
         message_index: messageIndex,
       });
     },
-    [emit],
+    [emit, noteUserActivity],
   );
 
   const trackResponseStarted = useCallback(
     (messageIndex: number) => {
+      noteUserActivity();
       emit('response_started', { message_index: messageIndex });
     },
-    [emit],
+    [emit, noteUserActivity],
   );
 
   const recordAiMessageArrival = useCallback(() => {

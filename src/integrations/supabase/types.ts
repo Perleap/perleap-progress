@@ -398,6 +398,72 @@ export type Database = {
           },
         ]
       }
+      assignment_clipboard_events: {
+        Row: {
+          assignment_id: string
+          context_key: string | null
+          copied_text: string | null
+          created_at: string
+          event_type: Database["public"]["Enums"]["assignment_clipboard_event_type"]
+          id: string
+          linked_message_index: number | null
+          message_index: number | null
+          pasted_text: string | null
+          sentence_index: number | null
+          sentence_text: string | null
+          source_kind: Database["public"]["Enums"]["assignment_clipboard_source_kind"]
+          student_id: string
+          submission_id: string
+        }
+        Insert: {
+          assignment_id: string
+          context_key?: string | null
+          copied_text?: string | null
+          created_at?: string
+          event_type: Database["public"]["Enums"]["assignment_clipboard_event_type"]
+          id?: string
+          linked_message_index?: number | null
+          message_index?: number | null
+          pasted_text?: string | null
+          sentence_index?: number | null
+          sentence_text?: string | null
+          source_kind: Database["public"]["Enums"]["assignment_clipboard_source_kind"]
+          student_id: string
+          submission_id: string
+        }
+        Update: {
+          assignment_id?: string
+          context_key?: string | null
+          copied_text?: string | null
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["assignment_clipboard_event_type"]
+          id?: string
+          linked_message_index?: number | null
+          message_index?: number | null
+          pasted_text?: string | null
+          sentence_index?: number | null
+          sentence_text?: string | null
+          source_kind?: Database["public"]["Enums"]["assignment_clipboard_source_kind"]
+          student_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_clipboard_events_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_clipboard_events_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_conversations: {
         Row: {
           assignment_id: string
@@ -1467,6 +1533,7 @@ export type Database = {
       }
       student_nuance_metrics: {
         Row: {
+          assignment_duration_seconds: number | null
           assignment_id: string
           avg_response_latency_ms: number | null
           classroom_id: string
@@ -1484,6 +1551,7 @@ export type Database = {
           understanding_cue_count: number
         }
         Insert: {
+          assignment_duration_seconds?: number | null
           assignment_id: string
           avg_response_latency_ms?: number | null
           classroom_id: string
@@ -1501,6 +1569,7 @@ export type Database = {
           understanding_cue_count?: number
         }
         Update: {
+          assignment_duration_seconds?: number | null
           assignment_id?: string
           avg_response_latency_ms?: number | null
           classroom_id?: string
@@ -1772,11 +1841,13 @@ export type Database = {
           attempt_number: number
           awaiting_teacher_feedback_release: boolean
           conversation_complete_at_submit: boolean | null
+          duration_seconds: number | null
           evaluation_status: string | null
           file_url: string | null
           file_urls: string[] | null
           id: string
           is_teacher_attempt: boolean
+          started_at: string | null
           status: Database["public"]["Enums"]["submission_status"]
           student_id: string
           submitted_at: string
@@ -1788,11 +1859,13 @@ export type Database = {
           attempt_number?: number
           awaiting_teacher_feedback_release?: boolean
           conversation_complete_at_submit?: boolean | null
+          duration_seconds?: number | null
           evaluation_status?: string | null
           file_url?: string | null
           file_urls?: string[] | null
           id?: string
           is_teacher_attempt?: boolean
+          started_at?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           student_id: string
           submitted_at?: string
@@ -1804,11 +1877,13 @@ export type Database = {
           attempt_number?: number
           awaiting_teacher_feedback_release?: boolean
           conversation_complete_at_submit?: boolean | null
+          duration_seconds?: number | null
           evaluation_status?: string | null
           file_url?: string | null
           file_urls?: string[] | null
           id?: string
           is_teacher_attempt?: boolean
+          started_at?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           student_id?: string
           submitted_at?: string
@@ -2296,6 +2371,18 @@ export type Database = {
         Returns: undefined
       }
       merge_raise: { Args: { p_ctx: Json }; Returns: undefined }
+      link_assignment_clipboard_paste_messages: {
+        Args: {
+          p_message_index: number
+          p_since?: string
+          p_submission_id: string
+        }
+        Returns: Json
+      }
+      record_assignment_clipboard_event: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
       replace_module_flow_steps: {
         Args: { p_section_id: string; p_steps: Json }
         Returns: undefined
@@ -2353,6 +2440,17 @@ export type Database = {
         | "single"
         | "multiple_until_due"
         | "multiple_unlimited"
+      assignment_clipboard_event_type: "copy" | "paste"
+      assignment_clipboard_source_kind:
+        | "assistant_message"
+        | "user_message"
+        | "chat_input"
+        | "student_facing_task"
+        | "assignment_instructions"
+        | "essay"
+        | "test_answer"
+        | "langchain_field"
+        | "page_unknown"
       assignment_status: "draft" | "published" | "archived"
       assignment_type:
         | "text_essay"
@@ -2377,6 +2475,8 @@ export type Database = {
         | "page_focus"
         | "activity_opened"
         | "understanding_cue"
+        | "in_tab_idle_start"
+        | "in_tab_idle_end"
       snapshot_source: "onboarding" | "assignment" | "reassess"
       submission_status: "in_progress" | "completed"
       user_role: "teacher" | "student" | "admin"
@@ -2538,6 +2638,8 @@ export const Constants = {
         "page_focus",
         "activity_opened",
         "understanding_cue",
+        "in_tab_idle_start",
+        "in_tab_idle_end",
       ],
       snapshot_source: ["onboarding", "assignment", "reassess"],
       submission_status: ["in_progress", "completed"],

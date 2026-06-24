@@ -22,7 +22,9 @@ export type NuanceEventType =
   | 'page_blur'
   | 'page_focus'
   | 'activity_opened'
-  | 'understanding_cue';
+  | 'understanding_cue'
+  | 'in_tab_idle_start'
+  | 'in_tab_idle_end';
 
 export interface NuanceEvent {
   student_id: string;

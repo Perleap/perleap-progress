@@ -4,6 +4,11 @@ import { isStoragePayloadTooLarge } from '@/lib/storageUploadErrors';
 
 export type UploadProgressCallback = (loaded: number, total: number) => void;
 
+export type ResumableUploadOptions = {
+  onProgress?: UploadProgressCallback;
+  signal?: AbortSignal;
+};
+
 const TUS_CHUNK_SIZE = 6 * 1024 * 1024;
 
 function getResumableEndpoint(): string {
@@ -19,8 +24,15 @@ export async function uploadFileResumable(
   bucketName: string,
   objectName: string,
   file: File,
-  onProgress?: UploadProgressCallback,
+  options?: ResumableUploadOptions,
 ): Promise<void> {
+  const onProgress = options?.onProgress;
+  const signal = options?.signal;
+
+  if (signal?.aborted) {
+    throw new DOMException('Upload aborted', 'AbortError');
+  }
+
   let {
     data: { session },
   } = await supabase.auth.getSession();
@@ -55,6 +67,10 @@ export async function uploadFileResumable(
       },
       chunkSize: TUS_CHUNK_SIZE,
       onError: (error) => {
+        if (signal?.aborted) {
+          reject(new DOMException('Upload aborted', 'AbortError'));
+          return;
+        }
         if (isStoragePayloadTooLarge(error)) {
           reject(new Error('STORAGE_GLOBAL_LIMIT_EXCEEDED'));
           return;
@@ -67,7 +83,20 @@ export async function uploadFileResumable(
       onSuccess: () => resolve(),
     });
 
+    const onAbort = () => {
+      upload.abort(true);
+      reject(new DOMException('Upload aborted', 'AbortError'));
+    };
+
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+
     void upload.findPreviousUploads().then((previousUploads) => {
+      if (signal?.aborted) {
+        onAbort();
+        return;
+      }
       if (previousUploads.length > 0) {
         upload.resumeFromPreviousUpload(previousUploads[0]!);
       }

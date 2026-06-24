@@ -30,7 +30,7 @@ import {
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { testKeys } from '@/hooks/queries/useTestQueries';
 import { WizardStepIndicator, type WizardStep } from '@/components/features/syllabus/WizardStepIndicator';
-import { normalizeTestQuestionDraft, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
+import { normalizeTestQuestionDraft, validateTestQuestionsForPublish, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
 import {
   deriveAllowMultipleSelections,
   legacySingleOptionId,
@@ -179,6 +179,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   const [aiMetadata, setAiMetadata] = useState<AssignmentCreateDraftV1['aiMetadata']>({});
 
   const [hasSubmissions, setHasSubmissions] = useState(false);
+  const [hasTestResponses, setHasTestResponses] = useState(false);
 
   const [hardSkillsSuggestionStatus, setHardSkillsSuggestionStatus] =
     useState<HardSkillsSuggestionStatus>('idle');
@@ -482,11 +483,21 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     if (!assignment?.id) return;
     let cancelled = false;
     (async () => {
-      const { count } = await supabase
+      const { data: submissionRows } = await supabase
         .from('submissions')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('assignment_id', assignment.id);
-      if (!cancelled) setHasSubmissions((count ?? 0) > 0);
+      if (cancelled) return;
+      const submissionIds = (submissionRows ?? []).map((row) => row.id);
+      if (submissionIds.length === 0) {
+        setHasTestResponses(false);
+        return;
+      }
+      const { count } = await supabase
+        .from('test_responses')
+        .select('id', { count: 'exact', head: true })
+        .in('submission_id', submissionIds);
+      if (!cancelled) setHasTestResponses((count ?? 0) > 0);
     })();
     return () => {
       cancelled = true;
@@ -656,6 +667,48 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   }, [open, assignment?.id, assignment?.type, isCreate]);
 
   useEffect(() => {
+    if (!open || isCreate) return;
+    if (!assignment?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await supabase
+        .from('submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('assignment_id', assignment.id);
+      if (!cancelled) setHasSubmissions((count ?? 0) > 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, assignment?.id, isCreate]);
+
+  useEffect(() => {
+    if (!open || isCreate) return;
+    if (!assignment?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data: submissionRows } = await supabase
+        .from('submissions')
+        .select('id')
+        .eq('assignment_id', assignment.id);
+      if (cancelled) return;
+      const submissionIds = (submissionRows ?? []).map((row) => row.id);
+      if (submissionIds.length === 0) {
+        setHasTestResponses(false);
+        return;
+      }
+      const { count } = await supabase
+        .from('test_responses')
+        .select('id', { count: 'exact', head: true })
+        .in('submission_id', submissionIds);
+      if (!cancelled) setHasTestResponses((count ?? 0) > 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, assignment?.id, isCreate]);
+
+  useEffect(() => {
     if (!open || isCreate) {
       syllabusSectionPrevRef.current = null;
       return;
@@ -806,6 +859,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         return Boolean(formData.due_at?.trim());
       }
       return true;
+    }
+    if (stepId === 'test') {
+      return formData.type !== 'test' || validateTestQuestionsForPublish(testQuestions);
     }
     return true;
   };
@@ -977,6 +1033,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       toast.error(t('createAssignment.wizard.fixValidation'));
       return;
     }
+    if (formData.type === 'test' && !validateTestQuestionsForPublish(testQuestions)) {
+      toast.error(t('createAssignment.wizard.testQuestionsInvalid'));
+      return;
+    }
 
     setLoading(true);
     try {
@@ -1062,12 +1122,15 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           }
         }
 
-        if (formData.type === 'test' && testQuestions.length > 0 && assignmentRow) {
+        if (formData.type === 'test' && assignmentRow) {
           const questionsToInsert = testQuestions.map((q) =>
             testQuestionToInsertRow(q, assignmentRow.id),
           );
           const { error: questionsError } = await supabase.from('test_questions').insert(questionsToInsert);
-          if (questionsError) console.error('Error inserting test questions:', questionsError);
+          if (questionsError) {
+            toast.error(t('createAssignment.wizard.testQuestionsSaveFailed'));
+            throw questionsError;
+          }
         }
 
         if (
@@ -1225,15 +1288,21 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           );
         }
 
-        if (formData.type === 'test' && !hasSubmissions) {
+        if (formData.type === 'test' && !hasTestResponses) {
           const { error: delErr } = await supabase.from('test_questions').delete().eq('assignment_id', assignment.id);
-          if (delErr) console.error(delErr);
+          if (delErr) {
+            toast.error(t('createAssignment.wizard.testQuestionsSaveFailed'));
+            throw delErr;
+          }
           if (testQuestions.length > 0) {
             const questionsToInsert = testQuestions.map((q) =>
               testQuestionToInsertRow(q, assignment.id),
             );
             const { error: insErr } = await supabase.from('test_questions').insert(questionsToInsert);
-            if (insErr) console.error(insErr);
+            if (insErr) {
+              toast.error(t('createAssignment.wizard.testQuestionsSaveFailed'));
+              throw insErr;
+            }
           }
           await queryClient.invalidateQueries({ queryKey: [...testKeys.all, 'questions', assignment.id] });
         }
@@ -1409,7 +1478,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 questions={testQuestions}
                 onQuestionsChange={setTestQuestions}
                 isRTL={isRTL}
-                readOnly={!isCreate && hasSubmissions}
+                readOnly={!isCreate && hasTestResponses}
               />
             )}
             {currentStepId === 'review' && (
@@ -1464,7 +1533,11 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 <Button
                   type="button"
                   onClick={() => void handleSubmit()}
-                  disabled={loading || !canProceedForStep('basics')}
+                  disabled={
+                    loading ||
+                    !canProceedForStep('basics') ||
+                    (formData.type === 'test' && !canProceedForStep('test'))
+                  }
                   className="rounded-full px-10 font-bold shadow-lg shadow-primary/20"
                 >
                   {loading ? (

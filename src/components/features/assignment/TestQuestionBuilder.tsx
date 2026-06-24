@@ -41,6 +41,21 @@ export function normalizeTestQuestionDraft(
   };
 }
 
+export function isTestQuestionDraftValid(question: TestQuestionDraft): boolean {
+  if (!question.question_text.trim()) return false;
+  if (question.question_type === 'open_ended') return true;
+  const filledOptions = question.options.filter((o) => o.text.trim());
+  if (filledOptions.length < 2) return false;
+  const correctIds = question.correct_option_ids.filter((id) =>
+    filledOptions.some((o) => o.id === id),
+  );
+  return correctIds.length >= 1;
+}
+
+export function validateTestQuestionsForPublish(questions: TestQuestionDraft[]): boolean {
+  return questions.length >= 1 && questions.every(isTestQuestionDraftValid);
+}
+
 interface TestQuestionBuilderProps {
   questions: TestQuestionDraft[];
   onQuestionsChange: (questions: TestQuestionDraft[]) => void;

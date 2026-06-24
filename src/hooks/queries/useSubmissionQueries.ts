@@ -14,6 +14,7 @@ import {
   getFullSubmissionDetails,
   getAssignmentConversationMessages,
   getAssignmentChatSentenceFlags,
+  getAssignmentClipboardEvents,
   getClassroomSubmissions,
   getEnrichedClassroomSubmissions,
   getSubmissionFeedback,
@@ -43,6 +44,8 @@ export const submissionKeys = {
     [...submissionKeys.all, 'conversation', submissionId] as const,
   chatSentenceFlags: (submissionId: string) =>
     [...submissionKeys.all, 'chat-sentence-flags', submissionId] as const,
+  clipboardEvents: (submissionId: string) =>
+    [...submissionKeys.all, 'clipboard-events', submissionId] as const,
   teacherPrivateNoteEntries: (submissionId: string) =>
     [...submissionKeys.all, 'teacher-private-note-entries', submissionId] as const,
 };
@@ -240,6 +243,26 @@ export const useTeacherChatSentenceFlags = (
     queryFn: async () => {
       if (!submissionId) throw new Error('Missing submission ID');
       const { data, error } = await getAssignmentChatSentenceFlags(submissionId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!submissionId && enabled,
+    staleTime: 30 * 1000,
+  });
+};
+
+/**
+ * Copy/paste events for a submission (teacher/student RLS).
+ */
+export const useTeacherClipboardEvents = (
+  submissionId: string | undefined,
+  enabled: boolean,
+) => {
+  return useQuery({
+    queryKey: submissionKeys.clipboardEvents(submissionId || ''),
+    queryFn: async () => {
+      if (!submissionId) throw new Error('Missing submission ID');
+      const { data, error } = await getAssignmentClipboardEvents(submissionId);
       if (error) throw error;
       return data ?? [];
     },

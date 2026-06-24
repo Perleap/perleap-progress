@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -25,6 +24,9 @@ import { submitWithBackgroundAiFeedback, completeSubmission } from '@/services/s
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useAuth } from '@/contexts/useAuth';
 import type { AssignmentCompletionTone } from '@/types/submission';
+import { TrackedTextarea } from '@/components/ui/tracked-textarea';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
 import { isMultiSelectMcq, toggleOptionId } from '@/lib/testMcq';
 
 interface TestTakingPageProps {
@@ -37,6 +39,8 @@ interface TestTakingPageProps {
   showAiFeedbackToStudents?: boolean;
   /** Teacher "Try assignment" — skip AI feedback (edge function writes assume student_profiles). */
   isTeacherTry?: boolean;
+  nuanceTracking?: NuanceTrackingCallbacks;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
@@ -52,11 +56,20 @@ export function TestTakingPage({
   enableAiFeedback = true,
   showAiFeedbackToStudents = true,
   isTeacherTry = false,
+  nuanceTracking,
+  clipboardTracking,
   onComplete,
 }: TestTakingPageProps) {
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
+  const hasTrackedFirstInteraction = useRef(false);
+
+  const trackFirstInteraction = () => {
+    if (hasTrackedFirstInteraction.current || !nuanceTracking) return;
+    hasTrackedFirstInteraction.current = true;
+    nuanceTracking.trackResponseStarted(0);
+  };
 
   const { data: questions, isLoading } = useTestQuestions(assignmentId, { forStudent: true });
   const submitResponses = useSubmitTestResponses();
@@ -66,6 +79,7 @@ export function TestTakingPage({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const updateAnswer = (questionId: string, value: TestAnswer) => {
+    trackFirstInteraction();
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], ...value } }));
   };
 
@@ -299,12 +313,16 @@ export function TestTakingPage({
                   </RadioGroup>
                 )
               ) : (
-                <Textarea
+                <TrackedTextarea
                   value={answers[question.id]?.text_answer || ''}
                   onChange={(e) => updateAnswer(question.id, { text_answer: e.target.value })}
                   placeholder={t('assignmentDetail.testTaking.typeAnswer')}
                   className="min-h-[100px] resize-none"
                   dir={isRTL ? 'rtl' : 'ltr'}
+                  clipboardTracking={clipboardTracking}
+                  pasteSourceKind="test_answer"
+                  pasteContextKey={question.id}
+                  copySourceKind="test_answer"
                 />
               )}
             </CardContent>

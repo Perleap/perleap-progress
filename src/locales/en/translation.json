@@ -460,6 +460,7 @@
     "conversationComplete": "Conversation complete! You can now finish the activity. If you didn't understand something or want to continue asking questions, feel free to do so. Once you are done, click the 'Complete Activity' button.",
     "conversationEndedPlaceholder": "Conversation ended - please complete the activity",
     "completeActivity": "Complete Activity",
+    "completingActivity": "Completing activity...",
     "generatingFeedback": "Generating feedback...",
     "errors": {
       "startingConversation": "Error starting conversation",
@@ -797,7 +798,14 @@
       "publicationStatus": "Publication status",
       "publicationStatusHelper": "Draft is hidden from students until you publish. Published assignments are visible to the class.",
       "aiFeedback": "AI feedback",
-      "aiFeedbackHelper": "When on, students can see AI-generated feedback on eligible work."
+      "aiFeedbackHelper": "When on, students can see AI-generated feedback on eligible work.",
+      "showFeedback": "Show feedback to students",
+      "showFeedbackHelper": "When on, students see AI feedback as soon as it is generated. When off, you release feedback when ready.",
+      "artifactFeedbackHint": "Project, presentation, and pipeline assignments default to teacher-released feedback."
+    },
+    "taskUnderstandingPrompt": {
+      "label": "Task understanding check",
+      "helper": "When on, students must confirm they understand the task in a \"Before you start\" step."
     },
     "wizard": {
       "steps": {
@@ -1192,6 +1200,9 @@
     "conversationFlowComplete": "Chat completed",
     "conversationFlowEarly": "Ended early",
     "flaggedSentencesBadge": "{{count}} flagged",
+    "clipboardCopiedBadge": "Copied",
+    "clipboardPastedBadge": "Pasted",
+    "clipboardBothBadge": "Copied & pasted",
     "fullReport": "Full Report"
   },
   "submissionDetail": {
@@ -1220,12 +1231,30 @@
     "generateFollowup": "Generate Follow-up",
     "viewConversation": "View Conversation",
     "generateFollowUp": "Generate Follow-up Assignment",
+    "exportJson": "Export JSON",
+    "exportJsonSuccess": "Submission exported as JSON",
+    "exportJsonLoading": "Exporting…",
     "teacherFeedbackDesc": "AI-generated analysis and recommendations based on the learning conversation",
     "studentFeedbackDesc": "What {{student}} saw after completing the assignment",
     "conversationHistory": "Conversation History",
     "conversationHistoryDesc": "Complete transcript between {{student}} and Perleap",
     "conversationEmpty": "No messages in this conversation yet.",
     "flaggedSentencesTitle": "Flagged assistant sentences",
+    "activitySignalsTitle": "Activity signals",
+    "clipboardActivityTitle": "Copy & paste activity",
+    "clipboard": {
+      "copiedBadge": "Copied",
+      "pastedBadge": "Pasted",
+      "sourceAssistant": "From assistant message {{message}}",
+      "sourceUserMessage": "From your message {{message}}",
+      "sourceChatInput": "From chat input",
+      "sourceStudentTask": "From task summary",
+      "sourceInstructions": "From assignment instructions",
+      "sourceEssay": "From essay response",
+      "sourceTestAnswer": "From test answer ({{question}})",
+      "sourceLangchainField": "From pipeline field ({{field}})",
+      "sourceUnknown": "Unknown source"
+    },
     "noStudentFacingTask": "No short student-facing task summary was saved for this assignment. You can generate or edit it in the assignment editor (Review step).",
     "fullAssignmentInstructions": "Full instructions",
     "feedbackEmpty": {
@@ -1411,6 +1440,7 @@
     "untitledAssignment": "Untitled assignment",
     "unitSectionLabel": "{{title}}",
     "studentTaskTitle": "Your task",
+    "studentTaskHelpAria": "How to use this assignment type",
     "referenceMaterials": "Reference materials ({{count}})",
     "loadingStudentTask": "Summarizing what you need to do…",
     "studentTaskNotSetYet": "We could not generate a short task summary. Your teacher can add or refine it in the assignment editor (Review → generate for students). For now, work through the activity in the chat below.",
@@ -1915,7 +1945,7 @@
     "classReference": "Class reference (all activities in this class in Nuance’s data): average response {{latency}}, time away from tab {{idle}}, work completed {{completion}} ({{n}} data points).",
     "classReferenceCompact": "Class: {{latency}} response · {{idle}} away from tab · {{completion}} done",
     "howNuanceTitle": "How Nuance works",
-    "howNuanceBody": "Nuance uses signals from the assignment experience: time to reply after a coach message, time with the tab in the background, how often an activity is opened, and whether work is finished, plus optional cues when phrasing in chat suggests confusion. It is not a grade. Flags are simple checks compared to the student and class, then phrased as practical teaching ideas. When in doubt, combine Nuance with your read of submissions and in-class discussion.",
+    "howNuanceBody": "Nuance uses signals from the assignment experience: time to reply after a coach message, time with the tab in the background or without mouse/keyboard activity for about 30 seconds, how often an activity is opened, and whether work is finished, plus optional cues when phrasing in chat suggests confusion. It is not a grade. Flags are simple checks compared to the student and class, then phrased as practical teaching ideas. When in doubt, combine Nuance with your read of submissions and in-class discussion.",
     "statusRow": {
       "typical": "Typical",
       "insight": "Nuance insight"
@@ -1975,18 +2005,20 @@
       "student": "Student",
       "activity": "Activity",
       "responseTime": "Avg Response",
-      "idleRatio": "Idle Ratio",
+      "idleRatio": "Time away from tab",
       "completion": "Completion",
       "sessions": "Sessions",
       "cuesInChat": "Cues in chat",
+      "timeOnAssignment": "Time on assignment",
       "status": "Status"
     },
     "tooltips": {
       "student": "The student's name, or the activity name when filtered to a specific student.",
       "responseTime": "Average time between the AI sending a message and the student replying.",
-      "idleRatio": "Percentage of session time the student spent inactive or tabbed away.",
+      "idleRatio": "Share of session time with the tab in the background or without mouse/keyboard activity for about 30 seconds.",
       "completion": "Percentage of started assignments the student actually finished.",
       "sessions": "Average number of times the student opened each assignment.",
+      "timeOnAssignment": "Wall-clock time from when the student started the assignment until they submitted. Unlike session or idle metrics, this spans the full attempt including time away from the tab.",
       "cuesInChat": "How often the student’s messages suggested confusion or a need to re-explain, in this activity’s chat.",
       "cuesInChatColumn": "Per-activity: how often the student’s phrasing looked like a clarification request. In the all-students view, the number is the average of those per-activity counts in your current filter. Expand a row to see when each cue happened; the list total is not the same as the rounded average in the cell.",
       "status": "Typical: patterns are in range. Nuance insight: a recommendation is available — expand the row to read it."

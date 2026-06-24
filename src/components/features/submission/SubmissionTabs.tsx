@@ -8,6 +8,11 @@ import { LangchainPipelineView } from './LangchainPipelineView';
 import { PresentationSubmissionView } from './PresentationSubmissionView';
 import { ProjectSubmissionView } from './ProjectSubmissionView';
 import { TestResultsView } from './TestResultsView';
+import { SubmissionExportJsonButton } from './SubmissionExportJsonButton';
+import {
+  SubmissionActivitySignalsCard,
+  type ActivitySignalScrollTarget,
+} from './SubmissionActivitySignalsCard';
 import type { Message } from '@/types';
 import type { StudentAlert } from '@/types/alerts';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
@@ -26,6 +31,7 @@ import {
   submissionKeys,
   useTeacherConversationMessages,
   useTeacherChatSentenceFlags,
+  useTeacherClipboardEvents,
 } from '@/hooks/queries';
 import {
   formatInlineListsForChatMarkdown,
@@ -122,12 +128,17 @@ export const SubmissionTabs = ({
       isChatLikeAssignment && assignmentTabLoadsChatData
     );
 
-  const flagsQueryEnabled = isChatLikeAssignment && assignmentTabLoadsChatData;
+  const flagsQueryEnabled = activeTab === 'assignment';
   const { data: chatSentenceFlagsRaw } = useTeacherChatSentenceFlags(
     submission.id,
-    flagsQueryEnabled
+    flagsQueryEnabled && isChatLikeAssignment,
   );
   const chatSentenceFlags = chatSentenceFlagsRaw ?? [];
+  const { data: clipboardEventsRaw } = useTeacherClipboardEvents(
+    submission.id,
+    flagsQueryEnabled,
+  );
+  const clipboardEvents = clipboardEventsRaw ?? [];
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const [highlightSentence, setHighlightSentence] = useState<{
     messageIndex: number;
@@ -151,6 +162,55 @@ export const SubmissionTabs = ({
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }, []);
+
+  const scrollToChatMessage = useCallback((messageIndex: number) => {
+    const elementId = `teacher-chat-message-${messageIndex}`;
+    requestAnimationFrame(() => {
+      const root = transcriptScrollRef.current;
+      const el =
+        root?.querySelector(`#${elementId}`) ??
+        (typeof document !== 'undefined' ? document.getElementById(elementId) : null);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, []);
+
+  const handleActivitySignalScroll = useCallback(
+    (target: ActivitySignalScrollTarget) => {
+      if (target.kind === 'chat_sentence') {
+        scrollToFlaggedChatSentence(target.messageIndex, target.sentenceIndex);
+        return;
+      }
+      if (target.kind === 'chat_message') {
+        scrollToChatMessage(target.messageIndex);
+        return;
+      }
+      if (target.kind === 'essay') {
+        document.getElementById('teacher-essay-submission')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        return;
+      }
+      if (target.kind === 'test_question') {
+        document
+          .getElementById(`teacher-test-question-${target.contextKey}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+    [scrollToFlaggedChatSentence, scrollToChatMessage],
+  );
+
+  const activitySignalsCard =
+    chatSentenceFlags.length > 0 || clipboardEvents.length > 0 ? (
+      <SubmissionActivitySignalsCard
+        sentenceFlags={chatSentenceFlags}
+        clipboardEvents={clipboardEvents}
+        uiLanguage={uiLanguage}
+        onScrollToTarget={handleActivitySignalScroll}
+      />
+    ) : null;
+
+  const exportJsonButton = <SubmissionExportJsonButton submissionId={submission.id} />;
 
   /** Assignment requires teacher to publish (AI feedback to students = No). */
   const assignmentGated = submission.assignments?.auto_publish_ai_feedback === false;
@@ -480,9 +540,11 @@ export const SubmissionTabs = ({
             case 'test':
               return (
                 <div className="space-y-6">
+                  {activitySignalsCard}
                   <TestResultsView
                     assignmentId={submission.assignments.id}
                     submissionId={submission.id}
+                    headerAction={exportJsonButton}
                   />
                   {canGenerateAiFeedback ? (
                     <div className="flex justify-end">
@@ -505,33 +567,51 @@ export const SubmissionTabs = ({
               );
             case 'project':
               return (
-                <ProjectSubmissionView
+                <div className="space-y-6">
+                  {activitySignalsCard}
+                  <ProjectSubmissionView
                   fileUrl={submission.file_url}
                   fileUrls={submission.file_urls}
+                  headerAction={exportJsonButton}
                   {...evalProps}
-                />
+                  />
+                </div>
               );
             case 'presentation':
-              return <PresentationSubmissionView fileUrl={submission.file_url} {...evalProps} />;
+              return (
+                <div className="space-y-6">
+                  {activitySignalsCard}
+                  <PresentationSubmissionView fileUrl={submission.file_url} headerAction={exportJsonButton} {...evalProps} />
+                </div>
+              );
             case 'langchain':
-              return <LangchainPipelineView textBody={submission.text_body} {...evalProps} />;
+              return (
+                <div className="space-y-6">
+                  {activitySignalsCard}
+                  <LangchainPipelineView textBody={submission.text_body} headerAction={exportJsonButton} {...evalProps} />
+                </div>
+              );
             case 'text_essay':
               return (
                 <div className="space-y-6">
+                  {activitySignalsCard}
                   <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                     <CardHeader>
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-4">
                         <CardTitle className="text-base text-left">
                           {submission.assignments.title}
                         </CardTitle>
-                        {instructionsTraceId && submission.assignments.instructions?.trim() ? (
-                          <AiContentFlagButton
-                            contentType="instructions"
-                            contentExcerpt={submission.assignments.instructions}
-                            opikTraceId={instructionsTraceId}
-                            assignmentId={submission.assignments.id}
-                          />
-                        ) : null}
+                        <div className="flex shrink-0 items-center gap-2">
+                          {exportJsonButton}
+                          {instructionsTraceId && submission.assignments.instructions?.trim() ? (
+                            <AiContentFlagButton
+                              contentType="instructions"
+                              contentExcerpt={submission.assignments.instructions}
+                              opikTraceId={instructionsTraceId}
+                              assignmentId={submission.assignments.id}
+                            />
+                          ) : null}
+                        </div>
                       </div>
                       {submission.assignments.instructions?.trim() ? (
                         <LessonReadingDetailsCollapsible
@@ -546,7 +626,10 @@ export const SubmissionTabs = ({
                       ) : null}
                     </CardHeader>
                   </Card>
-                  <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
+                  <Card
+                    id="teacher-essay-submission"
+                    className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden"
+                  >
                     <CardHeader>
                       <CardTitle className="text-base text-left">
                         {t('submissionDetail.essaySubmission')}
@@ -611,9 +694,12 @@ export const SubmissionTabs = ({
 
                   <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
                     <CardHeader>
-                      <CardTitle className="text-base text-left">
-                        {submission.assignments.title}
-                      </CardTitle>
+                      <div className="flex items-start justify-between gap-4">
+                        <CardTitle className="text-base text-left">
+                          {submission.assignments.title}
+                        </CardTitle>
+                        {exportJsonButton}
+                      </div>
                       {submission.assignments.instructions?.trim() ? (
                         <LessonReadingDetailsCollapsible
                           className="mt-3"
@@ -628,41 +714,7 @@ export const SubmissionTabs = ({
                     </CardHeader>
                   </Card>
 
-                  {isChatLikeAssignment && chatSentenceFlags.length > 0 ? (
-                    <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden">
-                      <CardHeader className="px-6 py-4">
-                        <CardTitle className="text-base font-semibold text-left">
-                          {t('submissionDetail.flaggedSentencesTitle')}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 px-6 pb-6 pt-0">
-                        {chatSentenceFlags.map((row) => (
-                          <button
-                            key={row.id}
-                            type="button"
-                            onClick={() =>
-                              scrollToFlaggedChatSentence(row.message_index, row.sentence_index)
-                            }
-                            className={cn(
-                              'w-full rounded-lg border border-slate-100 bg-slate-50/80 p-4 text-left',
-                              'transition-colors hover:bg-slate-100/90 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:bg-slate-800/70',
-                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-                            )}
-                          >
-                            <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-900 dark:text-slate-100">
-                              {row.sentence_text}
-                            </p>
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              {new Date(row.created_at).toLocaleString(
-                                uiLanguage === 'he' ? 'he-IL' : undefined,
-                                { dateStyle: 'short', timeStyle: 'short' }
-                              )}
-                            </p>
-                          </button>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  ) : null}
+                  {activitySignalsCard}
 
                   <Card className="flex min-h-[420px] flex-col rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden p-0 gap-0">
                     <CardHeader className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/80 px-6 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:flex-row sm:items-start sm:justify-between">
@@ -714,6 +766,7 @@ export const SubmissionTabs = ({
                             return (
                               <div
                                 key={idx}
+                                id={`teacher-chat-message-${idx}`}
                                 className={`mb-4 flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                               >
                                 <div

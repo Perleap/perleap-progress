@@ -379,7 +379,10 @@ export const deleteSectionResource = async (
 
 export type UploadResourceFileOptions = {
   onProgress?: UploadProgressCallback;
+  signal?: AbortSignal;
 };
+
+export const UPLOAD_CANCELLED_ERROR = 'UPLOAD_CANCELLED';
 
 export const uploadResourceFile = async (
   sectionId: string,
@@ -387,18 +390,32 @@ export const uploadResourceFile = async (
   options?: UploadResourceFileOptions,
 ): Promise<{ filePath: string; publicUrl: string } | { error: string }> => {
   try {
+    if (options?.signal?.aborted) {
+      return { error: UPLOAD_CANCELLED_ERROR };
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${sectionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
     if (file.size > TUS_UPLOAD_THRESHOLD_BYTES) {
-      await uploadFileResumable(STORAGE_BUCKET, fileName, file, options?.onProgress);
+      await uploadFileResumable(STORAGE_BUCKET, fileName, file, {
+        onProgress: options?.onProgress,
+        signal: options?.signal,
+      });
     } else {
       const { error: uploadError } = await supabase.storage
         .from(STORAGE_BUCKET)
         .upload(fileName, file, { upsert: false });
 
+      if (options?.signal?.aborted) {
+        return { error: UPLOAD_CANCELLED_ERROR };
+      }
       if (uploadError) return { error: uploadError.message };
       options?.onProgress?.(file.size, file.size);
+    }
+
+    if (options?.signal?.aborted) {
+      return { error: UPLOAD_CANCELLED_ERROR };
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -407,6 +424,12 @@ export const uploadResourceFile = async (
 
     return { filePath: fileName, publicUrl };
   } catch (error) {
+    if (
+      options?.signal?.aborted ||
+      (error instanceof DOMException && error.name === 'AbortError')
+    ) {
+      return { error: UPLOAD_CANCELLED_ERROR };
+    }
     if (
       error instanceof Error &&
       (error.message === 'STORAGE_GLOBAL_LIMIT_EXCEEDED' || isStoragePayloadTooLarge(error))

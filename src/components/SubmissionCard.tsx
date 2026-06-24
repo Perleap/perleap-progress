@@ -41,6 +41,41 @@ export function formatSubmissionAssignmentTitle(
   return `${assignmentTitle} #${attemptNumber}`;
 }
 
+export function SubmissionClipboardActivityBadge({
+  hasCopy,
+  hasPaste,
+  className,
+  size = 'default',
+}: {
+  hasCopy: boolean;
+  hasPaste: boolean;
+  className?: string;
+  size?: 'default' | 'compact';
+}) {
+  const { t } = useTranslation();
+  if (!hasCopy && !hasPaste) return null;
+
+  const label = hasCopy && hasPaste
+    ? t('submissionCard.clipboardBothBadge')
+    : hasCopy
+      ? t('submissionCard.clipboardCopiedBadge')
+      : t('submissionCard.clipboardPastedBadge');
+
+  const compact = size === 'compact';
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'shrink-0 rounded-full border-amber-500/50 bg-amber-500/10 font-medium text-amber-800 dark:text-amber-200',
+        compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-0.5 text-xs',
+        className,
+      )}
+    >
+      {label}
+    </Badge>
+  );
+}
+
 export function SubmissionFlaggedSentencesBadge({
   count,
   assignmentType,
@@ -90,6 +125,9 @@ interface SubmissionCardProps {
     is_teacher_attempt?: boolean | null;
     /** Student-reported assistant sentence flags (from enriched classroom query). */
     chat_sentence_flag_count?: number;
+    /** Copy/paste activity (from enriched classroom query). */
+    clipboard_has_copy?: boolean;
+    clipboard_has_paste?: boolean;
   };
   /** Total submission rows for this student + assignment in the classroom (from the same query). */
   submissionAttemptCount?: number;
@@ -258,11 +296,19 @@ export function SubmissionCard({
     />
   );
 
+  const clipboardActivityBadge = (
+    <SubmissionClipboardActivityBadge
+      hasCopy={submission.clipboard_has_copy ?? false}
+      hasPaste={submission.clipboard_has_paste ?? false}
+    />
+  );
+
   const topRow = (
     <div className="flex items-start justify-between gap-3">
       <h3 className={titleClass}>{displayAssignmentTitle}</h3>
       <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         {flaggedSentencesBadge}
+        {clipboardActivityBadge}
         {chatFlowBadge}
         {teacherPreviewBadge}
         {statusBadge}
@@ -353,6 +399,7 @@ export function SubmissionCard({
           </h3>
           <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:pt-0.5">
             {flaggedSentencesBadge}
+            {clipboardActivityBadge}
             {chatFlowBadge}
             {teacherPreviewBadge}
             {statusBadge}

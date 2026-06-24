@@ -49,6 +49,7 @@ async function insertSubmissionRow(
         student_id: studentId,
         attempt_number: attemptNumber,
         status: SUBMISSION_STATUS.IN_PROGRESS as any,
+        started_at: new Date().toISOString(),
         ...(opts?.isTeacherAttempt ? { is_teacher_attempt: true } : {}),
       },
     ])
@@ -374,6 +375,9 @@ export const getAssignmentConversationMessages = async (
 
 export type AssignmentChatSentenceFlag = Database['public']['Tables']['assignment_chat_sentence_flags']['Row'];
 
+export type AssignmentClipboardEvent =
+  Database['public']['Tables']['assignment_clipboard_events']['Row'];
+
 export type OpikTraceIds = Record<string, string>;
 
 export type TeacherAiContentType =
@@ -391,6 +395,28 @@ export const getAssignmentChatSentenceFlags = async (
   try {
     const { data, error } = await supabase
       .from('assignment_chat_sentence_flags')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+    return { data: data ?? [], error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Copy/paste events recorded during student assignment work (teacher + student RLS).
+ */
+export const getAssignmentClipboardEvents = async (
+  submissionId: string,
+): Promise<{ data: AssignmentClipboardEvent[] | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('assignment_clipboard_events')
       .select('*')
       .eq('submission_id', submissionId)
       .order('created_at', { ascending: true });
@@ -529,6 +555,10 @@ export const getEnrichedClassroomSubmissions = async (
       .in('submission_id', submissionIds);
 
     const flagCountBySubmissionId = new Map<string, number>();
+    const clipboardActivityBySubmissionId = new Map<
+      string,
+      { hasCopy: boolean; hasPaste: boolean }
+    >();
     if (submissionIds.length > 0) {
       const { data: flagRows } = await supabase
         .from('assignment_chat_sentence_flags')
@@ -537,6 +567,21 @@ export const getEnrichedClassroomSubmissions = async (
       for (const row of flagRows ?? []) {
         const sid = row.submission_id;
         flagCountBySubmissionId.set(sid, (flagCountBySubmissionId.get(sid) ?? 0) + 1);
+      }
+
+      const { data: clipboardRows } = await supabase
+        .from('assignment_clipboard_events')
+        .select('submission_id, event_type')
+        .in('submission_id', submissionIds);
+      for (const row of clipboardRows ?? []) {
+        const sid = row.submission_id;
+        const current = clipboardActivityBySubmissionId.get(sid) ?? {
+          hasCopy: false,
+          hasPaste: false,
+        };
+        if (row.event_type === 'copy') current.hasCopy = true;
+        if (row.event_type === 'paste') current.hasPaste = true;
+        clipboardActivityBySubmissionId.set(sid, current);
       }
     }
 
@@ -561,6 +606,8 @@ export const getEnrichedClassroomSubmissions = async (
         teacher_feedback: fb?.teacher_feedback,
         conversation_context: (fb?.conversation_context as unknown as Message[]) || [],
         chat_sentence_flag_count: flagCountBySubmissionId.get(sub.id) ?? 0,
+        clipboard_has_copy: clipboardActivityBySubmissionId.get(sub.id)?.hasCopy ?? false,
+        clipboard_has_paste: clipboardActivityBySubmissionId.get(sub.id)?.hasPaste ?? false,
       };
     });
 
@@ -1060,10 +1107,29 @@ export const completeSubmission = async (
   },
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
+    const submittedAt = new Date().toISOString();
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('submissions')
+      .select('started_at')
+      .eq('id', submissionId)
+      .maybeSingle();
+
+    if (fetchError) {
+      return { success: false, error: handleSupabaseError(fetchError) };
+    }
+
     const update: Database['public']['Tables']['submissions']['Update'] = {
       status: SUBMISSION_STATUS.COMPLETED,
-      submitted_at: new Date().toISOString(),
+      submitted_at: submittedAt,
     };
+
+    if (existing?.started_at) {
+      const startedMs = new Date(existing.started_at).getTime();
+      const submittedMs = new Date(submittedAt).getTime();
+      update.duration_seconds = Math.max(0, Math.round((submittedMs - startedMs) / 1000));
+    }
+
     if (options?.awaitingTeacherFeedbackRelease) {
       update.awaiting_teacher_feedback_release = true;
     }

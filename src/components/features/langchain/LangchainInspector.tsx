@@ -3,7 +3,8 @@ import type { Node } from '@xyflow/react';
 import { PanelRightClose } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { TrackedTextarea } from '@/components/ui/tracked-textarea';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -101,6 +102,7 @@ export interface LangchainInspectorProps {
   isRTL: boolean;
   onPatchData: (nodeId: string, partial: Record<string, unknown>) => void;
   onToggleCollapse?: () => void;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
   className?: string;
 }
 
@@ -110,6 +112,7 @@ export function LangchainInspector({
   isRTL,
   onPatchData,
   onToggleCollapse,
+  clipboardTracking,
   className,
 }: LangchainInspectorProps) {
   const { t } = useTranslation();
@@ -179,9 +182,11 @@ export function LangchainInspector({
             readOnly={readOnly}
             isRTL={isRTL}
             dir={dir}
+            nodeId={n.id}
             data={n.data as LangchainInputNodeData}
             descriptionLabel={t('assignmentDetail.langchain.inspector.fields.description')}
             onPatch={patch}
+            clipboardTracking={clipboardTracking}
           />
         )}
 
@@ -190,14 +195,25 @@ export function LangchainInspector({
             readOnly={readOnly}
             isRTL={isRTL}
             dir={dir}
+            nodeId={n.id}
             data={n.data as LangchainOutputNodeData}
             descriptionLabel={t('assignmentDetail.langchain.inspector.fields.description')}
             onPatch={patch}
+            clipboardTracking={clipboardTracking}
           />
         )}
 
         {n.type === 'llmNode' && (
-          <LlmSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainLlmNodeData} onPatch={patch} t={t} />
+          <LlmSection
+            readOnly={readOnly}
+            isRTL={isRTL}
+            dir={dir}
+            nodeId={n.id}
+            data={n.data as LangchainLlmNodeData}
+            onPatch={patch}
+            t={t}
+            clipboardTracking={clipboardTracking}
+          />
         )}
 
         {n.type === 'triggerNode' && (
@@ -216,16 +232,20 @@ function InputSection({
   readOnly,
   isRTL,
   dir,
+  nodeId,
   data,
   descriptionLabel,
   onPatch,
+  clipboardTracking,
 }: {
   readOnly: boolean;
   isRTL: boolean;
   dir: 'rtl' | 'ltr';
+  nodeId: string;
   data: LangchainInputNodeData | LangchainOutputNodeData;
   descriptionLabel: string;
   onPatch: (p: Record<string, unknown>) => void;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 }) {
   if (readOnly) {
     return (
@@ -235,7 +255,16 @@ function InputSection({
   return (
     <div className="space-y-1.5">
       <Label className={cn(isRTL && 'text-end block')}>{descriptionLabel}</Label>
-      <Textarea dir={dir} value={data.description} onChange={(e) => onPatch({ description: e.target.value })} rows={4} />
+      <TrackedTextarea
+        dir={dir}
+        value={data.description}
+        onChange={(e) => onPatch({ description: e.target.value })}
+        rows={4}
+        clipboardTracking={clipboardTracking}
+        pasteSourceKind="langchain_field"
+        pasteContextKey={`${nodeId}:description`}
+        copySourceKind="langchain_field"
+      />
     </div>
   );
 }
@@ -244,16 +273,20 @@ function LlmSection({
   readOnly,
   isRTL,
   dir,
+  nodeId,
   data,
   onPatch,
   t,
+  clipboardTracking,
 }: {
   readOnly: boolean;
   isRTL: boolean;
   dir: 'rtl' | 'ltr';
+  nodeId: string;
   data: LangchainLlmNodeData;
   onPatch: (p: Record<string, unknown>) => void;
   t: (k: string) => string;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 }) {
   if (readOnly) {
     return (
@@ -263,7 +296,16 @@ function LlmSection({
   return (
     <div className="space-y-1.5">
       <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.systemPrompt')}</Label>
-      <Textarea dir={dir} value={data.systemPrompt} onChange={(e) => onPatch({ systemPrompt: e.target.value })} rows={5} />
+      <TrackedTextarea
+        dir={dir}
+        value={data.systemPrompt}
+        onChange={(e) => onPatch({ systemPrompt: e.target.value })}
+        rows={5}
+        clipboardTracking={clipboardTracking}
+        pasteSourceKind="langchain_field"
+        pasteContextKey={`${nodeId}:systemPrompt`}
+        copySourceKind="langchain_field"
+      />
     </div>
   );
 }
