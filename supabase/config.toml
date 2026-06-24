@@ -1,4 +1,4 @@
-project_id = "amifonnyjcetwqdcrqur"
+project_id = "otjfoeyqiuerrgrdtgqx"
 
 # Global storage upload cap (must be >= bucket limits). Push with: supabase config push --project-ref <ref>
 [storage]
@@ -8,7 +8,7 @@ file_size_limit = "1GiB"
 public = true
 file_size_limit = "1GiB"
 
-# Auth settings for config push — staging project (amifonnyjcetwqdcrqur)
+# Auth settings for config push — staging project (otjfoeyqiuerrgrdtgqx)
 [auth]
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://staging.perleap.ai/**", "https://staging.perleap.ai"]
