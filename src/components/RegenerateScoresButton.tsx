@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -13,130 +14,238 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Undo2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useEvaluationRefreshProcessing } from '@/contexts/EvaluationRefreshProcessingContext';
+import {
+  estimateRefreshDurationSeconds,
+  formatEta,
+  getEligibleRefreshMeta,
+} from '@/lib/evaluationRefreshEstimate';
 
 interface RegenerateScoresButtonProps {
   classroomId: string;
   onComplete: () => void;
-  /** Short label + small button for inline toolbars (e.g. analytics filter card) */
   compact?: boolean;
 }
 
+type UndoResponse = {
+  restored: number;
+  failed: number;
+  canUndo?: boolean;
+  error?: string;
+};
+
 export function RegenerateScoresButton({ classroomId, onComplete, compact = false }: RegenerateScoresButtonProps) {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
+  const { isRefreshing, startRefresh } = useEvaluationRefreshProcessing();
+  const [undoLoading, setUndoLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [eligibleStudents, setEligibleStudents] = useState<number | null>(null);
+  const [eligibleSubmissions, setEligibleSubmissions] = useState<number | null>(null);
 
-  const regenerateAllScores = async () => {
-    setLoading(true);
-    try {
-      // Get all assignments in this classroom
-      const { data: assignments } = await supabase
-        .from('assignments')
+  const { data: hasUndoBatch, refetch: refetchUndoBatch } = useQuery({
+    queryKey: ['evaluation-refresh-batch', classroomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('evaluation_refresh_batches')
         .select('id')
-        .eq('classroom_id', classroomId);
+        .eq('classroom_id', classroomId)
+        .maybeSingle();
 
-      if (!assignments || assignments.length === 0) {
-        toast.info(t('analytics.noAssignments'));
-        setLoading(false);
-        return;
-      }
+      if (error) throw error;
+      return !!data?.id;
+    },
+    enabled: !!classroomId,
+  });
 
-      const assignmentIds = assignments.map((a) => a.id);
-
-      // Get all submissions with feedback (completed assignments)
-      const { data: submissions } = await supabase
-        .from('submissions')
+  const { data: hasRunningJob } = useQuery({
+    queryKey: ['evaluation-refresh-job-running', classroomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('evaluation_refresh_jobs')
         .select('id')
-        .in('assignment_id', assignmentIds);
+        .eq('classroom_id', classroomId)
+        .eq('status', 'running')
+        .maybeSingle();
 
-      if (!submissions || submissions.length === 0) {
-        toast.info(t('analytics.noCompletedSubmissions'));
-        setLoading(false);
-        return;
-      }
+      if (error) throw error;
+      return !!data?.id;
+    },
+    enabled: !!classroomId,
+    refetchInterval: isRefreshing ? 2000 : false,
+  });
 
-      // Filter to only submissions with feedback
-      const { data: feedbackData } = await supabase
-        .from('assignment_feedback')
-        .select('submission_id')
-        .in(
-          'submission_id',
-          submissions.map((s) => s.id)
-        );
+  const canUndo = !!hasUndoBatch && !hasRunningJob && !isRefreshing;
 
-      const completedSubmissionIds = feedbackData?.map((f) => f.submission_id) || [];
+  useEffect(() => {
+    if (!confirmOpen || !classroomId) {
+      setEligibleStudents(null);
+      setEligibleSubmissions(null);
+      return;
+    }
 
-      if (completedSubmissionIds.length === 0) {
-        toast.info(t('analytics.noCompletedSubmissions'));
-        setLoading(false);
-        return;
-      }
-
-      // Regenerate scores for each submission
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const submissionId of completedSubmissionIds) {
-        try {
-          const { error } = await supabase.functions.invoke('regenerate-scores', {
-            body: { submissionId },
-          });
-
-          if (error) {
-            failCount++;
-          } else {
-            successCount++;
-          }
-        } catch (e) {
-          failCount++;
+    let cancelled = false;
+    void getEligibleRefreshMeta(classroomId)
+      .then((meta) => {
+        if (!cancelled) {
+          setEligibleStudents(meta.studentCount);
+          setEligibleSubmissions(meta.submissionCount);
         }
-      }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEligibleStudents(null);
+          setEligibleSubmissions(null);
+        }
+      });
 
-      if (successCount > 0) {
-        toast.success(t('analytics.regenerateSuccess', { count: successCount }));
-        onComplete();
-      }
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmOpen, classroomId]);
 
-      if (failCount > 0) {
-        toast.error(t('analytics.regenerateFail', { count: failCount }));
+  const refreshAllEvaluations = async () => {
+    const result = await startRefresh(classroomId);
+
+    if ('error' in result) {
+      toast.error(t('analytics.refreshError'));
+      return;
+    }
+
+    if (result.status === 'cancelled') {
+      toast.info(t('analytics.refreshProgress.cancelled'));
+      return;
+    }
+
+    if (result.status === 'failed') {
+      toast.error(result.error ?? t('analytics.refreshError'));
+      return;
+    }
+
+    if (result.status === 'empty') {
+      if ((result.manualSkipped ?? 0) > 0 && (result.skipped ?? 0) === 0) {
+        toast.info(t('analytics.refreshAllManualSkipped', { count: result.manualSkipped }));
+      } else {
+        toast.info(t('analytics.noCompletedSubmissions'));
       }
-    } catch (error) {
-      toast.error(t('analytics.regenerateError'));
-    } finally {
-      setLoading(false);
+      return;
+    }
+
+    if ((result.updated ?? 0) > 0) {
+      const parts = [t('analytics.refreshSuccess', { count: result.updated })];
+      if ((result.manualSkipped ?? 0) > 0) {
+        parts.push(t('analytics.refreshManualSkipped', { count: result.manualSkipped }));
+      }
+      toast.success(parts.join(' '));
+      void refetchUndoBatch();
+      onComplete();
     }
   };
 
+  const undoRefresh = async () => {
+    setUndoLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<UndoResponse>(
+        'undo-evaluation-refresh',
+        { body: { classroomId } },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      const result = data ?? { restored: 0, failed: 0 };
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (result.restored > 0) {
+        toast.success(t('analytics.undoRefreshSuccess', { count: result.restored }));
+        void refetchUndoBatch();
+        onComplete();
+      } else {
+        toast.info(t('analytics.undoRefreshEmpty'));
+      }
+
+      if (result.failed > 0) {
+        toast.error(t('analytics.undoRefreshFail', { count: result.failed }));
+      }
+    } catch {
+      toast.error(t('analytics.undoRefreshError'));
+    } finally {
+      setUndoLoading(false);
+    }
+  };
+
+  const confirmEstimate =
+    eligibleStudents != null &&
+    eligibleStudents > 0 &&
+    eligibleSubmissions != null
+      ? t('analytics.refreshProgress.confirmEstimate', {
+          time: formatEta(
+            estimateRefreshDurationSeconds(eligibleStudents, eligibleSubmissions),
+          ),
+          count: eligibleStudents,
+        })
+      : null;
+
   return (
     <>
-      <Button
-        variant="outline"
-        size={compact ? 'sm' : 'default'}
-        className={compact ? 'shrink-0 gap-1.5' : undefined}
-        onClick={() => setConfirmOpen(true)}
-        disabled={loading}
-      >
-        <RefreshCw className={`${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} ${loading ? 'animate-spin' : ''}`} />
-        {loading
-          ? t('analytics.regeneratingScores')
-          : compact
-            ? t('analytics.refresh5D')
-            : t('analytics.regenerateAll5DScores')}
-      </Button>
+      <div className={cn('flex items-center gap-2', compact && 'shrink-0')}>
+        <Button
+          type="button"
+          variant="outline"
+          size={compact ? 'sm' : 'default'}
+          className={cn('rounded-lg', compact && 'shrink-0')}
+          onClick={() => setConfirmOpen(true)}
+          disabled={isRefreshing || undoLoading || !!hasRunningJob}
+        >
+          <RefreshCw
+            className={cn('h-4 w-4 me-1.5', isRefreshing && 'animate-spin')}
+            aria-hidden
+          />
+          {isRefreshing
+            ? t('analytics.regeneratingScores')
+            : compact
+              ? t('analytics.refresh5D')
+              : t('analytics.regenerateAll5DScores')}
+        </Button>
+
+        {canUndo ? (
+          <Button
+            type="button"
+            variant="outline"
+            size={compact ? 'sm' : 'default'}
+            className={cn('rounded-lg', compact && 'shrink-0')}
+            onClick={() => void undoRefresh()}
+            disabled={isRefreshing || undoLoading}
+          >
+            <Undo2
+              className={cn('h-4 w-4 me-1.5', undoLoading && 'animate-pulse')}
+              aria-hidden
+            />
+            {undoLoading ? t('analytics.undoingRefresh') : t('analytics.undoRefresh')}
+          </Button>
+        ) : null}
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('analytics.regenerateScoresConfirmTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('analytics.regenerateScoresConfirmDescription')}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t('analytics.regenerateScoresConfirmDescription')}
+              {confirmEstimate ? ` ${confirmEstimate}` : null}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setConfirmOpen(false);
-                void regenerateAllScores();
+                void refreshAllEvaluations();
               }}
             >
               {t('analytics.regenerateScoresConfirmAction')}

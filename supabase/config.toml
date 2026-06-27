@@ -36,6 +36,17 @@ verify_jwt = true
 [functions.regenerate-scores]
 verify_jwt = false
 
+[functions.refresh-class-evaluations]
+verify_jwt = true
+# Async job: compute all students, commit at end. REFRESH_EVAL_CONCURRENCY (default 4, max 5).
+# ~150s edge limit may still apply to very large classes.
+
+[functions.cancel-evaluation-refresh]
+verify_jwt = true
+
+[functions.undo-evaluation-refresh]
+verify_jwt = true
+
 [functions.rephrase-text]
 verify_jwt = false
 

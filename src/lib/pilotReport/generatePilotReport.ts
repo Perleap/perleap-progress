@@ -2,6 +2,7 @@ import type { Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import { build5dNarrativeEvidence } from '@/lib/analytics5dEvidence';
 import { runPool } from '@/lib/asyncPool';
 import {
+  filterReportableAssignments,
   getAllowedAssignmentIds,
   scopedStudentLatestScores,
   type AnalyticsModuleFilter,
@@ -72,8 +73,9 @@ export async function generatePilotReport(
     onParticipantDone,
   } = input;
 
+  const reportableAssignments = filterReportableAssignments(analyticsData.assignments);
   const effectiveAssignmentIds = getAllowedAssignmentIds(
-    analyticsData.assignments,
+    reportableAssignments,
     scopeModule,
     scopeAssignment,
   );
@@ -119,7 +121,7 @@ export async function generatePilotReport(
         context: 'student_avg',
         allowedAssignmentIds: effectiveAssignmentIds,
         allStudents: allStudentsForEvidence,
-        assignmentRefs: analyticsData.assignments,
+        assignmentRefs: reportableAssignments,
         singleStudentId: st.id,
         sectionTitleResolver,
       });

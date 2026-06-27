@@ -123,7 +123,13 @@ serve(async (req) => {
       });
     }
 
-    const allowed = ['class_avg', 'student_avg', 'module_compare'].includes(context);
+    const allowed = [
+      'class_avg',
+      'student_avg',
+      'module_compare',
+      'student_compare',
+      'assignment_compare',
+    ].includes(context);
     if (!allowed) {
       return new Response(JSON.stringify({ error: 'Invalid context' }), {
         status: 400,
@@ -151,6 +157,18 @@ serve(async (req) => {
     } else if (context === 'student_avg') {
       roleLine =
         `You explain one student's aggregated 5D profile as means over their scoped work. Student name (if any): ${studentName || 'not specified'}.`;
+    } else if (context === 'student_compare') {
+      roleLine =
+        `You explain the 5D means for one student (\"${compareLabelA || 'A'}\") in a head-to-head comparison with another student (\"${compareLabelB || 'B'}\"). The JSON scores are for the first student only.`;
+      if (peerScores) {
+        roleLine += ` Peer student mean scores (for contrast, 0–10): ${JSON.stringify(peerScores)}`;
+      }
+    } else if (context === 'assignment_compare') {
+      roleLine =
+        `You explain the class-wide 5D means for one assignment (\"${compareLabelA || 'A'}\") in a head-to-head comparison with another assignment (\"${compareLabelB || 'B'}\"). The JSON scores are for the first assignment only.`;
+      if (peerScores) {
+        roleLine += ` Peer assignment mean scores (for contrast, 0–10): ${JSON.stringify(peerScores)}`;
+      }
     } else {
       roleLine =
         `You explain the 5D means for one syllabus section (\"${compareLabelA || 'A'}\") in a head-to-head comparison with another section (\"${compareLabelB || 'B'}\"). The JSON scores are for the first section only.`;

@@ -42,6 +42,12 @@ function clamp0to100(value: unknown): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
+function clampPriority(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(1, Math.min(10, Math.round(n)));
+}
+
 function pickEnum<T extends readonly string[]>(value: unknown, allowed: T, fallback: T[number]): T[number] {
   return typeof value === 'string' && (allowed as readonly string[]).includes(value)
     ? (value as T[number])
@@ -181,6 +187,8 @@ Readiness labels (use exactly one):
 Role-fit labels (use exactly one): "builder" (builder/implementer), "analyst" (solution analyst), "champion" (platform champion), "enablement" (customer enablement/support), "training" (needs further training first).
 
 Confidence reflects evidence quality: "high" only with rich evidence across several assignments; "medium" with partial evidence; "low" with thin or missing evidence. If evidence is thin, lower confidence rather than guessing high scores. Never invent evidence.
+
+Also assign placementPriority: integer 1-10 for how urgently you would assign this person to supervised real builder work, based ONLY on their observed evidence and answers. 10 = top pick now; 1 = not suitable yet. Should align with readiness but can differentiate within the same readiness tier (e.g. two "coach" participants may be 6 vs 8). Low completion must lower urgency: if fewer than half of scoped assignments are completed, placementPriority should rarely exceed 5; supervised real work requires enough hands-on evidence.
 ${langLine}
 Return ONLY valid JSON with this exact shape (no markdown):
 {
@@ -191,6 +199,7 @@ Return ONLY valid JSON with this exact shape (no markdown):
   "mainRisk": "one specific sentence grounded in evidence",
   "nextAction": "one concrete, assignable next step for management",
   "confidence": "high" | "medium" | "low",
+  "placementPriority": 1,
   "whyBullets": ["2-3 short bullets, each one sentence, citing specific observed evidence for this decision"]
 }`;
 
@@ -277,6 +286,7 @@ Cohort mean dimension scores (0-100): ${meanDimensions}`;
           mainRisk: cleanSentence(parsed.mainRisk, ''),
           nextAction: cleanSentence(parsed.nextAction, ''),
           confidence: pickEnum(parsed.confidence, CONFIDENCE_LABELS, 'low'),
+          placementPriority: clampPriority(parsed.placementPriority),
           whyBullets: parseWhyBullets(parsed.whyBullets),
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

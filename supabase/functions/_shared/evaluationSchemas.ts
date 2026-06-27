@@ -4,6 +4,10 @@ const dimensionSchema = {
   type: 'object',
   properties: {
     level: { type: ['integer', 'null'] },
+    development: { type: ['integer', 'null'] },
+    motivation: { type: ['integer', 'null'] },
+    phase: { type: ['string', 'null'], enum: ['up', 'down', null] },
+    next: { type: ['string', 'null'] },
     score: { type: ['number', 'null'] },
     notAssessableReason: { type: ['string', 'null'] },
     evidence: {
@@ -12,7 +16,17 @@ const dimensionSchema = {
     },
     explanation: { type: 'string' },
   },
-  required: ['level', 'score', 'notAssessableReason', 'evidence', 'explanation'],
+  required: [
+    'level',
+    'development',
+    'motivation',
+    'phase',
+    'next',
+    'score',
+    'notAssessableReason',
+    'evidence',
+    'explanation',
+  ],
   additionalProperties: false,
 } as const;
 
@@ -63,7 +77,7 @@ export const EVALUATION_HARD_SKILLS_JSON_SCHEMA = {
           type: 'object',
           properties: {
             skill_component: { type: 'string' },
-            current_level_percent: { type: 'number' },
+            current_level_percent: { type: ['number', 'null'] },
             proficiency_description: { type: 'string' },
             actionable_challenge: { type: 'string' },
             evidence: {

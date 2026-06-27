@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
-  formatWatchPosition,
+  formatWatchPercent,
   useVideoWatchAnalytics,
   type VideoEngagementSummary,
 } from '@/hooks/queries/useVideoWatchQueries';
@@ -79,7 +79,7 @@ function VideoSummaryCard({
                     {t('analytics.videoEngagement.plays')}
                   </TableHead>
                   <TableHead className={cn(isRTL && 'text-right')}>
-                    {t('analytics.videoEngagement.lastStopped')}
+                    {t('analytics.videoEngagement.percentWatched')}
                   </TableHead>
                   <TableHead className={cn(isRTL && 'text-right')}>
                     {t('analytics.videoEngagement.status')}
@@ -94,7 +94,7 @@ function VideoSummaryCard({
                     </TableCell>
                     <TableCell className={cn(isRTL && 'text-right')}>{row.play_count}</TableCell>
                     <TableCell className={cn(isRTL && 'text-right')}>
-                      {formatWatchPosition(row.last_position_seconds, row.duration_seconds)}
+                      {formatWatchPercent(row)}
                     </TableCell>
                     <TableCell className={cn(isRTL && 'text-right')}>
                       <span className="text-sm text-muted-foreground">

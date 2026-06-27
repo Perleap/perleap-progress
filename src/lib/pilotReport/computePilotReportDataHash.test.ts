@@ -139,4 +139,34 @@ describe('computePilotReportDataHash', () => {
     });
     expect(all).not.toBe(scoped);
   });
+
+  it('handles partial null dimension scores without throwing', () => {
+    const data = baseData({
+      students: [
+        {
+          id: 's1',
+          fullName: 'Alice',
+          submissions: [{ student_id: 's1', assignment_id: 'a1', status: 'completed' }],
+          snapshots: [
+            {
+              user_id: 's1',
+              submission_id: 'sub1',
+              scores: { vision: 7, values: null, thinking: 5, connection: null, action: 3 },
+            },
+          ],
+          narrativeRows: [],
+        },
+      ],
+      rawSubmissions: [{ id: 'sub1', assignment_id: 'a1' }],
+    });
+    expect(() =>
+      computePilotReportDataHash({
+        analyticsData: data,
+        scopeModule: 'all',
+        scopeAssignment: 'all',
+        language: 'en',
+        sectionTitleResolver,
+      }),
+    ).not.toThrow();
+  });
 });

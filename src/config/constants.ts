@@ -92,6 +92,22 @@ export const DIMENSION_CONFIG = {
   },
 } as const;
 
+/** QED radar layer styling (Development = indigo, Motivation = amber). */
+export const QED_LAYER_CONFIG = {
+  development: {
+    color: '#4F46E5',
+    strokeWidth: 2,
+    fillOpacity: 0.35,
+    dash: undefined as string | undefined,
+  },
+  motivation: {
+    color: '#F59E0B',
+    strokeWidth: 2,
+    fillOpacity: 0.2,
+    dash: '6 4',
+  },
+} as const;
+
 // Score Ranges
 export const SCORE_MIN = 0;
 export const SCORE_MAX = 10;

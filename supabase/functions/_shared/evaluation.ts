@@ -18,6 +18,7 @@ import {
   normalizeHardSkillsAssessment,
   type EvalScoresRecord,
   type EvalScoreExplanations,
+  type EvalQedMeasuresRecord,
   type RawEvaluationPayload,
   type RawHardSkillAssessment,
 } from './evaluationValidation.ts';
@@ -71,6 +72,7 @@ export interface EvaluationResult {
   teacherFeedback: string;
   scores: EvalScoresRecord;
   scoreExplanations: EvalScoreExplanations;
+  qedMeasures: EvalQedMeasuresRecord;
   evidence: Partial<Record<string, string[]>>;
   hardSkillsAssessment: ReturnType<typeof normalizeHardSkillsAssessment>;
 }
@@ -315,6 +317,7 @@ export async function runEvaluation(
     teacherFeedback,
     scores: normalized.scores,
     scoreExplanations: normalized.scoreExplanations,
+    qedMeasures: normalized.qedMeasures,
     evidence: normalized.evidence,
     hardSkillsAssessment,
   };

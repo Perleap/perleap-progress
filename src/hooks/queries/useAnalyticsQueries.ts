@@ -17,6 +17,7 @@ import {
 import type { SyllabusStructureType } from '@/types/syllabus';
 import type { AnalyticsAssignmentRef, AnalyticsModuleRef } from '@/lib/analyticsScope';
 import { parseScoreExplanations, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
+import { averageQedMeasuresAcrossSnapshots } from '@/lib/qedMeasures';
 import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
 
 type SubRow = {
@@ -33,6 +34,7 @@ type SnapshotRow = {
   submission_id: string;
   scores: Json;
   score_explanations: Json | null;
+  qed_measures: Json | null;
 };
 
 function sectionLabelFor(
@@ -116,7 +118,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
       // 3. Fetch assignments (linked to syllabus sections when present)
       const { data: assignments } = await supabase
         .from('assignments')
-        .select('id, title, syllabus_section_id, instructions')
+        .select('id, title, syllabus_section_id, instructions, status, active, deleted_at')
         .eq('classroom_id', classroomId);
 
       const assignmentRefs: AnalyticsAssignmentRef[] = (assignments || []).map((a) => ({
@@ -124,6 +126,9 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         title: a.title,
         syllabusSectionId: a.syllabus_section_id,
         instructions: a.instructions,
+        status: a.status as AnalyticsAssignmentRef['status'],
+        active: a.active,
+        deletedAt: a.deleted_at,
       }));
 
       // 4. Fetch enrollments with student profiles in bulk
@@ -149,7 +154,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
       // 6. Fetch 5D snapshots in bulk
       const { data: snapshots } = await supabase
         .from('five_d_snapshots')
-        .select('user_id, submission_id, scores, score_explanations')
+        .select('user_id, submission_id, scores, score_explanations, qed_measures')
         .in('submission_id', submissionIds)
         .eq('classroom_id', classroomId)
         .neq('source', 'onboarding');
@@ -218,6 +223,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         }
 
         let averageScores = null;
+        let latestQedMeasures = null;
         if (studentSnapshotsForAggregate.length > 0) {
           const totals = { vision: 0, values: 0, thinking: 0, connection: 0, action: 0 };
           studentSnapshotsForAggregate.forEach((s) => {
@@ -233,6 +239,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
             }),
             {} as Record<string, number>,
           );
+          latestQedMeasures = averageQedMeasuresAcrossSnapshots(studentSnapshotsForAggregate);
         }
 
         const studentHardSkills =
@@ -251,6 +258,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
           id: sid,
           fullName: profile?.full_name || 'Unknown',
           latestScores: averageScores,
+          latestQedMeasures,
           feedbackCount: studentFeedback.length,
           submissions: studentSubmissions,
           snapshots: studentSnapshotsForAggregate,

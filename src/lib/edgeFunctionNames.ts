@@ -20,12 +20,15 @@ export const EDGE_FUNCTION_NAMES = [
   'perleap-chat',
   'pilot-readiness',
   'regenerate-scores',
+  'refresh-class-evaluations',
+  'cancel-evaluation-refresh',
   'rephrase-text',
   'speech-to-text',
   'suggest-assignment-hard-skills',
   'teacher-assistant-chat',
   'text-to-speech',
   'transcribe-live-session',
+  'undo-evaluation-refresh',
 ] as const;
 
 export type EdgeFunctionName = (typeof EDGE_FUNCTION_NAMES)[number];

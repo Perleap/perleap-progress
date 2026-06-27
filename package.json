@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:edge": "deno test --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts",
+    "test:edge": "deno test --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts supabase/functions/_shared/asyncPool.test.ts",
     "gen:types": "node scripts/gen-supabase-types.mjs",
     "extract:unit-memory-outliers": "node scripts/extract-unit-memory-outliers.mjs",
     "migrate:section-memory-to-course": "node scripts/migrate-section-memory-to-course.mjs"
@@ -49,6 +49,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "gsap": "^3.15.0",
+    "html2canvas": "^1.4.1",
     "i18next": "^23.16.8",
     "input-otp": "^1.4.2",
     "install": "^0.13.0",

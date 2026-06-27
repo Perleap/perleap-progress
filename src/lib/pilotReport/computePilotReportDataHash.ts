@@ -5,6 +5,7 @@ import {
   type Analytics5dNarrativeRow,
 } from '@/lib/analytics5dEvidence';
 import {
+  filterReportableAssignments,
   getAllowedAssignmentIds,
   scopedStudentLatestScores,
   type AnalyticsAssignmentRef,
@@ -17,7 +18,10 @@ const FIVED_KEYS: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'conn
 
 function stableScoreKey(scores: FiveDScores | null): string {
   if (!scores) return 'no-scores';
-  return FIVED_KEYS.map((k) => scores[k].toFixed(2)).join(',');
+  return FIVED_KEYS.map((k) => {
+    const v = scores[k];
+    return v == null ? 'null' : v.toFixed(2);
+  }).join(',');
 }
 
 export type PilotReportAnalyticsStudent = {
@@ -42,8 +46,9 @@ export function computePilotReportDataHash(input: {
   sectionTitleResolver: (syllabusSectionId: string | null) => string;
 }): string {
   const { analyticsData, scopeModule, scopeAssignment, language, sectionTitleResolver } = input;
+  const reportableAssignments = filterReportableAssignments(analyticsData.assignments);
   const effectiveAssignmentIds = getAllowedAssignmentIds(
-    analyticsData.assignments,
+    reportableAssignments,
     scopeModule,
     scopeAssignment,
   );
@@ -57,6 +62,7 @@ export function computePilotReportDataHash(input: {
   }));
 
   const parts: string[] = [
+    'schema:pilot-v2-placementPriority',
     `lang:${language}`,
     `assignments:${sortedAssignmentIds.join(',')}`,
   ];
@@ -76,7 +82,7 @@ export function computePilotReportDataHash(input: {
       context: 'student_avg',
       allowedAssignmentIds: effectiveAssignmentIds,
       allStudents: allStudentsForEvidence,
-      assignmentRefs: analyticsData.assignments,
+      assignmentRefs: reportableAssignments,
       singleStudentId: st.id,
       sectionTitleResolver,
     });

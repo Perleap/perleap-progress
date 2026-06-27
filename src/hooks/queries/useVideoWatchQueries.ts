@@ -35,9 +35,13 @@ export const videoWatchKeys = {
   classroom: (classroomId: string) => [...videoWatchKeys.all, 'classroom', classroomId] as const,
 };
 
-function completionPct(row: VideoWatchProgressRow): number {
+export function getVideoWatchCompletionPct(row: VideoWatchProgressRow): number {
   if (row.duration_seconds <= 0) return row.completed ? 100 : 0;
   return Math.min(100, Math.round((row.max_position_seconds / row.duration_seconds) * 100));
+}
+
+export function formatWatchPercent(row: VideoWatchProgressRow): string {
+  return `${getVideoWatchCompletionPct(row)}%`;
 }
 
 function resolveVideoTitle(
@@ -105,7 +109,7 @@ export function useVideoWatchAnalytics(classroomId: string | undefined) {
         const uniqueViewers = rows.length;
         const avgCompletionPct =
           rows.length > 0
-            ? Math.round(rows.reduce((sum, r) => sum + completionPct(r), 0) / rows.length)
+            ? Math.round(rows.reduce((sum, r) => sum + getVideoWatchCompletionPct(r), 0) / rows.length)
             : 0;
 
         summaries.push({

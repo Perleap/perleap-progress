@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Printer, Download, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, FileDown, Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   useClassroomAnalytics,
   useClassroom,
@@ -13,6 +14,7 @@ import { shouldWaitForPendingSnapshot } from '@/services/pilotReportCacheService
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import {
+  filterReportableAssignments,
   getAllowedAssignmentIds,
   structureTypeToLabelKey,
   type AnalyticsModuleFilter,
@@ -20,22 +22,27 @@ import {
 import { computePilotReportDataHash } from '@/lib/pilotReport/computePilotReportDataHash';
 import {
   PILOT_DIMENSION_KEYS,
+  PILOT_READINESS_VALUES,
   type PilotCohortSummary,
   type PilotParticipantRow,
   type PilotReportData,
+  type PilotReportStaticCopy,
 } from '@/lib/pilotReport/types';
 import {
   buildCohortOutcome,
   buildRoleFitDistributionLine,
   countNotAssessed,
   formatPilotDateRange,
-  sortParticipantsForDecision,
+  formatCompletionPercent,
+  rankParticipantsForAppendix,
 } from '@/lib/pilotReport/buildPilotReportData';
+import { buildPieChartSvg, READINESS_PIE_COLORS } from '@/lib/pilotReport/buildPieChartSvg';
 import { buildPilotReportHtml } from '@/lib/pilotReport/buildPilotReportHtml';
 import { buildPilotReportStaticCopy } from '@/lib/pilotReport/buildPilotReportStaticCopy';
+import { exportPilotReportPdf } from '@/lib/pilotReport/exportPilotReportPdf';
 import { fetchLogoDataUri } from '@/lib/pilotReport/fetchLogoDataUri';
 import { buildPilotReportId } from '@/lib/pilotReport/pilotReportId';
-import { pilotReportDownloadFilename } from '@/lib/pilotReport/pilotReportFilename';
+import { pilotReportDownloadFilename, pilotReportPdfFilename } from '@/lib/pilotReport/pilotReportFilename';
 
 const BLUE = {
   primary: '#3369B7',
@@ -65,6 +72,216 @@ function SectionNote({ children }: { children: React.ReactNode }) {
     >
       {children}
     </p>
+  );
+}
+
+function MethodologyLegend({ staticCopy }: { staticCopy: PilotReportStaticCopy }) {
+  return (
+    <section>
+      <SectionBar title={staticCopy.sectionMethodology} />
+      <div
+        className="px-4 py-3 text-xs text-slate-700 space-y-1.5 leading-relaxed border-t"
+        style={{ borderColor: BLUE.border, backgroundColor: '#f7fafd' }}
+      >
+        <p className="font-bold" style={{ color: BLUE.dark }}>
+          {staticCopy.legendReadinessTitle}
+        </p>
+        <p>{staticCopy.legendReadinessReady}</p>
+        <p>{staticCopy.legendReadinessCoach}</p>
+        <p>{staticCopy.legendReadinessRedirect}</p>
+        <p>{staticCopy.legendReadinessNotReady}</p>
+      </div>
+    </section>
+  );
+}
+
+function ReadinessPieChart({
+  cohort,
+  staticCopy,
+  notAssessedCount,
+}: {
+  cohort: ReturnType<typeof buildCohortOutcome>;
+  staticCopy: PilotReportStaticCopy;
+  notAssessedCount: number;
+}) {
+  const svg = useMemo(() => {
+    const segments = PILOT_READINESS_VALUES.map((key) => ({
+      label: staticCopy.readinessLabels[key],
+      value: cohort.readinessCounts[key],
+      color: READINESS_PIE_COLORS[key],
+    }));
+    if (notAssessedCount > 0) {
+      segments.push({
+        label: staticCopy.cohortNotAssessed,
+        value: notAssessedCount,
+        color: READINESS_PIE_COLORS.not_assessed,
+      });
+    }
+    return buildPieChartSvg({
+      segments,
+      ariaLabel: staticCopy.sectionExecutiveSummary,
+      centerLabel: String(cohort.participantsAssessed),
+    });
+  }, [cohort, staticCopy, notAssessedCount]);
+
+  if (!svg) return null;
+  return (
+    <div
+      className="p-6 border-b min-h-[280px] flex items-center"
+      style={{ borderColor: BLUE.border }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
+const SUMMARY_COLUMN_STYLES = {
+  strength: {
+    header: '#1E7A45',
+    background: '#E2F5EA',
+    text: '#1a5c35',
+    border: '#B5E0C6',
+  },
+  risk: {
+    header: '#B43333',
+    background: '#FDE8E8',
+    text: '#8c2828',
+    border: '#ECB8B8',
+  },
+  action: {
+    header: '#3369B7',
+    background: '#E8F0FA',
+    text: '#1B3A6B',
+    border: '#B8CFE8',
+  },
+} as const;
+
+const BADGE_SIZE_PX = 56;
+
+function badgeCircleStyle(sizePx: number, extra?: CSSProperties): CSSProperties {
+  return {
+    width: sizePx,
+    height: sizePx,
+    minWidth: sizePx,
+    minHeight: sizePx,
+    display: 'inline-grid',
+    placeItems: 'center',
+    justifyItems: 'center',
+    textAlign: 'center',
+    direction: 'ltr',
+    boxSizing: 'border-box',
+    ...extra,
+  };
+}
+
+function ParticipantCardBadges({
+  participant,
+  staticCopy,
+}: {
+  participant: PilotParticipantRow & { rank: number };
+  staticCopy: PilotReportStaticCopy;
+}) {
+  const readinessLabel = participant.readiness
+    ? staticCopy.readinessLabels[participant.readiness]
+    : staticCopy.noData;
+  const completionPct = formatCompletionPercent(
+    participant.completedInScope,
+    participant.assignmentsInScope,
+  );
+
+  return (
+    <div className="flex shrink-0 items-center gap-1.5" dir="ltr">
+      <div
+        className="shrink-0 rounded-full border-2 font-bold"
+        style={badgeCircleStyle(BADGE_SIZE_PX, {
+          ...readinessPillStyle(participant.readiness),
+          fontSize: '0.55rem',
+          lineHeight: 1.15,
+          padding: '0 4px',
+        })}
+        title={readinessLabel}
+      >
+        {readinessLabel}
+      </div>
+      <div
+        className="shrink-0 rounded-full border-2 border-white font-bold"
+        style={badgeCircleStyle(BADGE_SIZE_PX, {
+          backgroundColor: BLUE.labelBg,
+          color: BLUE.dark,
+          fontSize: '0.75rem',
+          lineHeight: 1,
+          padding: 0,
+        })}
+        title={staticCopy.appendixCompleted}
+      >
+        {completionPct}
+      </div>
+      <div
+        className="shrink-0 rounded-full border-2 border-white font-bold text-white"
+        style={badgeCircleStyle(BADGE_SIZE_PX, {
+          backgroundColor: BLUE.primary,
+          fontSize: '0.75rem',
+          lineHeight: 1,
+          padding: 0,
+        })}
+        aria-label={`#${participant.rank}`}
+      >
+        #{participant.rank}
+      </div>
+    </div>
+  );
+}
+
+function AppendixSummaryGrid({
+  participant,
+  staticCopy,
+}: {
+  participant: PilotParticipantRow;
+  staticCopy: PilotReportStaticCopy;
+}) {
+  const columns: { variant: keyof typeof SUMMARY_COLUMN_STYLES; label: string; text: string }[] = [
+    {
+      variant: 'strength',
+      label: staticCopy.colStrength,
+      text: participant.keyStrength || staticCopy.noData,
+    },
+    {
+      variant: 'risk',
+      label: staticCopy.colRisk,
+      text: participant.mainRisk || staticCopy.noData,
+    },
+    {
+      variant: 'action',
+      label: staticCopy.colNextAction,
+      text: participant.nextAction || staticCopy.noData,
+    },
+  ];
+
+  return (
+    <div
+      className="grid grid-cols-3 gap-2 w-full mt-3 pt-3 border-t"
+      style={{ borderColor: BLUE.border }}
+    >
+      {columns.map(({ variant, label, text }) => {
+        const style = SUMMARY_COLUMN_STYLES[variant];
+        return (
+          <div
+            key={variant}
+            className="rounded-sm px-2.5 py-2 text-xs min-w-0"
+            style={{
+              backgroundColor: style.background,
+              border: `1px solid ${style.border}`,
+            }}
+          >
+            <p className="font-bold mb-1" style={{ color: style.header }}>
+              {label}
+            </p>
+            <p className="leading-relaxed" style={{ color: style.text }}>
+              {text}
+            </p>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -140,15 +357,21 @@ export default function PilotReportPage() {
   const [regenerateKey, setRegenerateKey] = useState(0);
   const [pendingTick, setPendingTick] = useState(0);
   const ensureTriggeredRef = useRef<string | null>(null);
+  const reportDocRef = useRef<HTMLDivElement>(null);
   const [logoDataUri, setLogoDataUri] = useState<string | undefined>();
   const [reportId, setReportId] = useState(() => buildPilotReportId(undefined));
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const assignments = data?.assignments || [];
+  const reportableAssignments = useMemo(
+    () => filterReportableAssignments(assignments),
+    [assignments],
+  );
   const modules = data?.modules || [];
 
   const effectiveAssignmentIds = useMemo(
-    () => getAllowedAssignmentIds(assignments, selectedModule, selectedAssignment),
-    [assignments, selectedModule, selectedAssignment],
+    () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
+    [reportableAssignments, selectedModule, selectedAssignment],
   );
 
   const filterSummary = useMemo(() => {
@@ -266,8 +489,8 @@ export default function PilotReportPage() {
 
   const cohort = useMemo(() => buildCohortOutcome(participants), [participants]);
 
-  const sortedParticipants = useMemo(
-    () => sortParticipantsForDecision(participants),
+  const rankedAppendix = useMemo(
+    () => rankParticipantsForAppendix(participants),
     [participants],
   );
 
@@ -318,7 +541,7 @@ export default function PilotReportPage() {
       },
       cohort,
       summary: cohortSummary,
-      participants: sortedParticipants,
+      participants,
       staticCopy,
     };
   }, [
@@ -331,7 +554,7 @@ export default function PilotReportPage() {
     analyticsLanguage,
     isRTL,
     cohort,
-    sortedParticipants,
+    participants,
     staticCopy,
     reportId,
     logoDataUri,
@@ -351,6 +574,18 @@ export default function PilotReportPage() {
     a.click();
     URL.revokeObjectURL(url);
   }, [reportData, classroom?.name]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (!reportData || !isReady) return;
+    setIsExportingPdf(true);
+    try {
+      await exportPilotReportPdf(reportData, pilotReportPdfFilename(classroom?.name));
+    } catch {
+      toast.error(t('pilotReport.exportPdfError'));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [reportData, classroom?.name, isReady, t]);
 
   const handleRegenerate = useCallback(async () => {
     if (!classroomId) return;
@@ -387,14 +622,6 @@ export default function PilotReportPage() {
     );
   }
 
-  const findings = cohortSummary
-    ? [
-        [staticCopy.findingStrongest, cohortSummary.strongestCapability],
-        [staticCopy.findingGap, cohortSummary.mainGap],
-        [staticCopy.findingNextAction, cohortSummary.topNextAction],
-      ].filter(([, text]) => text && text.trim().length > 0)
-    : [];
-
   const toolbar = (
     <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border no-print print:hidden">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -419,11 +646,15 @@ export default function PilotReportPage() {
             variant="outline"
             size="sm"
             className="rounded-lg"
-            onClick={() => window.print()}
-            disabled={!isReady}
+            onClick={() => void handleExportPdf()}
+            disabled={!reportData || !isReady || isExportingPdf}
           >
-            <Printer className="h-4 w-4 me-1.5" aria-hidden />
-            {t('common.print', 'Print')}
+            {isExportingPdf ? (
+              <Loader2 className="h-4 w-4 me-1.5 animate-spin" aria-hidden />
+            ) : (
+              <FileDown className="h-4 w-4 me-1.5" aria-hidden />
+            )}
+            {t('pilotReport.exportPdf')}
           </Button>
           <Button
             type="button"
@@ -499,6 +730,8 @@ export default function PilotReportPage() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div
+          id="pilot-report-doc"
+          ref={reportDocRef}
           className="bg-white border shadow-sm"
           style={{ borderColor: BLUE.border }}
         >
@@ -526,258 +759,75 @@ export default function PilotReportPage() {
             <p className="text-sm font-semibold mt-3" style={{ color: BLUE.dark }}>
               {classroom?.name || '—'}
             </p>
-            {pilotDateRangeDisplay ? (
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">{pilotDateRangeDisplay}</p>
-            ) : null}
+            <div className="text-xs text-slate-500 mt-2 leading-relaxed space-y-0.5">
+              {pilotDateRangeDisplay ? <p>{pilotDateRangeDisplay}</p> : null}
+              <p>
+                {staticCopy.labelAssignmentsInScope}: {effectiveAssignmentIds.length}
+              </p>
+              <p>
+                {staticCopy.labelCohortSize}: {data?.students.length ?? 0}
+              </p>
+            </div>
           </header>
+
+          <MethodologyLegend staticCopy={staticCopy} />
 
           {/* 01 Executive summary */}
           <section>
             <SectionBar num="01" title={staticCopy.sectionExecutiveSummary} />
-            <table className="w-full text-sm border-collapse">
-              <tbody>
-                {[
-                  [
-                    staticCopy.cohortParticipants,
-                    `${cohort.participantsAssessed} of ${cohort.participantsTotal}`,
-                  ],
-                  [staticCopy.cohortReady, String(cohort.readinessCounts.ready)],
-                  [staticCopy.cohortCoach, String(cohort.readinessCounts.coach)],
-                  [staticCopy.cohortRedirect, String(cohort.readinessCounts.redirect)],
-                  [staticCopy.cohortNotReady, String(cohort.readinessCounts.not_ready)],
-                  ...(notAssessedCount > 0
-                    ? [[staticCopy.cohortNotAssessed, String(notAssessedCount)] as [string, string]]
-                    : []),
-                  ...(roleFitLine
-                    ? [[staticCopy.cohortRoleFitDistribution, roleFitLine] as [string, string]]
-                    : []),
-                ].map(([label, value]) => (
-                  <tr key={label} className="border-b last:border-b-0" style={{ borderColor: BLUE.border }}>
-                    <td
-                      className="w-2/5 px-4 py-2.5 font-semibold align-top border-e"
-                      style={{ backgroundColor: BLUE.labelBg, color: BLUE.dark, borderColor: BLUE.border }}
-                    >
-                      {label}
-                    </td>
-                    <td className="px-4 py-2.5 font-bold" style={{ color: BLUE.dark }}>
-                      {value}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {cohortSummary?.recommendation ? (
-              <p
-                className="text-sm leading-relaxed px-4 py-3 border-b"
-                style={{ backgroundColor: BLUE.labelBg, borderColor: BLUE.border }}
-              >
-                {cohortSummary.recommendation}
+            <ReadinessPieChart
+              cohort={cohort}
+              staticCopy={staticCopy}
+              notAssessedCount={notAssessedCount}
+            />
+            <p className="text-sm px-4 py-2.5 border-b text-slate-700" style={{ borderColor: BLUE.border }}>
+              <span className="font-semibold" style={{ color: BLUE.dark }}>
+                {staticCopy.cohortParticipants}:
+              </span>{' '}
+              {cohort.participantsAssessed} of {cohort.participantsTotal}
+            </p>
+            {roleFitLine ? (
+              <p className="text-sm px-4 py-2.5 border-b text-slate-700" style={{ borderColor: BLUE.border }}>
+                <span className="font-semibold" style={{ color: BLUE.dark }}>
+                  {staticCopy.cohortRoleFitDistribution}:
+                </span>{' '}
+                {roleFitLine}
               </p>
             ) : null}
-            {findings.length > 0 ? (
-              <ul className="px-4 py-3 space-y-1.5 border-b list-disc list-inside" style={{ borderColor: BLUE.border }}>
-                {findings.map(([label, text]) => (
-                  <li key={label} className="text-sm text-slate-700">
-                    <span className="font-bold" style={{ color: BLUE.dark }}>
-                      {label}:
-                    </span>{' '}
-                    {text}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-
-          {/* 02 Cohort capability snapshot */}
-          <section>
-            <SectionBar num="02" title={staticCopy.sectionCapabilitySnapshot} />
-            <SectionNote>{staticCopy.sectionCapabilitySnapshotDesc}</SectionNote>
-            <div className="p-4 space-y-3">
-              {cohort.meanDimensions ? (
-                PILOT_DIMENSION_KEYS.map((key) => {
-                  const value = cohort.meanDimensions![key];
-                  return (
-                    <div key={key} className="flex items-center gap-3">
-                      <span
-                        className="w-48 shrink-0 text-xs font-semibold"
-                        style={{ color: BLUE.dark }}
-                      >
-                        {staticCopy.dimensionLabels[key]}
-                      </span>
-                      <div className="flex-1 h-3.5 rounded-sm overflow-hidden" style={{ backgroundColor: '#dde8f4' }}>
-                        <div
-                          className="h-full rounded-sm"
-                          style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: BLUE.primary }}
-                        />
-                      </div>
-                      <span className="w-10 text-xs font-bold text-end" style={{ color: BLUE.dark }}>
-                        {value}
-                      </span>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-slate-500">
-                  {staticCopy.noData}
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* 03 Participant decision table */}
-          <section>
-            <SectionBar num="03" title={staticCopy.sectionDecisionTable} />
-            <SectionNote>{staticCopy.sectionDecisionTableDesc}</SectionNote>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse min-w-[760px]">
-                <thead>
-                  <tr style={{ backgroundColor: BLUE.headerBg }}>
-                    {[
-                      staticCopy.colParticipant,
-                      staticCopy.colReadiness,
-                      staticCopy.colFit,
-                      staticCopy.colStrength,
-                      staticCopy.colRisk,
-                      staticCopy.colNextAction,
-                      staticCopy.colConfidence,
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="text-start text-[0.7rem] font-bold px-2.5 py-2 border-b"
-                        style={{ color: BLUE.dark, borderColor: BLUE.border }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedParticipants.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-4 text-slate-500">
-                        {staticCopy.noData}
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedParticipants.map((p) => (
-                      <tr key={p.id} className="border-b last:border-b-0 align-top" style={{ borderColor: BLUE.border }}>
-                        <td className="px-2.5 py-2 font-bold text-slate-800">{p.name}</td>
-                        {p.assessed ? (
-                          <>
-                            <td className="px-2.5 py-2">
-                              <span
-                                className="inline-block px-2 py-0.5 rounded-full text-[0.68rem] font-bold whitespace-nowrap border"
-                                style={readinessPillStyle(p.readiness)}
-                              >
-                                {p.readiness ? staticCopy.readinessLabels[p.readiness] : staticCopy.noData}
-                              </span>
-                            </td>
-                            <td className="px-2.5 py-2 text-slate-700">
-                              {p.roleFit ? staticCopy.roleFitLabels[p.roleFit] : staticCopy.noData}
-                            </td>
-                            <td className="px-2.5 py-2 text-slate-700">{p.keyStrength || staticCopy.noData}</td>
-                            <td className="px-2.5 py-2 text-slate-700">{p.mainRisk || staticCopy.noData}</td>
-                            <td className="px-2.5 py-2 text-slate-700">{p.nextAction || staticCopy.noData}</td>
-                            <td className="px-2.5 py-2 text-slate-700">
-                              {p.confidence ? staticCopy.confidenceLabels[p.confidence] : staticCopy.noData}
-                            </td>
-                          </>
-                        ) : (
-                          <td colSpan={6} className="px-2.5 py-2 text-slate-400">
-                            {staticCopy.notAssessed}
-                          </td>
-                        )}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
           </section>
 
           {/* Appendix */}
-          {sortedParticipants.some((p) => p.assessed) ? (
+          {rankedAppendix.length > 0 ? (
             <section>
               <SectionBar title={staticCopy.sectionAppendix} />
               <SectionNote>{staticCopy.sectionAppendixDesc}</SectionNote>
               <div className="p-4 space-y-3">
-                {sortedParticipants
-                  .filter((p) => p.assessed)
-                  .map((p) => (
+                {rankedAppendix.map((p) => (
                     <div
                       key={p.id}
                       className="border px-4 py-3"
                       style={{ borderColor: BLUE.border, backgroundColor: '#f7fafd' }}
                     >
-                      <p className="text-sm font-bold" style={{ color: BLUE.dark }}>
-                        {p.name}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5 mb-2">
-                        {p.roleFit ? staticCopy.roleFitLabels[p.roleFit] : staticCopy.noData} ·{' '}
-                        {p.readiness ? staticCopy.readinessLabels[p.readiness] : staticCopy.noData} ·{' '}
-                        {p.confidence ? staticCopy.confidenceLabels[p.confidence] : staticCopy.noData} ·{' '}
-                        {staticCopy.appendixCompleted}: {p.completedInScope}/{p.assignmentsInScope}
-                      </p>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <p className="text-sm font-bold min-w-0" style={{ color: BLUE.dark }}>
+                          {p.name}
+                        </p>
+                        <ParticipantCardBadges participant={p} staticCopy={staticCopy} />
+                      </div>
                       {p.dimensions ? (
-                        <div>
+                        <div className="mt-2">
                           <p className="text-[0.65rem] font-bold uppercase tracking-wide mb-1" style={{ color: BLUE.dark }}>
                             {staticCopy.appendixObservedSignals}
                           </p>
                           <MiniDimensionBars dimensions={p.dimensions} labels={staticCopy.dimensionLabels} />
                         </div>
                       ) : null}
-                      {p.whyBullets.length > 0 ? (
-                        <div className="mt-2">
-                          <p className="text-xs font-bold" style={{ color: BLUE.dark }}>
-                            {staticCopy.appendixWhyBullets}
-                          </p>
-                          <ul className="list-disc list-inside text-xs text-slate-700 mt-1 space-y-0.5">
-                            {p.whyBullets.map((bullet, i) => (
-                              <li key={`${p.id}-why-${i}`}>{bullet}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      {p.keyStrength ? <p className="text-xs text-slate-700 mb-1 mt-2">{p.keyStrength}</p> : null}
-                      {p.mainRisk ? (
-                        <p className="text-xs text-slate-700 mb-1">
-                          <span className="font-bold" style={{ color: BLUE.dark }}>
-                            {staticCopy.appendixRisk}:
-                          </span>{' '}
-                          {p.mainRisk}
-                        </p>
-                      ) : null}
-                      {p.nextAction ? (
-                        <p className="text-xs text-slate-700">
-                          <span className="font-bold" style={{ color: BLUE.dark }}>
-                            {staticCopy.appendixNextAction}:
-                          </span>{' '}
-                          {p.nextAction}
-                        </p>
-                      ) : null}
+                      <AppendixSummaryGrid participant={p} staticCopy={staticCopy} />
                     </div>
                   ))}
               </div>
             </section>
           ) : null}
-
-          <section>
-            <SectionBar title={staticCopy.sectionMethodology} />
-            <div
-              className="px-4 py-3 text-xs text-slate-700 space-y-1.5 leading-relaxed border-t"
-              style={{ borderColor: BLUE.border, backgroundColor: '#f7fafd' }}
-            >
-              <p className="font-bold" style={{ color: BLUE.dark }}>
-                {staticCopy.legendReadinessTitle}
-              </p>
-              <p>{staticCopy.legendReadinessReady}</p>
-              <p>{staticCopy.legendReadinessCoach}</p>
-              <p>{staticCopy.legendReadinessRedirect}</p>
-              <p>{staticCopy.legendReadinessNotReady}</p>
-              <p>{staticCopy.legendWeighting}</p>
-              <p>{staticCopy.legendConfidence}</p>
-            </div>
-          </section>
 
           <footer
             className="text-center text-xs text-slate-500 px-4 py-5 border-t"
