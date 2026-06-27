@@ -1270,6 +1270,7 @@
     },
     "teacherEvaluation": {
       "writeEvaluation": "כתוב הערכה",
+      "overrideEvaluation": "דריסת הערכה",
       "placeholder": "כתוב את ההערכה והמשוב שלך להגשת התלמיד...",
       "submit": "הגש הערכה",
       "submitting": "מעריך...",
