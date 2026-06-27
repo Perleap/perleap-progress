@@ -13,7 +13,6 @@ import {
   Target,
   Info,
   Download,
-  GitCompare,
   Presentation,
   ClipboardCheck,
 } from 'lucide-react';
@@ -25,12 +24,12 @@ import { toast } from 'sonner';
 import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
 import type { Json } from '@/integrations/supabase/types';
 import type { HardSkillAssessmentWithStudent } from '@/types/hard-skills';
-import type { FiveDScores } from '@/types/models';
+import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
 import {
   MainAnalytics5dNarrativeBlock,
-  CompareSide5dNarrativeBlock,
   StudentList5dNarrativeBlock,
 } from '@/components/analytics/Analytics5dNarrativeBlocks';
+import { AnalyticsCompare5dCard } from '@/components/analytics/AnalyticsCompare5dCard';
 import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
 import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
 import { VideoEngagementPanel } from '@/components/features/analytics/VideoEngagementPanel';
@@ -39,25 +38,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
-import { analytics5dNarrativeKeys, useAnalytics5dNarrative } from '@/hooks/queries/useAnalytics5dNarrative';
 import {
   build5dNarrativeEvidence,
   trimToMax,
@@ -67,12 +50,14 @@ import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
 import {
   getAllowedAssignmentIds,
   getClassroomAverage5D,
+  getClassroomAverageQedMeasures,
   hasUnplacedAssignments,
   structureTypeToLabelKey,
   scopedStudentLatestScores,
+  scopedStudentLatestQedMeasures,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { isLessonBriefCacheReady, setLessonBriefClassNarrativeCache } from '@/lib/lessonBriefNarrativeCache';
+import { isLessonBriefCacheReady } from '@/lib/lessonBriefNarrativeCache';
 import { prepareLessonBriefNarratives } from '@/services/lessonBriefPreloadService';
 import { ensurePilotReportSnapshot } from '@/services/pilotReportCacheService';
 // `useClassroomAnalytics` and 5D LLM evidence (incl. optional teacher notes) are teacher-only; do
@@ -104,8 +89,6 @@ export const ClassroomAnalytics = ({
   const [selectedModule, setSelectedModule] = useState<AnalyticsModuleFilter>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
-  const [compareA, setCompareA] = useState<string>('');
-  const [compareB, setCompareB] = useState<string>('');
 
   const queryClient = useQueryClient();
   const { data, isLoading: loading } = useClassroomAnalytics(classroomId);
@@ -157,13 +140,6 @@ export const ClassroomAnalytics = ({
     sectionType: t(`syllabus.${structKey}`),
   });
   const showUnplaced = hasUnplacedAssignments(assignments);
-  const canCompareSections = modules.length + (showUnplaced ? 1 : 0) >= 2;
-
-  const labelForCompareModule = (id: string) => {
-    if (!id) return '';
-    if (id === 'unplaced') return t('analytics.unplacedAssignments');
-    return modules.find((m) => m.id === id)?.title ?? id;
-  };
 
   const visibleAssignments = useMemo(() => {
     if (selectedModule === 'all') return assignments;
@@ -225,17 +201,20 @@ export const ClassroomAnalytics = ({
     writeUrl(selectedModule, selectedAssignment, s);
   };
 
+  const snapshotRowsForAvg = data?.students as {
+    id: string;
+    snapshots: {
+      user_id: string;
+      submission_id: string;
+      scores: import('@/integrations/supabase/types').Json;
+      qed_measures?: import('@/integrations/supabase/types').Json | null;
+    }[];
+  }[] | undefined;
+
   const classAverage = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return null;
     return getClassroomAverage5D(
-      data.students as {
-        id: string;
-        snapshots: {
-          user_id: string;
-          submission_id: string;
-          scores: import('@/integrations/supabase/types').Json;
-        }[];
-      }[],
+      snapshotRowsForAvg ?? [],
       data.rawSubmissions,
       data.assignments,
       selectedModule,
@@ -243,7 +222,20 @@ export const ClassroomAnalytics = ({
       selectedStudent,
       data.rawSnapshots
     );
-  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds]);
+  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
+
+  const classAverageQed = useMemo(() => {
+    if (!data || effectiveAssignmentIds.length === 0) return null;
+    return getClassroomAverageQedMeasures(
+      snapshotRowsForAvg ?? [],
+      data.rawSubmissions,
+      data.assignments,
+      selectedModule,
+      selectedAssignment,
+      selectedStudent,
+      data.rawSnapshots
+    );
+  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
 
   const scopedFeedback = useMemo(() => {
     if (!data) return { count: 0, activeStudents: 0 };
@@ -268,46 +260,6 @@ export const ClassroomAnalytics = ({
   const displayEngagement = displayCompletion;
 
   const coveredStudents = displayActiveStudents;
-
-  const compareAvgA = useMemo(() => {
-    if (!data || !compareA) return null;
-    return getClassroomAverage5D(
-      data.students as {
-        id: string;
-        snapshots: {
-          user_id: string;
-          submission_id: string;
-          scores: import('@/integrations/supabase/types').Json;
-        }[];
-      }[],
-      data.rawSubmissions,
-      data.assignments,
-      compareA as AnalyticsModuleFilter,
-      'all',
-      'all',
-      data.rawSnapshots
-    );
-  }, [data, compareA]);
-
-  const compareAvgB = useMemo(() => {
-    if (!data || !compareB) return null;
-    return getClassroomAverage5D(
-      data.students as {
-        id: string;
-        snapshots: {
-          user_id: string;
-          submission_id: string;
-          scores: import('@/integrations/supabase/types').Json;
-        }[];
-      }[],
-      data.rawSubmissions,
-      data.assignments,
-      compareB as AnalyticsModuleFilter,
-      'all',
-      'all',
-      data.rawSnapshots
-    );
-  }, [data, compareB]);
 
   const exportFilterSummary = useMemo(() => {
     const mod =
@@ -384,91 +336,6 @@ export const ClassroomAnalytics = ({
     });
   }, [data, selectedStudent, effectiveAssignmentIds, sectionTitleResolver]);
 
-  const compare5dEvidenceA = useMemo(() => {
-    if (!data || !compareA) {
-      return { evidenceText: '', sourceCount: 0 };
-    }
-    const allowed = getAllowedAssignmentIds(assignments, compareA, 'all');
-    return build5dNarrativeEvidence({
-      context: 'module_compare',
-      allowedAssignmentIds: allowed,
-      compareModuleId: compareA === 'unplaced' ? 'unplaced' : compareA,
-      allStudents: data.students.map((s) => ({
-        id: s.id,
-        fullName: s.fullName,
-        narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-      })),
-      assignmentRefs: data.assignments,
-      sectionTitleResolver,
-    });
-  }, [data, compareA, assignments, sectionTitleResolver]);
-
-  const compare5dEvidenceB = useMemo(() => {
-    if (!data || !compareB) {
-      return { evidenceText: '', sourceCount: 0 };
-    }
-    const allowed = getAllowedAssignmentIds(assignments, compareB, 'all');
-    return build5dNarrativeEvidence({
-      context: 'module_compare',
-      allowedAssignmentIds: allowed,
-      compareModuleId: compareB === 'unplaced' ? 'unplaced' : compareB,
-      allStudents: data.students.map((s) => ({
-        id: s.id,
-        fullName: s.fullName,
-        narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-      })),
-      assignmentRefs: data.assignments,
-      sectionTitleResolver,
-    });
-  }, [data, compareB, assignments, sectionTitleResolver]);
-
-  const { data: mainClassNarrative } = useAnalytics5dNarrative(
-    classAverage && selectedStudent === 'all'
-      ? {
-          classroomId,
-          context: 'class_avg',
-          language: analyticsLanguage,
-          scores: classAverage,
-          filterSummary: exportFilterSummary,
-          evidenceText: main5dNarrativeEvidence.evidenceText || undefined,
-          evidenceSourceCount: main5dNarrativeEvidence.sourceCount,
-        }
-      : null,
-    {
-      enabled: !!classAverage && selectedStudent === 'all' && effectiveAssignmentIds.length > 0,
-      narrativeId: main5dNarrativeId,
-    },
-  );
-
-  useEffect(() => {
-    if (
-      !classAverage ||
-      selectedStudent !== 'all' ||
-      !mainClassNarrative ||
-      effectiveAssignmentIds.length === 0
-    ) {
-      return;
-    }
-
-    setLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment, {
-      classAverage,
-      narrative: mainClassNarrative,
-      evidenceSourceCount: main5dNarrativeEvidence.sourceCount,
-      filterSummary: exportFilterSummary,
-      cachedAt: Date.now(),
-    });
-  }, [
-    classAverage,
-    selectedStudent,
-    mainClassNarrative,
-    effectiveAssignmentIds.length,
-    classroomId,
-    selectedModule,
-    selectedAssignment,
-    main5dNarrativeEvidence.sourceCount,
-    exportFilterSummary,
-  ]);
-
   const studentList5dEvidenceById = useMemo(() => {
     if (!data) {
       return new Map<string, { evidenceText: string; sourceCount: number }>();
@@ -495,19 +362,6 @@ export const ClassroomAnalytics = ({
     }
     return m;
   }, [data, assignments, selectedModule, sectionTitleResolver]);
-
-  const compareFilterSummary = useMemo(() => {
-    if (!compareA || !compareB) return exportFilterSummary;
-    const a =
-      compareA === 'unplaced'
-        ? t('analytics.unplacedAssignments')
-        : (modules.find((m) => m.id === compareA)?.title ?? compareA);
-    const b =
-      compareB === 'unplaced'
-        ? t('analytics.unplacedAssignments')
-        : (modules.find((m) => m.id === compareB)?.title ?? compareB);
-    return t('analytics.compareNarrativeScope', { a, b, filters: exportFilterSummary });
-  }, [compareA, compareB, exportFilterSummary, t, modules]);
 
   const perStudentForExport = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return [];
@@ -635,7 +489,13 @@ export const ClassroomAnalytics = ({
     }
     const scopeIds = getAllowedAssignmentIds(assignments, selectedModule, 'all');
     if (scopeIds.length === 0) {
-      return students.map((s) => ({ ...s, latestScores: null, feedbackCount: 0, hardSkills: [] }));
+      return students.map((s) => ({
+        ...s,
+        latestScores: null,
+        latestQedMeasures: null,
+        feedbackCount: 0,
+        hardSkills: [],
+      }));
     }
     const allow = new Set(scopeIds);
     return students.map((s) => {
@@ -645,12 +505,16 @@ export const ClassroomAnalytics = ({
       const latest = data
         ? scopedStudentLatestScores(s.snapshots, data.rawSubmissions, scopeIds)
         : null;
+      const latestQed = data
+        ? scopedStudentLatestQedMeasures(s.snapshots, data.rawSubmissions, scopeIds)
+        : null;
       const hardFiltered =
         s.hardSkills?.filter((h) => h.assignment_id && allow.has(h.assignment_id as string)) || [];
       return {
         ...s,
         feedbackCount: fb.length,
         latestScores: latest,
+        latestQedMeasures: latestQed,
         hardSkills: hardFiltered,
       };
     });
@@ -898,192 +762,25 @@ export const ClassroomAnalytics = ({
         </p>
       </div>
 
-      {canCompareSections ? (
-        <Card
-          className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
-          dir={isRTL ? 'rtl' : 'ltr'}
-        >
-          <CardHeader className="border-b border-border pb-4">
-            <CardTitle
-              className={`flex items-center gap-3 text-lg font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
-            >
-              <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-                <GitCompare className="h-5 w-5 text-primary" />
-              </div>
-              {t('analytics.compareSections')}
-            </CardTitle>
-            <CardDescription className={isRTL ? 'text-right' : 'text-left'}>
-              {t('analytics.compareHint')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
-              <div className="space-y-2 sm:min-w-[200px]">
-                <span
-                  className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}
-                >
-                  {t('analytics.compareModuleA')}
-                </span>
-                <Select
-                  value={compareA || '_none_'}
-                  onValueChange={(v) => setCompareA(v === '_none_' ? '' : v)}
-                >
-                  <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectValue placeholder={t('analytics.compareSelectSection')}>
-                      {compareA
-                        ? labelForCompareModule(compareA)
-                        : t('analytics.compareSelectSection')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">{t('analytics.compareSelectSection')}</SelectItem>
-                    {modules.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.title}
-                      </SelectItem>
-                    ))}
-                    {showUnplaced ? (
-                      <SelectItem value="unplaced">{t('analytics.unplacedAssignments')}</SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 sm:min-w-[200px]">
-                <span
-                  className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}
-                >
-                  {t('analytics.compareModuleB')}
-                </span>
-                <Select
-                  value={compareB || '_none_'}
-                  onValueChange={(v) => setCompareB(v === '_none_' ? '' : v)}
-                >
-                  <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectValue placeholder={t('analytics.compareSelectSection')}>
-                      {compareB
-                        ? labelForCompareModule(compareB)
-                        : t('analytics.compareSelectSection')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">{t('analytics.compareSelectSection')}</SelectItem>
-                    {modules.map((m) => (
-                      <SelectItem key={`b-${m.id}`} value={m.id}>
-                        {m.title}
-                      </SelectItem>
-                    ))}
-                    {showUnplaced ? (
-                      <SelectItem value="unplaced">{t('analytics.unplacedAssignments')}</SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {compareA && compareB && compareA === compareB ? (
-              <p className="text-sm text-amber-700 dark:text-amber-500">
-                {t('analytics.compareSameSection')}
-              </p>
-            ) : null}
-
-            {compareA && compareB && compareA !== compareB && (!compareAvgA || !compareAvgB) ? (
-              <p className="text-sm text-muted-foreground">
-                {t('classroomAnalytics.noStudentDataInScope')}
-              </p>
-            ) : null}
-
-            {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
-              <>
-                <div className="overflow-x-auto rounded-xl border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[28%]">{t('analytics.compareDimension')}</TableHead>
-                        <TableHead className="text-center">
-                          {compareA === 'unplaced'
-                            ? t('analytics.unplacedAssignments')
-                            : (modules.find((m) => m.id === compareA)?.title ?? 'A')}
-                        </TableHead>
-                        <TableHead className="text-center">
-                          {compareB === 'unplaced'
-                            ? t('analytics.unplacedAssignments')
-                            : (modules.find((m) => m.id === compareB)?.title ?? 'B')}
-                        </TableHead>
-                        <TableHead className="text-center w-[20%]">
-                          {t('analytics.compareDelta')}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(['vision', 'values', 'thinking', 'connection', 'action'] as const).map(
-                        (dim) => {
-                          const a = compareAvgA[dim];
-                          const b = compareAvgB[dim];
-                          const d = b - a;
-                          return (
-                            <TableRow key={dim}>
-                              <TableCell className="font-medium">
-                                {t(`submissionDetail.dimensions.${dim}`)}
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums">
-                                {a.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums">
-                                {b.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums text-muted-foreground">
-                                {d >= 0 ? '+' : ''}
-                                {d.toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-border/60 p-2 bg-muted/10">
-                    {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
-                      <CompareSide5dNarrativeBlock
-                        classroomId={classroomId}
-                        sideScores={compareAvgA}
-                        filterSummary={compareFilterSummary}
-                        language={analyticsLanguage}
-                        compareLabelA={labelForCompareModule(compareA)}
-                        compareLabelB={labelForCompareModule(compareB)}
-                        peerScores={compareAvgB}
-                        isRTL={isRTL}
-                        enabled
-                        narrativeId={`5d-compare-a-${compareA}-${compareB}`}
-                        evidenceText={compare5dEvidenceA.evidenceText}
-                        evidenceSourceCount={compare5dEvidenceA.sourceCount}
-                      />
-                    ) : null}
-                  </div>
-                  <div className="rounded-2xl border border-border/60 p-2 bg-muted/10">
-                    {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
-                      <CompareSide5dNarrativeBlock
-                        classroomId={classroomId}
-                        sideScores={compareAvgB}
-                        filterSummary={compareFilterSummary}
-                        language={analyticsLanguage}
-                        compareLabelA={labelForCompareModule(compareB)}
-                        compareLabelB={labelForCompareModule(compareA)}
-                        peerScores={compareAvgA}
-                        isRTL={isRTL}
-                        enabled
-                        narrativeId={`5d-compare-b-${compareA}-${compareB}`}
-                        evidenceText={compare5dEvidenceB.evidenceText}
-                        evidenceSourceCount={compare5dEvidenceB.sourceCount}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </CardContent>
-        </Card>
+      {data ? (
+        <AnalyticsCompare5dCard
+          classroomId={classroomId}
+          modules={modules}
+          assignments={assignments}
+          students={data.students.map((s) => ({
+            id: s.id,
+            fullName: s.fullName,
+            snapshots: s.snapshots,
+            narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows,
+          }))}
+          showUnplaced={showUnplaced}
+          structKey={structKey}
+          analyticsLanguage={analyticsLanguage}
+          isRTL={isRTL}
+          rawSubmissions={data.rawSubmissions}
+          rawSnapshots={data.rawSnapshots}
+          sectionTitleResolver={sectionTitleResolver}
+        />
       ) : null}
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -1125,6 +822,7 @@ export const ClassroomAnalytics = ({
                   <MainAnalytics5dNarrativeBlock
                     classroomId={classroomId}
                     classAverage={classAverage}
+                    classAverageQed={classAverageQed}
                     filterSummary={exportFilterSummary}
                     language={analyticsLanguage}
                     selectedStudent={selectedStudent}
@@ -1249,6 +947,10 @@ export const ClassroomAnalytics = ({
                                   connection: DEFAULT_SCORE,
                                   action: DEFAULT_SCORE,
                                 }) as FiveDScores
+                              }
+                              qedMeasures={
+                                (student as { latestQedMeasures?: FiveDQedMeasures | null })
+                                  .latestQedMeasures ?? null
                               }
                               filterSummary={exportFilterSummary}
                               language={analyticsLanguage}

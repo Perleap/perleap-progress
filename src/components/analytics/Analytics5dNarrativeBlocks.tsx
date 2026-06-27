@@ -3,7 +3,8 @@ import { FiveDChart } from '@/components/FiveDChart';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { useAnalytics5dNarrative, type Analytics5dNarrativeContext } from '@/hooks/queries/useAnalytics5dNarrative';
-import type { FiveDScores } from '@/types/models';
+import type { Compare5dNarrativeContext } from '@/lib/analyticsCompare5d/types';
+import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
 
 type Lang = 'en' | 'he';
 
@@ -68,6 +69,7 @@ function NarrativeFraming({
 export function MainAnalytics5dNarrativeBlock({
   classroomId,
   classAverage,
+  classAverageQed,
   filterSummary,
   language,
   selectedStudent,
@@ -80,6 +82,7 @@ export function MainAnalytics5dNarrativeBlock({
 }: {
   classroomId: string;
   classAverage: FiveDScores;
+  classAverageQed?: FiveDQedMeasures | null;
   filterSummary: string;
   language: Lang;
   selectedStudent: string;
@@ -112,7 +115,11 @@ export function MainAnalytics5dNarrativeBlock({
       isRTL={isRTL}
       evidenceSourceCount={evidenceSourceCount ?? 0}
     >
-      <FiveDChart scores={classAverage} explanations={data?.explanations ?? null} />
+      <FiveDChart
+        scores={classAverage}
+        qedMeasures={classAverageQed}
+        explanations={data?.explanations ?? null}
+      />
     </NarrativeFraming>
   );
 }
@@ -120,6 +127,7 @@ export function MainAnalytics5dNarrativeBlock({
 export function CompareSide5dNarrativeBlock({
   classroomId,
   sideScores,
+  sideQedMeasures,
   filterSummary,
   language,
   compareLabelA,
@@ -130,9 +138,11 @@ export function CompareSide5dNarrativeBlock({
   narrativeId,
   evidenceText,
   evidenceSourceCount,
+  context = 'module_compare',
 }: {
   classroomId: string;
   sideScores: FiveDScores;
+  sideQedMeasures?: FiveDQedMeasures | null;
   filterSummary: string;
   language: Lang;
   compareLabelA: string;
@@ -143,11 +153,12 @@ export function CompareSide5dNarrativeBlock({
   narrativeId: string;
   evidenceText?: string;
   evidenceSourceCount?: number;
+  context?: Compare5dNarrativeContext;
 }) {
   const { data, isLoading, isError } = useAnalytics5dNarrative(
     {
       classroomId,
-      context: 'module_compare',
+      context,
       language,
       scores: sideScores,
       filterSummary,
@@ -167,7 +178,11 @@ export function CompareSide5dNarrativeBlock({
       isRTL={isRTL}
       evidenceSourceCount={evidenceSourceCount ?? 0}
     >
-      <FiveDChart scores={sideScores} explanations={data?.explanations ?? null} />
+      <FiveDChart
+        scores={sideScores}
+        qedMeasures={sideQedMeasures}
+        explanations={data?.explanations ?? null}
+      />
     </NarrativeFraming>
   );
 }
@@ -177,6 +192,7 @@ export function StudentList5dNarrativeBlock({
   studentId,
   studentName,
   scores,
+  qedMeasures,
   filterSummary,
   language,
   isOpen,
@@ -189,6 +205,7 @@ export function StudentList5dNarrativeBlock({
   studentId: string;
   studentName: string;
   scores: FiveDScores;
+  qedMeasures?: FiveDQedMeasures | null;
   filterSummary: string;
   language: Lang;
   isOpen: boolean;
@@ -218,7 +235,7 @@ export function StudentList5dNarrativeBlock({
       isRTL={isRTL}
       evidenceSourceCount={evidenceSourceCount ?? 0}
     >
-      <FiveDChart scores={scores} explanations={data?.explanations ?? null} />
+      <FiveDChart scores={scores} qedMeasures={qedMeasures} explanations={data?.explanations ?? null} />
     </NarrativeFraming>
   );
 }

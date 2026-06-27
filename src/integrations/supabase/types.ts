@@ -520,6 +520,7 @@ export type Database = {
           assignment_id: string
           conversation_context: Json | null
           created_at: string
+          evaluation_source: string | null
           id: string
           opik_trace_ids: Json
           student_feedback: string | null
@@ -532,6 +533,7 @@ export type Database = {
           assignment_id: string
           conversation_context?: Json | null
           created_at?: string
+          evaluation_source?: string | null
           id?: string
           opik_trace_ids?: Json
           student_feedback?: string | null
@@ -544,6 +546,7 @@ export type Database = {
           assignment_id?: string
           conversation_context?: Json | null
           created_at?: string
+          evaluation_source?: string | null
           id?: string
           opik_trace_ids?: Json
           student_feedback?: string | null
@@ -892,12 +895,102 @@ export type Database = {
           },
         ]
       }
+      evaluation_refresh_batches: {
+        Row: {
+          backups: Json
+          classroom_id: string
+          created_at: string
+          created_by: string
+          id: string
+        }
+        Insert: {
+          backups?: Json
+          classroom_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+        }
+        Update: {
+          backups?: Json
+          classroom_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_refresh_batches_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: true
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_refresh_jobs: {
+        Row: {
+          batch_id: string | null
+          classroom_id: string
+          completed_students: number
+          created_at: string
+          created_by: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          status: string
+          total_students: number
+          total_submissions: number
+        }
+        Insert: {
+          batch_id?: string | null
+          classroom_id: string
+          completed_students?: number
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          status: string
+          total_students?: number
+          total_submissions?: number
+        }
+        Update: {
+          batch_id?: string | null
+          classroom_id?: string
+          completed_students?: number
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          status?: string
+          total_students?: number
+          total_submissions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_refresh_jobs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_refresh_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_refresh_jobs_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       five_d_snapshots: {
         Row: {
           classroom_id: string | null
           created_at: string
           delta: Json | null
           id: string
+          qed_measures: Json | null
           score_explanations: Json | null
           scores: Json
           source: Database["public"]["Enums"]["snapshot_source"]
@@ -909,6 +1002,7 @@ export type Database = {
           created_at?: string
           delta?: Json | null
           id?: string
+          qed_measures?: Json | null
           score_explanations?: Json | null
           scores?: Json
           source: Database["public"]["Enums"]["snapshot_source"]
@@ -920,6 +1014,7 @@ export type Database = {
           created_at?: string
           delta?: Json | null
           id?: string
+          qed_measures?: Json | null
           score_explanations?: Json | null
           scores?: Json
           source?: Database["public"]["Enums"]["snapshot_source"]

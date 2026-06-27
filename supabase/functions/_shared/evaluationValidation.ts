@@ -16,8 +16,23 @@ export type EvalScoresRecord = Record<EvalDimensionKey, number | null>;
 
 export type EvalScoreExplanations = Record<EvalDimensionKey, string>;
 
+export type QedPhase = 'up' | 'down';
+
+export interface EvalDimensionQedMeasures {
+  development: number | null;
+  motivation: number | null;
+  phase: QedPhase | null;
+  next: string | null;
+}
+
+export type EvalQedMeasuresRecord = Record<EvalDimensionKey, EvalDimensionQedMeasures>;
+
 export interface RawDimensionPayload {
   level?: number | null;
+  development?: number | null;
+  motivation?: number | null;
+  phase?: string | null;
+  next?: string | null;
   score?: number | null;
   notAssessableReason?: string | null;
   evidence?: string[];
@@ -38,6 +53,7 @@ export interface NormalizedEvaluation {
   assignmentChecklist: string[];
   scores: EvalScoresRecord;
   scoreExplanations: EvalScoreExplanations;
+  qedMeasures: EvalQedMeasuresRecord;
   evidence: Partial<Record<EvalDimensionKey, string[]>>;
   studentFeedback: string;
   teacherFeedback: string;
@@ -54,6 +70,35 @@ export function clampScore(value: unknown): number | null {
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n)) return null;
   return Math.min(10, Math.max(1, Math.round(n)));
+}
+
+/** Clamp QED D/M to 1–100. */
+export function clampQedMeasure(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(100, Math.max(1, Math.round(n)));
+}
+
+export function parseQedPhase(value: unknown): QedPhase | null {
+  if (value === 'up' || value === 'down') return value;
+  return null;
+}
+
+/** Derive stored 1–10 score from development (1–100). */
+export function scoreFromDevelopment(development: number | null): number | null {
+  if (development === null) return null;
+  return clampScore(Math.round(development / 10));
+}
+
+function emptyQedMeasures(): EvalQedMeasuresRecord {
+  return {
+    vision: { development: null, motivation: null, phase: null, next: null },
+    values: { development: null, motivation: null, phase: null, next: null },
+    thinking: { development: null, motivation: null, phase: null, next: null },
+    connection: { development: null, motivation: null, phase: null, next: null },
+    action: { development: null, motivation: null, phase: null, next: null },
+  };
 }
 
 const SHORT_QUOTE_MAX_LEN = 6;
@@ -92,28 +137,58 @@ export function normalizeDimension(
   score: number | null;
   explanation: string;
   evidence: string[];
+  qed: EvalDimensionQedMeasures;
 } {
+  const emptyQed: EvalDimensionQedMeasures = {
+    development: null,
+    motivation: null,
+    phase: null,
+    next: null,
+  };
+
   if (!raw) {
-    return { score: null, explanation: '', evidence: [] };
+    return { score: null, explanation: '', evidence: [], qed: emptyQed };
   }
 
   const notAssessable = raw.notAssessableReason?.trim();
-  if (notAssessable && (raw.level == null && raw.score == null)) {
+  const nextText = typeof raw.next === 'string' && raw.next.trim() ? raw.next.trim() : null;
+  let development = clampQedMeasure(raw.development);
+  let motivation = clampQedMeasure(raw.motivation);
+  const phase = parseQedPhase(raw.phase);
+
+  if (notAssessable && development === null && motivation === null && raw.score == null && raw.level == null) {
     return {
       score: null,
       explanation: notAssessable,
       evidence: [],
+      qed: { development: null, motivation: null, phase: null, next: nextText ?? notAssessable },
     };
   }
 
   let score = clampScore(raw.score);
+  if (score === null && development !== null) {
+    score = scoreFromDevelopment(development);
+  }
+  if (development === null && score !== null) {
+    development = clampQedMeasure(score * 10);
+  }
   if (score === null && typeof raw.level === 'number' && Number.isFinite(raw.level)) {
     score = levelToScore(raw.level);
+    if (development === null) {
+      development = clampQedMeasure(score * 10);
+    }
   }
 
   const evidence = Array.isArray(raw.evidence)
     ? raw.evidence.filter((e): e is string => typeof e === 'string' && e.trim().length > 0)
     : [];
+
+  const qed: EvalDimensionQedMeasures = {
+    development,
+    motivation,
+    phase,
+    next: nextText,
+  };
 
   if (requireEvidence && sourceText.trim().length > 0 && score !== null) {
     const verified = evidence.filter((q) => evidenceQuoteInSource(q, sourceText));
@@ -121,6 +196,7 @@ export function normalizeDimension(
       score,
       explanation: raw.explanation?.trim() || '',
       evidence: verified,
+      qed,
     };
   }
 
@@ -128,6 +204,7 @@ export function normalizeDimension(
     score,
     explanation: raw.explanation?.trim() || raw.notAssessableReason?.trim() || '',
     evidence,
+    qed,
   };
 }
 
@@ -153,12 +230,14 @@ export function normalizeEvaluationPayload(
     action: '',
   };
   const evidence: Partial<Record<EvalDimensionKey, string[]>> = {};
+  const qedMeasures = emptyQedMeasures();
 
   if (raw.dimensions) {
     for (const key of EVAL_DIMENSION_KEYS) {
       const dim = normalizeDimension(raw.dimensions[key], sourceText, requireEvidence);
       scores[key] = dim.score;
       scoreExplanations[key] = dim.explanation;
+      qedMeasures[key] = dim.qed;
       if (dim.evidence.length > 0) {
         evidence[key] = dim.evidence;
       }
@@ -167,6 +246,13 @@ export function normalizeEvaluationPayload(
     for (const key of EVAL_DIMENSION_KEYS) {
       scores[key] = clampScore(raw.scores[key]);
       scoreExplanations[key] = raw.scoreExplanations?.[key]?.trim() || '';
+      const s = scores[key];
+      qedMeasures[key] = {
+        development: s !== null ? clampQedMeasure(s * 10) : null,
+        motivation: null,
+        phase: null,
+        next: null,
+      };
     }
   }
 
@@ -176,6 +262,7 @@ export function normalizeEvaluationPayload(
       : [],
     scores,
     scoreExplanations,
+    qedMeasures,
     evidence,
     studentFeedback: typeof raw.studentFeedback === 'string' ? raw.studentFeedback.trim() : '',
     teacherFeedback: typeof raw.teacherFeedback === 'string' ? raw.teacherFeedback.trim() : '',

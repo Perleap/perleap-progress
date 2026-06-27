@@ -497,3 +497,5 @@
     contain: paint;
   }
 }
+
+/* Lesson brief / report PDF export — styles applied in html2canvas onclone, not on live page */

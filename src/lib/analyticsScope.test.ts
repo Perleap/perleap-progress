@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  filterReportableAssignments,
   getAllowedAssignmentIds,
   getClassroomAverage5D,
   type AnalyticsAssignmentRef,
@@ -30,6 +31,23 @@ describe('getAllowedAssignmentIds', () => {
   });
   it('rejects single assignment if not in module', () => {
     expect(getAllowedAssignmentIds(sampleAssignments, 'm1', 'u1')).toEqual([]);
+  });
+});
+
+describe('filterReportableAssignments', () => {
+  const mixed: AnalyticsAssignmentRef[] = [
+    { id: 'pub', title: 'Published', syllabusSectionId: null, status: 'published', active: true, deletedAt: null },
+    { id: 'draft', title: 'Draft', syllabusSectionId: null, status: 'draft', active: true, deletedAt: null },
+    { id: 'arch', title: 'Archived', syllabusSectionId: null, status: 'archived', active: true, deletedAt: null },
+    { id: 'del', title: 'Deleted', syllabusSectionId: null, status: 'published', active: false, deletedAt: '2026-01-01' },
+  ];
+
+  it('keeps only published, active, non-deleted assignments', () => {
+    expect(filterReportableAssignments(mixed).map((a) => a.id)).toEqual(['pub']);
+  });
+
+  it('passes through assignments without reportability metadata (tests)', () => {
+    expect(filterReportableAssignments(sampleAssignments)).toHaveLength(3);
   });
 });
 

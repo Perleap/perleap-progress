@@ -14,11 +14,9 @@ import {
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
-import {
-  domainForSkillComponent,
-  parseHardSkillsFromDb,
-} from '../_shared/hardSkillsFormat.ts';
+import { parseHardSkillsFromDb } from '../_shared/hardSkillsFormat.ts';
 import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
+import { persistAiEvaluation } from '../_shared/evaluationPersist.ts';
 import { notifyStudentFeedbackReceived } from '../_shared/notifyStudentFeedbackReceived.ts';
 
 const corsHeaders = {
@@ -32,7 +30,6 @@ async function clearPriorEvaluation(
 ): Promise<void> {
   await Promise.all([
     supabase.from('five_d_snapshots').delete().eq('submission_id', submissionId),
-    supabase.from('assignment_feedback').delete().eq('submission_id', submissionId),
     supabase.from('hard_skill_assessments').delete().eq('submission_id', submissionId),
   ]);
 }
@@ -157,64 +154,27 @@ serve(async (req) => {
       },
     );
 
-    const { studentFeedback, scores, scoreExplanations, hardSkillsAssessment } = evaluation;
+    const { studentFeedback, scores, scoreExplanations, qedMeasures, hardSkillsAssessment } = evaluation;
 
     await clearPriorEvaluation(supabase, submissionId);
 
-    const [snapshotResult, feedbackSaveResult] = await Promise.all([
-      supabase.from('five_d_snapshots').insert({
-        user_id: studentId,
-        scores,
-        score_explanations: scoreExplanations,
-        source: 'assignment',
-        submission_id: submissionId,
-        classroom_id: classroomId,
-      }),
-
-      supabase.from('assignment_feedback').insert({
-        submission_id: submissionId,
-        student_id: studentId,
-        assignment_id: assignmentId,
-        student_feedback: studentFeedback,
-        teacher_feedback: teacherFeedback,
-        conversation_context: [],
-        visible_to_student: visibleToStudent,
-      }),
-
-      hardSkillsAssessment.length > 0
-        ? (async () => {
-            try {
-              const records = hardSkillsAssessment.map((a) => ({
-                submission_id: submissionId,
-                assignment_id: assignmentId,
-                student_id: studentId,
-                domain: domainForSkillComponent(
-                  skillPairs,
-                  a.skill_component,
-                  assignmentData?.hard_skill_domain,
-                ),
-                skill_component: a.skill_component,
-                current_level_percent: a.current_level_percent,
-                proficiency_description: a.proficiency_description,
-                actionable_challenge: a.actionable_challenge,
-              }));
-              const { error: err } = await supabase.from('hard_skill_assessments').insert(records);
-              if (err) logError('Error saving hard skills', err);
-            } catch (e) {
-              logError('Error processing hard skills', e);
-            }
-          })()
-        : Promise.resolve({ error: null }),
-    ]);
-
-    if (snapshotResult.error) {
-      logError('Error saving 5D snapshot', snapshotResult.error);
-      throw snapshotResult.error;
-    }
-    if (feedbackSaveResult.error) {
-      logError('Error saving feedback', feedbackSaveResult.error);
-      throw feedbackSaveResult.error;
-    }
+    await persistAiEvaluation(supabase, {
+      submissionId,
+      studentId,
+      assignmentId,
+      classroomId,
+      scores,
+      scoreExplanations,
+      qedMeasures,
+      studentFeedback,
+      teacherFeedback: teacherFeedback.trim(),
+      hardSkillsAssessment,
+      skillPairs,
+      hardSkillDomain: assignmentData?.hard_skill_domain,
+      evaluationSource: 'teacher_manual',
+      conversationContext: [],
+      visibleToStudent,
+    });
 
     const { error: submissionFlagError } = await supabase
       .from('submissions')

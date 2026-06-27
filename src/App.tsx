@@ -44,6 +44,7 @@ import {
 } from './routes/lazyPages';
 import { TeacherAssistantProvider } from './components/ai/TeacherAssistant';
 import { LiveSessionProcessingProvider } from './contexts/LiveSessionProcessingContext';
+import { EvaluationRefreshProcessingProvider } from './contexts/EvaluationRefreshProcessingContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,6 +73,7 @@ const App = () => (
             <LanguageProvider>
               <TeacherAssistantProvider>
               <LiveSessionProcessingProvider>
+              <EvaluationRefreshProcessingProvider>
               <Suspense fallback={<RouteLoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Landing />} />
@@ -265,6 +267,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>
+              </EvaluationRefreshProcessingProvider>
               </LiveSessionProcessingProvider>
               </TeacherAssistantProvider>
             </LanguageProvider>

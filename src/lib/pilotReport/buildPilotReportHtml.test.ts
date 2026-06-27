@@ -11,19 +11,19 @@ describe('escapeHtml', () => {
 });
 
 describe('buildPilotReportHtml', () => {
-  it('renders the decision table with participant names (internal report)', () => {
+  it('renders participant names in the appendix (internal report)', () => {
     const html = buildPilotReportHtml(basePilotReport);
-    expect(html).toContain('Participant Decision Table');
-    expect(html).toContain('Dana Cohen');
-    expect(html).toContain('Noa Levi');
+    const appendix = html.split('Appendix — Participant Summaries')[1] ?? '';
+    expect(appendix).toContain('Dana Cohen');
+    expect(html).not.toContain('Participant Decision Table');
   });
 
-  it('shows course name and pilot dates only in the title block', () => {
+  it('shows course name, pilot dates, and scope facts in the title block', () => {
     const html = buildPilotReportHtml(basePilotReport);
     expect(html).toContain('<p class="course-line">INSAIT Builders Pilot</p>');
     expect(html).toContain('Jan 1, 2026 – Mar 31, 2026');
-    expect(html).not.toContain('Assignments in scope');
-    expect(html).not.toContain('Cohort size');
+    expect(html).toContain('Assignments in scope');
+    expect(html).toContain('Cohort size');
   });
 
   it('renders localized readiness and role-fit labels', () => {
@@ -34,7 +34,7 @@ describe('buildPilotReportHtml', () => {
 
   it('marks failed participants as not assessed and excludes them from the appendix', () => {
     const html = buildPilotReportHtml(basePilotReport);
-    expect(html).toContain('Not assessed — insufficient data or generation failed');
+    expect(html).toContain('Not assessed: 1');
     const appendix = html.split('Appendix — Participant Summaries')[1] ?? '';
     expect(appendix).toContain('Dana Cohen');
     expect(appendix).not.toContain('Noa Levi');
@@ -46,28 +46,29 @@ describe('buildPilotReportHtml', () => {
     expect(html).not.toContain('Internal — management use');
   });
 
-  it('includes the capability snapshot bar chart SVG', () => {
+  it('includes a readiness pie chart in the executive summary', () => {
     const html = buildPilotReportHtml(basePilotReport);
-    expect(html).toContain('<svg');
-    expect(html).toContain('Cohort Capability Snapshot');
-    expect(html).toContain('Builder execution');
-  });
-
-  it('omits the snapshot section when no participant was assessed', () => {
-    const html = buildPilotReportHtml({
-      ...basePilotReport,
-      cohort: { ...basePilotReport.cohort, meanDimensions: null, participantsAssessed: 0 },
-      participants: [failedParticipant],
-    });
+    const execSection = html.split('Executive Summary')[1]?.split('Appendix — Participant Summaries')[0] ?? '';
+    expect(execSection).toContain('<svg');
+    expect(execSection).toContain('viewBox="0 0 820 280"');
     expect(html).not.toContain('Cohort Capability Snapshot');
   });
 
-  it('renders role-fit distribution and not-assessed count in executive summary', () => {
+  it('renders role-fit distribution and participants assessed in executive summary', () => {
     const html = buildPilotReportHtml(basePilotReport);
     expect(html).toContain('1 of 2');
     expect(html).toContain('Recommended role-fit distribution');
     expect(html).toContain('Builder / implementer: 1');
-    expect(html).toContain('Not assessed');
+  });
+
+  it('places methodology legend before the executive summary without weighting or confidence', () => {
+    const html = buildPilotReportHtml(basePilotReport);
+    const legendIdx = html.indexOf('How to read this report');
+    const execIdx = html.indexOf('Executive Summary');
+    expect(legendIdx).toBeGreaterThan(-1);
+    expect(execIdx).toBeGreaterThan(legendIdx);
+    expect(html).not.toContain('builder execution 30%');
+    expect(html).not.toContain('Confidence reflects evidence quality');
   });
 
   it('renders methodology legend and report ID in footer', () => {
@@ -83,12 +84,27 @@ describe('buildPilotReportHtml', () => {
     expect(html).toContain('data:image/svg+xml;base64,PHN2Zy8+');
   });
 
-  it('renders why-bullets and per-participant signal charts in appendix', () => {
+  it('renders card badges, completion percent, and three-column summary in appendix', () => {
     const html = buildPilotReportHtml(basePilotReport);
-    expect(html).toContain('Why this decision');
-    expect(html).toContain('Completed 5 of 6 scoped assignments with working builds.');
+    expect(html).toContain('appendix-card-header');
+    expect(html).toContain('card-badges');
+    expect(html).toContain('card-badge-numeric');
+    expect(html).not.toContain('card-badge-cell');
+    expect(html).toContain('#1');
+    expect(html).toContain('83%');
+    expect(html).toContain('appendix-summary-grid');
+    expect(html).toContain('appendix-summary-col-strength');
+    expect(html).toContain('appendix-summary-col-risk');
+    expect(html).toContain('appendix-summary-col-action');
+    expect(html).toContain('Ships working builds quickly.');
+    expect(html).toContain('Gets stuck on multi-step debugging.');
+    expect(html).toContain('Assign to supervised client build.');
+    expect(html).not.toContain('Why this decision');
+    expect(html).not.toContain('appendix-meta');
+    expect(html).not.toContain('padding-inline-end: 9.5rem');
     const appendix = html.split('Appendix — Participant Summaries')[1] ?? '';
-    expect(appendix.match(/<svg/g)?.length ?? 0).toBeGreaterThanOrEqual(1);
+    expect(appendix).toContain('signal-row');
+    expect(appendix).toContain('signal-value');
   });
 
   it('escapes script injection in participant fields', () => {
@@ -108,11 +124,25 @@ describe('buildPilotReportHtml', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
-  it('renders cohort counts and the recommendation paragraph', () => {
+  it('renders cohort counts without recommendation or findings in executive summary', () => {
     const html = buildPilotReportHtml(basePilotReport);
     expect(html).toContain('Participants assessed');
-    expect(html).toContain('Move 1 participant into a supervised builder track now.');
-    expect(html).toContain('Strongest capability');
+    expect(html).not.toContain('Move 1 participant into a supervised builder track now.');
+    expect(html).not.toContain('Strongest capability');
+    expect(html).not.toContain('AI-generated decisions.');
+  });
+
+  it('does not render a numbered section 02 decision table', () => {
+    const html = buildPilotReportHtml(basePilotReport);
+    expect(html).not.toContain('Participant Decision Table');
+    expect(html).not.toContain('>02<');
+  });
+
+  it('includes pdf-block markers for block-based PDF export', () => {
+    const html = buildPilotReportHtml(basePilotReport);
+    expect(html).toContain('title-block pdf-block');
+    expect(html).toContain('appendix-intro-card');
+    expect(html).toContain('footer pdf-block');
   });
 
   it('sets RTL direction for Hebrew reports', () => {

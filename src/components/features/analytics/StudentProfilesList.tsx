@@ -57,7 +57,12 @@ export const StudentProfilesList = ({ students }: StudentProfilesListProps) => {
                 </div>
               </CardHeader>
               <CardContent>
-                {student.latestScores && <FiveDChart scores={student.latestScores} />}
+                {student.latestScores && (
+                  <FiveDChart
+                    scores={student.latestScores}
+                    qedMeasures={student.latestQedMeasures ?? null}
+                  />
+                )}
               </CardContent>
             </Card>
           ))}

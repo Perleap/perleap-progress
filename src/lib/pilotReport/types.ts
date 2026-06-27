@@ -49,6 +49,8 @@ export type PilotParticipantRow = {
   dimensions: PilotDimensionScores | null;
   /** Weighted 0-100 score; internal model input, not displayed prominently. */
   weightedScore: number | null;
+  /** AI placement urgency 1–10; used for appendix ranking, not displayed. */
+  placementPriority: number | null;
   readiness: PilotReadiness | null;
   roleFit: PilotRoleFit | null;
   keyStrength: string;

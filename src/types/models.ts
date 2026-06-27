@@ -213,6 +213,19 @@ export interface FiveDScores {
   action: number | null;
 }
 
+export type FiveDDimensionKey = keyof FiveDScores;
+
+export type QedPhase = 'up' | 'down';
+
+export interface FiveDDimensionQedMeasures {
+  development: number | null;
+  motivation: number | null;
+  phase: QedPhase | null;
+  next: string | null;
+}
+
+export type FiveDQedMeasures = Record<FiveDDimensionKey, FiveDDimensionQedMeasures>;
+
 export interface FiveDSnapshot {
   id: string;
   user_id: string;
@@ -220,6 +233,7 @@ export interface FiveDSnapshot {
   source: 'onboarding' | 'assignment';
   submission_id: string | null;
   classroom_id: string | null;
+  qed_measures?: FiveDQedMeasures | null;
   score_explanations?: {
     vision?: string;
     values?: string;

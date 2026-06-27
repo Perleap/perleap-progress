@@ -3,7 +3,12 @@ import { evidenceSourceNoteForBundle } from '@/lib/analytics5dEvidence';
 import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
 import type { FiveDScores } from '@/types/models';
 
-export type Analytics5dNarrativeContext = 'class_avg' | 'student_avg' | 'module_compare';
+export type Analytics5dNarrativeContext =
+  | 'class_avg'
+  | 'student_avg'
+  | 'module_compare'
+  | 'student_compare'
+  | 'assignment_compare';
 
 export interface Analytics5dNarrativeInput {
   classroomId: string;

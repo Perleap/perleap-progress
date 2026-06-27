@@ -1,20 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { hashEvidenceKey } from '@/lib/analytics5dEvidence';
+import { stableFiveDScoreKey } from '@/lib/fiveDScores';
 import {
   invokeExplainAnalytics5d,
   type Analytics5dNarrativeContext,
   type Analytics5dNarrativeInput,
   type Analytics5dNarrativeResult,
 } from '@/services/analytics5dExplainService';
-import type { FiveDScores } from '@/types/models';
 
 export type { Analytics5dNarrativeContext, Analytics5dNarrativeInput, Analytics5dNarrativeResult };
-
-const FIVED_KEYS: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
-
-function stableScoreKey(s: FiveDScores): string {
-  return FIVED_KEYS.map((k) => s[k].toFixed(2)).join(',');
-}
 
 export const analytics5dNarrativeKeys = {
   all: ['analytics5dNarrative'] as const,
@@ -29,8 +23,8 @@ export const analytics5dNarrativeKeys = {
       input.studentName ?? '',
       input.compareLabelA ?? '',
       input.compareLabelB ?? '',
-      stableScoreKey(input.scores),
-      input.peerScores ? stableScoreKey(input.peerScores) : '',
+      stableFiveDScoreKey(input.scores),
+      input.peerScores ? stableFiveDScoreKey(input.peerScores) : '',
       input.brief ? 'brief' : 'full',
       input.evidenceText != null && input.evidenceText !== ''
         ? hashEvidenceKey(input.evidenceText)
