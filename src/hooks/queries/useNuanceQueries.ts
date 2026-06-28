@@ -14,6 +14,8 @@ export interface NuanceMetric {
   session_count: number;
   total_session_duration_ms: number;
   first_interaction_latency_ms: number | null;
+  /** Wall-clock seconds from attempt start to submit. */
+  assignment_duration_seconds?: number | null;
   /** Count of in-chat "understanding" cues; optional for older API/cache rows. */
   understanding_cue_count?: number;
 }

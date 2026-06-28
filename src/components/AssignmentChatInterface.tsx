@@ -41,8 +41,13 @@ import {
 } from '@/lib/chatDisplay';
 import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
 import { getTaskUnderstandingChoice } from '@/lib/taskUnderstandingStorage';
+import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
 import SafeMathMarkdown from './SafeMathMarkdown';
 import { cn } from '@/lib/utils';
+import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
+import type { DbAssignmentType } from '@/types/models';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -53,18 +58,6 @@ interface Message {
     url?: string;
     type?: string;
   };
-}
-
-interface NuanceTrackingCallbacks {
-  trackResponseSubmitted: (responseTimeMs: number, messageIndex: number) => void;
-  trackResponseStarted: (messageIndex: number) => void;
-  recordAiMessageArrival: () => void;
-  getTimeSinceLastAiMessage: () => number | null;
-  trackUnderstandingCue: (
-    result: import('@/lib/understandingCueDetection').UnderstandingCueResult,
-    messageLength: number,
-    messageIndex: number,
-  ) => void;
 }
 
 export type AssignmentChatCompletePayload = {
@@ -84,8 +77,10 @@ interface AssignmentChatInterfaceProps {
   priorSubmissionIdsForContext?: string[];
   onComplete: (payload: AssignmentChatCompletePayload) => void | Promise<void>;
   nuanceTracking?: NuanceTrackingCallbacks;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
   /** primary = chat completes the assignment; companion = Q&A alongside another task UI */
   variant?: 'primary' | 'companion';
+  assignmentType: DbAssignmentType;
   studentFacingTask?: string | null;
   taskLoading?: boolean;
   /** When false, the first AI greeting is deferred until this becomes true. */
@@ -133,7 +128,9 @@ export function AssignmentChatInterface({
   priorSubmissionIdsForContext,
   onComplete,
   nuanceTracking,
+  clipboardTracking,
   variant = 'primary',
+  assignmentType,
   studentFacingTask,
   taskLoading = false,
   chatInitAllowed = true,
@@ -259,6 +256,7 @@ export function AssignmentChatInterface({
   } = useConversation({
     submissionId,
     assignmentInstructions,
+    studentFacingTask,
     assignmentId,
     priorSubmissionIds: priorSubmissionIdsForContext,
     companionMode: variant === 'companion',
@@ -409,6 +407,14 @@ export function AssignmentChatInterface({
 
   const handlePaste = useCallback(
     async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      if (text.trim() && clipboardTracking) {
+        clipboardTracking.trackPaste({
+          pastedText: text,
+          sourceKind: 'chat_input',
+        });
+      }
+
       const items = e.clipboardData?.items;
       if (items?.length) {
         for (let i = 0; i < items.length; i++) {
@@ -429,11 +435,13 @@ export function AssignmentChatInterface({
         await processAttachmentFile(files[0]);
       }
     },
-    [processAttachmentFile],
+    [processAttachmentFile, clipboardTracking],
   );
 
   const handleSendMessage = async () => {
     if ((!input.trim() && !attachedFile) || loading || sending) return;
+
+    const outgoingMessageIndex = messages.length;
 
     if (nuanceTracking) {
       const elapsed = nuanceTracking.getTimeSinceLastAiMessage();
@@ -460,6 +468,9 @@ export function AssignmentChatInterface({
     shouldScrollRef.current = true;
 
     await sendConversationMessage(userMessage, fileCtx);
+    if (userMessage && clipboardTracking) {
+      clipboardTracking.linkRecentChatPastes(outgoingMessageIndex);
+    }
   };
 
   const handleComplete = async () => {
@@ -889,6 +900,11 @@ export function AssignmentChatInterface({
                         key={`${index}-p-${partIdx}`}
                         className={`rounded-lg p-3 bg-muted`}
                         dir="auto"
+                        {...clipboardZoneProps({
+                          sourceKind: isUser ? 'user_message' : 'assistant_message',
+                          messageIndex: index,
+                          messageContent: isUser ? undefined : String(message.content ?? ''),
+                        })}
                         style={{
                           unicodeBidi: 'plaintext',
                           animationDelay: !isUser && partIdx > 0 ? `${partIdx * 45}ms` : undefined,
@@ -999,10 +1015,11 @@ export function AssignmentChatInterface({
           </div>
         )}
 
-        <div className="flex gap-1.5 items-end mb-4">
+        <div className="flex gap-1.5 items-end mb-1">
           <div className="flex-1 relative">
             <Textarea
               ref={chatInputRef}
+              {...clipboardZoneProps({ sourceKind: 'chat_input' })}
               placeholder={conversationEnded ? t('assignmentChat.conversationEndedPlaceholder', 'Conversation ended - please complete the activity') : t('assignmentChat.placeholder')}
               value={input}
               onChange={(e) => {
@@ -1088,23 +1105,12 @@ export function AssignmentChatInterface({
 
       <TabsContent value="assignment" className="flex-1 mt-0 overflow-visible">
         <ScrollArea className={resourcesScrollAreaClass}>
-          <div className={cn('space-y-2 px-3 py-4 text-sm', isRTL && 'text-end')}>
-            <h3 className="font-medium text-foreground">{t('assignmentDetail.studentTaskTitle')}</h3>
-            {taskLoading ? (
-              <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                {t('assignmentDetail.loadingStudentTask')}
-              </p>
-            ) : studentFacingTask?.trim() ? (
-              <p className="whitespace-pre-wrap leading-relaxed text-foreground" dir="auto">
-                {studentFacingTask.trim()}
-              </p>
-            ) : (
-              <p className="text-muted-foreground leading-relaxed" dir="auto">
-                {t('assignmentDetail.studentTaskNotSetYet')}
-              </p>
-            )}
-          </div>
+          <StudentFacingTaskSection
+            assignmentType={assignmentType}
+            taskText={studentFacingTask}
+            taskLoading={taskLoading}
+            className={cn('px-3 py-4', isRTL && 'text-end')}
+          />
         </ScrollArea>
       </TabsContent>
 

@@ -31,6 +31,7 @@ export interface PilotParticipantAssessmentResult {
   mainRisk: string;
   nextAction: string;
   confidence: PilotConfidence;
+  placementPriority: number;
   whyBullets: string[];
 }
 
@@ -60,6 +61,12 @@ function clamp0to100(value: unknown): number {
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function clampPriority(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(1, Math.min(10, Math.round(n)));
 }
 
 function cleanText(value: unknown): string {
@@ -114,6 +121,7 @@ export async function invokePilotReadiness(
     mainRisk: cleanText(data?.mainRisk),
     nextAction: cleanText(data?.nextAction),
     confidence: pickEnum(data?.confidence, PILOT_CONFIDENCE_VALUES, 'low'),
+    placementPriority: clampPriority(data?.placementPriority),
     whyBullets: parseWhyBullets(data?.whyBullets),
   };
 }

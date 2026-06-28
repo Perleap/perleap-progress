@@ -1,11 +1,17 @@
-import { buildHorizontalBarChartSvg } from './buildHorizontalBarChartSvg';
+import { buildPieChartSvg, READINESS_PIE_COLORS } from './buildPieChartSvg';
 import {
   PILOT_DIMENSION_KEYS,
+  PILOT_READINESS_VALUES,
   type PilotParticipantRow,
   type PilotReportData,
   type PilotReportStaticCopy,
 } from './types';
-import { buildRoleFitDistributionLine, countNotAssessed } from './buildPilotReportData';
+import {
+  buildRoleFitDistributionLine,
+  countNotAssessed,
+  formatCompletionPercent,
+  rankParticipantsForAppendix,
+} from './buildPilotReportData';
 
 const BLUE = {
   primary: '#3369B7',
@@ -13,8 +19,6 @@ const BLUE = {
   labelBg: '#E8F0FA',
   headerBg: '#D6E4F5',
   border: '#B8CFE8',
-  pillBg: '#D6E4F5',
-  pillText: '#3369B7',
 };
 
 export function escapeHtml(value: string): string {
@@ -30,18 +34,18 @@ function sectionBar(num: string, title: string): string {
   return `<div class="section-bar">${numPart}${escapeHtml(title)}</div>`;
 }
 
-function readinessPillClass(readiness: PilotParticipantRow['readiness']): string {
+function readinessBadgeClass(readiness: PilotParticipantRow['readiness']): string {
   switch (readiness) {
     case 'ready':
-      return 'pill pill-ready';
+      return 'card-badge-readiness-ready';
     case 'coach':
-      return 'pill pill-coach';
+      return 'card-badge-readiness-coach';
     case 'redirect':
-      return 'pill pill-redirect';
+      return 'card-badge-readiness-redirect';
     case 'not_ready':
-      return 'pill pill-notready';
+      return 'card-badge-readiness-notready';
     default:
-      return 'pill';
+      return 'card-badge-neutral';
   }
 }
 
@@ -49,24 +53,33 @@ const INLINE_CSS = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: Arial, Helvetica, 'Segoe UI', sans-serif;
-    background: #eef2f7;
+    background: #fff;
     color: #1a1a1a;
     line-height: 1.5;
-    padding: 2rem 1rem;
+    padding: 0;
+    margin: 0;
     counter-reset: page;
   }
   .doc {
+    width: 860px;
     max-width: 860px;
-    margin: 0 auto;
+    margin: 0;
     background: #fff;
-    border: 1px solid ${BLUE.border};
-    box-shadow: 0 2px 12px rgba(27, 58, 107, 0.08);
+    border: none;
+    box-shadow: none;
   }
   .title-block {
     text-align: center;
     padding: 2rem 2rem 1.5rem;
     background: linear-gradient(180deg, ${BLUE.headerBg} 0%, #fff 100%);
     border-bottom: 1px solid ${BLUE.border};
+  }
+  .pdf-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    width: 100%;
+    overflow: visible;
+    box-sizing: border-box;
   }
   .cover-eyebrow { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: ${BLUE.primary}; font-weight: 700; }
   .cover-logo { height: 36px; margin: 0 auto 0.75rem; display: block; }
@@ -111,66 +124,133 @@ const INLINE_CSS = `
   }
   .lv-value { padding: 0.65rem 1rem; vertical-align: top; color: #333; }
   .lv-bold { font-weight: 700; font-size: 1rem; color: ${BLUE.dark}; }
-  .recommendation {
-    font-size: 0.9rem;
-    color: #333;
-    padding: 0.875rem 1rem;
-    background: ${BLUE.labelBg};
-    border-bottom: 1px solid ${BLUE.border};
-    line-height: 1.6;
-  }
-  .findings { padding: 0.75rem 1rem; border-bottom: 1px solid ${BLUE.border}; }
-  .findings li { font-size: 0.85rem; color: #333; margin-bottom: 0.35rem; margin-inline-start: 1.1rem; }
-  .findings li:last-child { margin-bottom: 0; }
-  .findings .finding-label { font-weight: 700; color: ${BLUE.dark}; }
-  .chart-wrap { padding: 1rem; }
+  .chart-wrap { padding: 1.5rem; min-height: 280px; display: flex; align-items: center; border-bottom: 1px solid ${BLUE.border}; }
   .chart-wrap svg { display: block; width: 100%; height: auto; }
-  .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .data-table th {
-    text-align: start;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: ${BLUE.dark};
-    padding: 0.55rem 0.65rem;
-    background: ${BLUE.headerBg};
-    border-bottom: 1px solid ${BLUE.border};
-  }
-  .data-table td {
-    padding: 0.55rem 0.65rem;
-    border-bottom: 1px solid ${BLUE.border};
-    vertical-align: top;
-  }
-  .data-table tr:last-child td { border-bottom: none; }
-  .pill {
-    display: inline-block;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    white-space: nowrap;
-    background: ${BLUE.pillBg};
-    color: ${BLUE.pillText};
-    border: 1px solid ${BLUE.border};
-  }
-  .pill-ready { background: #E2F5EA; color: #1E7A45; border-color: #B5E0C6; }
-  .pill-coach { background: #FFF4DC; color: #946300; border-color: #EFD9A2; }
-  .pill-redirect { background: #EDE8FA; color: #5B41A8; border-color: #CFC3EE; }
-  .pill-notready { background: #FDE8E8; color: #B43333; border-color: #ECB8B8; }
+  .exec-meta { font-size: 0.85rem; color: #333; padding: 0.65rem 1rem; border-bottom: 1px solid ${BLUE.border}; line-height: 1.6; }
   .appendix-card {
     border: 1px solid ${BLUE.border};
     background: #f7fafd;
     padding: 0.875rem 1rem;
-    margin: 0 1rem 0.75rem;
+    margin: 0 0 0.75rem;
   }
+  .appendix-intro-card .appendix-card {
+    margin-bottom: 0;
+  }
+  .appendix-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .card-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    direction: ltr;
+  }
+  .card-badge {
+    width: 3.5rem;
+    height: 3.5rem;
+    min-width: 3.5rem;
+    min-height: 3.5rem;
+    border-radius: 999px;
+    font-weight: 700;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    display: inline-grid;
+    place-items: center;
+    justify-items: center;
+    text-align: center;
+    direction: ltr;
+    padding: 0 0.25rem;
+  }
+  .card-badge-readiness { font-size: 0.55rem; line-height: 1.15; }
+  .card-badge-numeric { font-size: 0.75rem; line-height: 1; padding: 0; }
+  .card-badge-readiness-ready { background: #E2F5EA; color: #1E7A45; border-color: #B5E0C6; }
+  .card-badge-readiness-coach { background: #FFF4DC; color: #946300; border-color: #EFD9A2; }
+  .card-badge-readiness-redirect { background: #EDE8FA; color: #5B41A8; border-color: #CFC3EE; }
+  .card-badge-readiness-notready { background: #FDE8E8; color: #B43333; border-color: #ECB8B8; }
+  .card-badge-neutral { background: ${BLUE.labelBg}; color: ${BLUE.dark}; border-color: #fff; }
+  .card-badge-rank { background: ${BLUE.primary}; color: #fff; border-color: #fff; }
   .appendix-grid { padding-top: 1rem; padding-bottom: 0.25rem; }
-  .appendix-name { font-size: 0.95rem; font-weight: 700; color: ${BLUE.dark}; }
-  .appendix-meta { font-size: 0.75rem; color: #555; margin: 0.2rem 0 0.5rem; }
-  .appendix-line { font-size: 0.8rem; color: #333; margin-bottom: 0.25rem; }
-  .appendix-line strong { color: ${BLUE.dark}; }
+  .appendix-name { font-size: 0.95rem; font-weight: 700; color: ${BLUE.dark}; min-width: 0; }
   .appendix-signals { margin: 0.5rem 0; }
-  .appendix-signals svg { display: block; width: 100%; max-width: 480px; height: auto; }
-  .appendix-why { font-size: 0.78rem; color: #333; margin: 0.35rem 0 0.5rem 1.1rem; }
-  .appendix-why li { margin-bottom: 0.2rem; }
+  .signal-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+  .signal-row:last-child { margin-bottom: 0; }
+  .signal-label {
+    width: 9rem;
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: ${BLUE.dark};
+  }
+  .signal-bar-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: #dde8f4;
+  }
+  .signal-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: ${BLUE.primary};
+  }
+  .signal-value {
+    width: 2rem;
+    text-align: end;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: ${BLUE.dark};
+  }
+  .appendix-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid ${BLUE.border};
+    break-inside: avoid;
+  }
+  .appendix-summary-col {
+    border-radius: 3px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    min-width: 0;
+  }
+  .appendix-summary-col h5 {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+  .appendix-summary-col-strength {
+    background: #E2F5EA;
+    border: 1px solid #B5E0C6;
+    color: #1a5c35;
+  }
+  .appendix-summary-col-strength h5 { color: #1E7A45; }
+  .appendix-summary-col-risk {
+    background: #FDE8E8;
+    border: 1px solid #ECB8B8;
+    color: #8c2828;
+  }
+  .appendix-summary-col-risk h5 { color: #B43333; }
+  .appendix-summary-col-action {
+    background: #E8F0FA;
+    border: 1px solid ${BLUE.border};
+    color: #1B3A6B;
+  }
+  .appendix-summary-col-action h5 { color: ${BLUE.primary}; }
   .legend-box {
     padding: 0.875rem 1rem;
     margin: 0;
@@ -196,143 +276,158 @@ const INLINE_CSS = `
     body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .doc { box-shadow: none; border: none; max-width: none; }
     .section, .title-block { break-inside: avoid; }
-    .print-footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 0.65rem; color: #aaa; }
-    .print-footer::after { content: counter(page); }
   }
 `;
 
-function buildParticipantSignalsChart(
+function buildParticipantSignalsHtml(
   p: PilotParticipantRow,
   staticCopy: PilotReportStaticCopy,
 ): string {
   if (!p.dimensions) return '';
-  return buildHorizontalBarChartSvg({
-    items: PILOT_DIMENSION_KEYS.map((key) => ({
-      label: staticCopy.dimensionLabels[key],
-      value: p.dimensions![key],
-    })),
-    width: 480,
-    rowHeight: 22,
-    ariaLabel: `${staticCopy.appendixObservedSignals}: ${p.name}`,
+  const rows = PILOT_DIMENSION_KEYS.map((key) => {
+    const value = p.dimensions![key];
+    const pct = Math.max(0, Math.min(100, value));
+    const label = escapeHtml(staticCopy.dimensionLabels[key]);
+    return `<div class="signal-row">
+  <span class="signal-label">${label}</span>
+  <div class="signal-bar-track"><div class="signal-bar-fill" style="width:${pct}%"></div></div>
+  <span class="signal-value">${Math.round(value)}</span>
+</div>`;
+  }).join('\n');
+  return rows;
+}
+
+function buildScopeFactsHtml(meta: PilotReportData['meta'], staticCopy: PilotReportStaticCopy): string {
+  const lines: string[] = [];
+  if (meta.pilotDateRange) lines.push(meta.pilotDateRange);
+  lines.push(
+    `${staticCopy.labelAssignmentsInScope}: ${meta.assignmentsInScope}`,
+    `${staticCopy.labelCohortSize}: ${meta.cohortSize}`,
+  );
+  return `<p class="scope-facts">${lines.map((l) => escapeHtml(l)).join('<br>')}</p>`;
+}
+
+function buildLegendHtml(staticCopy: PilotReportStaticCopy): string {
+  return `<div class="section pdf-block">
+    ${sectionBar('', staticCopy.sectionMethodology)}
+    <div class="legend-box">
+      <p><strong>${escapeHtml(staticCopy.legendReadinessTitle)}</strong></p>
+      <p>${escapeHtml(staticCopy.legendReadinessReady)}</p>
+      <p>${escapeHtml(staticCopy.legendReadinessCoach)}</p>
+      <p>${escapeHtml(staticCopy.legendReadinessRedirect)}</p>
+      <p>${escapeHtml(staticCopy.legendReadinessNotReady)}</p>
+    </div>
+  </div>`;
+}
+
+function buildCardBadgesHtml(
+  p: PilotParticipantRow & { rank: number },
+  staticCopy: PilotReportStaticCopy,
+): string {
+  const readinessLabel = p.readiness
+    ? staticCopy.readinessLabels[p.readiness]
+    : staticCopy.noData;
+  const readinessClass = p.readiness
+    ? readinessBadgeClass(p.readiness)
+    : 'card-badge-neutral';
+  const completionPct = formatCompletionPercent(p.completedInScope, p.assignmentsInScope);
+  return `<div class="card-badges">
+  <div class="card-badge card-badge-readiness ${readinessClass}">${escapeHtml(readinessLabel)}</div>
+  <div class="card-badge card-badge-neutral card-badge-numeric">${escapeHtml(completionPct)}</div>
+  <div class="card-badge card-badge-rank card-badge-numeric">#${p.rank}</div>
+</div>`;
+}
+
+function buildAppendixSummaryGridHtml(
+  p: PilotParticipantRow,
+  staticCopy: PilotReportStaticCopy,
+): string {
+  const cols: [string, string, string][] = [
+    ['appendix-summary-col-strength', staticCopy.colStrength, p.keyStrength || staticCopy.noData],
+    ['appendix-summary-col-risk', staticCopy.colRisk, p.mainRisk || staticCopy.noData],
+    ['appendix-summary-col-action', staticCopy.colNextAction, p.nextAction || staticCopy.noData],
+  ];
+  const colHtml = cols
+    .map(
+      ([className, label, text]) =>
+        `<div class="appendix-summary-col ${className}"><h5>${escapeHtml(label)}</h5><p>${escapeHtml(text)}</p></div>`,
+    )
+    .join('');
+  return `<div class="appendix-summary-grid">${colHtml}</div>`;
+}
+
+function buildReadinessPieChart(
+  cohort: PilotReportData['cohort'],
+  staticCopy: PilotReportStaticCopy,
+  notAssessedCount: number,
+): string {
+  const segments = PILOT_READINESS_VALUES.map((key) => ({
+    label: staticCopy.readinessLabels[key],
+    value: cohort.readinessCounts[key],
+    color: READINESS_PIE_COLORS[key],
+  }));
+  if (notAssessedCount > 0) {
+    segments.push({
+      label: staticCopy.cohortNotAssessed,
+      value: notAssessedCount,
+      color: READINESS_PIE_COLORS.not_assessed,
+    });
+  }
+  return buildPieChartSvg({
+    segments,
+    ariaLabel: staticCopy.sectionExecutiveSummary,
+    centerLabel: String(cohort.participantsAssessed),
   });
 }
 
-function buildScopeFactsHtml(meta: PilotReportData['meta']): string {
-  if (!meta.pilotDateRange) return '';
-  return `<p class="scope-facts">${escapeHtml(meta.pilotDateRange)}</p>`;
-}
-
 export function buildPilotReportHtml(data: PilotReportData): string {
-  const { meta, cohort, summary, participants, staticCopy } = data;
+  const { meta, cohort, participants, staticCopy } = data;
   const dir = meta.dir;
   const lang = meta.language;
 
   const notAssessedCount = countNotAssessed(participants);
-  const participantsValue = `${cohort.participantsAssessed} of ${cohort.participantsTotal}`;
   const roleFitLine = buildRoleFitDistributionLine(cohort.roleFitCounts, staticCopy.roleFitLabels);
+  const rankedAppendix = rankParticipantsForAppendix(participants);
 
-  const cohortRows: [string, string][] = [
-    [staticCopy.cohortParticipants, participantsValue],
-    [staticCopy.cohortReady, String(cohort.readinessCounts.ready)],
-    [staticCopy.cohortCoach, String(cohort.readinessCounts.coach)],
-    [staticCopy.cohortRedirect, String(cohort.readinessCounts.redirect)],
-    [staticCopy.cohortNotReady, String(cohort.readinessCounts.not_ready)],
+  const pieChart = buildReadinessPieChart(cohort, staticCopy, notAssessedCount);
+
+  const execMetaLines: string[] = [
+    `${staticCopy.cohortParticipants}: ${cohort.participantsAssessed} of ${cohort.participantsTotal}`,
   ];
-  if (notAssessedCount > 0) {
-    cohortRows.push([staticCopy.cohortNotAssessed, String(notAssessedCount)]);
-  }
   if (roleFitLine) {
-    cohortRows.push([staticCopy.cohortRoleFitDistribution, roleFitLine]);
+    execMetaLines.push(`${staticCopy.cohortRoleFitDistribution}: ${roleFitLine}`);
   }
-
-  const cohortRowsHtml = cohortRows
-    .map(
-      ([label, value]) =>
-        `<tr><td class="lv-label">${escapeHtml(label)}</td><td class="lv-value lv-bold">${escapeHtml(value)}</td></tr>`,
-    )
+  const execMetaHtml = execMetaLines
+    .map((line) => `<p class="exec-meta">${escapeHtml(line)}</p>`)
     .join('');
 
-  const findings = [
-    [staticCopy.findingStrongest, summary.strongestCapability],
-    [staticCopy.findingGap, summary.mainGap],
-    [staticCopy.findingNextAction, summary.topNextAction],
-  ]
-    .filter(([, text]) => text.trim().length > 0)
-    .map(
-      ([label, text]) =>
-        `<li><span class="finding-label">${escapeHtml(label)}:</span> ${escapeHtml(text)}</li>`,
-    )
-    .join('');
-
-  const snapshotChart = cohort.meanDimensions
-    ? buildHorizontalBarChartSvg({
-        items: PILOT_DIMENSION_KEYS.map((key) => ({
-          label: staticCopy.dimensionLabels[key],
-          value: cohort.meanDimensions![key],
-        })),
-        ariaLabel: staticCopy.sectionCapabilitySnapshot,
-      })
-    : '';
-
-  const decisionRows = participants
-    .map((p) => {
-      if (!p.assessed) {
-        return `<tr>
-          <td><strong>${escapeHtml(p.name)}</strong></td>
-          <td colspan="6" style="color:#888">${escapeHtml(staticCopy.notAssessed)}</td>
-        </tr>`;
-      }
-      return `<tr>
-        <td><strong>${escapeHtml(p.name)}</strong></td>
-        <td><span class="${readinessPillClass(p.readiness)}">${escapeHtml(p.readiness ? staticCopy.readinessLabels[p.readiness] : staticCopy.noData)}</span></td>
-        <td>${escapeHtml(p.roleFit ? staticCopy.roleFitLabels[p.roleFit] : staticCopy.noData)}</td>
-        <td>${escapeHtml(p.keyStrength || staticCopy.noData)}</td>
-        <td>${escapeHtml(p.mainRisk || staticCopy.noData)}</td>
-        <td>${escapeHtml(p.nextAction || staticCopy.noData)}</td>
-        <td>${escapeHtml(p.confidence ? staticCopy.confidenceLabels[p.confidence] : staticCopy.noData)}</td>
-      </tr>`;
-    })
-    .join('');
-
-  const appendixCards = participants
-    .filter((p) => p.assessed)
-    .map((p) => {
-      const signalsChart = buildParticipantSignalsChart(p, staticCopy);
-      const whyHtml =
-        p.whyBullets.length > 0
-          ? `<p class="appendix-line"><strong>${escapeHtml(staticCopy.appendixWhyBullets)}:</strong></p><ul class="appendix-why">${p.whyBullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>`
-          : '';
-      return `<div class="appendix-card">
-        <p class="appendix-name">${escapeHtml(p.name)}</p>
-        <p class="appendix-meta">
-          ${escapeHtml(p.roleFit ? staticCopy.roleFitLabels[p.roleFit] : staticCopy.noData)} ·
-          ${escapeHtml(p.readiness ? staticCopy.readinessLabels[p.readiness] : staticCopy.noData)} ·
-          ${escapeHtml(p.confidence ? staticCopy.confidenceLabels[p.confidence] : staticCopy.noData)} ·
-          ${escapeHtml(staticCopy.appendixCompleted)}: ${p.completedInScope}/${p.assignmentsInScope}
-        </p>
-        ${signalsChart ? `<div class="appendix-signals">${signalsChart}</div>` : ''}
-        ${whyHtml}
-        ${p.keyStrength ? `<p class="appendix-line">${escapeHtml(p.keyStrength)}</p>` : ''}
-        ${p.mainRisk ? `<p class="appendix-line"><strong>${escapeHtml(staticCopy.appendixRisk)}:</strong> ${escapeHtml(p.mainRisk)}</p>` : ''}
-        ${p.nextAction ? `<p class="appendix-line"><strong>${escapeHtml(staticCopy.appendixNextAction)}:</strong> ${escapeHtml(p.nextAction)}</p>` : ''}
+  const appendixCards = rankedAppendix
+    .map((p, index) => {
+      const signalsHtml = buildParticipantSignalsHtml(p, staticCopy);
+      const cardHtml = `<div class="appendix-card${index === 0 ? '' : ' pdf-block'}">
+        <div class="appendix-card-header">
+          <p class="appendix-name">${escapeHtml(p.name)}</p>
+          ${buildCardBadgesHtml(p, staticCopy)}
+        </div>
+        ${signalsHtml ? `<div class="appendix-signals">${signalsHtml}</div>` : ''}
+        ${buildAppendixSummaryGridHtml(p, staticCopy)}
       </div>`;
+
+      if (index === 0) {
+        return `<div class="pdf-block appendix-intro-card">
+      ${sectionBar('', staticCopy.sectionAppendix)}
+      <p class="section-note">${escapeHtml(staticCopy.sectionAppendixDesc)}</p>
+      ${cardHtml}
+    </div>`;
+      }
+
+      return cardHtml;
     })
     .join('');
 
   const logoHtml = meta.logoDataUri
     ? `<img class="cover-logo" src="${meta.logoDataUri}" alt="Perleap" />`
     : '';
-
-  const legendHtml = `<div class="legend-box">
-    <h4>${escapeHtml(staticCopy.sectionMethodology)}</h4>
-    <p><strong>${escapeHtml(staticCopy.legendReadinessTitle)}</strong></p>
-    <p>${escapeHtml(staticCopy.legendReadinessReady)}</p>
-    <p>${escapeHtml(staticCopy.legendReadinessCoach)}</p>
-    <p>${escapeHtml(staticCopy.legendReadinessRedirect)}</p>
-    <p>${escapeHtml(staticCopy.legendReadinessNotReady)}</p>
-    <p>${escapeHtml(staticCopy.legendWeighting)}</p>
-    <p>${escapeHtml(staticCopy.legendConfidence)}</p>
-  </div>`;
 
   return `<!DOCTYPE html>
 <html lang="${lang}" dir="${dir}">
@@ -344,66 +439,35 @@ export function buildPilotReportHtml(data: PilotReportData): string {
 </head>
 <body>
   <div class="doc">
-    <header class="title-block">
+    <header class="title-block pdf-block">
       ${logoHtml}
       <p class="cover-eyebrow">${escapeHtml(staticCopy.coverEyebrow)}</p>
       <h1 class="doc-title">${escapeHtml(staticCopy.coverTitle)}</h1>
       <p class="course-line">${escapeHtml(meta.classroomLabel)}</p>
-      ${buildScopeFactsHtml(meta)}
+      ${buildScopeFactsHtml(meta, staticCopy)}
     </header>
 
-    <div class="section">
+    ${buildLegendHtml(staticCopy)}
+
+    <div class="section pdf-block">
       ${sectionBar('01', staticCopy.sectionExecutiveSummary)}
-      <table class="lv-table">${cohortRowsHtml}</table>
-      ${summary.recommendation ? `<p class="recommendation">${escapeHtml(summary.recommendation)}</p>` : ''}
-      ${findings ? `<ul class="findings">${findings}</ul>` : ''}
-    </div>
-
-    ${
-      snapshotChart
-        ? `<div class="section">
-      ${sectionBar('02', staticCopy.sectionCapabilitySnapshot)}
-      <p class="section-note">${escapeHtml(staticCopy.sectionCapabilitySnapshotDesc)}</p>
-      <div class="chart-wrap">${snapshotChart}</div>
-    </div>`
-        : ''
-    }
-
-    <div class="section">
-      ${sectionBar(snapshotChart ? '03' : '02', staticCopy.sectionDecisionTable)}
-      <p class="section-note">${escapeHtml(staticCopy.sectionDecisionTableDesc)}</p>
-      <table class="data-table">
-        <thead><tr>
-          <th>${escapeHtml(staticCopy.colParticipant)}</th>
-          <th>${escapeHtml(staticCopy.colReadiness)}</th>
-          <th>${escapeHtml(staticCopy.colFit)}</th>
-          <th>${escapeHtml(staticCopy.colStrength)}</th>
-          <th>${escapeHtml(staticCopy.colRisk)}</th>
-          <th>${escapeHtml(staticCopy.colNextAction)}</th>
-          <th>${escapeHtml(staticCopy.colConfidence)}</th>
-        </tr></thead>
-        <tbody>${decisionRows}</tbody>
-      </table>
+      ${pieChart ? `<div class="chart-wrap">${pieChart}</div>` : ''}
+      ${execMetaHtml}
     </div>
 
     ${
       appendixCards
         ? `<div class="section">
-      ${sectionBar('', staticCopy.sectionAppendix)}
-      <p class="section-note">${escapeHtml(staticCopy.sectionAppendixDesc)}</p>
       <div class="appendix-grid">${appendixCards}</div>
     </div>`
         : ''
     }
 
-    ${legendHtml}
-
-    <footer class="footer">
+    <footer class="footer pdf-block">
       <p>${escapeHtml(staticCopy.footerDisclaimer)}</p>
       <p class="footer-meta">${escapeHtml(staticCopy.reportIdLabel)}: ${escapeHtml(meta.reportId)} · ${escapeHtml(meta.generatedAtDisplay)}</p>
     </footer>
   </div>
-  <div class="print-footer" aria-hidden="true"></div>
 </body>
 </html>`;
 }

@@ -222,3 +222,77 @@ Deno.test('meanNonNullScores skips null dimensions', () => {
   });
   assertAlmostEquals(mean!, 6, 0.001);
 });
+
+Deno.test('normalizeEvaluationPayload extracts structured QED measures', () => {
+  const result = normalizeEvaluationPayload(
+    {
+      dimensions: {
+        vision: {
+          level: null,
+          development: 72,
+          motivation: 85,
+          phase: 'up',
+          next: 'Channel drive into finishing the draft',
+          score: 7,
+          notAssessableReason: null,
+          evidence: [],
+          explanation: 'Strong creative drive',
+        },
+        values: {
+          level: null,
+          development: null,
+          motivation: null,
+          phase: null,
+          next: 'No values signal',
+          score: null,
+          notAssessableReason: 'No values signal',
+          evidence: [],
+          explanation: '',
+        },
+        thinking: {
+          level: null,
+          development: 55,
+          motivation: 50,
+          phase: 'down',
+          next: 'Rebuild engagement',
+          score: 6,
+          notAssessableReason: null,
+          evidence: [],
+          explanation: '',
+        },
+        connection: {
+          level: null,
+          development: null,
+          motivation: null,
+          phase: null,
+          next: null,
+          score: null,
+          notAssessableReason: null,
+          evidence: [],
+          explanation: '',
+        },
+        action: {
+          level: null,
+          development: null,
+          motivation: null,
+          phase: null,
+          next: null,
+          score: null,
+          notAssessableReason: null,
+          evidence: [],
+          explanation: '',
+        },
+      },
+      studentFeedback: 'Keep going',
+      teacherFeedback: 'Good work',
+    },
+    'student work text',
+    { requireEvidence: false },
+  );
+
+  assertEquals(result.scores.vision, 7);
+  assertEquals(result.qedMeasures.vision.development, 72);
+  assertEquals(result.qedMeasures.vision.motivation, 85);
+  assertEquals(result.qedMeasures.vision.phase, 'up');
+  assertEquals(result.qedMeasures.thinking.phase, 'down');
+});

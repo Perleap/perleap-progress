@@ -153,6 +153,10 @@ export interface Submission {
   file_urls: string[] | null;
   status: 'in_progress' | 'completed';
   submitted_at: string | null;
+  /** When the student started this attempt (row creation). */
+  started_at?: string | null;
+  /** Wall-clock seconds from started_at to submit. */
+  duration_seconds?: number | null;
   /** True when AI feedback exists but teacher has not released it to the student. */
   awaiting_teacher_feedback_release?: boolean;
   /** Async AI evaluation lifecycle (null when no AI eval was requested). */
@@ -209,6 +213,19 @@ export interface FiveDScores {
   action: number | null;
 }
 
+export type FiveDDimensionKey = keyof FiveDScores;
+
+export type QedPhase = 'up' | 'down';
+
+export interface FiveDDimensionQedMeasures {
+  development: number | null;
+  motivation: number | null;
+  phase: QedPhase | null;
+  next: string | null;
+}
+
+export type FiveDQedMeasures = Record<FiveDDimensionKey, FiveDDimensionQedMeasures>;
+
 export interface FiveDSnapshot {
   id: string;
   user_id: string;
@@ -216,6 +233,7 @@ export interface FiveDSnapshot {
   source: 'onboarding' | 'assignment';
   submission_id: string | null;
   classroom_id: string | null;
+  qed_measures?: FiveDQedMeasures | null;
   score_explanations?: {
     vision?: string;
     values?: string;

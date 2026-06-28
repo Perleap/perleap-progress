@@ -1,5 +1,6 @@
 /**
- * Regenerate Scores - uses shared rubric-based evaluation pipeline
+ * Regenerate Scores - single submission re-eval using shared persist helper.
+ * Skips teacher_manual evaluations. Prefer refresh-class-evaluations for classroom batch + Undo.
  */
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
@@ -20,6 +21,7 @@ import {
   detectLanguageFromText,
 } from '../_shared/evaluationContext.ts';
 import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
+import { persistAiEvaluation } from '../_shared/evaluationPersist.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +37,24 @@ serve(async (req) => {
     const { submissionId } = await req.json();
     logInfo('Regenerate scores request', { submissionId });
 
+    if (!submissionId) {
+      throw new Error('submissionId is required');
+    }
+
     const supabase = createSupabaseClient();
+
+    const { data: feedbackRow } = await supabase
+      .from('assignment_feedback')
+      .select('evaluation_source, visible_to_student')
+      .eq('submission_id', submissionId)
+      .maybeSingle();
+
+    if (feedbackRow?.evaluation_source === 'teacher_manual') {
+      return new Response(
+        JSON.stringify({ skipped: true, reason: 'teacher_manual' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     const { data: submissionData, error: subErr } = await supabase
       .from('submissions')
@@ -74,9 +93,8 @@ serve(async (req) => {
       assignmentData?.hard_skill_domain,
     );
 
-    const opikThreadId = typeof submissionId === 'string' && submissionId
-      ? submissionId
-      : crypto.randomUUID();
+    const opikThreadId = submissionId;
+    const feedbackTraceId = uuidv7();
 
     const evaluation = await runEvaluation(
       {
@@ -99,7 +117,7 @@ serve(async (req) => {
             traceName: 'regenerate-scores.main',
             tags: ['regenerate-scores', 'edge-function'],
             threadId: opikThreadId,
-            clientTraceId: uuidv7(),
+            clientTraceId: feedbackTraceId,
             traceStartMs: t.traceStartMs,
             traceEndMs: t.traceEndMs,
             input: {
@@ -123,26 +141,25 @@ serve(async (req) => {
       },
     );
 
-    const scores = evaluation.scores;
-    const scoreExplanations = evaluation.scoreExplanations;
-
-    await supabase.from('five_d_snapshots').delete().eq('submission_id', submissionId);
-
-    const { error: snapshotError } = await supabase.from('five_d_snapshots').insert({
-      user_id: studentId,
-      scores,
-      score_explanations: scoreExplanations,
-      source: 'assignment',
-      submission_id: submissionId,
-      classroom_id: classroomId,
+    await persistAiEvaluation(supabase, {
+      submissionId,
+      studentId,
+      assignmentId,
+      classroomId,
+      scores: evaluation.scores,
+      scoreExplanations: evaluation.scoreExplanations,
+      qedMeasures: evaluation.qedMeasures,
+      studentFeedback: evaluation.studentFeedback,
+      teacherFeedback: evaluation.teacherFeedback,
+      hardSkillsAssessment: evaluation.hardSkillsAssessment,
+      skillPairs,
+      hardSkillDomain: assignmentData?.hard_skill_domain,
+      evaluationSource: 'ai_student_work',
+      visibleToStudent: feedbackRow?.visible_to_student ?? true,
+      opikTraceIds: { feedback_main: feedbackTraceId },
     });
 
-    if (snapshotError) {
-      logError('Error saving snapshot', snapshotError);
-      throw snapshotError;
-    }
-
-    return new Response(JSON.stringify({ scores }), {
+    return new Response(JSON.stringify({ scores: evaluation.scores }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

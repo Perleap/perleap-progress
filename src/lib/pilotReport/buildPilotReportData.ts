@@ -61,6 +61,7 @@ export function buildParticipantRow(input: {
       assessed: false,
       dimensions: null,
       weightedScore: null,
+      placementPriority: null,
       readiness: null,
       roleFit: null,
       keyStrength: '',
@@ -79,6 +80,7 @@ export function buildParticipantRow(input: {
     assessed: true,
     dimensions: assessment.dimensions,
     weightedScore: computeWeightedScore(assessment.dimensions),
+    placementPriority: assessment.placementPriority,
     readiness: assessment.readiness,
     roleFit: assessment.roleFit,
     keyStrength: assessment.keyStrength,
@@ -142,6 +144,47 @@ const READINESS_SORT_ORDER: Record<PilotReadiness, number> = {
   not_ready: 3,
 };
 
+function rankPriorityValue(priority: number | null | undefined): number {
+  return priority != null && priority >= 1 ? priority : 0;
+}
+
+export function completionRatio(completed: number, total: number): number {
+  if (total <= 0) return 0;
+  return completed / total;
+}
+
+/** Blended rank input: AI placementPriority weighted by scoped assignment completion. */
+export function computeEffectiveRankScore(row: PilotParticipantRow): number {
+  const priority = rankPriorityValue(row.placementPriority);
+  if (priority === 0) return 0;
+  return priority * completionRatio(row.completedInScope, row.assignmentsInScope);
+}
+
+function compareParticipantsForRank(a: PilotParticipantRow, b: PilotParticipantRow): number {
+  const aEffective = computeEffectiveRankScore(a);
+  const bEffective = computeEffectiveRankScore(b);
+  if (aEffective !== bEffective) return bEffective - aEffective;
+
+  const aPriority = rankPriorityValue(a.placementPriority);
+  const bPriority = rankPriorityValue(b.placementPriority);
+  if (aPriority !== bPriority) return bPriority - aPriority;
+
+  const aReady = a.readiness != null ? READINESS_SORT_ORDER[a.readiness] : 99;
+  const bReady = b.readiness != null ? READINESS_SORT_ORDER[b.readiness] : 99;
+  if (aReady !== bReady) return aReady - bReady;
+
+  return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+}
+
+/** Appendix order: #1 (best) at top; sorted by effective rank score, then AI priority. */
+export function rankParticipantsForAppendix(
+  rows: PilotParticipantRow[],
+): Array<PilotParticipantRow & { rank: number }> {
+  const assessed = rows.filter((p) => p.assessed);
+  const sorted = [...assessed].sort(compareParticipantsForRank);
+  return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
+}
+
 /** Decision table order: ready → coach → redirect → not_ready → not assessed, then name. */
 export function sortParticipantsForDecision(rows: PilotParticipantRow[]): PilotParticipantRow[] {
   return [...rows].sort((a, b) => {
@@ -164,6 +207,12 @@ export function buildRoleFitDistributionLine(
 
 export function countNotAssessed(participants: PilotParticipantRow[]): number {
   return participants.filter((p) => !p.assessed).length;
+}
+
+/** Scoped assignment completion as a rounded percentage for appendix badges. */
+export function formatCompletionPercent(completed: number, total: number): string {
+  if (total <= 0) return '—';
+  return `${Math.round((completed / total) * 100)}%`;
 }
 
 /** Format classroom start/end dates for the scope line. */

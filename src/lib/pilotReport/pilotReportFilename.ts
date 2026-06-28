@@ -11,3 +11,8 @@ export function pilotReportDownloadFilename(courseName: string | undefined | nul
   const date = new Date().toISOString().slice(0, 10);
   return `perleap-pilot-report-${shortName}-${date}.html`;
 }
+
+/** Same slug as HTML export, with `.pdf` extension. */
+export function pilotReportPdfFilename(courseName: string | undefined | null): string {
+  return pilotReportDownloadFilename(courseName).replace(/\.html$/, '.pdf');
+}

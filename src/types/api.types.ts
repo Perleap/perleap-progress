@@ -8,6 +8,7 @@ import type {
   AssignmentAttemptMode,
   Classroom,
   FiveDScores,
+  FiveDQedMeasures,
   Message,
   Submission,
   TeacherProfile,
@@ -156,6 +157,7 @@ export interface StudentAnalytics {
   id: string;
   fullName: string;
   latestScores: FiveDScores | null;
+  latestQedMeasures?: FiveDQedMeasures | null;
   feedbackCount: number;
 }
 

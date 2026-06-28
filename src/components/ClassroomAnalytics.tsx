@@ -13,7 +13,6 @@ import {
   Target,
   Info,
   Download,
-  GitCompare,
   Presentation,
   ClipboardCheck,
 } from 'lucide-react';
@@ -25,12 +24,12 @@ import { toast } from 'sonner';
 import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
 import type { Json } from '@/integrations/supabase/types';
 import type { HardSkillAssessmentWithStudent } from '@/types/hard-skills';
-import type { FiveDScores } from '@/types/models';
+import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
 import {
   MainAnalytics5dNarrativeBlock,
-  CompareSide5dNarrativeBlock,
   StudentList5dNarrativeBlock,
 } from '@/components/analytics/Analytics5dNarrativeBlocks';
+import { AnalyticsCompare5dCard } from '@/components/analytics/AnalyticsCompare5dCard';
 import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
 import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
 import { VideoEngagementPanel } from '@/components/features/analytics/VideoEngagementPanel';
@@ -39,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+<<<<<<< HEAD
 import {
   Select,
   SelectContent,
@@ -55,10 +55,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatFiveDScoreDisplay } from '@/lib/fiveDScores';
+=======
+>>>>>>> bugs_during_course
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
-import { analytics5dNarrativeKeys, useAnalytics5dNarrative } from '@/hooks/queries/useAnalytics5dNarrative';
 import {
   build5dNarrativeEvidence,
   trimToMax,
@@ -66,14 +67,18 @@ import {
 } from '@/lib/analytics5dEvidence';
 import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
 import {
+  filterReportableAssignments,
+  computeAnalyticsKpiDisplay,
   getAllowedAssignmentIds,
   getClassroomAverage5D,
+  getClassroomAverageQedMeasures,
   hasUnplacedAssignments,
   structureTypeToLabelKey,
   scopedStudentLatestScores,
+  scopedStudentLatestQedMeasures,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { isLessonBriefCacheReady, setLessonBriefClassNarrativeCache } from '@/lib/lessonBriefNarrativeCache';
+import { isLessonBriefCacheReady } from '@/lib/lessonBriefNarrativeCache';
 import { prepareLessonBriefNarratives } from '@/services/lessonBriefPreloadService';
 import { ensurePilotReportSnapshot } from '@/services/pilotReportCacheService';
 // `useClassroomAnalytics` and 5D LLM evidence (incl. optional teacher notes) are teacher-only; do
@@ -105,8 +110,6 @@ export const ClassroomAnalytics = ({
   const [selectedModule, setSelectedModule] = useState<AnalyticsModuleFilter>('all');
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
-  const [compareA, setCompareA] = useState<string>('');
-  const [compareB, setCompareB] = useState<string>('');
 
   const queryClient = useQueryClient();
   const { data, isLoading: loading } = useClassroomAnalytics(classroomId);
@@ -114,10 +117,13 @@ export const ClassroomAnalytics = ({
   const students = data?.students || [];
   const allStudents = data?.allStudents || [];
   const assignments = data?.assignments || [];
+  const reportableAssignments = useMemo(
+    () => filterReportableAssignments(assignments),
+    [assignments],
+  );
   const modules = data?.modules || [];
   const structureType = data?.structureType;
   const studentCount = data?.studentCount || 0;
-  const fullAssignmentCount = data?.assignmentCount || 0;
 
   const readUrlRef = useRef(false);
   useEffect(() => {
@@ -157,22 +163,15 @@ export const ClassroomAnalytics = ({
   const allModulesLabel = t('analytics.allSyllabusSections', {
     sectionType: t(`syllabus.${structKey}`),
   });
-  const showUnplaced = hasUnplacedAssignments(assignments);
-  const canCompareSections = modules.length + (showUnplaced ? 1 : 0) >= 2;
-
-  const labelForCompareModule = (id: string) => {
-    if (!id) return '';
-    if (id === 'unplaced') return t('analytics.unplacedAssignments');
-    return modules.find((m) => m.id === id)?.title ?? id;
-  };
+  const showUnplaced = hasUnplacedAssignments(reportableAssignments);
 
   const visibleAssignments = useMemo(() => {
-    if (selectedModule === 'all') return assignments;
+    if (selectedModule === 'all') return reportableAssignments;
     if (selectedModule === 'unplaced') {
-      return assignments.filter((a) => a.syllabusSectionId == null);
+      return reportableAssignments.filter((a) => a.syllabusSectionId == null);
     }
-    return assignments.filter((a) => a.syllabusSectionId === selectedModule);
-  }, [assignments, selectedModule]);
+    return reportableAssignments.filter((a) => a.syllabusSectionId === selectedModule);
+  }, [reportableAssignments, selectedModule]);
 
   useEffect(() => {
     if (selectedAssignment === 'all') return;
@@ -182,13 +181,12 @@ export const ClassroomAnalytics = ({
   }, [visibleAssignments, selectedAssignment]);
 
   const effectiveAssignmentIds = useMemo(
-    () => getAllowedAssignmentIds(assignments, selectedModule, selectedAssignment),
-    [assignments, selectedModule, selectedAssignment]
+    () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
+    [reportableAssignments, selectedModule, selectedAssignment]
   );
-  const effectiveSet = useMemo(() => new Set(effectiveAssignmentIds), [effectiveAssignmentIds]);
   const moduleScopeIds = useMemo(
-    () => getAllowedAssignmentIds(assignments, selectedModule, 'all'),
-    [assignments, selectedModule]
+    () => getAllowedAssignmentIds(reportableAssignments, selectedModule, 'all'),
+    [reportableAssignments, selectedModule]
   );
 
   const isNarrowingView = !(
@@ -226,89 +224,63 @@ export const ClassroomAnalytics = ({
     writeUrl(selectedModule, selectedAssignment, s);
   };
 
+  const snapshotRowsForAvg = data?.students as {
+    id: string;
+    snapshots: {
+      user_id: string;
+      submission_id: string;
+      scores: import('@/integrations/supabase/types').Json;
+      qed_measures?: import('@/integrations/supabase/types').Json | null;
+    }[];
+  }[] | undefined;
+
   const classAverage = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return null;
     return getClassroomAverage5D(
-      data.students as {
-        id: string;
-        snapshots: {
-          user_id: string;
-          submission_id: string;
-          scores: import('@/integrations/supabase/types').Json;
-        }[];
-      }[],
+      snapshotRowsForAvg ?? [],
       data.rawSubmissions,
-      data.assignments,
+      reportableAssignments,
       selectedModule,
       selectedAssignment,
       selectedStudent,
       data.rawSnapshots
     );
-  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds]);
+  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
 
-  const scopedFeedback = useMemo(() => {
-    if (!data) return { count: 0, activeStudents: 0 };
-    const rows = (data.rawFeedback || []).filter((f) => effectiveSet.has(f.assignment_id));
-    const stu = new Set(rows.map((r) => r.student_id));
-    return { count: rows.length, activeStudents: stu.size };
-  }, [data, effectiveSet]);
+  const classAverageQed = useMemo(() => {
+    if (!data || effectiveAssignmentIds.length === 0) return null;
+    return getClassroomAverageQedMeasures(
+      snapshotRowsForAvg ?? [],
+      data.rawSubmissions,
+      reportableAssignments,
+      selectedModule,
+      selectedAssignment,
+      selectedStudent,
+      data.rawSnapshots
+    );
+  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
 
-  const displayAssignmentCount = isNarrowingView
-    ? effectiveAssignmentIds.length
-    : fullAssignmentCount;
-  const displayTotalSubmissions = isNarrowingView
-    ? scopedFeedback.count
-    : students.reduce((s, st) => s + st.feedbackCount, 0);
-  const displayActiveStudents = isNarrowingView
-    ? scopedFeedback.activeStudents
-    : students.filter((s) => s.feedbackCount > 0).length;
-  const displayCompletion =
-    studentCount > 0 ? Math.round((displayActiveStudents / studentCount) * 100) : 0;
+  const kpiDisplay = useMemo(
+    () =>
+      computeAnalyticsKpiDisplay({
+        isNarrowingView,
+        allAssignments: assignments,
+        effectiveAssignmentIds,
+        rawFeedback: data?.rawFeedback || [],
+        enrolledStudentCount: studentCount,
+      }),
+    [isNarrowingView, assignments, effectiveAssignmentIds, data?.rawFeedback, studentCount],
+  );
+
+  const displayAssignmentCount = kpiDisplay.assignmentCount;
+  const displayTotalSubmissions = kpiDisplay.totalSubmissions;
+  const displayActiveStudents = kpiDisplay.activeStudents;
+  const displayCompletion = kpiDisplay.completionPercent;
   const displayAvgSubmissions =
     studentCount > 0 ? (displayTotalSubmissions / studentCount).toFixed(1) : '0';
   const displayEngagement = displayCompletion;
 
   const coveredStudents = displayActiveStudents;
-
-  const compareAvgA = useMemo(() => {
-    if (!data || !compareA) return null;
-    return getClassroomAverage5D(
-      data.students as {
-        id: string;
-        snapshots: {
-          user_id: string;
-          submission_id: string;
-          scores: import('@/integrations/supabase/types').Json;
-        }[];
-      }[],
-      data.rawSubmissions,
-      data.assignments,
-      compareA as AnalyticsModuleFilter,
-      'all',
-      'all',
-      data.rawSnapshots
-    );
-  }, [data, compareA]);
-
-  const compareAvgB = useMemo(() => {
-    if (!data || !compareB) return null;
-    return getClassroomAverage5D(
-      data.students as {
-        id: string;
-        snapshots: {
-          user_id: string;
-          submission_id: string;
-          scores: import('@/integrations/supabase/types').Json;
-        }[];
-      }[],
-      data.rawSubmissions,
-      data.assignments,
-      compareB as AnalyticsModuleFilter,
-      'all',
-      'all',
-      data.rawSnapshots
-    );
-  }, [data, compareB]);
 
   const exportFilterSummary = useMemo(() => {
     const mod =
@@ -385,96 +357,11 @@ export const ClassroomAnalytics = ({
     });
   }, [data, selectedStudent, effectiveAssignmentIds, sectionTitleResolver]);
 
-  const compare5dEvidenceA = useMemo(() => {
-    if (!data || !compareA) {
-      return { evidenceText: '', sourceCount: 0 };
-    }
-    const allowed = getAllowedAssignmentIds(assignments, compareA, 'all');
-    return build5dNarrativeEvidence({
-      context: 'module_compare',
-      allowedAssignmentIds: allowed,
-      compareModuleId: compareA === 'unplaced' ? 'unplaced' : compareA,
-      allStudents: data.students.map((s) => ({
-        id: s.id,
-        fullName: s.fullName,
-        narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-      })),
-      assignmentRefs: data.assignments,
-      sectionTitleResolver,
-    });
-  }, [data, compareA, assignments, sectionTitleResolver]);
-
-  const compare5dEvidenceB = useMemo(() => {
-    if (!data || !compareB) {
-      return { evidenceText: '', sourceCount: 0 };
-    }
-    const allowed = getAllowedAssignmentIds(assignments, compareB, 'all');
-    return build5dNarrativeEvidence({
-      context: 'module_compare',
-      allowedAssignmentIds: allowed,
-      compareModuleId: compareB === 'unplaced' ? 'unplaced' : compareB,
-      allStudents: data.students.map((s) => ({
-        id: s.id,
-        fullName: s.fullName,
-        narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-      })),
-      assignmentRefs: data.assignments,
-      sectionTitleResolver,
-    });
-  }, [data, compareB, assignments, sectionTitleResolver]);
-
-  const { data: mainClassNarrative } = useAnalytics5dNarrative(
-    classAverage && selectedStudent === 'all'
-      ? {
-          classroomId,
-          context: 'class_avg',
-          language: analyticsLanguage,
-          scores: classAverage,
-          filterSummary: exportFilterSummary,
-          evidenceText: main5dNarrativeEvidence.evidenceText || undefined,
-          evidenceSourceCount: main5dNarrativeEvidence.sourceCount,
-        }
-      : null,
-    {
-      enabled: !!classAverage && selectedStudent === 'all' && effectiveAssignmentIds.length > 0,
-      narrativeId: main5dNarrativeId,
-    },
-  );
-
-  useEffect(() => {
-    if (
-      !classAverage ||
-      selectedStudent !== 'all' ||
-      !mainClassNarrative ||
-      effectiveAssignmentIds.length === 0
-    ) {
-      return;
-    }
-
-    setLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment, {
-      classAverage,
-      narrative: mainClassNarrative,
-      evidenceSourceCount: main5dNarrativeEvidence.sourceCount,
-      filterSummary: exportFilterSummary,
-      cachedAt: Date.now(),
-    });
-  }, [
-    classAverage,
-    selectedStudent,
-    mainClassNarrative,
-    effectiveAssignmentIds.length,
-    classroomId,
-    selectedModule,
-    selectedAssignment,
-    main5dNarrativeEvidence.sourceCount,
-    exportFilterSummary,
-  ]);
-
   const studentList5dEvidenceById = useMemo(() => {
     if (!data) {
       return new Map<string, { evidenceText: string; sourceCount: number }>();
     }
-    const allowed = getAllowedAssignmentIds(assignments, selectedModule, 'all');
+    const allowed = getAllowedAssignmentIds(reportableAssignments, selectedModule, 'all');
     const m = new Map<string, { evidenceText: string; sourceCount: number }>();
     const allStudentsNarr = data.students.map((st) => ({
       id: st.id,
@@ -496,19 +383,6 @@ export const ClassroomAnalytics = ({
     }
     return m;
   }, [data, assignments, selectedModule, sectionTitleResolver]);
-
-  const compareFilterSummary = useMemo(() => {
-    if (!compareA || !compareB) return exportFilterSummary;
-    const a =
-      compareA === 'unplaced'
-        ? t('analytics.unplacedAssignments')
-        : (modules.find((m) => m.id === compareA)?.title ?? compareA);
-    const b =
-      compareB === 'unplaced'
-        ? t('analytics.unplacedAssignments')
-        : (modules.find((m) => m.id === compareB)?.title ?? compareB);
-    return t('analytics.compareNarrativeScope', { a, b, filters: exportFilterSummary });
-  }, [compareA, compareB, exportFilterSummary, t, modules]);
 
   const perStudentForExport = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return [];
@@ -634,9 +508,15 @@ export const ClassroomAnalytics = ({
     if (selectedModule === 'all') {
       return students;
     }
-    const scopeIds = getAllowedAssignmentIds(assignments, selectedModule, 'all');
+    const scopeIds = getAllowedAssignmentIds(reportableAssignments, selectedModule, 'all');
     if (scopeIds.length === 0) {
-      return students.map((s) => ({ ...s, latestScores: null, feedbackCount: 0, hardSkills: [] }));
+      return students.map((s) => ({
+        ...s,
+        latestScores: null,
+        latestQedMeasures: null,
+        feedbackCount: 0,
+        hardSkills: [],
+      }));
     }
     const allow = new Set(scopeIds);
     return students.map((s) => {
@@ -646,12 +526,16 @@ export const ClassroomAnalytics = ({
       const latest = data
         ? scopedStudentLatestScores(s.snapshots, data.rawSubmissions, scopeIds)
         : null;
+      const latestQed = data
+        ? scopedStudentLatestQedMeasures(s.snapshots, data.rawSubmissions, scopeIds)
+        : null;
       const hardFiltered =
         s.hardSkills?.filter((h) => h.assignment_id && allow.has(h.assignment_id as string)) || [];
       return {
         ...s,
         feedbackCount: fb.length,
         latestScores: latest,
+        latestQedMeasures: latestQed,
         hardSkills: hardFiltered,
       };
     });
@@ -899,6 +783,7 @@ export const ClassroomAnalytics = ({
         </p>
       </div>
 
+<<<<<<< HEAD
       {canCompareSections ? (
         <Card
           className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
@@ -1087,6 +972,27 @@ export const ClassroomAnalytics = ({
             ) : null}
           </CardContent>
         </Card>
+=======
+      {data ? (
+        <AnalyticsCompare5dCard
+          classroomId={classroomId}
+          modules={modules}
+          assignments={assignments}
+          students={data.students.map((s) => ({
+            id: s.id,
+            fullName: s.fullName,
+            snapshots: s.snapshots,
+            narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows,
+          }))}
+          showUnplaced={showUnplaced}
+          structKey={structKey}
+          analyticsLanguage={analyticsLanguage}
+          isRTL={isRTL}
+          rawSubmissions={data.rawSubmissions}
+          rawSnapshots={data.rawSnapshots}
+          sectionTitleResolver={sectionTitleResolver}
+        />
+>>>>>>> bugs_during_course
       ) : null}
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -1128,6 +1034,7 @@ export const ClassroomAnalytics = ({
                   <MainAnalytics5dNarrativeBlock
                     classroomId={classroomId}
                     classAverage={classAverage}
+                    classAverageQed={classAverageQed}
                     filterSummary={exportFilterSummary}
                     language={analyticsLanguage}
                     selectedStudent={selectedStudent}
@@ -1252,6 +1159,10 @@ export const ClassroomAnalytics = ({
                                   connection: DEFAULT_SCORE,
                                   action: DEFAULT_SCORE,
                                 }) as FiveDScores
+                              }
+                              qedMeasures={
+                                (student as { latestQedMeasures?: FiveDQedMeasures | null })
+                                  .latestQedMeasures ?? null
                               }
                               filterSummary={exportFilterSummary}
                               language={analyticsLanguage}
@@ -1443,7 +1354,7 @@ export const ClassroomAnalytics = ({
                           <span
                             className={`text-sm font-medium text-muted-foreground capitalize ${isRTL ? 'text-right' : 'text-left'}`}
                           >
-                            {t(`submissionDetail.dimensions.${dimension}`)}
+                            {t(`dimensions.${dimension}.label`)}
                           </span>
                           <div className="flex items-center gap-3">
                             <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">

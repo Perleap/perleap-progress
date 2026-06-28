@@ -58,6 +58,7 @@ async function insertSubmissionRow(
         student_id: studentId,
         attempt_number: attemptNumber,
         status: SUBMISSION_STATUS.IN_PROGRESS as any,
+        started_at: new Date().toISOString(),
         ...(opts?.isTeacherAttempt ? { is_teacher_attempt: true } : {}),
       },
     ])
@@ -440,7 +441,198 @@ export const getAssignmentConversationMessages = async (
   }
 };
 
+const BULK_QUERY_CHUNK_SIZE = 200;
+
+function chunkIds<T>(ids: T[], size = BULK_QUERY_CHUNK_SIZE): T[][] {
+  if (ids.length === 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export type ClassroomSubmissionForWorkExport = {
+  id: string;
+  student_id: string;
+  student_name: string;
+  assignment_id: string;
+  assignment_title: string;
+  assignment_type: string;
+  syllabus_section_id: string | null;
+  status: string;
+  submitted_at: string;
+  attempt_number: number;
+  text_body: string | null;
+  file_url: string | null;
+  file_urls: string[] | null;
+  artifact_transcript: string | null;
+};
+
+/**
+ * Submissions in a classroom with work fields needed for bulk student-work export.
+ */
+export const getClassroomSubmissionsForWorkExport = async (
+  classroomId: string,
+): Promise<{ data: ClassroomSubmissionForWorkExport[] | null; error: ApiError | null }> => {
+  try {
+    const { data: assignments, error: assignError } = await supabase
+      .from('assignments')
+      .select('id, title, type, syllabus_section_id')
+      .eq('classroom_id', classroomId);
+
+    if (assignError) throw assignError;
+    if (!assignments || assignments.length === 0) return { data: [], error: null };
+
+    const assignmentIds = assignments.map((a) => a.id);
+    const assignmentById = new Map(assignments.map((a) => [a.id, a]));
+
+    const { data: submissions, error: subError } = await supabase
+      .from('submissions')
+      .select(
+        'id, student_id, assignment_id, status, submitted_at, attempt_number, text_body, file_url, file_urls, artifact_transcript',
+      )
+      .in('assignment_id', assignmentIds)
+      .order('submitted_at', { ascending: false });
+
+    if (subError) throw subError;
+    if (!submissions || submissions.length === 0) return { data: [], error: null };
+
+    const profileByUserId = await resolveUserDisplayProfiles(
+      supabase,
+      submissions.map((s) => s.student_id),
+    );
+
+    const rows: ClassroomSubmissionForWorkExport[] = submissions.map((sub) => {
+      const assignment = assignmentById.get(sub.assignment_id);
+      const studentProfile = profileByUserId.get(sub.student_id);
+      return {
+        id: sub.id,
+        student_id: sub.student_id,
+        student_name: studentProfile?.full_name || 'Unknown',
+        assignment_id: sub.assignment_id,
+        assignment_title: assignment?.title || 'Unknown Assignment',
+        assignment_type: assignment?.type ?? 'unknown',
+        syllabus_section_id: assignment?.syllabus_section_id ?? null,
+        status: sub.status,
+        submitted_at: sub.submitted_at,
+        attempt_number: sub.attempt_number,
+        text_body: sub.text_body ?? null,
+        file_url: sub.file_url ?? null,
+        file_urls: sub.file_urls ?? null,
+        artifact_transcript: sub.artifact_transcript ?? null,
+      };
+    });
+
+    return { data: rows, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Bulk-load chat messages for many submissions (teacher RLS applies).
+ */
+export const getBulkAssignmentConversationMessages = async (
+  submissionIds: string[],
+): Promise<{ data: Map<string, Message[]> | null; error: ApiError | null }> => {
+  if (submissionIds.length === 0) {
+    return { data: new Map(), error: null };
+  }
+
+  try {
+    const map = new Map<string, Message[]>();
+
+    for (const chunk of chunkIds(submissionIds)) {
+      const { data, error } = await supabase
+        .from('assignment_conversations')
+        .select('submission_id, messages')
+        .in('submission_id', chunk);
+
+      if (error) {
+        return { data: null, error: handleSupabaseError(error) };
+      }
+
+      for (const row of data ?? []) {
+        if (!row.messages || !Array.isArray(row.messages) || row.messages.length === 0) continue;
+        const raw = row.messages as unknown as Message[];
+        map.set(row.submission_id, rehydrateMessages(raw));
+      }
+    }
+
+    return { data: map, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+export type BulkTestWorkData = {
+  questionsByAssignmentId: Map<string, Record<string, unknown>[]>;
+  responsesBySubmissionId: Map<string, Record<string, unknown>[]>;
+};
+
+/**
+ * Bulk-load test questions and responses for classroom work export.
+ */
+export const getBulkTestWorkData = async (
+  assignmentIds: string[],
+  submissionIds: string[],
+): Promise<{ data: BulkTestWorkData | null; error: ApiError | null }> => {
+  const questionsByAssignmentId = new Map<string, Record<string, unknown>[]>();
+  const responsesBySubmissionId = new Map<string, Record<string, unknown>[]>();
+
+  if (assignmentIds.length === 0 && submissionIds.length === 0) {
+    return { data: { questionsByAssignmentId, responsesBySubmissionId }, error: null };
+  }
+
+  try {
+    for (const chunk of chunkIds(assignmentIds)) {
+      const { data, error } = await supabase
+        .from('test_questions')
+        .select('*')
+        .in('assignment_id', chunk)
+        .order('order_index', { ascending: true });
+
+      if (error) {
+        return { data: null, error: handleSupabaseError(error) };
+      }
+
+      for (const row of data ?? []) {
+        const assignmentId = row.assignment_id;
+        const list = questionsByAssignmentId.get(assignmentId) ?? [];
+        list.push(row as Record<string, unknown>);
+        questionsByAssignmentId.set(assignmentId, list);
+      }
+    }
+
+    for (const chunk of chunkIds(submissionIds)) {
+      const { data, error } = await supabase
+        .from('test_responses')
+        .select('*')
+        .in('submission_id', chunk);
+
+      if (error) {
+        return { data: null, error: handleSupabaseError(error) };
+      }
+
+      for (const row of data ?? []) {
+        const submissionId = row.submission_id;
+        const list = responsesBySubmissionId.get(submissionId) ?? [];
+        list.push(row as Record<string, unknown>);
+        responsesBySubmissionId.set(submissionId, list);
+      }
+    }
+
+    return { data: { questionsByAssignmentId, responsesBySubmissionId }, error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
 export type AssignmentChatSentenceFlag = Database['public']['Tables']['assignment_chat_sentence_flags']['Row'];
+
+export type AssignmentClipboardEvent =
+  Database['public']['Tables']['assignment_clipboard_events']['Row'];
 
 export type OpikTraceIds = Record<string, string>;
 
@@ -459,6 +651,28 @@ export const getAssignmentChatSentenceFlags = async (
   try {
     const { data, error } = await supabase
       .from('assignment_chat_sentence_flags')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      return { data: null, error: handleSupabaseError(error) };
+    }
+    return { data: data ?? [], error: null };
+  } catch (error) {
+    return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Copy/paste events recorded during student assignment work (teacher + student RLS).
+ */
+export const getAssignmentClipboardEvents = async (
+  submissionId: string,
+): Promise<{ data: AssignmentClipboardEvent[] | null; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('assignment_clipboard_events')
       .select('*')
       .eq('submission_id', submissionId)
       .order('created_at', { ascending: true });
@@ -597,6 +811,10 @@ export const getEnrichedClassroomSubmissions = async (
       .in('submission_id', submissionIds);
 
     const flagCountBySubmissionId = new Map<string, number>();
+    const clipboardActivityBySubmissionId = new Map<
+      string,
+      { hasCopy: boolean; hasPaste: boolean }
+    >();
     if (submissionIds.length > 0) {
       const { data: flagRows } = await supabase
         .from('assignment_chat_sentence_flags')
@@ -605,6 +823,21 @@ export const getEnrichedClassroomSubmissions = async (
       for (const row of flagRows ?? []) {
         const sid = row.submission_id;
         flagCountBySubmissionId.set(sid, (flagCountBySubmissionId.get(sid) ?? 0) + 1);
+      }
+
+      const { data: clipboardRows } = await supabase
+        .from('assignment_clipboard_events')
+        .select('submission_id, event_type')
+        .in('submission_id', submissionIds);
+      for (const row of clipboardRows ?? []) {
+        const sid = row.submission_id;
+        const current = clipboardActivityBySubmissionId.get(sid) ?? {
+          hasCopy: false,
+          hasPaste: false,
+        };
+        if (row.event_type === 'copy') current.hasCopy = true;
+        if (row.event_type === 'paste') current.hasPaste = true;
+        clipboardActivityBySubmissionId.set(sid, current);
       }
     }
 
@@ -629,6 +862,8 @@ export const getEnrichedClassroomSubmissions = async (
         teacher_feedback: fb?.teacher_feedback,
         conversation_context: [],
         chat_sentence_flag_count: flagCountBySubmissionId.get(sub.id) ?? 0,
+        clipboard_has_copy: clipboardActivityBySubmissionId.get(sub.id)?.hasCopy ?? false,
+        clipboard_has_paste: clipboardActivityBySubmissionId.get(sub.id)?.hasPaste ?? false,
       };
     });
 
@@ -1130,10 +1365,29 @@ export const completeSubmission = async (
   },
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
+    const submittedAt = new Date().toISOString();
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('submissions')
+      .select('started_at')
+      .eq('id', submissionId)
+      .maybeSingle();
+
+    if (fetchError) {
+      return { success: false, error: handleSupabaseError(fetchError) };
+    }
+
     const update: Database['public']['Tables']['submissions']['Update'] = {
       status: SUBMISSION_STATUS.COMPLETED,
-      submitted_at: new Date().toISOString(),
+      submitted_at: submittedAt,
     };
+
+    if (existing?.started_at) {
+      const startedMs = new Date(existing.started_at).getTime();
+      const submittedMs = new Date(submittedAt).getTime();
+      update.duration_seconds = Math.max(0, Math.round((submittedMs - startedMs) / 1000));
+    }
+
     if (options?.awaitingTeacherFeedbackRelease) {
       update.awaiting_teacher_feedback_release = true;
     }

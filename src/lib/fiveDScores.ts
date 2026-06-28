@@ -1,6 +1,6 @@
-import type { FiveDScores } from '@/types/models';
+import type { FiveDScores, FiveDDimensionKey } from '@/types/models';
 
-export const FIVE_D_DIMENSION_KEYS: (keyof FiveDScores)[] = [
+export const FIVE_D_DIMENSION_KEYS: FiveDDimensionKey[] = [
   'vision',
   'values',
   'thinking',
@@ -114,4 +114,37 @@ export function fiveDScoreForChart(
 ): number {
   const v = scores?.[key];
   return isFiveDScoreAssessed(v) ? v : 0;
+}
+
+/** Table/display formatting — null dimensions render as em dash. */
+export function formatFiveDScoreDisplay(
+  score: number | null | undefined,
+  decimals = 2,
+): string {
+  return typeof score === 'number' && !Number.isNaN(score) ? score.toFixed(decimals) : '—';
+}
+
+export function formatFiveDScoreDelta(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  decimals = 2,
+): string {
+  if (
+    typeof a !== 'number' ||
+    Number.isNaN(a) ||
+    typeof b !== 'number' ||
+    Number.isNaN(b)
+  ) {
+    return '—';
+  }
+  const d = b - a;
+  return `${d >= 0 ? '+' : ''}${d.toFixed(decimals)}`;
+}
+
+/** Stable cache-key fragment for FiveDScores (null dimensions serialize as "null"). */
+export function stableFiveDScoreKey(scores: FiveDScores): string {
+  return FIVE_D_DIMENSION_KEYS.map((k) => {
+    const v = scores[k];
+    return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(2) : 'null';
+  }).join(',');
 }

@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { rehydrateMessages } from '@/lib/conversationMessages';
 import { hasConversationCompleteMarker } from '@/lib/chatDisplay';
+import { areAllParsedTasksComplete, resolveAssignmentTutorText } from '@/lib/assignmentTasks';
 
 interface UseConversationResult {
   messages: Message[];
@@ -29,6 +30,8 @@ interface UseConversationParams {
   submissionId: string;
   /** Used only for local language detection (`getAssignmentLanguage`); never sent on the chat API. */
   assignmentInstructions: string;
+  /** Prefer over instructions when inferring task progress on reload. */
+  studentFacingTask?: string | null;
   assignmentId: string;
   priorSubmissionIds?: string[];
   /** When true, AI "conversation complete" does not lock the chat or drive assignment submission. */
@@ -49,6 +52,7 @@ interface UseConversationParams {
 export const useConversation = ({
   submissionId,
   assignmentInstructions,
+  studentFacingTask,
   assignmentId,
   priorSubmissionIds,
   companionMode = false,
@@ -176,7 +180,7 @@ export const useConversation = ({
     try {
       const { data, error: fetchError } = await supabase
         .from('assignment_conversations')
-        .select('messages')
+        .select('messages, completed_task_indexes')
         .eq('submission_id', submissionId)
         .maybeSingle();
 
@@ -187,6 +191,9 @@ export const useConversation = ({
       if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         const rawMessages = data.messages as unknown as Message[];
         const lastAssistantRaw = [...rawMessages].reverse().find((m) => m.role === 'assistant');
+        let markerDetected = false;
+        let semanticDetected = false;
+        let tasksComplete = false;
         if (lastAssistantRaw && !companionMode) {
           const upperContent = String(lastAssistantRaw.content).toUpperCase();
           const semanticPhrases = [
@@ -196,6 +203,7 @@ export const useConversation = ({
             'COMPLETED THE ASSIGNMENT',
             'FINISHED THE ASSIGNMENT',
             'YOU HAVE COMPLETED ALL',
+            'YOU COMPLETED ALL',
             'YOU\'VE COMPLETED ALL',
             'SUCCESSFULLY ANSWERED ALL',
             'ACTIVITY IS COMPLETE',
@@ -216,10 +224,11 @@ export const useConversation = ({
             'סיימת את המטלה',
             'סיימת את הפעילות',
           ];
-          if (
-            hasConversationCompleteMarker(String(lastAssistantRaw.content)) ||
-            semanticPhrases.some((phrase) => upperContent.includes(phrase))
-          ) {
+          markerDetected = hasConversationCompleteMarker(String(lastAssistantRaw.content));
+          semanticDetected = semanticPhrases.some((phrase) => upperContent.includes(phrase));
+          const tutorText = resolveAssignmentTutorText(assignmentInstructions, studentFacingTask);
+          tasksComplete = areAllParsedTasksComplete(tutorText, data.completed_task_indexes);
+          if (markerDetected || semanticDetected || tasksComplete) {
             setConversationEnded(true);
           }
         }
@@ -233,7 +242,7 @@ export const useConversation = ({
       setLoading(false);
       loadCompletedRef.current = true;
     }
-  }, [submissionId, companionMode]);
+  }, [submissionId, companionMode, assignmentInstructions, studentFacingTask]);
 
   const loadConversationRef = useRef(loadConversation);
   loadConversationRef.current = loadConversation;

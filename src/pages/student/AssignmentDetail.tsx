@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+=======
+import { useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+>>>>>>> bugs_during_course
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
@@ -40,6 +45,8 @@ import { PresentationSubmissionPage } from '@/components/features/assignment/Pre
 import { LangchainBuilderPage } from '@/components/features/assignment/LangchainBuilderPage';
 import { EssaySubmissionPage } from '@/components/features/assignment/EssaySubmissionPage';
 import { useNuanceTracking } from '@/hooks/useNuanceTracking';
+import { useAssignmentClipboardTracking } from '@/hooks/useAssignmentClipboardTracking';
+import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
 import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
 import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
@@ -51,7 +58,11 @@ import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
+<<<<<<< HEAD
 import { AssignmentTypeHelpHint } from '@/components/features/assignment/AssignmentTypeHelpHint';
+=======
+import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
+>>>>>>> bugs_during_course
 import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
@@ -83,12 +94,12 @@ const AssignmentDetail = () => {
   const queryClient = useQueryClient();
   const [retryLoading, setRetryLoading] = useState(false);
   const [referenceMaterialsOpen, setReferenceMaterialsOpen] = useState(false);
-  const [taskCardOpen, setTaskCardOpen] = useState(false);
   const [introWizardOpen, setIntroWizardOpen] = useState(false);
   const [assignmentIntroStorageTick, setAssignmentIntroStorageTick] = useState(0);
   const [taskUnderstandingStorageTick, setTaskUnderstandingStorageTick] = useState(0);
   const [companionScrollTick, setCompanionScrollTick] = useState(0);
   const companionChatAnchorRef = useRef<HTMLDivElement>(null);
+  const assignmentClipboardRootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isTeacherTry || !assignmentId || !user?.id) return;
@@ -532,6 +543,24 @@ const AssignmentDetail = () => {
     enabled: !!assignment && !!submission && !feedback && !isTeacherTry,
   });
 
+  const clipboardTracking = useAssignmentClipboardTracking({
+    studentId: user?.id,
+    assignmentId: assignmentId || undefined,
+    submissionId: submission?.id,
+    enabled: !!assignment && !!submission && !feedback && !isTeacherTry,
+  });
+
+  useEffect(() => {
+    const root = assignmentClipboardRootRef.current;
+    if (!root || !clipboardTracking) return;
+
+    const onCopy = () => {
+      clipboardTracking.handleWorkspaceCopy(root);
+    };
+    root.addEventListener('copy', onCopy);
+    return () => root.removeEventListener('copy', onCopy);
+  }, [clipboardTracking, submission?.id]);
+
   const handleAssignmentCompleted = useCallback(
     async (tone?: AssignmentCompletionTone) => {
       if (
@@ -733,6 +762,9 @@ const AssignmentDetail = () => {
             taskLoading={isStudentTaskLoading}
             onTypeStepComplete={handleTypeStepComplete}
             onTaskConfirm={handleTaskConfirm}
+            clipboardTracking={
+              submission && !feedback && !isTeacherTry ? clipboardTracking : undefined
+            }
           />
         ) : null}
         <div className="space-y-6 pb-8">
@@ -789,6 +821,7 @@ const AssignmentDetail = () => {
             </div>
           </div>
 
+<<<<<<< HEAD
           {showPageTaskCard ? (
             <Collapsible
               open={taskCardOpen}
@@ -840,6 +873,15 @@ const AssignmentDetail = () => {
                 )}
               </CollapsibleContent>
             </Collapsible>
+=======
+          <div ref={assignmentClipboardRootRef} className="space-y-6">
+          {assignment ? (
+            <StudentFacingTaskSection
+              assignmentType={assignment.type as DbAssignmentType}
+              taskText={resolvedStudentFacingTask || assignment.student_facing_task}
+              taskLoading={isStudentTaskLoading}
+            />
+>>>>>>> bugs_during_course
           ) : null}
 
           {unitOutlineMaterials.length > 0 ? (
@@ -867,13 +909,15 @@ const AssignmentDetail = () => {
                 />
               </CollapsibleTrigger>
               <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-1">
-                <ResourceViewer
-                  resources={unitOutlineMaterials}
-                  isRTL={isRTL}
-                  compact
-                  compactVariant="list"
-                  hideListHeader
-                />
+                <div {...clipboardZoneProps({ sourceKind: 'assignment_instructions' })}>
+                  <ResourceViewer
+                    resources={unitOutlineMaterials}
+                    isRTL={isRTL}
+                    compact
+                    compactVariant="list"
+                    hideListHeader
+                  />
+                </div>
               </CollapsibleContent>
             </Collapsible>
           ) : null}
@@ -919,8 +963,6 @@ const AssignmentDetail = () => {
           )}
 
           {!feedback && submission && (() => {
-            const MANUAL_EVAL_TYPES = ['project', 'presentation', 'langchain'];
-            const isManualEvalType = MANUAL_EVAL_TYPES.includes(assignment.type);
             const isCompleted = submission.status === 'completed';
 
             const flowContinueRow =
@@ -1013,17 +1055,25 @@ const AssignmentDetail = () => {
               );
             }
 
+<<<<<<< HEAD
             if (!isTeacherTry && isCompleted && !feedback && assignment.enable_ai_feedback === false) {
               const awaitingKey = isManualEvalType
                 ? `assignmentDetail.${assignment.type}.awaitingReview`
                 : 'assignmentDetail.success.completed';
               const CompletedIcon = isManualEvalType ? Clock : CheckCircle;
+=======
+            if (isCompleted && assignment.enable_ai_feedback === false && !feedback) {
+              const awaitingKey = `assignmentDetail.${assignment.type}.awaitingReview`;
+              const awaitingFallback = t('assignmentDetail.submittedAwaitingReview', {
+                defaultValue: 'Your activity has been submitted and is awaiting teacher review.',
+              });
+>>>>>>> bugs_during_course
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                     <CompletedIcon className="h-10 w-10 text-primary mb-4" />
                     <p className="text-sm font-medium text-primary">
-                      {t(awaitingKey)}
+                      {t(awaitingKey, { defaultValue: awaitingFallback })}
                     </p>
                     {flowContinueRow}
                   </CardContent>
@@ -1055,12 +1105,19 @@ const AssignmentDetail = () => {
             }
 
             const chatSharedProps = {
+              assignmentType: assignment.type as DbAssignmentType,
               studentFacingTask: resolvedStudentFacingTask || assignment.student_facing_task,
               taskLoading: isStudentTaskLoading,
               chatInitAllowed,
               initialGreetingMode,
               postExplainTutoring: storedTaskUnderstandingChoice === 'no',
             };
+
+            const wrapAssignmentWorkspace = (content: ReactNode) => (
+              <div className="space-y-6">
+                {content}
+              </div>
+            );
 
             const companionChat = (
               <AssignmentChatInterface
@@ -1073,6 +1130,7 @@ const AssignmentDetail = () => {
                 priorSubmissionIdsForContext={isTeacherTry ? undefined : chatPriorSubmissionIds}
                 onComplete={() => {}}
                 nuanceTracking={nuanceTracking}
+                clipboardTracking={clipboardTracking}
                 variant="companion"
                 {...chatSharedProps}
               />
@@ -1089,8 +1147,8 @@ const AssignmentDetail = () => {
 
             switch (assignment.type) {
               case 'test':
-                return (
-                  <div className="space-y-6">
+                return wrapAssignmentWorkspace(
+                  <>
                     <TestTakingPage
                       assignmentId={assignment.id}
                       assignmentInstructions={assignment.instructions}
@@ -1098,14 +1156,16 @@ const AssignmentDetail = () => {
                       enableAiFeedback={assignment.enable_ai_feedback !== false}
                       showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
                       isTeacherTry={isTeacherTry}
+                      nuanceTracking={nuanceTracking}
+                      clipboardTracking={clipboardTracking}
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
-                  </div>
+                  </>,
                 );
               case 'text_essay':
-                return (
-                  <div className="space-y-6">
+                return wrapAssignmentWorkspace(
+                  <>
                     <EssaySubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
@@ -1114,14 +1174,15 @@ const AssignmentDetail = () => {
                       showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
                       isTeacherTry={isTeacherTry}
                       initialText={submission.text_body}
+                      clipboardTracking={clipboardTracking}
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
-                  </div>
+                  </>,
                 );
               case 'project':
-                return (
-                  <div className="space-y-6">
+                return wrapAssignmentWorkspace(
+                  <>
                     <ProjectSubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
@@ -1132,11 +1193,11 @@ const AssignmentDetail = () => {
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
-                  </div>
+                  </>,
                 );
               case 'presentation':
-                return (
-                  <div className="space-y-6">
+                return wrapAssignmentWorkspace(
+                  <>
                     <PresentationSubmissionPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
@@ -1147,11 +1208,11 @@ const AssignmentDetail = () => {
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
-                  </div>
+                  </>,
                 );
               case 'langchain':
-                return (
-                  <div className="space-y-6">
+                return wrapAssignmentWorkspace(
+                  <>
                     <LangchainBuilderPage
                       assignmentId={assignment.id}
                       submissionId={submission.id}
@@ -1160,13 +1221,15 @@ const AssignmentDetail = () => {
                       showAiFeedbackToStudents={assignment.auto_publish_ai_feedback !== false}
                       isTeacherTry={isTeacherTry}
                       initialPipelineText={submission.text_body}
+                      nuanceTracking={nuanceTracking}
+                      clipboardTracking={clipboardTracking}
                       onComplete={handleAssignmentCompleted}
                     />
                     {companionBlock}
-                  </div>
+                  </>,
                 );
               default:
-                return (
+                return wrapAssignmentWorkspace(
                   <AssignmentChatInterface
                     assignmentId={assignment.id}
                     assignmentTitle={assignment.title}
@@ -1177,12 +1240,15 @@ const AssignmentDetail = () => {
                     priorSubmissionIdsForContext={isTeacherTry ? undefined : chatPriorSubmissionIds}
                     onComplete={handleActivityComplete}
                     nuanceTracking={nuanceTracking}
+                    clipboardTracking={clipboardTracking}
                     variant="primary"
                     {...chatSharedProps}
-                  />
+                  />,
                 );
             }
           })()}
+
+          </div>
 
           {feedback && (
             <Card className="shadow-sm">

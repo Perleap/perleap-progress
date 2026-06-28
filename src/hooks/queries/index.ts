@@ -43,6 +43,7 @@ export {
   useFullSubmissionDetails,
   useTeacherConversationMessages,
   useTeacherChatSentenceFlags,
+  useTeacherClipboardEvents,
   useSubmissionTeacherPrivateNoteEntries,
   useCreateSubmissionTeacherPrivateNoteEntry,
   useTeacherResetStudentAssignmentProgress,
@@ -135,7 +136,8 @@ export type {
 export {
   videoWatchKeys,
   useVideoWatchAnalytics,
-  formatWatchPosition,
+  getVideoWatchCompletionPct,
+  formatWatchPercent,
 } from './useVideoWatchQueries';
 
 export type {

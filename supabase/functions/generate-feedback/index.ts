@@ -20,12 +20,10 @@ import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 import { notifyStudentFeedbackReceived } from '../_shared/notifyStudentFeedbackReceived.ts';
-import {
-  domainForSkillComponent,
-  parseHardSkillsFromDb,
-} from '../_shared/hardSkillsFormat.ts';
+import { parseHardSkillsFromDb } from '../_shared/hardSkillsFormat.ts';
 import { buildStudentWorkContext } from '../_shared/evaluationContext.ts';
 import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
+import { persistAiEvaluation } from '../_shared/evaluationPersist.ts';
 
 declare const EdgeRuntime: {
   waitUntil(promise: Promise<unknown>): void;
@@ -200,7 +198,7 @@ async function runFeedbackPipeline(
     },
   );
 
-  const { studentFeedback, teacherFeedback, scores, scoreExplanations, hardSkillsAssessment } =
+  const { studentFeedback, teacherFeedback, scores, scoreExplanations, qedMeasures, hardSkillsAssessment } =
     evaluation;
 
   logInfo(`AI calls completed in ${Date.now() - aiStartTime}ms`);
@@ -209,64 +207,27 @@ async function runFeedbackPipeline(
   const dbStartTime = Date.now();
   const visibleToStudent = autoPublishAiFeedback;
 
-  const [snapshotResult, feedbackSaveResult] = await Promise.all([
-    supabase.from('five_d_snapshots').insert({
-      user_id: studentId,
-      scores,
-      score_explanations: scoreExplanations,
-      source: 'assignment',
-      submission_id: submissionId,
-      classroom_id: classroomId,
-    }),
-    supabase.from('assignment_feedback').insert({
-      submission_id: submissionId,
-      student_id: studentId,
-      assignment_id: assignmentId,
-      student_feedback: studentFeedback,
-      teacher_feedback: teacherFeedback,
-      conversation_context: workContext.conversationMessages,
-      visible_to_student: visibleToStudent,
-      opik_trace_ids: {
-        feedback_main: feedbackTraceId,
-        hard_skills: hardSkillsTraceId,
-      },
-    }),
-    hardSkillsAssessment.length > 0
-      ? (async () => {
-          try {
-            const assessmentRecords = hardSkillsAssessment.map((assessment) => ({
-              submission_id: submissionId,
-              assignment_id: assignmentId,
-              student_id: studentId,
-              domain: domainForSkillComponent(
-                skillPairs,
-                assessment.skill_component,
-                assignmentData?.hard_skill_domain,
-              ),
-              skill_component: assessment.skill_component,
-              current_level_percent: assessment.current_level_percent,
-              proficiency_description: assessment.proficiency_description,
-              actionable_challenge: assessment.actionable_challenge,
-            }));
-            const { error: err } = await supabase
-              .from('hard_skill_assessments')
-              .insert(assessmentRecords);
-            if (err) logError('Error saving hard skills', err);
-          } catch (e) {
-            logError('Error processing hard skills', e);
-          }
-        })()
-      : Promise.resolve({ error: null }),
-  ]);
-
-  if (snapshotResult.error) {
-    logError('Error saving 5D snapshot', snapshotResult.error);
-    throw snapshotResult.error;
-  }
-  if (feedbackSaveResult.error) {
-    logError('Error saving assignment feedback', feedbackSaveResult.error);
-    throw feedbackSaveResult.error;
-  }
+  await persistAiEvaluation(supabase, {
+    submissionId,
+    studentId,
+    assignmentId,
+    classroomId,
+    scores,
+    scoreExplanations,
+    qedMeasures,
+    studentFeedback,
+    teacherFeedback,
+    hardSkillsAssessment,
+    skillPairs,
+    hardSkillDomain: assignmentData?.hard_skill_domain,
+    evaluationSource: 'ai_student_work',
+    conversationContext: workContext.conversationMessages,
+    visibleToStudent,
+    opikTraceIds: {
+      feedback_main: feedbackTraceId,
+      hard_skills: hardSkillsTraceId,
+    },
+  });
 
   const { error: submissionFlagError } = await supabase
     .from('submissions')

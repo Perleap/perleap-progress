@@ -49,7 +49,7 @@ import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { CourseOutlineSection, CoursePackageCard } from '@/components/features/syllabus';
-import { pilotReportKeys } from '@/hooks/queries';
+import { analyticsKeys, pilotReportKeys } from '@/hooks/queries';
 import { invalidatePilotReportSnapshots } from '@/services/pilotReportCacheService';
 import {
   classroomKeys,
@@ -138,6 +138,12 @@ const ClassroomDetail = () => {
       await invalidatePilotReportSnapshots(id);
       await queryClient.invalidateQueries({
         queryKey: [...pilotReportKeys.all, 'snapshot', id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: analyticsKeys.classroom(id),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['evaluation-refresh-batch', id],
       });
     }
     await refetchClassroom();

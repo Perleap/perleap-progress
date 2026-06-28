@@ -6,9 +6,10 @@ import { FiveDChart } from './FiveDChart';
 import { LoadingSpinner } from './common/LoadingSpinner';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import type { FiveDScores, FiveDSnapshot } from '@/types/models';
+import type { FiveDScores, FiveDSnapshot, FiveDQedMeasures } from '@/types/models';
 import { selectBestSubmissionIdForAggregate } from '@/lib/bestSubmission';
 import { averageFiveDScoresAcrossSnapshots } from '@/lib/fiveDScores';
+import { averageQedMeasuresAcrossSnapshots, parseQedMeasures } from '@/lib/qedMeasures';
 
 interface StudentAnalyticsProps {
   studentId: string;
@@ -32,14 +33,16 @@ export function StudentAnalytics({
   const [viewMode, setViewMode] = useState<'average' | 'perSubmission'>('perSubmission');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(currentSubmissionId || '');
   const [submissions, setSubmissions] = useState<SubmissionInfo[]>([]);
-  const [averageScores, setAverageScores] = useState<Pick<
-    FiveDSnapshot,
-    'scores' | 'score_explanations'
-  > | null>(null);
-  const [perSubmissionScores, setPerSubmissionScores] = useState<Pick<
-    FiveDSnapshot,
-    'scores' | 'score_explanations'
-  > | null>(null);
+  const [averageScores, setAverageScores] = useState<{
+    scores: FiveDScores;
+    score_explanations: FiveDSnapshot['score_explanations'];
+    qed_measures: FiveDQedMeasures | null;
+  } | null>(null);
+  const [perSubmissionScores, setPerSubmissionScores] = useState<{
+    scores: FiveDScores;
+    score_explanations: FiveDSnapshot['score_explanations'];
+    qed_measures: FiveDQedMeasures | null;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -91,7 +94,7 @@ export function StudentAnalytics({
         const submissionIds = rows.map((s) => s.id);
         const { data: snapshotsData } = await supabase
           .from('five_d_snapshots')
-          .select('submission_id, scores, score_explanations')
+          .select('submission_id, scores, score_explanations, qed_measures')
           .eq('user_id', studentId)
           .in('submission_id', submissionIds);
 
@@ -135,9 +138,11 @@ export function StudentAnalytics({
           );
 
           if (avgScores) {
+            const avgQed = averageQedMeasuresAcrossSnapshots(bestForAverage);
             setAverageScores({
               scores: avgScores,
               score_explanations: null,
+              qed_measures: avgQed,
             });
           }
         }
@@ -155,7 +160,7 @@ export function StudentAnalytics({
     try {
       const { data } = await supabase
         .from('five_d_snapshots')
-        .select('scores, score_explanations')
+        .select('scores, score_explanations, qed_measures')
         .eq('user_id', studentId)
         .eq('submission_id', selectedSubmissionId)
         .order('created_at', { ascending: false })
@@ -167,6 +172,7 @@ export function StudentAnalytics({
           ? {
               scores: data.scores as unknown as FiveDScores,
               score_explanations: data.score_explanations as unknown,
+              qed_measures: parseQedMeasures(data.qed_measures),
             }
           : null,
       );
@@ -219,6 +225,7 @@ export function StudentAnalytics({
                 <div className="text-sm text-muted-foreground">{t('studentAnalytics.scoresFromSubmission')}</div>
                 <FiveDChart
                   scores={perSubmissionScores.scores}
+                  qedMeasures={perSubmissionScores.qed_measures}
                   explanations={perSubmissionScores.score_explanations}
                 />
               </div>
@@ -236,7 +243,11 @@ export function StudentAnalytics({
                   Average across all {submissions.length} submission
                   {submissions.length !== 1 ? 's' : ''} in this classroom
                 </div>
-                <FiveDChart scores={averageScores.scores} explanations={null} />
+                <FiveDChart
+                  scores={averageScores.scores}
+                  qedMeasures={averageScores.qed_measures}
+                  explanations={null}
+                />
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">No score data available</div>

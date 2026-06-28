@@ -53,7 +53,7 @@ import {
   useReorderSectionResources,
 } from '@/hooks/queries';
 import type { SectionResource } from '@/types/syllabus';
-import { formatResourceFileSize, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
+import { formatResourceFileSize, getMaxResourceFileSizeLabel, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
 import { Progress, ProgressValue } from '@/components/ui/progress';
 
 interface ResourceUploaderProps {
@@ -249,7 +249,10 @@ export const ResourceUploader = ({
 
       for (const file of fileArray) {
         if (!isResourceFileWithinSizeLimit(file)) {
-          toast.error(t('syllabus.resources.fileTooLarge', { name: file.name }));
+          toast.error(t('syllabus.resources.fileTooLarge', {
+            name: file.name,
+            maxSize: getMaxResourceFileSizeLabel(),
+          }));
           continue;
         }
 

@@ -1,4 +1,25 @@
-project_id = "zwhnpteterkrunfevixs"
+project_id = "otjfoeyqiuerrgrdtgqx"
+
+# Global storage upload cap (must be >= bucket limits). Push with: supabase config push --project-ref <ref>
+[storage]
+file_size_limit = "1GiB"
+
+[storage.buckets.syllabus-resources]
+public = true
+file_size_limit = "1GiB"
+
+# Auth settings for config push — staging project (otjfoeyqiuerrgrdtgqx)
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://staging.perleap.ai/**", "https://staging.perleap.ai"]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
 
 [functions.perleap-chat]
 verify_jwt = true
@@ -14,6 +35,17 @@ verify_jwt = true
 
 [functions.regenerate-scores]
 verify_jwt = false
+
+[functions.refresh-class-evaluations]
+verify_jwt = true
+# Async job: compute all students, commit at end. REFRESH_EVAL_CONCURRENCY (default 4, max 5).
+# ~150s edge limit may still apply to very large classes.
+
+[functions.cancel-evaluation-refresh]
+verify_jwt = true
+
+[functions.undo-evaluation-refresh]
+verify_jwt = true
 
 [functions.rephrase-text]
 verify_jwt = false

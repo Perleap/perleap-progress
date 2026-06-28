@@ -46,6 +46,7 @@ import {
 import { NodePalette } from './NodePalette';
 import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode, DatabaseNode } from './nodes';
 import { cn } from '@/lib/utils';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 
 const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'> = {
   inputNode: 'input',
@@ -78,7 +79,10 @@ export interface LangchainEditorProps {
   initialEdges?: Edge[];
   /** When set, notifies when the graph node count changes (add/remove nodes). */
   onNodeCountChange?: (count: number) => void;
+  /** Fired on meaningful graph edits (not selection-only). */
+  onUserActivity?: () => void;
   readOnly?: boolean;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 }
 
 interface LangchainEditorInnerProps extends LangchainEditorProps {
@@ -90,6 +94,8 @@ const LangchainEditorInner = ({
   initialEdges,
   readOnly,
   onNodeCountChange,
+  onUserActivity,
+  clipboardTracking,
   editorRef,
 }: LangchainEditorInnerProps) => {
   const { i18n, t } = useTranslation();
@@ -135,11 +141,28 @@ const LangchainEditorInner = ({
     [initialNodes?.length]
   );
 
+  const notifyUserActivity = useCallback(() => {
+    onUserActivity?.();
+  }, [onUserActivity]);
+
+  const isMeaningfulNodeChange = (changes: NodeChange[]) =>
+    changes.some(
+      (c) =>
+        c.type === 'add' ||
+        c.type === 'remove' ||
+        c.type === 'replace' ||
+        (c.type === 'position' && c.dragging === false),
+    );
+
+  const isMeaningfulEdgeChange = (changes: EdgeChange[]) =>
+    changes.some((c) => c.type === 'add' || c.type === 'remove' || c.type === 'replace');
+
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge({ ...params, type: 'deletable', animated: true }, eds));
+      notifyUserActivity();
     },
-    [setEdges]
+    [setEdges, notifyUserActivity],
   );
 
   const handleNodesChange = useCallback(
@@ -148,6 +171,10 @@ const LangchainEditorInner = ({
         ? changes.filter((c) => c.type === 'select' || c.type === 'dimensions')
         : changes;
       if (nextChanges.length === 0) return;
+
+      if (!readOnly && isMeaningfulNodeChange(nextChanges)) {
+        notifyUserActivity();
+      }
 
       const removedIds = new Set(
         nextChanges.filter((c) => c.type === 'remove').map((c) => c.id)
@@ -158,12 +185,16 @@ const LangchainEditorInner = ({
 
       setNodes((nds) => applyNodeChanges(nextChanges, nds));
     },
-    [readOnly, selectedNodeId, setNodes]
+    [readOnly, selectedNodeId, setNodes, notifyUserActivity],
   );
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       if (changes.length === 0) return;
+
+      if (!readOnly && isMeaningfulEdgeChange(changes)) {
+        notifyUserActivity();
+      }
 
       const removedIds = new Set(
         changes.filter((c) => c.type === 'remove').map((c) => c.id)
@@ -174,7 +205,7 @@ const LangchainEditorInner = ({
 
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
-    [selectedEdgeId, setEdges]
+    [selectedEdgeId, setEdges, readOnly, notifyUserActivity],
   );
 
   const onSelectionChange = useCallback(({ nodes: selNodes, edges: selEdges }: OnSelectionChangeParams) => {
@@ -214,8 +245,9 @@ const LangchainEditorInner = ({
             : n
         )
       );
+      notifyUserActivity();
     },
-    [readOnly, setNodes]
+    [readOnly, setNodes, notifyUserActivity],
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -262,8 +294,13 @@ const LangchainEditorInner = ({
 
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(newNode.id);
+      notifyUserActivity();
     },
+<<<<<<< HEAD
     [setNodes, t]
+=======
+    [setNodes, notifyUserActivity]
+>>>>>>> bugs_during_course
   );
 
   const editorContextValue = useMemo(
@@ -338,6 +375,7 @@ const LangchainEditorInner = ({
               isRTL={isRTL}
               onPatchData={readOnly ? () => {} : patchNodeData}
               onToggleCollapse={readOnly ? undefined : () => setInspectorOpen(false)}
+              clipboardTracking={clipboardTracking}
               className="min-w-0 min-h-0 flex-1 overflow-hidden"
             />
           ) : (

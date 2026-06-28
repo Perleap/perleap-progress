@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { hashEvidenceKey } from '@/lib/analytics5dEvidence';
+import { stableFiveDScoreKey } from '@/lib/fiveDScores';
 import {
   invokeExplainAnalytics5d,
   type Analytics5dNarrativeContext,
   type Analytics5dNarrativeInput,
   type Analytics5dNarrativeResult,
 } from '@/services/analytics5dExplainService';
+<<<<<<< HEAD
 import type { FiveDScores } from '@/types/models';
 import { stableFiveDScoresKey } from '@/lib/fiveDScores';
 
@@ -15,6 +17,11 @@ function stableScoreKey(s: FiveDScores): string {
   return stableFiveDScoresKey(s);
 }
 
+=======
+
+export type { Analytics5dNarrativeContext, Analytics5dNarrativeInput, Analytics5dNarrativeResult };
+
+>>>>>>> bugs_during_course
 export const analytics5dNarrativeKeys = {
   all: ['analytics5dNarrative'] as const,
   one: (input: Analytics5dNarrativeInput & { narrativeId: string }) =>
@@ -28,8 +35,8 @@ export const analytics5dNarrativeKeys = {
       input.studentName ?? '',
       input.compareLabelA ?? '',
       input.compareLabelB ?? '',
-      stableScoreKey(input.scores),
-      input.peerScores ? stableScoreKey(input.peerScores) : '',
+      stableFiveDScoreKey(input.scores),
+      input.peerScores ? stableFiveDScoreKey(input.peerScores) : '',
       input.brief ? 'brief' : 'full',
       input.evidenceText != null && input.evidenceText !== ''
         ? hashEvidenceKey(input.evidenceText)

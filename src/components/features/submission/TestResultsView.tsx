@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, XCircle, CircleDot, AlignLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useTestQuestions, useTestResponses } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
@@ -14,9 +16,10 @@ import {
 interface TestResultsViewProps {
   assignmentId: string;
   submissionId: string;
+  headerAction?: ReactNode;
 }
 
-export function TestResultsView({ assignmentId, submissionId }: TestResultsViewProps) {
+export function TestResultsView({ assignmentId, submissionId, headerAction }: TestResultsViewProps) {
   const { t } = useTranslation();
   const { data: questions, isLoading: loadingQuestions } = useTestQuestions(assignmentId);
   const { data: responses, isLoading: loadingResponses } = useTestResponses(submissionId);
@@ -29,18 +32,75 @@ export function TestResultsView({ assignmentId, submissionId }: TestResultsViewP
     );
   }
 
+  const responseList = responses ?? [];
+
   if (!questions || questions.length === 0) {
+    if (responseList.length > 0) {
+      return (
+        <div className="space-y-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {t('submissionDetail.testResults.noQuestionsWithResponsesWarning')}
+            </AlertDescription>
+          </Alert>
+          {responseList.map((response, index) => {
+            const selectedIds = parseOptionIds(
+              response.selected_option_ids,
+              response.selected_option_id,
+            );
+            return (
+              <Card key={response.id}>
+                <CardHeader className="pb-3">
+                  <Badge variant="outline" className="shrink-0">
+                    {t('submissionDetail.testResults.orphanResponseTitle', { index: index + 1 })}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {selectedIds.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {t('submissionDetail.testResults.selectedOptions')}: {selectedIds.join(', ')}
+                    </p>
+                  )}
+                  {response.text_answer && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t('submissionDetail.testResults.studentAnswer')}:
+                      </p>
+                      <div className="p-3 rounded-lg bg-muted/50 text-sm whitespace-pre-wrap">
+                        {response.text_answer}
+                      </div>
+                    </div>
+                  )}
+                  {selectedIds.length === 0 && !response.text_answer && (
+                    <span className="text-sm text-muted-foreground italic">
+                      {t('submissionDetail.testResults.noAnswer')}
+                    </span>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      );
+    }
+
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          No test questions found.
+        <CardContent className="py-8 text-center space-y-2">
+          <p className="text-muted-foreground">
+            {t('submissionDetail.testResults.noQuestionsFound')}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {t('submissionDetail.testResults.addQuestionsHint')}
+          </p>
         </CardContent>
       </Card>
     );
   }
 
   const responseMap = new Map(
-    (responses || []).map((r) => [r.question_id, r])
+    responseList.map((r) => [r.question_id, r])
   );
 
   const mcqQuestions = questions.filter((q) => q.question_type === 'multiple_choice');
@@ -56,9 +116,12 @@ export function TestResultsView({ assignmentId, submissionId }: TestResultsViewP
   return (
     <div className="space-y-4">
       <Card className="bg-muted/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">{t('submissionDetail.testResults.title')}</CardTitle>
-          <CardDescription>{t('submissionDetail.testResults.description')}</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
+          <div className="min-w-0">
+            <CardTitle className="text-lg">{t('submissionDetail.testResults.title')}</CardTitle>
+            <CardDescription>{t('submissionDetail.testResults.description')}</CardDescription>
+          </div>
+          {headerAction}
         </CardHeader>
         <CardContent>
           <div className="flex gap-6">
@@ -99,7 +162,7 @@ export function TestResultsView({ assignmentId, submissionId }: TestResultsViewP
             : null;
 
         return (
-          <Card key={question.id} className="overflow-hidden">
+          <Card key={question.id} id={`teacher-test-question-${question.id}`} className="overflow-hidden">
             <CardHeader className="pb-3 bg-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

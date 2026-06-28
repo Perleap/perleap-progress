@@ -24,11 +24,11 @@ export const TargetDimensionsSelector = ({
   const { t } = useTranslation();
 
   const dimensionsList = [
-    { key: 'vision', label: t('createAssignment.dimensions.vision') },
-    { key: 'values', label: t('createAssignment.dimensions.values') },
-    { key: 'thinking', label: t('createAssignment.dimensions.thinking') },
-    { key: 'connection', label: t('createAssignment.dimensions.connection') },
-    { key: 'action', label: t('createAssignment.dimensions.action') },
+    { key: 'vision', label: t('dimensions.vision.label') },
+    { key: 'values', label: t('dimensions.values.label') },
+    { key: 'thinking', label: t('dimensions.thinking.label') },
+    { key: 'connection', label: t('dimensions.connection.label') },
+    { key: 'action', label: t('dimensions.action.label') },
   ];
 
   return (

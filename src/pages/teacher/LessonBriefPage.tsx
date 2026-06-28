@@ -1,32 +1,36 @@
-import { useState, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Printer, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, FileDown, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useClassroomAnalytics, useClassroom } from '@/hooks/queries';
-import { analytics5dNarrativeKeys, useAnalytics5dNarrative } from '@/hooks/queries/useAnalytics5dNarrative';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { FiveDChart } from '@/components/FiveDChart';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DIMENSION_CONFIG } from '@/config/constants';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  getLessonBriefClassNarrativeCache,
   getLessonBriefPreloadStatus,
   getLessonBriefStudentNarrativesCache,
   isLessonBriefCacheReady,
 } from '@/lib/lessonBriefNarrativeCache';
 import {
+  filterReportableAssignments,
   getAllowedAssignmentIds,
   getClassroomAverage5D,
   structureTypeToLabelKey,
   scopedStudentLatestScores,
+  scopedStudentLatestQedMeasures,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
 import { build5dNarrativeEvidence, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import { invokeExplainAnalytics5d, type Analytics5dNarrativeResult } from '@/services/analytics5dExplainService';
 import { runPool } from '@/lib/asyncPool';
-import type { FiveDScores } from '@/types/models';
+import type { TFunction } from 'i18next';
+import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
+import {
+  exportLessonBriefPdf,
+  lessonBriefPdfFilename,
+} from '@/lib/lessonBrief/exportLessonBriefPdf';
 
 type SubmissionLike = {
   student_id: string;
@@ -58,10 +62,11 @@ type StudentWithNarrative = {
   completedInScope: number;
   assignmentsInScope: number;
   scores: FiveDScores | null;
+  qedMeasures: FiveDQedMeasures | null;
   narrative: Analytics5dNarrativeResult | null;
 };
 
-type StudentStatus = 'High priority' | 'Needs support' | 'Monitor' | 'Stable';
+type StudentStatusKey = 'highPriority' | 'needsSupport' | 'monitor' | 'stable';
 
 type DimensionKey = keyof FiveDScores;
 
@@ -77,17 +82,24 @@ type StudentReportRow = StudentWithNarrative & {
   averageScore: number | null;
   weakestDimension: DimensionKey | null;
   weakestScore: number | null;
-  status: StudentStatus;
+  status: StudentStatusKey;
   normalizedNarrative: StudentNarrativeFields;
 };
 
 const DIMENSION_ORDER: DimensionKey[] = ['vision', 'values', 'thinking', 'connection', 'action'];
 
-const STATUS_PRIORITY_ORDER: Record<StudentStatus, number> = {
-  'High priority': 0,
-  'Needs support': 1,
-  Monitor: 2,
-  Stable: 3,
+const STATUS_PRIORITY_ORDER: Record<StudentStatusKey, number> = {
+  highPriority: 0,
+  needsSupport: 1,
+  monitor: 2,
+  stable: 3,
+};
+
+const STATUS_I18N_KEY: Record<StudentStatusKey, string> = {
+  highPriority: 'analytics.lessonBrief.statusHighPriority',
+  needsSupport: 'analytics.lessonBrief.statusNeedsSupport',
+  monitor: 'analytics.lessonBrief.statusMonitor',
+  stable: 'analytics.lessonBrief.statusStable',
 };
 
 const LESSON_BRIEF_POLL_MS = 500;
@@ -110,124 +122,6 @@ function safeScore(value: number): number {
   return Number.isFinite(value) ? value : 0;
 }
 
-function ClassSnapshotSection({
-  classroomId,
-  classAverage,
-  filterSummary,
-  language,
-  isRTL,
-  narrativeId,
-  evidenceText,
-  evidenceSourceCount,
-  cachedNarrative,
-}: {
-  classroomId: string;
-  classAverage: FiveDScores;
-  filterSummary: string;
-  language: 'en' | 'he';
-  isRTL: boolean;
-  narrativeId: string;
-  evidenceText?: string;
-  evidenceSourceCount: number;
-  cachedNarrative?: Analytics5dNarrativeResult | null;
-}) {
-  const { t } = useTranslation();
-  const hasCachedNarrative = Boolean(cachedNarrative?.explanations);
-  const { data, isLoading, isError } = useAnalytics5dNarrative(
-    {
-      classroomId,
-      context: 'class_avg',
-      language,
-      scores: classAverage,
-      filterSummary,
-      evidenceText,
-      evidenceSourceCount,
-    },
-    { enabled: !!classroomId && !hasCachedNarrative, narrativeId }
-  );
-
-  const explanations = cachedNarrative?.explanations ?? data?.explanations ?? null;
-  const scopeSummary = cachedNarrative?.scopeSummary ?? data?.scopeSummary ?? null;
-  const showEvidenceStatus = hasCachedNarrative || (!isLoading && !isError);
-
-  return (
-    <Card className="rounded-2xl border border-slate-200 shadow-sm break-inside-avoid">
-      <CardHeader>
-        <CardTitle className="text-base">{t('analytics.classAverage')}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0 space-y-4">
-        {isLoading && !hasCachedNarrative && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-            {t('analytics.narrative.loading')}
-          </div>
-        )}
-        {isError && !hasCachedNarrative && <p className="text-xs text-destructive">{t('analytics.narrative.error')}</p>}
-        {scopeSummary && (hasCachedNarrative || !isLoading) && (
-          <p className={`text-sm text-muted-foreground leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
-            {scopeSummary}
-          </p>
-        )}
-        {showEvidenceStatus && evidenceSourceCount > 0 ? (
-          <p className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
-            {t('analytics.narrative.basedOnSources', { count: evidenceSourceCount })}
-          </p>
-        ) : null}
-        {showEvidenceStatus && evidenceSourceCount === 0 ? (
-          <p className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
-            {t('analytics.narrative.scoresOnlyHint')}
-          </p>
-        ) : null}
-
-        <div className={isLoading && !hasCachedNarrative ? 'opacity-60 pointer-events-none' : ''}>
-          <div className="grid grid-cols-1 xl:grid-cols-[1.75fr_0.9fr] gap-6 items-center">
-            <div className="min-h-[420px] md:min-h-[520px] w-full">
-              <FiveDChart
-                scores={classAverage}
-                explanations={explanations}
-                showLabels={false}
-                height={520}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
-              {DIMENSION_ORDER.map((dimension) => {
-                const config = DIMENSION_CONFIG[dimension];
-                const value = safeScore(classAverage[dimension]);
-                const barWidth = `${Math.max(0, Math.min(100, value * 10))}%`;
-                const explanation =
-                  explanations?.[dimension] || t(`dimensions.${dimension}.description`);
-                return (
-                  <Card key={dimension} className="rounded-2xl border border-slate-200 shadow-sm">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: config.color }}
-                          />
-                          <p className="text-sm font-semibold text-slate-800">{config.label}</p>
-                        </div>
-                        <p className="text-sm font-bold text-slate-900">{value.toFixed(1)}/10</p>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">{explanation}</p>
-                      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: barWidth, backgroundColor: config.color }}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function averageFiveD(scores: FiveDScores): number {
   const total = DIMENSION_ORDER.reduce((sum, key) => sum + safeScore(scores[key]), 0);
   return total / DIMENSION_ORDER.length;
@@ -248,11 +142,11 @@ function getWeakestDimension(scores: FiveDScores): { key: DimensionKey; value: n
   return { key: weakest, value: weakestValue };
 }
 
-function classifyStudentStatus(completionRatio: number, weakestScore: number): StudentStatus {
-  if (completionRatio < 0.35 || weakestScore < 3.5) return 'High priority';
-  if (completionRatio < 0.55 || weakestScore < 5) return 'Needs support';
-  if (completionRatio < 0.75 || weakestScore < 6.5) return 'Monitor';
-  return 'Stable';
+function classifyStudentStatus(completionRatio: number, weakestScore: number): StudentStatusKey {
+  if (completionRatio < 0.35 || weakestScore < 3.5) return 'highPriority';
+  if (completionRatio < 0.55 || weakestScore < 5) return 'needsSupport';
+  if (completionRatio < 0.75 || weakestScore < 6.5) return 'monitor';
+  return 'stable';
 }
 
 function asList(value: string[] | null | undefined): string[] {
@@ -263,32 +157,43 @@ function asList(value: string[] | null | undefined): string[] {
 function normalizeNarrative(
   narrative: Analytics5dNarrativeResult | null,
   studentName: string,
-  weakestDimension: DimensionKey | null
+  weakestDimension: DimensionKey | null,
+  t: TFunction,
 ): StudentNarrativeFields {
   const summary =
     narrative?.scopeSummary?.trim() ||
-    `${studentName} has limited scoped evidence. Use this card as a quick check-in baseline for the next lesson.`;
+    t('analytics.lessonBrief.defaultSummary', { name: studentName });
 
   const strengths = asList(narrative?.strengths);
   const weaknesses = asList(narrative?.weaknesses);
   const improvement = asList(narrative?.nextSteps);
 
-  const weakestLabel = weakestDimension ? DIMENSION_CONFIG[weakestDimension].label : 'one key 5D area';
+  const weakestLabel = weakestDimension
+    ? t(`dimensions.${weakestDimension}.label`)
+    : t('analytics.lessonBrief.dash');
 
   return {
     summary,
     strengths:
       strengths.length > 0
         ? strengths
-        : ['Keeps participating enough to provide evidence for coaching decisions.'],
+        : [t('analytics.lessonBrief.defaultStrength')],
     weaknesses:
       weaknesses.length > 0
         ? weaknesses
-        : [`Needs stronger consistency in ${weakestLabel.toLowerCase()} to improve lesson outcomes.`],
+        : [
+            t('analytics.lessonBrief.defaultWeakness', {
+              dimension: weakestLabel.toLowerCase(),
+            }),
+          ],
     improvement:
       improvement.length > 0
         ? improvement
-        : [`Set one concrete, measurable next step focused on ${weakestLabel.toLowerCase()}.`],
+        : [
+            t('analytics.lessonBrief.defaultImprovement', {
+              dimension: weakestLabel.toLowerCase(),
+            }),
+          ],
   };
 }
 
@@ -296,7 +201,6 @@ export default function LessonBriefPage() {
   const { id: classroomId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage } = useLanguage();
   const analyticsLanguage = uiLanguage === 'he' ? 'he' : 'en';
@@ -306,16 +210,21 @@ export default function LessonBriefPage() {
 
   const [studentData, setStudentData] = useState<StudentWithNarrative[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const selectedModule = (searchParams.get('analyticsModule') as AnalyticsModuleFilter) || 'all';
   const selectedAssignment = searchParams.get('analyticsAssignment') || 'all';
 
   const assignments = data?.assignments || [];
+  const reportableAssignments = useMemo(
+    () => filterReportableAssignments(assignments),
+    [assignments],
+  );
   const modules = data?.modules || [];
 
   const effectiveAssignmentIds = useMemo(
-    () => getAllowedAssignmentIds(assignments, selectedModule, selectedAssignment),
-    [assignments, selectedModule, selectedAssignment]
+    () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
+    [reportableAssignments, selectedModule, selectedAssignment]
   );
 
   const exportFilterSummary = useMemo(() => {
@@ -343,18 +252,13 @@ export default function LessonBriefPage() {
     return getClassroomAverage5D(
       data.students as any,
       data.rawSubmissions,
-      data.assignments,
+      reportableAssignments,
       selectedModule,
       selectedAssignment,
       'all',
       data.rawSnapshots
     );
-  }, [data, selectedModule, selectedAssignment, effectiveAssignmentIds]);
-
-  const classNarrativeId = useMemo(
-    () => `5d-main-${selectedModule}-${selectedAssignment}-all`,
-    [selectedModule, selectedAssignment]
-  );
+  }, [data, selectedModule, selectedAssignment, effectiveAssignmentIds, reportableAssignments]);
 
   const sectionTitleResolver = useCallback(
     (syllabusSectionId: string | null) => {
@@ -363,54 +267,6 @@ export default function LessonBriefPage() {
     },
     [modules, t]
   );
-
-  const classNarrativeEvidence = useMemo(() => {
-    if (!data) return { evidenceText: '', sourceCount: 0 };
-    return build5dNarrativeEvidence({
-      context: 'class_avg',
-      allowedAssignmentIds: effectiveAssignmentIds,
-      allStudents: data.students.map((s) => ({
-        id: s.id,
-        fullName: s.fullName,
-        narrativeRows: (s as { narrativeRows?: Analytics5dNarrativeRow[] }).narrativeRows ?? [],
-      })),
-      assignmentRefs: data.assignments,
-      sectionTitleResolver,
-    });
-  }, [data, effectiveAssignmentIds, sectionTitleResolver]);
-
-  const analyticsClassCache = useMemo(() => {
-    if (!classroomId) return null;
-    return getLessonBriefClassNarrativeCache(classroomId, selectedModule, selectedAssignment);
-  }, [classroomId, selectedModule, selectedAssignment]);
-
-  const displayClassAverage = analyticsClassCache?.classAverage ?? classAverage;
-
-  useLayoutEffect(() => {
-    if (!analyticsClassCache?.narrative || !displayClassAverage || !classroomId) return;
-    const key = analytics5dNarrativeKeys.one({
-      classroomId,
-      context: 'class_avg',
-      language: analyticsLanguage,
-      scores: displayClassAverage,
-      filterSummary: exportFilterSummary,
-      evidenceText: classNarrativeEvidence.evidenceText || undefined,
-      evidenceSourceCount: classNarrativeEvidence.sourceCount,
-      narrativeId: classNarrativeId,
-    });
-    if (!queryClient.getQueryData(key)) {
-      queryClient.setQueryData(key, analyticsClassCache.narrative);
-    }
-  }, [
-    analyticsClassCache,
-    displayClassAverage,
-    classroomId,
-    analyticsLanguage,
-    exportFilterSummary,
-    classNarrativeEvidence,
-    classNarrativeId,
-    queryClient,
-  ]);
 
   const generatedAt = useMemo(    () =>
       new Date().toLocaleString(uiLanguage === 'he' ? 'he-IL' : 'en-US', {
@@ -447,7 +303,12 @@ export default function LessonBriefPage() {
       const weakestScore = weakestDimensionData?.value ?? null;
       const averageScore = student.scores ? averageFiveD(student.scores) : null;
       const status = classifyStudentStatus(completionRatio, weakestScore ?? 0);
-      const normalizedNarrative = normalizeNarrative(student.narrative, student.name, weakestDimension);
+      const normalizedNarrative = normalizeNarrative(
+        student.narrative,
+        student.name,
+        weakestDimension,
+        t,
+      );
 
       return {
         ...student,
@@ -465,7 +326,7 @@ export default function LessonBriefPage() {
       if (statusDiff !== 0) return statusDiff;
       return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     });
-  }, [studentData]);
+  }, [studentData, t]);
 
   const classPriorityInsights = useMemo(() => {
     const weakestDimensions = classAverage
@@ -474,13 +335,17 @@ export default function LessonBriefPage() {
           .slice(0, 2)
       : [];
 
-    const highPriorityCount = studentRows.filter((row) => row.status === 'High priority').length;
-    const needsSupportCount = studentRows.filter((row) => row.status === 'Needs support').length;
+    const highPriorityCount = studentRows.filter((row) => row.status === 'highPriority').length;
+    const needsSupportCount = studentRows.filter((row) => row.status === 'needsSupport').length;
 
     const firstWeakDimension = weakestDimensions[0];
     const secondWeakDimension = weakestDimensions[1];
-    const firstWeakLabel = firstWeakDimension ? DIMENSION_CONFIG[firstWeakDimension].label : 'Vision';
-    const secondWeakLabel = secondWeakDimension ? DIMENSION_CONFIG[secondWeakDimension].label : 'Thinking';
+    const firstWeakLabel = firstWeakDimension
+      ? t(`dimensions.${firstWeakDimension}.label`)
+      : t('dimensions.vision.label');
+    const secondWeakLabel = secondWeakDimension
+      ? t(`dimensions.${secondWeakDimension}.label`)
+      : t('dimensions.thinking.label');
 
     const firstWeakScore = firstWeakDimension && classAverage ? safeScore(classAverage[firstWeakDimension]) : 0;
     const secondWeakScore =
@@ -488,19 +353,28 @@ export default function LessonBriefPage() {
 
     return [
       {
-        title: `Prioritize ${firstWeakLabel} routines at lesson launch`,
-        body: `Class average is ${firstWeakScore.toFixed(1)}/10 in ${firstWeakLabel}. Begin with a quick model of strong work criteria and one concrete success example.`,
+        title: t('analytics.lessonBrief.priorityTitle1', { dimension: firstWeakLabel }),
+        body: t('analytics.lessonBrief.priorityBody1', {
+          score: firstWeakScore.toFixed(1),
+          dimension: firstWeakLabel,
+        }),
       },
       {
-        title: `Use structured peer moments to strengthen ${secondWeakLabel}`,
-        body: `${secondWeakLabel} is at ${secondWeakScore.toFixed(1)}/10. Add a short peer explanation checkpoint so students justify choices before submitting.`,
+        title: t('analytics.lessonBrief.priorityTitle2', { dimension: secondWeakLabel }),
+        body: t('analytics.lessonBrief.priorityBody2', {
+          score: secondWeakScore.toFixed(1),
+          dimension: secondWeakLabel,
+        }),
       },
       {
-        title: `Target intervention for at-risk learners`,
-        body: `${highPriorityCount + needsSupportCount} students are flagged as High priority or Needs support, and scoped assignment completion is ${(scopedClassCompletionRatio * 100).toFixed(0)}%. End class with one personalized next step tied to each learner's lowest dimension.`,
+        title: t('analytics.lessonBrief.priorityTitle3'),
+        body: t('analytics.lessonBrief.priorityBody3', {
+          count: highPriorityCount + needsSupportCount,
+          completion: (scopedClassCompletionRatio * 100).toFixed(0),
+        }),
       },
     ];
-  }, [classAverage, studentRows, scopedClassCompletionRatio]);
+  }, [classAverage, studentRows, scopedClassCompletionRatio, t]);
 
   useEffect(() => {
     if (!data || !classroomId || effectiveAssignmentIds.length === 0) return;
@@ -523,6 +397,7 @@ export default function LessonBriefPage() {
         ),
         assignmentsInScope: denom,
         scores: scopedStudentLatestScores(st.snapshots, data.rawSubmissions, effectiveAssignmentIds),
+        qedMeasures: scopedStudentLatestQedMeasures(st.snapshots, data.rawSubmissions, effectiveAssignmentIds),
         narrative: null as Analytics5dNarrativeResult | null,
       }));
     };
@@ -598,7 +473,7 @@ export default function LessonBriefPage() {
             context: 'student_avg',
             allowedAssignmentIds: effectiveAssignmentIds,
             allStudents: allStudentsForEvidence,
-            assignmentRefs: data.assignments,
+            assignmentRefs: reportableAssignments,
             singleStudentId: row.id,
             sectionTitleResolver,
           });
@@ -660,11 +535,24 @@ export default function LessonBriefPage() {
     analyticsLanguage,
     exportFilterSummary,
     sectionTitleResolver,
+    reportableAssignments,
   ]);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handleExportPdf = useCallback(async () => {
+    if (isGenerating) return;
+    setIsExportingPdf(true);
+    try {
+      window.scrollTo(0, 0);
+      await exportLessonBriefPdf({
+        contentRootId: 'lesson-brief-content',
+        filename: lessonBriefPdfFilename(classroom?.name),
+      });
+    } catch {
+      toast.error(t('analytics.lessonBrief.exportError'));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [isGenerating, classroom?.name, t]);
 
   const handleDownloadHtml = () => {
     const content = document.getElementById('lesson-brief-content')?.innerHTML;
@@ -724,10 +612,15 @@ export default function LessonBriefPage() {
               variant="outline"
               size="sm"
               className="rounded-lg"
-              onClick={handlePrint}
+              onClick={() => void handleExportPdf()}
+              disabled={isGenerating || isExportingPdf}
             >
-              <Printer className="h-4 w-4 me-1.5" aria-hidden />
-              {t('common.print', 'Print')}
+              {isExportingPdf ? (
+                <Loader2 className="h-4 w-4 me-1.5 animate-spin" aria-hidden />
+              ) : (
+                <FileDown className="h-4 w-4 me-1.5" aria-hidden />
+              )}
+              {t('pilotReport.exportPdf')}
             </Button>
             <Button
               type="button"
@@ -743,81 +636,64 @@ export default function LessonBriefPage() {
       </div>
 
       <div id="lesson-brief-content" className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
-        <section className="rounded-3xl border border-blue-200/60 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 text-white px-6 md:px-8 py-8 shadow-lg break-inside-avoid">
+        <section className="pdf-block rounded-3xl border border-blue-200/60 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 text-white px-6 md:px-8 py-8 shadow-lg break-inside-avoid">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.18em] text-blue-100 font-semibold">Perleap Lesson Brief</p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Lesson Preparation Report</h1>
-            <p className="text-blue-100 text-sm md:text-base">
-              Teacher-facing overview with class focus areas and student coaching guidance.
+            <p className="text-xs uppercase tracking-[0.18em] text-blue-100 font-semibold">
+              {t('analytics.lessonBrief.coverEyebrow')}
             </p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              {t('analytics.lessonBrief.title')}
+            </h1>
+            <p className="text-blue-100 text-sm md:text-base">{t('analytics.lessonBrief.subtitle')}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-6 text-sm">
             <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-blue-100">Course</p>
+              <p className="text-blue-100">{t('analytics.lessonBrief.classroom')}</p>
               <p className="font-semibold">{classroom?.name || t('analytics.lessonBrief.dash')}</p>
             </div>
             <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-blue-100">Generated date</p>
+              <p className="text-blue-100">{t('analytics.lessonBrief.generatedDateLabel')}</p>
               <p className="font-semibold">{generatedAt}</p>
             </div>
             <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-blue-100">Current filters</p>
+              <p className="text-blue-100">{t('analytics.lessonBrief.currentFiltersLabel')}</p>
               <p className="font-semibold">{exportFilterSummary}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
             <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs uppercase tracking-wide">Total students</p>
+              <p className="text-blue-100 text-xs uppercase tracking-wide">
+                {t('analytics.lessonBrief.totalStudentsLabel')}
+              </p>
               <p className="text-2xl font-semibold mt-1">{totalStudents}</p>
             </div>
             <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs uppercase tracking-wide">Total submissions</p>
+              <p className="text-blue-100 text-xs uppercase tracking-wide">
+                {t('analytics.lessonBrief.totalSubmissionsLabel')}
+              </p>
               <p className="text-2xl font-semibold mt-1">{totalSubmissions}</p>
             </div>
             <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs uppercase tracking-wide">Avg submissions / student</p>
+              <p className="text-blue-100 text-xs uppercase tracking-wide">
+                {t('analytics.lessonBrief.avgSubmissionsLabel')}
+              </p>
               <p className="text-2xl font-semibold mt-1">{averageSubmissionsPerStudent.toFixed(1)}</p>
             </div>
             <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs uppercase tracking-wide">Assignments in scope</p>
+              <p className="text-blue-100 text-xs uppercase tracking-wide">
+                {t('analytics.lessonBrief.assignmentsInScopeLabel')}
+              </p>
               <p className="text-2xl font-semibold mt-1">{effectiveAssignmentIds.length}</p>
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 break-inside-avoid">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Class Snapshot</h2>
-              <p className="text-sm text-slate-600">Class-level 5D profile with quick dimension-level interpretation.</p>
-            </div>
-          </div>
-
-          {displayClassAverage && effectiveAssignmentIds.length > 0 ? (
-            <ClassSnapshotSection
-              classroomId={classroomId!}
-              classAverage={displayClassAverage}
-              filterSummary={exportFilterSummary}
-              language={analyticsLanguage}
-              isRTL={isRTL}
-              narrativeId={classNarrativeId}
-              evidenceText={classNarrativeEvidence.evidenceText}
-              evidenceSourceCount={classNarrativeEvidence.sourceCount}
-              cachedNarrative={analyticsClassCache?.narrative}
-            />
-          ) : (
-            <Card className="rounded-2xl border border-slate-200 shadow-sm">
-              <CardContent className="p-6 text-sm text-slate-600">
-                No class-level 5D data is available for the selected scope.
-              </CardContent>
-            </Card>
-          )}
-        </section>
-
-        <section className="space-y-4 break-inside-avoid">
-          <h2 className="text-2xl font-semibold text-slate-900">Teaching Priorities</h2>
+        <section className="pdf-block space-y-4 break-inside-avoid">
+          <h2 className="text-2xl font-semibold text-slate-900">
+            {t('analytics.lessonBrief.teachingPrioritiesTitle')}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {classPriorityInsights.map((priority, index) => (
               <Card key={priority.title} className="rounded-2xl border border-slate-200 shadow-sm">
@@ -833,11 +709,13 @@ export default function LessonBriefPage() {
           </div>
         </section>
 
-        <section className="space-y-4 break-inside-avoid">
+        <section className="pdf-block space-y-4 break-inside-avoid">
           <div className="flex items-end justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Student Table</h2>
-              <p className="text-sm text-slate-600">Compact classroom scan for completion, 5D performance, and lowest dimension.</p>
+              <h2 className="text-2xl font-semibold text-slate-900">
+                {t('analytics.lessonBrief.studentTableTitle')}
+              </h2>
+              <p className="text-sm text-slate-600">{t('analytics.lessonBrief.studentTableDescription')}</p>
             </div>
           </div>
 
@@ -847,10 +725,12 @@ export default function LessonBriefPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50">
                     <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
-                      <th className="px-4 py-3 font-semibold">Student</th>
-                      <th className="px-4 py-3 font-semibold">Completed / Scope</th>
-                      <th className="px-4 py-3 font-semibold">5D scores</th>
-                      <th className="px-4 py-3 font-semibold">Lowest dimension</th>
+                      <th className="px-4 py-3 font-semibold">{t('analytics.lessonBrief.columnStudent')}</th>
+                      <th className="px-4 py-3 font-semibold">{t('analytics.lessonBrief.columnProgress')}</th>
+                      <th className="px-4 py-3 font-semibold">{t('analytics.lessonBrief.column5dScores')}</th>
+                      <th className="px-4 py-3 font-semibold">
+                        {t('analytics.lessonBrief.columnLowestDimension')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -865,7 +745,7 @@ export default function LessonBriefPage() {
                             <span className="text-xs leading-relaxed">
                               {DIMENSION_ORDER.map((dimension) => (
                                 <span key={dimension}>
-                                  {DIMENSION_CONFIG[dimension].label.slice(0, 1)}:
+                                  {t(`dimensions.${dimension}.abbrev`)}:
                                   {safeScore(student.scores![dimension]).toFixed(1)}
                                   {dimension !== 'action' ? ' · ' : ''}
                                 </span>
@@ -876,7 +756,7 @@ export default function LessonBriefPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-slate-700">
-                          {student.weakestDimension ? DIMENSION_CONFIG[student.weakestDimension].label : t('analytics.lessonBrief.dash')}
+                          {student.weakestDimension ? t(`dimensions.${student.weakestDimension}.label`) : t('analytics.lessonBrief.dash')}
                         </td>
                       </tr>
                     ))}
@@ -887,108 +767,110 @@ export default function LessonBriefPage() {
           </Card>
         </section>
 
-        <section className="space-y-4">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Student Coaching Cards</h2>
-              <p className="text-sm text-slate-600">Use these cards to plan targeted support before the next lesson.</p>
-            </div>
-          </div>
-
+        <section className="space-y-6">
           {isGenerating && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4 no-print print:hidden">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              <p className="text-muted-foreground">{t('analytics.lessonBrief.preparingSummaries')}</p>
+              <p className="text-slate-500">{t('analytics.lessonBrief.preparingSummaries')}</p>
             </div>
           )}
 
-          {!isGenerating && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {studentRows.map((student) => (
-                <Card
-                  key={student.id}
-                  className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden break-inside-avoid"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <CardTitle className="text-xl font-semibold text-slate-900">{student.name}</CardTitle>
-                        <p className="text-sm text-slate-600 mt-1">
-                          {student.completedInScope} / {student.assignmentsInScope} completed
-                          {student.averageScore != null ? ` · Avg 5D ${student.averageScore.toFixed(1)}/10` : ''}
-                          {` · ${student.status}`}
-                        </p>
-                      </div>
+          {!isGenerating &&
+            studentRows.map((student, index) => (
+              <div
+                key={student.id}
+                className="pdf-block lesson-brief-student-card rounded-2xl border-2 border-slate-300 bg-white overflow-hidden"
+                data-pdf-fit-page="true"
+              >
+                {index === 0 && (
+                  <div className="px-6 pt-6 pb-4 border-b border-slate-200">
+                    <h2 className="text-2xl font-semibold text-slate-900">
+                      {t('analytics.lessonBrief.coachingCardsTitle')}
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {t('analytics.lessonBrief.coachingCardsDescription')}
+                    </p>
+                  </div>
+                )}
+
+                <div className="px-6 py-4 border-b border-slate-100">
+                  <h3 className="text-xl font-semibold text-slate-900">{student.name}</h3>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {t('analytics.lessonBrief.completedMeta', {
+                      completed: student.completedInScope,
+                      total: student.assignmentsInScope,
+                    })}
+                    {student.averageScore != null
+                      ? ` · ${t('analytics.lessonBrief.avg5dMeta', { score: student.averageScore.toFixed(1) })}`
+                      : ''}
+                    {` · ${t(STATUS_I18N_KEY[student.status])}`}
+                  </p>
+                </div>
+
+                <div className="px-6 py-3 border-b border-slate-100 lesson-brief-radar-chart">
+                  {student.scores ? (
+                    <FiveDChart
+                      scores={student.scores}
+                      qedMeasures={student.qedMeasures}
+                      explanations={student.narrative?.explanations ?? null}
+                      showLabels={false}
+                      layerControlsLayout="stacked"
+                      height={260}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-3 text-sm text-slate-500">
+                      {t('analytics.lessonBrief.narrativeNoScores')}
                     </div>
-                  </CardHeader>
+                  )}
+                </div>
 
-                  <CardContent className="p-5 space-y-4">
-                    {student.scores ? (
-                      <div className="space-y-2">
-                        {DIMENSION_ORDER.map((dimension) => {
-                          const value = safeScore(student.scores?.[dimension] ?? 0);
-                          return (
-                            <div key={dimension} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-medium text-slate-700">{DIMENSION_CONFIG[dimension].label}</span>
-                                <span className="text-slate-900 font-semibold">{value.toFixed(1)}/10</span>
-                              </div>
-                              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                                <div
-                                  className="h-full rounded-full"
-                                  style={{
-                                    width: `${Math.max(0, Math.min(100, value * 10))}%`,
-                                    backgroundColor: DIMENSION_CONFIG[dimension].color,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-slate-200 p-3 text-sm text-slate-500">
-                        {t('analytics.lessonBrief.narrativeNoScores')}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-xl border border-border bg-card p-3 md:col-span-2">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">summary</p>
-                        <p className="text-sm text-foreground leading-relaxed">{student.normalizedNarrative.summary}</p>
-                      </div>
-                      <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
-                        <p className="text-xs uppercase tracking-wide text-emerald-700/80 mb-1">strengths</p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-emerald-950/80">
-                          {student.normalizedNarrative.strengths.map((item, index) => (
-                            <li key={`${student.id}-strength-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
-                        <p className="text-xs uppercase tracking-wide text-amber-700/80 mb-1">weaknesses</p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-amber-950/80">
-                          {student.normalizedNarrative.weaknesses.map((item, index) => (
-                            <li key={`${student.id}-weakness-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 md:col-span-2">
-                        <p className="text-xs uppercase tracking-wide text-blue-700/80 mb-1">improvement</p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-blue-950/80">
-                          {student.normalizedNarrative.improvement.map((item, index) => (
-                            <li key={`${student.id}-improvement-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                <div className="px-6 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div className="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
+                        {t('analytics.lessonBrief.studentSummaryLabel')}
+                      </p>
+                      <p className="text-sm text-slate-900 leading-relaxed">
+                        {student.normalizedNarrative.summary}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                      <p className="text-xs uppercase tracking-wide text-emerald-700/80 mb-1">
+                        {t('analytics.lessonBrief.strengthsLabel')}
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-emerald-950/80">
+                        {student.normalizedNarrative.strengths.map((item, itemIndex) => (
+                          <li key={`${student.id}-strength-${itemIndex}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                      <p className="text-xs uppercase tracking-wide text-amber-700/80 mb-1">
+                        {t('analytics.lessonBrief.weaknessesLabel')}
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-amber-950/80">
+                        {student.normalizedNarrative.weaknesses.map((item, itemIndex) => (
+                          <li key={`${student.id}-weakness-${itemIndex}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 md:col-span-2">
+                      <p className="text-xs uppercase tracking-wide text-blue-700/80 mb-1">
+                        {t('analytics.lessonBrief.improvementLabel')}
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-blue-950/80">
+                        {student.normalizedNarrative.improvement.map((item, itemIndex) => (
+                          <li key={`${student.id}-improvement-${itemIndex}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
         </section>
 
-        <div className="text-center text-xs text-slate-400 pt-8 border-t border-slate-200">
+        <div className="pdf-block text-center text-xs text-slate-400 pt-8 border-t border-slate-200">
           {t('analytics.lessonBrief.footerDisclaimer')}
         </div>
       </div>

@@ -3,10 +3,14 @@ import {
   buildCohortOutcome,
   buildParticipantRow,
   buildRoleFitDistributionLine,
+  completionRatio,
+  computeEffectiveRankScore,
   computeWeightedScore,
   countCompletedAssignmentsInScope,
   countNotAssessed,
   fillRecommendationFallback,
+  formatCompletionPercent,
+  rankParticipantsForAppendix,
   sortParticipantsForDecision,
 } from './buildPilotReportData';
 import { buildPilotReportId } from './pilotReportId';
@@ -82,11 +86,13 @@ describe('buildParticipantRow', () => {
         mainRisk: 'Debugging.',
         nextAction: 'Supervised work.',
         confidence: 'high',
+        placementPriority: 9,
         whyBullets: ['Evidence bullet one.'],
       },
     });
     expect(row.assessed).toBe(true);
     expect(row.weightedScore).toBe(74);
+    expect(row.placementPriority).toBe(9);
     expect(row.readiness).toBe('ready');
   });
 
@@ -101,6 +107,7 @@ describe('buildParticipantRow', () => {
     expect(row.assessed).toBe(false);
     expect(row.readiness).toBeNull();
     expect(row.weightedScore).toBeNull();
+    expect(row.placementPriority).toBeNull();
   });
 });
 
@@ -162,6 +169,168 @@ describe('sortParticipantsForDecision', () => {
     const ready = { ...assessedParticipant, id: 'r', name: 'Amy', readiness: 'ready' as const };
     const sorted = sortParticipantsForDecision([coach, failedParticipant, ready]);
     expect(sorted.map((p) => p.name)).toEqual(['Amy', 'Zara', 'Noa Levi']);
+  });
+});
+
+describe('computeEffectiveRankScore', () => {
+  it('multiplies placementPriority by completion ratio', () => {
+    expect(completionRatio(1, 6)).toBeCloseTo(1 / 6);
+    expect(
+      computeEffectiveRankScore({
+        ...assessedParticipant,
+        placementPriority: 7,
+        completedInScope: 1,
+        assignmentsInScope: 6,
+      }),
+    ).toBeCloseTo(7 / 6);
+    expect(
+      computeEffectiveRankScore({
+        ...assessedParticipant,
+        placementPriority: 6,
+        completedInScope: 5,
+        assignmentsInScope: 6,
+      }),
+    ).toBeCloseTo(5);
+  });
+
+  it('returns 0 when placementPriority is missing', () => {
+    expect(
+      computeEffectiveRankScore({ ...assessedParticipant, placementPriority: null }),
+    ).toBe(0);
+  });
+});
+
+describe('rankParticipantsForAppendix', () => {
+  it('assigns rank 1 to the highest effective score and orders best first', () => {
+    const top = { ...assessedParticipant, id: 'r', name: 'Amy', placementPriority: 9 };
+    const lower = {
+      ...assessedParticipant,
+      id: 'c',
+      name: 'Zara',
+      readiness: 'coach' as const,
+      placementPriority: 5,
+    };
+    const ranked = rankParticipantsForAppendix([lower, top]);
+    expect(ranked.map((p) => p.name)).toEqual(['Amy', 'Zara']);
+  });
+
+  it('ranks higher completion above higher raw priority when effective score is lower', () => {
+    const lowCompletion = {
+      ...assessedParticipant,
+      id: 'a',
+      name: 'Leah Levy',
+      placementPriority: 7,
+      completedInScope: 1,
+      assignmentsInScope: 6,
+    };
+    const highCompletion = {
+      ...assessedParticipant,
+      id: 'b',
+      name: 'Dana Cohen',
+      placementPriority: 6,
+      completedInScope: 5,
+      assignmentsInScope: 6,
+    };
+    const ranked = rankParticipantsForAppendix([lowCompletion, highCompletion]);
+    expect(ranked.map((p) => p.name)).toEqual(['Dana Cohen', 'Leah Levy']);
+    expect(ranked[0].rank).toBe(1);
+  });
+
+  it('breaks effective-score ties by raw placementPriority then readiness', () => {
+    const lowerPriority = {
+      ...assessedParticipant,
+      id: 'a',
+      name: 'Alex',
+      readiness: 'ready' as const,
+      placementPriority: 6,
+      completedInScope: 3,
+      assignmentsInScope: 6,
+    };
+    const higherPriority = {
+      ...assessedParticipant,
+      id: 'b',
+      name: 'Blair',
+      readiness: 'coach' as const,
+      placementPriority: 9,
+      completedInScope: 2,
+      assignmentsInScope: 6,
+    };
+    const ranked = rankParticipantsForAppendix([lowerPriority, higherPriority]);
+    expect(ranked.map((p) => p.name)).toEqual(['Blair', 'Alex']);
+  });
+
+  it('breaks ties on placementPriority by readiness when completion is equal', () => {
+    const coach = {
+      ...assessedParticipant,
+      id: 'a',
+      name: 'Alex',
+      readiness: 'coach' as const,
+      placementPriority: 7,
+    };
+    const ready = {
+      ...assessedParticipant,
+      id: 'b',
+      name: 'Blair',
+      readiness: 'ready' as const,
+      placementPriority: 7,
+    };
+    const ranked = rankParticipantsForAppendix([coach, ready]);
+    expect(ranked.map((p) => p.name)).toEqual(['Blair', 'Alex']);
+  });
+
+  it('excludes not-assessed participants from ranked appendix list', () => {
+    const ranked = rankParticipantsForAppendix([assessedParticipant, failedParticipant]);
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0].rank).toBe(1);
+  });
+
+  it('ranks participants with placementPriority above legacy rows missing the field', () => {
+    const legacy = {
+      ...assessedParticipant,
+      id: 'a',
+      name: 'Alex',
+      readiness: 'ready' as const,
+      placementPriority: null,
+    };
+    const scored = {
+      ...assessedParticipant,
+      id: 'b',
+      name: 'Blair',
+      readiness: 'coach' as const,
+      placementPriority: 6,
+    };
+    const ranked = rankParticipantsForAppendix([legacy, scored]);
+    expect(ranked.map((p) => p.name)).toEqual(['Blair', 'Alex']);
+  });
+
+  it('falls back to readiness then name among legacy rows without placementPriority', () => {
+    const coach = {
+      ...assessedParticipant,
+      id: 'a',
+      name: 'Zara',
+      readiness: 'coach' as const,
+      placementPriority: null,
+    };
+    const ready = {
+      ...assessedParticipant,
+      id: 'b',
+      name: 'Amy',
+      readiness: 'ready' as const,
+      placementPriority: null,
+    };
+    const ranked = rankParticipantsForAppendix([coach, ready]);
+    expect(ranked.map((p) => p.name)).toEqual(['Amy', 'Zara']);
+  });
+});
+
+describe('formatCompletionPercent', () => {
+  it('returns rounded percentage', () => {
+    expect(formatCompletionPercent(5, 6)).toBe('83%');
+    expect(formatCompletionPercent(6, 6)).toBe('100%');
+  });
+
+  it('returns em dash when total is zero', () => {
+    expect(formatCompletionPercent(0, 0)).toBe('—');
   });
 });
 
