@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AssignmentTypeIntroContent } from '@/components/features/assignment/AssignmentTypeIntroContent';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import type { DbAssignmentType } from '@/types/models';
@@ -46,7 +45,7 @@ export function AssignmentTypeIntroDialog({
   onTypeStepComplete,
   onTaskConfirm,
 }: AssignmentTypeIntroDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isRTL } = useLanguage();
   const [step, setStep] = useState<WizardStep>(skipTypeStep ? 'task' : 'type');
 
@@ -56,14 +55,10 @@ export function AssignmentTypeIntroDialog({
     }
   }, [open, skipTypeStep]);
 
-<<<<<<< HEAD
-  const taskText = studentFacingTask?.trim() ?? '';
-=======
   const title = getAssignmentTypeIntroTitle(t, i18n, assignmentType);
   const body = getAssignmentTypeIntroBody(t, i18n, assignmentType);
   const tutorial = getAssignmentTypeTutorial(t, i18n, assignmentType);
 
->>>>>>> bugs_during_course
   const taskReady = !taskLoading;
 
   const handleOpenChange = (next: boolean) => {
@@ -92,11 +87,39 @@ export function AssignmentTypeIntroDialog({
       >
         {step === 'type' ? (
           <>
-            <AssignmentTypeIntroContent
-              assignmentType={assignmentType}
-              assignmentTitle={assignmentTitle}
-              variant="dialog"
-            />
+            <DialogHeader className={cn(isRTL && 'text-end')}>
+              <DialogTitle>{title}</DialogTitle>
+              {assignmentTitle?.trim() ? (
+                <p className="text-muted-foreground text-sm font-normal">{assignmentTitle.trim()}</p>
+              ) : null}
+              <DialogDescription
+                className={cn(
+                  'leading-relaxed whitespace-pre-wrap',
+                  isRTL ? 'text-end' : 'text-start',
+                )}
+              >
+                {body}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div
+              className={cn(
+                'space-y-2 border-t border-border/60 pt-4',
+                isRTL && 'text-end',
+              )}
+            >
+              <h3 className="text-sm font-medium text-foreground">
+                {t('assignmentTypeIntro.howToUseHeading')}
+              </h3>
+              <DialogDescription
+                className={cn(
+                  'text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground',
+                  isRTL ? 'text-end' : 'text-start',
+                )}
+              >
+                {tutorial}
+              </DialogDescription>
+            </div>
 
             <DialogFooter className={cn(isRTL && 'sm:flex-row-reverse')}>
               <Button type="button" onClick={handleTypeContinue}>

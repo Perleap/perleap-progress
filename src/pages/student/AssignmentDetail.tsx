@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-=======
 import { useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
->>>>>>> bugs_during_course
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { ClassroomLayout } from '@/components/layouts';
@@ -58,11 +53,7 @@ import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
-<<<<<<< HEAD
-import { AssignmentTypeHelpHint } from '@/components/features/assignment/AssignmentTypeHelpHint';
-=======
 import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
->>>>>>> bugs_during_course
 import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
@@ -87,8 +78,6 @@ const AssignmentDetail = () => {
   const isTeacherTry = Boolean(teacherRouteClassroomId && params.assignmentId);
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const preferredSubmissionId = searchParams.get('submission') ?? undefined;
   const { user } = useAuth();
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
@@ -131,7 +120,7 @@ const AssignmentDetail = () => {
 
   const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(
     assignmentId || undefined,
-    { isTeacherTry, preferredSubmissionId },
+    { isTeacherTry },
   );
 
   const needsAutoStudentTask = Boolean(
@@ -373,7 +362,6 @@ const AssignmentDetail = () => {
   const submissionContext = assignmentData?.submissionContext as
     | { allAttempts: unknown[]; canRetry: boolean }
     | undefined;
-
   const canRetry = submissionContext?.canRetry ?? false;
   const attemptMode = (assignment as { attempt_mode?: string } | undefined)?.attempt_mode ?? 'single';
 
@@ -512,13 +500,13 @@ const AssignmentDetail = () => {
   );
 
   useEffect(() => {
-    if (companionScrollTick === 0) return;
     if (!assignment || isChatLikeAssignmentType(assignment.type)) return;
+    if (storedTaskUnderstandingChoice !== 'no') return;
     const frameId = requestAnimationFrame(() => {
       companionChatAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     return () => cancelAnimationFrame(frameId);
-  }, [companionScrollTick, assignment?.type]);
+  }, [assignment?.type, storedTaskUnderstandingChoice, companionScrollTick]);
 
   const syllabusSectionTitle = useMemo(() => {
     const sectionId = assignment?.syllabus_section_id;
@@ -821,59 +809,6 @@ const AssignmentDetail = () => {
             </div>
           </div>
 
-<<<<<<< HEAD
-          {showPageTaskCard ? (
-            <Collapsible
-              open={taskCardOpen}
-              onOpenChange={setTaskCardOpen}
-              className="overflow-hidden rounded-lg border border-border/60 bg-muted/5"
-              dir={isRTL ? 'rtl' : 'ltr'}
-            >
-              <div
-                className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2.5',
-                  isRTL ? 'flex-row-reverse' : 'flex-row',
-                )}
-              >
-                <CollapsibleTrigger
-                  className={cn(
-                    'flex min-w-0 flex-1 items-center justify-between gap-2 text-start outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
-                    isRTL ? 'text-end' : 'text-start',
-                  )}
-                >
-                  <span className="text-sm font-medium text-foreground">
-                    {t('assignmentDetail.studentTaskTitle')}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-                      taskCardOpen && 'rotate-180',
-                    )}
-                    aria-hidden
-                  />
-                </CollapsibleTrigger>
-                {!isTeacherTry ? (
-                  <AssignmentTypeHelpHint assignmentType={assignment.type as DbAssignmentType} />
-                ) : null}
-              </div>
-              <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-2 text-sm">
-                {resolvedStudentFacingTask ? (
-                  <p className="whitespace-pre-wrap text-foreground leading-relaxed" dir="auto">
-                    {resolvedStudentFacingTask}
-                  </p>
-                ) : isStudentTaskLoading ? (
-                  <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                    {t('assignmentDetail.loadingStudentTask')}
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground leading-relaxed" dir="auto">
-                    {t('assignmentDetail.studentTaskNotSetYet')}
-                  </p>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-=======
           <div ref={assignmentClipboardRootRef} className="space-y-6">
           {assignment ? (
             <StudentFacingTaskSection
@@ -881,7 +816,6 @@ const AssignmentDetail = () => {
               taskText={resolvedStudentFacingTask || assignment.student_facing_task}
               taskLoading={isStudentTaskLoading}
             />
->>>>>>> bugs_during_course
           ) : null}
 
           {unitOutlineMaterials.length > 0 ? (
@@ -920,19 +854,6 @@ const AssignmentDetail = () => {
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          ) : null}
-
-          {!showPageTaskCard && !isTeacherTry && assignment ? (
-            <div
-              className={cn(
-                'flex items-center gap-1.5 text-sm font-medium text-foreground',
-                isRTL && 'flex-row-reverse',
-              )}
-              dir={isRTL ? 'rtl' : 'ltr'}
-            >
-              {t('assignmentDetail.studentTaskTitle')}
-              <AssignmentTypeHelpHint assignmentType={assignment.type as DbAssignmentType} />
-            </div>
           ) : null}
 
           {!feedback && !submission && (
@@ -1025,7 +946,7 @@ const AssignmentDetail = () => {
                 </div>
               ) : null;
 
-            if (!isTeacherTry && isCompleted && submission.awaiting_teacher_feedback_release) {
+            if (isCompleted && submission.awaiting_teacher_feedback_release) {
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -1041,7 +962,7 @@ const AssignmentDetail = () => {
 
             const evalStatus = submission.evaluation_status;
 
-            if (!isTeacherTry && isCompleted && evalStatus === EVALUATION_STATUS.FAILED && !feedback) {
+            if (isCompleted && evalStatus === EVALUATION_STATUS.FAILED && !feedback) {
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -1055,23 +976,15 @@ const AssignmentDetail = () => {
               );
             }
 
-<<<<<<< HEAD
-            if (!isTeacherTry && isCompleted && !feedback && assignment.enable_ai_feedback === false) {
-              const awaitingKey = isManualEvalType
-                ? `assignmentDetail.${assignment.type}.awaitingReview`
-                : 'assignmentDetail.success.completed';
-              const CompletedIcon = isManualEvalType ? Clock : CheckCircle;
-=======
             if (isCompleted && assignment.enable_ai_feedback === false && !feedback) {
               const awaitingKey = `assignmentDetail.${assignment.type}.awaitingReview`;
               const awaitingFallback = t('assignmentDetail.submittedAwaitingReview', {
                 defaultValue: 'Your activity has been submitted and is awaiting teacher review.',
               });
->>>>>>> bugs_during_course
               return (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <CompletedIcon className="h-10 w-10 text-primary mb-4" />
+                    <Clock className="h-10 w-10 text-primary mb-4" />
                     <p className="text-sm font-medium text-primary">
                       {t(awaitingKey, { defaultValue: awaitingFallback })}
                     </p>
@@ -1082,7 +995,6 @@ const AssignmentDetail = () => {
             }
 
             if (
-              !isTeacherTry &&
               isCompleted &&
               !feedback &&
               assignment.enable_ai_feedback !== false &&

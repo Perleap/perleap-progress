@@ -41,21 +41,11 @@ import {
   defaultDataForLangchainNodeType,
   ensureLangchainNodeData,
   isLangchainNodeType,
-  type LangchainNodeType,
 } from './langchainNodeData';
 import { NodePalette } from './NodePalette';
-import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode, DatabaseNode } from './nodes';
+import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode } from './nodes';
 import { cn } from '@/lib/utils';
 import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
-
-const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'> = {
-  inputNode: 'input',
-  outputNode: 'output',
-  llmNode: 'llm',
-  triggerNode: 'trigger',
-  emailNode: 'email',
-  databaseNode: 'database',
-};
 
 const nodeTypes: NodeTypes = {
   inputNode: InputNode,
@@ -63,7 +53,6 @@ const nodeTypes: NodeTypes = {
   llmNode: LLMNode,
   triggerNode: TriggerNode,
   emailNode: EmailNode,
-  databaseNode: DatabaseNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -283,7 +272,6 @@ const LangchainEditorInner = ({
       if (!position) return;
 
       const data = defaultDataForLangchainNodeType(type);
-      data.label = t(`assignmentDetail.langchain.nodes.${NODE_I18N_KEY[type]}`);
 
       const newNode: Node = {
         id: `${type}_${Date.now()}`,
@@ -296,11 +284,7 @@ const LangchainEditorInner = ({
       setSelectedNodeId(newNode.id);
       notifyUserActivity();
     },
-<<<<<<< HEAD
-    [setNodes, t]
-=======
     [setNodes, notifyUserActivity]
->>>>>>> bugs_during_course
   );
 
   const editorContextValue = useMemo(

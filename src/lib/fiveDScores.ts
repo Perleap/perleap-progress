@@ -116,14 +116,6 @@ export function fiveDScoreForChart(
   return isFiveDScoreAssessed(v) ? v : 0;
 }
 
-/** Table/display formatting — null dimensions render as em dash. */
-export function formatFiveDScoreDisplay(
-  score: number | null | undefined,
-  decimals = 2,
-): string {
-  return typeof score === 'number' && !Number.isNaN(score) ? score.toFixed(decimals) : '—';
-}
-
 export function formatFiveDScoreDelta(
   a: number | null | undefined,
   b: number | null | undefined,
@@ -143,8 +135,5 @@ export function formatFiveDScoreDelta(
 
 /** Stable cache-key fragment for FiveDScores (null dimensions serialize as "null"). */
 export function stableFiveDScoreKey(scores: FiveDScores): string {
-  return FIVE_D_DIMENSION_KEYS.map((k) => {
-    const v = scores[k];
-    return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(2) : 'null';
-  }).join(',');
+  return stableFiveDScoresKey(scores);
 }

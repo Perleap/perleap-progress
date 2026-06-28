@@ -12,16 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-<<<<<<< HEAD
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem, ToggleDot } from '@/components/ui/radio-group';
-=======
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
->>>>>>> bugs_during_course
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Send, CircleDot, AlignLeft, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
@@ -68,9 +62,6 @@ export function TestTakingPage({
 }: TestTakingPageProps) {
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage = 'en' } = useLanguage();
-<<<<<<< HEAD
-  const { user, loading: authLoading } = useAuth();
-=======
   const { user } = useAuth();
   const hasTrackedFirstInteraction = useRef(false);
 
@@ -79,16 +70,8 @@ export function TestTakingPage({
     hasTrackedFirstInteraction.current = true;
     nuanceTracking.trackResponseStarted(0);
   };
->>>>>>> bugs_during_course
 
-  const {
-    data: questions,
-    isLoading,
-    isError: questionsError,
-    refetch: refetchQuestions,
-  } = useTestQuestions(assignmentId, {
-    forStudent: !isTeacherTry,
-  });
+  const { data: questions, isLoading } = useTestQuestions(assignmentId, { forStudent: true });
   const submitResponses = useSubmitTestResponses();
 
   const [answers, setAnswers] = useState<Record<string, TestAnswer>>({});
@@ -114,16 +97,7 @@ export function TestTakingPage({
   };
 
   const requestSubmit = () => {
-    if (!user) {
-      if (!authLoading) {
-        toast.error(t('assignmentDetail.testTaking.sessionExpired'));
-      }
-      return;
-    }
-    if (!questions) {
-      toast.error(t('assignmentDetail.testTaking.questionsNotLoaded'));
-      return;
-    }
+    if (!questions || !user) return;
 
     const unanswered = questions.filter((q) => {
       const answer = answers[q.id];
@@ -208,21 +182,6 @@ export function TestTakingPage({
     );
   }
 
-  if (questionsError) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-4">
-          <p className="text-muted-foreground">
-            {t('assignmentDetail.testTaking.questionsLoadError')}
-          </p>
-          <Button type="button" variant="outline" onClick={() => void refetchQuestions()}>
-            {t('common.retry')}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   if (!questions || questions.length === 0) {
     return (
       <Card>
@@ -256,6 +215,18 @@ export function TestTakingPage({
       </AlertDialog>
 
       <div className="space-y-4">
+      <Card className="bg-primary/5 border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">{t('assignmentDetail.testTaking.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {questions.length} {t('submissionDetail.testResults.question').toLowerCase()}
+            {questions.length !== 1 ? 's' : ''}
+          </p>
+        </CardContent>
+      </Card>
+
       {questions.map((question, index) => {
         const options = (question.options as { id: string; text: string }[] | null) || [];
         const multiSelect = isMultiSelectMcq(question.allow_multiple_selections);
@@ -264,21 +235,20 @@ export function TestTakingPage({
         return (
           <Card key={question.id} className="overflow-hidden">
             <CardHeader className="pb-3 bg-transparent">
-              <Badge
-                variant="secondary"
-                className="shrink-0 rounded-full gap-1.5 px-2.5 py-0.5 font-medium text-muted-foreground"
-              >
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="shrink-0">
+                  {t('assignmentDetail.testTaking.question', { number: index + 1 })}
+                </Badge>
                 {question.question_type === 'multiple_choice' ? (
                   multiSelect ? (
-                    <ListChecks className="size-3 shrink-0" />
+                    <ListChecks className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <CircleDot className="size-3 shrink-0" />
+                    <CircleDot className="h-4 w-4 text-muted-foreground" />
                   )
                 ) : (
-                  <AlignLeft className="size-3 shrink-0" />
+                  <AlignLeft className="h-4 w-4 text-muted-foreground" />
                 )}
-                {t('assignmentDetail.testTaking.question', { number: index + 1 })}
-              </Badge>
+              </div>
               <p className={`text-sm font-medium mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {question.question_text}
               </p>
@@ -293,26 +263,30 @@ export function TestTakingPage({
                 multiSelect ? (
                   <div className="space-y-2" dir={isRTL ? 'rtl' : 'ltr'}>
                     {options.map((option) => (
-                      <label
+                      <div
                         key={option.id}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          const nextChecked = !selectedIds.includes(option.id);
-                          updateAnswer(question.id, {
-                            selected_option_ids: toggleOptionId(
-                              selectedIds,
-                              option.id,
-                              nextChecked,
-                            ),
-                          });
-                        }}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                       >
-                        <ToggleDot
+                        <Checkbox
+                          id={`${question.id}-${option.id}`}
                           checked={selectedIds.includes(option.id)}
-                          className="shrink-0"
+                          onCheckedChange={(checked) =>
+                            updateAnswer(question.id, {
+                              selected_option_ids: toggleOptionId(
+                                selectedIds,
+                                option.id,
+                                checked === true,
+                              ),
+                            })
+                          }
                         />
-                        <span className="flex-1 text-sm leading-normal">{option.text}</span>
-                      </label>
+                        <Label
+                          htmlFor={`${question.id}-${option.id}`}
+                          className="flex-1 cursor-pointer text-sm"
+                        >
+                          {option.text}
+                        </Label>
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -325,18 +299,15 @@ export function TestTakingPage({
                   >
                     <div className="space-y-2">
                       {options.map((option) => (
-                        <label
-                          key={option.id}
-                          htmlFor={`${question.id}-${option.id}`}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        >
-                          <RadioGroupItem
-                            value={option.id}
-                            id={`${question.id}-${option.id}`}
-                            className="shrink-0"
-                          />
-                          <span className="flex-1 text-sm leading-normal">{option.text}</span>
-                        </label>
+                        <div key={option.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
+                          <Label
+                            htmlFor={`${question.id}-${option.id}`}
+                            className="flex-1 cursor-pointer text-sm"
+                          >
+                            {option.text}
+                          </Label>
+                        </div>
                       ))}
                     </div>
                   </RadioGroup>
@@ -363,13 +334,6 @@ export function TestTakingPage({
         <Button
           onClick={requestSubmit}
           disabled={submitting}
-          title={
-            !user && !authLoading
-              ? t('assignmentDetail.testTaking.sessionExpired')
-              : !questions && (!isLoading || questionsError)
-                ? t('assignmentDetail.testTaking.questionsNotLoaded')
-                : undefined
-          }
           size="lg"
           className="gap-2 rounded-full shadow-md"
         >

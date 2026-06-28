@@ -7,21 +7,9 @@ import {
   type Analytics5dNarrativeInput,
   type Analytics5dNarrativeResult,
 } from '@/services/analytics5dExplainService';
-<<<<<<< HEAD
-import type { FiveDScores } from '@/types/models';
-import { stableFiveDScoresKey } from '@/lib/fiveDScores';
 
 export type { Analytics5dNarrativeContext, Analytics5dNarrativeInput, Analytics5dNarrativeResult };
 
-function stableScoreKey(s: FiveDScores): string {
-  return stableFiveDScoresKey(s);
-}
-
-=======
-
-export type { Analytics5dNarrativeContext, Analytics5dNarrativeInput, Analytics5dNarrativeResult };
-
->>>>>>> bugs_during_course
 export const analytics5dNarrativeKeys = {
   all: ['analytics5dNarrative'] as const,
   one: (input: Analytics5dNarrativeInput & { narrativeId: string }) =>

@@ -7,11 +7,6 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-<<<<<<< HEAD
-import { DIMENSION_CONFIG } from '@/config/constants';
-import type { FiveDScores } from '@/types/models';
-import { getAssessedFiveDDimensions, isFiveDScoreAssessed } from '@/lib/fiveDScores';
-=======
 import { DIMENSION_CONFIG, QED_LAYER_CONFIG } from '@/config/constants';
 import type { FiveDDimensionKey, FiveDScores, FiveDQedMeasures } from '@/types/models';
 import { FIVE_D_DIMENSION_KEYS } from '@/lib/fiveDScores';
@@ -20,7 +15,6 @@ import {
   hasDualLayerQedData,
   type QedLayerKey,
 } from '@/lib/qedMeasures';
->>>>>>> bugs_during_course
 import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -36,75 +30,6 @@ interface RadarChartProps {
   layerControlsLayout?: 'side' | 'stacked';
 }
 
-<<<<<<< HEAD
-interface ChartDataPoint {
-  dimension: keyof FiveDScores;
-  value: number | null;
-  fullMark: number;
-  label: string;
-}
-
-interface RadarShapePoint {
-  x: number;
-  y: number;
-  cx?: number;
-  cy?: number;
-  payload?: ChartDataPoint;
-  value?: number | null;
-}
-
-interface AssessedRadarShapeProps {
-  points?: RadarShapePoint[];
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-  fillOpacity?: number;
-}
-
-function AssessedRadarShape({
-  points = [],
-  fill = '#888888',
-  stroke = '#888888',
-  strokeWidth = 2,
-  fillOpacity = 0.6,
-}: AssessedRadarShapeProps) {
-  const assessed = points.filter(
-    (point) => point.payload?.value != null && Number.isFinite(point.x) && Number.isFinite(point.y),
-  );
-
-  if (assessed.length === 0) return null;
-
-  const cx = points[0]?.cx ?? 0;
-  const cy = points[0]?.cy ?? 0;
-
-  let d: string;
-
-  if (assessed.length === 1) {
-    // A single assessed dimension: draw a spoke from the center to the point so it is visible.
-    const { x, y } = assessed[0];
-    d = `M ${cx},${cy} L ${x},${y}`;
-  } else if (assessed.length === 2) {
-    // Two assessed dimensions: a closed wedge anchored at the polar center.
-    const [a, b] = assessed;
-    d = `M ${cx},${cy} L ${a.x},${a.y} L ${b.x},${b.y} Z`;
-  } else {
-    // Three or more: a closed polygon through only the assessed vertices.
-    const segments = assessed.map((point, i) => `${i === 0 ? 'M' : 'L'} ${point.x},${point.y}`);
-    d = `${segments.join(' ')} Z`;
-  }
-
-  return (
-    <path
-      d={d}
-      fill={fill}
-      fillOpacity={fillOpacity}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeLinejoin="round"
-    />
-  );
-}
-=======
 type ChartPoint = {
   dimension: FiveDDimensionKey;
   label: string;
@@ -117,19 +42,14 @@ type ChartPoint = {
   explanation: string;
   scoreRaw: number | null;
 };
->>>>>>> bugs_during_course
 
 interface CustomTooltipProps {
   active?: boolean;
   payload?: Array<{
     value: number;
-<<<<<<< HEAD
-    payload: ChartDataPoint;
-=======
     name: string;
     color: string;
     payload: ChartPoint;
->>>>>>> bugs_during_course
   }>;
   visibleLayers: Set<QedLayerKey>;
   showMotivationLayer: boolean;
@@ -144,19 +64,11 @@ const CustomTooltip = ({
   const { t } = useTranslation();
   if (!active || !payload?.length) return null;
 
-<<<<<<< HEAD
-  const { dimension, value } = payload[0].payload;
-
-  if (value == null) return null;
-
-  const blurb = explanations?.[dimension] || t(`dimensions.${dimension}.description`);
-=======
   const point = payload[0].payload;
   const blurb =
     point.next ||
     point.explanation ||
     t(`dimensions.${point.dimension}.description`);
->>>>>>> bugs_during_course
 
   return (
     <div className="bg-background border border-border rounded-lg shadow-lg p-3 max-w-xs z-50">
@@ -224,121 +136,6 @@ export const RadarChart = ({
   const [showDevelopment, setShowDevelopment] = useState(true);
   const [showMotivation, setShowMotivation] = useState(true);
 
-<<<<<<< HEAD
-  const dimensionOrder: (keyof FiveDScores)[] = ['vision', 'values', 'thinking', 'connection', 'action'];
-  const assessedDimensions = getAssessedFiveDDimensions(scores);
-  const chartData: ChartDataPoint[] = dimensionOrder.map((dimension) => {
-    const score = scores[dimension];
-    return {
-      dimension,
-      value: isFiveDScoreAssessed(score) ? score : null,
-      fullMark: 10,
-      label: t(`dimensions.${dimension}.label`),
-    };
-  });
-
-  const getFillColor = () => {
-    if (hoveredDimension) {
-      return DIMENSION_CONFIG[hoveredDimension].color;
-    }
-    return 'url(#rainbowGradient)';
-  };
-
-  const getStrokeColor = () => {
-    if (hoveredDimension) {
-      return DIMENSION_CONFIG[hoveredDimension].color;
-    }
-    return '#888888';
-  };
-
-  return (
-    <div className="w-full">
-      {assessedDimensions.length === 0 ? (
-        <div
-          className="flex items-center justify-center text-sm text-muted-foreground"
-          style={{ height }}
-        >
-          {t('dimensions.noAssessableDimensions', {
-            defaultValue: 'No assessable dimensions for this view',
-          })}
-        </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={height}>
-          <RechartsRadarChart data={chartData}>
-            <defs>
-              <linearGradient id="rainbowGradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.6} />
-                <stop offset="25%" stopColor="#EF4444" stopOpacity={0.6} />
-                <stop offset="50%" stopColor="#3B82F6" stopOpacity={0.6} />
-                <stop offset="75%" stopColor="#10B981" stopOpacity={0.6} />
-                <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.6} />
-              </linearGradient>
-            </defs>
-
-            <PolarGrid stroke="hsl(var(--border))" />
-            <PolarAngleAxis
-              dataKey="label"
-              tick={({ payload, x, y, textAnchor }) => {
-                const dimension = chartData[payload.index].dimension;
-                const isHovered = hoveredDimension === dimension;
-                const color = DIMENSION_CONFIG[dimension].color;
-
-                return (
-                  <text
-                    x={x}
-                    y={y}
-                    textAnchor={textAnchor}
-                    fill={isHovered ? color : 'hsl(var(--foreground))'}
-                    fontSize={isHovered ? 14 : 12}
-                    fontWeight={isHovered ? 'bold' : 'normal'}
-                    className="cursor-pointer transition-all duration-200"
-                    onMouseEnter={() => setHoveredDimension(dimension)}
-                    onMouseLeave={() => setHoveredDimension(null)}
-                  >
-                    {payload.value}
-                  </text>
-                );
-              }}
-            />
-            <PolarRadiusAxis
-              angle={90}
-              domain={[0, 10]}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-              ticks={[0, 3, 6, 10]}
-            />
-            <Radar
-              name="Score"
-              dataKey="value"
-              stroke={getStrokeColor()}
-              fill={getFillColor()}
-              fillOpacity={0.6}
-              strokeWidth={2}
-              isAnimationActive={false}
-              connectNulls={false}
-              dot={false}
-              shape={(props) => (
-                <AssessedRadarShape
-                  points={props.points as RadarShapePoint[] | undefined}
-                  fill={getFillColor()}
-                  stroke={getStrokeColor()}
-                  strokeWidth={2}
-                  fillOpacity={0.6}
-                />
-              )}
-            />
-            <Tooltip
-              content={({ active, payload }) => (
-                <CustomTooltip
-                  active={active}
-                  payload={payload as CustomTooltipProps['payload']}
-                  explanations={explanations}
-                />
-              )}
-            />
-          </RechartsRadarChart>
-        </ResponsiveContainer>
-      )}
-=======
   useEffect(() => {
     setShowMotivation(dualLayer);
     setShowDevelopment(true);
@@ -521,7 +318,6 @@ export const RadarChart = ({
           ) : null}
         </div>
       </div>
->>>>>>> bugs_during_course
 
       {showLabels ? (
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -529,13 +325,6 @@ export const RadarChart = ({
             const config = DIMENSION_CONFIG[dimension];
             const point = data.find((d) => d.dimension === dimension)!;
             const explanation = explanations?.[dimension];
-<<<<<<< HEAD
-            const score = scores[dimension];
-            const displayValue = isFiveDScoreAssessed(score)
-              ? `${score.toFixed(1)}/10`
-              : t('dimensions.notAssessable', { defaultValue: 'N/A' });
-=======
->>>>>>> bugs_during_course
             const isHovered = hoveredDimension === dimension;
 
             return (

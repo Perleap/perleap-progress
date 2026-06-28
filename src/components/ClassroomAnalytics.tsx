@@ -38,25 +38,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-<<<<<<< HEAD
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { formatFiveDScoreDisplay } from '@/lib/fiveDScores';
-=======
->>>>>>> bugs_during_course
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
@@ -783,196 +764,6 @@ export const ClassroomAnalytics = ({
         </p>
       </div>
 
-<<<<<<< HEAD
-      {canCompareSections ? (
-        <Card
-          className="rounded-[32px] border-none shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
-          dir={isRTL ? 'rtl' : 'ltr'}
-        >
-          <CardHeader className="border-b border-border pb-4">
-            <CardTitle
-              className={`flex items-center gap-3 text-lg font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
-            >
-              <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-                <GitCompare className="h-5 w-5 text-primary" />
-              </div>
-              {t('analytics.compareSections')}
-            </CardTitle>
-            <CardDescription className={isRTL ? 'text-right' : 'text-left'}>
-              {t('analytics.compareHint')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
-              <div className="space-y-2 sm:min-w-[200px]">
-                <span
-                  className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}
-                >
-                  {t('analytics.compareModuleA')}
-                </span>
-                <Select
-                  value={compareA || '_none_'}
-                  onValueChange={(v) => setCompareA(v === '_none_' ? '' : v)}
-                >
-                  <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectValue placeholder={t('analytics.compareSelectSection')}>
-                      {compareA
-                        ? labelForCompareModule(compareA)
-                        : t('analytics.compareSelectSection')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">{t('analytics.compareSelectSection')}</SelectItem>
-                    {modules.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.title}
-                      </SelectItem>
-                    ))}
-                    {showUnplaced ? (
-                      <SelectItem value="unplaced">{t('analytics.unplacedAssignments')}</SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 sm:min-w-[200px]">
-                <span
-                  className={`text-sm font-semibold text-muted-foreground block ${isRTL ? 'text-right' : 'text-left'}`}
-                >
-                  {t('analytics.compareModuleB')}
-                </span>
-                <Select
-                  value={compareB || '_none_'}
-                  onValueChange={(v) => setCompareB(v === '_none_' ? '' : v)}
-                >
-                  <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <SelectValue placeholder={t('analytics.compareSelectSection')}>
-                      {compareB
-                        ? labelForCompareModule(compareB)
-                        : t('analytics.compareSelectSection')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">{t('analytics.compareSelectSection')}</SelectItem>
-                    {modules.map((m) => (
-                      <SelectItem key={`b-${m.id}`} value={m.id}>
-                        {m.title}
-                      </SelectItem>
-                    ))}
-                    {showUnplaced ? (
-                      <SelectItem value="unplaced">{t('analytics.unplacedAssignments')}</SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {compareA && compareB && compareA === compareB ? (
-              <p className="text-sm text-amber-700 dark:text-amber-500">
-                {t('analytics.compareSameSection')}
-              </p>
-            ) : null}
-
-            {compareA && compareB && compareA !== compareB && (!compareAvgA || !compareAvgB) ? (
-              <p className="text-sm text-muted-foreground">
-                {t('classroomAnalytics.noStudentDataInScope')}
-              </p>
-            ) : null}
-
-            {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
-              <>
-                <div className="overflow-x-auto rounded-xl border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[28%]">{t('analytics.compareDimension')}</TableHead>
-                        <TableHead className="text-center">
-                          {compareA === 'unplaced'
-                            ? t('analytics.unplacedAssignments')
-                            : (modules.find((m) => m.id === compareA)?.title ?? 'A')}
-                        </TableHead>
-                        <TableHead className="text-center">
-                          {compareB === 'unplaced'
-                            ? t('analytics.unplacedAssignments')
-                            : (modules.find((m) => m.id === compareB)?.title ?? 'B')}
-                        </TableHead>
-                        <TableHead className="text-center w-[20%]">
-                          {t('analytics.compareDelta')}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(['vision', 'values', 'thinking', 'connection', 'action'] as const).map(
-                        (dim) => {
-                          const a = compareAvgA[dim];
-                          const b = compareAvgB[dim];
-                          const d =
-                            typeof a === 'number' && typeof b === 'number' ? b - a : null;
-                          return (
-                            <TableRow key={dim}>
-                              <TableCell className="font-medium">
-                                {t(`submissionDetail.dimensions.${dim}`)}
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums">
-                                {formatFiveDScoreDisplay(a, 2)}
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums">
-                                {formatFiveDScoreDisplay(b, 2)}
-                              </TableCell>
-                              <TableCell className="text-center tabular-nums text-muted-foreground">
-                                {d == null
-                                  ? '—'
-                                  : `${d >= 0 ? '+' : ''}${formatFiveDScoreDisplay(d, 2)}`}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        }
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-border/60 p-2 bg-muted/10">
-                    {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
-                      <CompareSide5dNarrativeBlock
-                        classroomId={classroomId}
-                        sideScores={compareAvgA}
-                        filterSummary={compareFilterSummary}
-                        language={analyticsLanguage}
-                        compareLabelA={labelForCompareModule(compareA)}
-                        compareLabelB={labelForCompareModule(compareB)}
-                        peerScores={compareAvgB}
-                        isRTL={isRTL}
-                        enabled
-                        narrativeId={`5d-compare-a-${compareA}-${compareB}`}
-                        evidenceText={compare5dEvidenceA.evidenceText}
-                        evidenceSourceCount={compare5dEvidenceA.sourceCount}
-                      />
-                    ) : null}
-                  </div>
-                  <div className="rounded-2xl border border-border/60 p-2 bg-muted/10">
-                    {compareAvgA && compareAvgB && compareA && compareB && compareA !== compareB ? (
-                      <CompareSide5dNarrativeBlock
-                        classroomId={classroomId}
-                        sideScores={compareAvgB}
-                        filterSummary={compareFilterSummary}
-                        language={analyticsLanguage}
-                        compareLabelA={labelForCompareModule(compareB)}
-                        compareLabelB={labelForCompareModule(compareA)}
-                        peerScores={compareAvgA}
-                        isRTL={isRTL}
-                        enabled
-                        narrativeId={`5d-compare-b-${compareA}-${compareB}`}
-                        evidenceText={compare5dEvidenceB.evidenceText}
-                        evidenceSourceCount={compare5dEvidenceB.sourceCount}
-                      />
-                    ) : null}
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </CardContent>
-        </Card>
-=======
       {data ? (
         <AnalyticsCompare5dCard
           classroomId={classroomId}
@@ -992,7 +783,6 @@ export const ClassroomAnalytics = ({
           rawSnapshots={data.rawSnapshots}
           sectionTitleResolver={sectionTitleResolver}
         />
->>>>>>> bugs_during_course
       ) : null}
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -1347,8 +1137,7 @@ export const ClassroomAnalytics = ({
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(classAverage).map(([dimension, score]) => {
-                      const numeric =
-                        typeof score === 'number' && !Number.isNaN(score) ? score : null;
+                      const numeric = Number(score);
                       return (
                         <div key={dimension} className="flex items-center justify-between">
                           <span
@@ -1360,11 +1149,11 @@ export const ClassroomAnalytics = ({
                             <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-primary rounded-full"
-                                style={{ width: `${numeric != null ? (numeric / 10) * 100 : 0}%` }}
+                                style={{ width: `${(numeric / 10) * 100}%` }}
                               />
                             </div>
                             <span className="text-sm font-bold text-foreground w-8 text-right">
-                              {formatFiveDScoreDisplay(numeric, 1)}
+                              {numeric.toFixed(1)}
                             </span>
                           </div>
                         </div>

@@ -37,7 +37,6 @@ import {
   formatInlineListsForChatMarkdown,
   splitAssistantMessageIntoSentences,
 } from '@/lib/chatDisplay';
-import { EVALUATION_STATUS } from '@/config/constants';
 import { cn } from '@/lib/utils';
 import {
   generateFeedback,
@@ -60,7 +59,6 @@ interface SubmissionTabsProps {
     conversation_complete_at_submit?: boolean | null;
     /** When true, student is still waiting for teacher to publish feedback. */
     awaiting_teacher_feedback_release?: boolean;
-    evaluation_status?: string | null;
     file_url?: string | null;
     file_urls?: string[] | null;
     text_body?: string | null;
@@ -70,7 +68,6 @@ interface SubmissionTabsProps {
       title: string;
       instructions?: string;
       type: string;
-      enable_ai_feedback?: boolean;
       auto_publish_ai_feedback?: boolean;
       /** AI-generated short task shown to students before they start. */
       student_facing_task?: string | null;
@@ -238,32 +235,11 @@ export const SubmissionTabs = ({
     setStudentDraft(feedback.student_feedback ?? '');
   }, [feedback?.teacher_feedback, feedback?.student_feedback, feedback?.visible_to_student]);
 
-  const AI_FEEDBACK_GENERATE_TYPES = [
-    'text_essay',
-    'test',
-    'questions',
-    'chatbot',
-    'project',
-    'presentation',
-    'langchain',
-  ] as const;
-
-  const supportsAiFeedbackGenerate =
+  const canGenerateAiFeedback =
     submission.status === 'completed' &&
+    !feedback &&
     !submission.is_teacher_attempt &&
-    AI_FEEDBACK_GENERATE_TYPES.includes(
-      assignmentType as (typeof AI_FEEDBACK_GENERATE_TYPES)[number],
-    );
-
-  const canGenerateAiFeedback = supportsAiFeedbackGenerate && !feedback;
-
-  const showGenerateAiFeedbackButton = supportsAiFeedbackGenerate;
-
-  const aiEvalInProgress =
-    submission.evaluation_status === EVALUATION_STATUS.PENDING ||
-    submission.evaluation_status === EVALUATION_STATUS.PROCESSING;
-
-  const generateDisabled = generatingAi || aiEvalInProgress;
+    ['text_essay', 'test', 'questions', 'chatbot'].includes(assignmentType);
 
   const feedbackMainTraceId = readOpikTraceId(feedback?.opik_trace_ids, 'feedback_main');
   const studentFacingTraceId = readOpikTraceId(
@@ -284,17 +260,13 @@ export const SubmissionTabs = ({
         studentId: submission.student_id,
         assignmentId: submission.assignments.id,
         language,
-        regenerate: true,
       });
       if (error) throw error;
       toast.success(t('submissionDetail.generateAiEvaluation.success'));
       await queryClient.invalidateQueries({
-        queryKey: submissionKeys.detail(submission.id),
-      });
-      await queryClient.invalidateQueries({
         queryKey: submissionKeys.conversation(submission.id),
       });
-      await onEvaluationComplete?.();
+      onEvaluationComplete?.();
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -431,32 +403,15 @@ export const SubmissionTabs = ({
                       {t('submissionDetail.editFeedback.teacherHint')}
                     </CardDescription>
                   </div>
-                  <div className="flex shrink-0 items-start gap-2">
-                    {showGenerateAiFeedbackButton ? (
-                      <Button
-                        type="button"
-                        onClick={() => void handleGenerateAiEvaluation()}
-                        disabled={generateDisabled}
-                        className="shrink-0 rounded-xl gap-2"
-                      >
-                        {generateDisabled ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                        {t('submissionDetail.generateAiEvaluation.action')}
-                      </Button>
-                    ) : null}
-                    {feedbackMainTraceId ? (
-                      <AiContentFlagButton
-                        contentType="teacher_feedback"
-                        contentExcerpt={teacherDraft}
-                        opikTraceId={feedbackMainTraceId}
-                        assignmentId={submission.assignments.id}
-                        submissionId={submission.id}
-                      />
-                    ) : null}
-                  </div>
+                  {feedbackMainTraceId ? (
+                    <AiContentFlagButton
+                      contentType="teacher_feedback"
+                      contentExcerpt={teacherDraft}
+                      opikTraceId={feedbackMainTraceId}
+                      assignmentId={submission.assignments.id}
+                      submissionId={submission.id}
+                    />
+                  ) : null}
                 </div>
               </CardHeader>
               <CardContent className="p-6 pt-4 space-y-3">
@@ -524,73 +479,6 @@ export const SubmissionTabs = ({
               </CardContent>
             </Card>
           </div>
-        ) : canGenerateAiFeedback ? (
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              {t('submissionDetail.generateAiEvaluation.description')}
-            </p>
-
-            <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden p-0 gap-0">
-              <CardHeader className="bg-accent dark:bg-accent/30 px-6 py-4 pb-4 text-left rounded-t-xl">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-foreground text-left">
-                      {t('submissionDetail.teacherFeedback')}
-                    </CardTitle>
-                    <CardDescription className="text-left text-xs pt-1">
-                      {t('submissionDetail.editFeedback.teacherHint')}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => void handleGenerateAiEvaluation()}
-                    disabled={generateDisabled}
-                    className="shrink-0 rounded-xl gap-2"
-                  >
-                    {generateDisabled ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    {t('submissionDetail.generateAiEvaluation.action')}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 pt-4 space-y-3">
-                <Textarea
-                  value=""
-                  readOnly
-                  disabled
-                  className="min-h-[140px] text-sm rounded-lg"
-                  placeholder={t('submissionDetail.editFeedback.teacherPlaceholder')}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden p-0 gap-0">
-              <CardHeader className="bg-accent dark:bg-accent/30 px-6 py-4 pb-4 text-left rounded-t-xl">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-foreground text-left">
-                      {t('submissionDetail.studentFeedback')}
-                    </CardTitle>
-                    <CardDescription className="text-left text-xs pt-1">
-                      {t('submissionDetail.editFeedback.studentHint')}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 pt-4 space-y-3">
-                <Textarea
-                  value=""
-                  readOnly
-                  disabled
-                  className="min-h-[180px] text-sm rounded-lg"
-                  placeholder={t('submissionDetail.editFeedback.studentPlaceholder')}
-                />
-              </CardContent>
-            </Card>
-          </div>
         ) : (
           <Card className="rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800">
             <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -651,12 +539,6 @@ export const SubmissionTabs = ({
           switch (assignmentType) {
             case 'test':
               return (
-<<<<<<< HEAD
-                <TestResultsView
-                  assignmentId={submission.assignments.id}
-                  submissionId={submission.id}
-                />
-=======
                 <div className="space-y-6">
                   {activitySignalsCard}
                   <TestResultsView
@@ -682,7 +564,6 @@ export const SubmissionTabs = ({
                     </div>
                   ) : null}
                 </div>
->>>>>>> bugs_during_course
               );
             case 'project':
               return (
@@ -761,6 +642,23 @@ export const SubmissionTabs = ({
                       <div className="whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800/50 p-4 text-sm text-slate-800 dark:text-slate-200 min-h-[200px]">
                         {submission.text_body?.trim() || t('submissionDetail.essayEmpty')}
                       </div>
+                      {canGenerateAiFeedback ? (
+                        <div className="mt-4 flex justify-end">
+                          <Button
+                            type="button"
+                            onClick={() => void handleGenerateAiEvaluation()}
+                            disabled={generatingAi}
+                            className="rounded-xl gap-2"
+                          >
+                            {generatingAi ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4" />
+                            )}
+                            {t('submissionDetail.generateAiEvaluation.action')}
+                          </Button>
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                 </div>
@@ -828,6 +726,21 @@ export const SubmissionTabs = ({
                           {t('submissionDetail.conversationHistoryDesc', { student: studentName })}
                         </CardDescription>
                       </div>
+                      {canGenerateAiFeedback ? (
+                        <Button
+                          type="button"
+                          onClick={() => void handleGenerateAiEvaluation()}
+                          disabled={generatingAi}
+                          className="shrink-0 rounded-xl gap-2"
+                        >
+                          {generatingAi ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                          {t('submissionDetail.generateAiEvaluation.action')}
+                        </Button>
+                      ) : null}
                     </CardHeader>
                     <CardContent className="flex flex-1 flex-col overflow-hidden p-0 min-h-0">
                       <div
