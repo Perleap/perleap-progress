@@ -87,7 +87,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const accountItems: NavItem[] = React.useMemo(() => {
     const items: NavItem[] = [
       {
-        title: t('settings.profile'),
+        title: t('settings.profile.title'),
         url: `${basePath}/settings?tab=profile`,
         icon: User,
       },

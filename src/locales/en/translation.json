@@ -21,7 +21,8 @@
     "monitoring": "Monitoring",
     "aiPrompts": "AI prompts",
     "language": "Language",
-    "toggleSidebar": "Toggle sidebar"
+    "toggleSidebar": "Toggle sidebar",
+    "backToDashboard": "Back to dashboard"
   },
   "teacherTry": {
     "bannerTitle": "Teacher preview",
@@ -474,7 +475,8 @@
       "fileTooLarge": "File is too large (max 10 MB).",
       "fileTypeNotAllowed": "This file type is not supported. Use PDF, PNG, JPG, or text files.",
       "completing": "Error completing activity",
-      "flag": "Could not send your report. Please try again."
+      "flag": "Could not send your report. Please try again.",
+      "sessionExpired": "Your session expired. Refresh the page and try again."
     },
     "success": {
       "activityCompleted": "Activity completed! Feedback generated.",
@@ -510,6 +512,10 @@
       "rawModel": "Raw model output",
       "afterPostprocess": "After normalize / polish",
       "finalClient": "Final message to client (stored)"
+    },
+    "completeNotReady": "Complete the required steps before finishing this activity.",
+    "resources": {
+      "empty": "No resources uploaded yet"
     }
   },
   "aiContentFlag": {
@@ -578,6 +584,7 @@
     "importFromFileBusy": "Importing…",
     "importWizardHint": "Always creates a new empty class from the backup (supports v1 / v2).",
     "errors": {
+      "creating": "Error creating classroom",
       "creatingClassroom": "Error creating classroom",
       "uploadPdf": "Please upload a PDF file",
       "fileSize": "File is too large",
@@ -665,7 +672,8 @@
       "progressPhaseFinishing": "Saving transcript to your live session",
       "success": "Live session created with transcript.",
       "error": "Could not create the live session.",
-      "submit": "Create"
+      "submit": "Create",
+      "runInBackground": "Run in background"
     },
     "status": {
       "processing": "Processing your recording",
@@ -698,6 +706,13 @@
       "notYet": "Not yet",
       "preparing": "Preparing evaluation...",
       "saved": "Evaluation saved."
+    },
+    "processing": {
+      "bannerTitle": "Processing: {{title}}",
+      "completeTitle": "Live session ready",
+      "keepTabOpen": "Keep this tab open until processing finishes.",
+      "view": "View",
+      "later": "Later"
     }
   },
   "createAssignment": {
@@ -830,7 +845,9 @@
       "studentFacingPlaceholder": "Students will read this before they start. Use Generate to draft from your instructions.",
       "generateForStudents": "Generate for students",
       "studentFacingGenerated": "Student summary ready — review and save when you are done.",
-      "studentFacingGenerateFailed": "Could not generate a summary. Try again or write the short text yourself."
+      "studentFacingGenerateFailed": "Could not generate a summary. Try again or write the short text yourself.",
+      "testQuestionsInvalid": "Fix test questions before saving.",
+      "testQuestionsSaveFailed": "Could not save test questions. Try again."
     },
     "testBuilder": {
       "title": "Test Questions",
@@ -846,7 +863,19 @@
       "selectCorrectAnswer": "Select the correct answer",
       "removeQuestion": "Remove question",
       "removeOption": "Remove option",
-      "noQuestions": "No questions added yet. Click \"Add Question\" to start building your test."
+      "noQuestions": "No questions added yet. Click \"Add Question\" to start building your test.",
+      "markCorrectOptions": "Mark correct option(s)",
+      "correctAnswers": "Correct answers"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Enter assignment title",
+      "instructions": "Instructions",
+      "instructionsPlaceholder": "Describe what students need to do...",
+      "type": "Type",
+      "typePlaceholder": "Select assignment type",
+      "dueDate": "Due date",
+      "targetDimensions": "Target dimensions"
     }
   },
   "editAssignment": {
@@ -965,6 +994,10 @@
       "title": "Enrolled Students",
       "subtitle": "View and manage your students",
       "joined": "Joined",
+      "empty": {
+        "title": "No students yet",
+        "description": "Share your invite code so students can join this classroom."
+      },
       "noStudents": "No students enrolled yet",
       "studentIncomplete": "Student (Profile Incomplete)",
       "detailDialogTitle": "Student: {{name}}",
@@ -1081,7 +1114,8 @@
       "moduleReorderHint": "Reorder modules in the Course Outline.",
       "previewActivity": "Open activity in new tab",
       "typeLesson": "Lesson",
-      "dueLabel": "Due"
+      "dueLabel": "Due",
+      "videoFileTooLarge": "Video file is too large (max {{maxMb}} MB)."
     },
     "activitiesFlow": {
       "sheetTitle": "Module flow",
@@ -1108,7 +1142,11 @@
       "viewAssignment": "View assignment",
       "tryAssignment": "Try assignment (preview)",
       "tryActivity": "Try activity (preview)",
-      "viewSubmissions": "View submissions for this assignment"
+      "viewSubmissions": "View submissions for this assignment",
+      "deleteAssignmentTitle": "Remove assignment from flow?",
+      "deleteAssignmentDescription": "Remove \"{{name}}\" from this module flow? The assignment itself will not be deleted.",
+      "deleteLiveSessionTitle": "Remove live session from flow?",
+      "deleteLiveSessionDescription": "Remove \"{{name}}\" from this module flow? The live session will not be deleted."
     },
     "errors": {
       "loading": "Error loading classroom",
@@ -1143,6 +1181,37 @@
       "deleteButton": "Delete Classroom",
       "deleting": "Deleting...",
       "cancel": "Cancel"
+    },
+    "code": "Invite code",
+    "materials": "Materials",
+    "resetDialog": {
+      "button": "Reset classroom",
+      "title": "Reset classroom data",
+      "description": "This removes all students, submissions, and progress from this classroom. Course structure and assignments are kept.",
+      "cancel": "Cancel",
+      "confirmButton": "Reset classroom",
+      "resetting": "Resetting…",
+      "success": "Classroom reset complete.",
+      "error": "Could not reset the classroom. Try again.",
+      "previewLoading": "Loading preview…",
+      "previewError": "Could not load reset preview.",
+      "typeToConfirm": "Type the classroom name to confirm:",
+      "confirmPlaceholder": "Classroom name",
+      "confirmMismatch": "Name does not match.",
+      "willRemoveTitle": "Will be removed",
+      "willRemoveStudents": "{{count}} enrolled students",
+      "willRemoveSubmissions": "{{count}} submissions",
+      "willRemoveProgress": "All student progress and scores",
+      "willKeepTitle": "Will be kept",
+      "willKeepCourse": "Course outline and syllabus",
+      "willKeepAssignments": "{{count}} assignments",
+      "willKeepOutline": "Module and activity structure",
+      "confirmPrompt": {
+        "title": "Reset this classroom?",
+        "description": "You are about to permanently remove student data from this classroom. This cannot be undone.",
+        "cancel": "Go back",
+        "continue": "Continue"
+      }
     }
   },
   "submissionsTab": {
@@ -1184,7 +1253,9 @@
     "tableSubmitted": "Submitted",
     "tableMessages": "Chat",
     "tableChatFlow": "Chat flow",
-    "tableFeedback": "Feedback"
+    "tableFeedback": "Feedback",
+    "from": "From",
+    "to": "To"
   },
   "submissionCard": {
     "chatMessages": "{{count}} messages in chat",
@@ -1281,7 +1352,15 @@
       "noAnswer": "No answer provided",
       "summary": "{{correct}} of {{total}} correct",
       "mcqScore": "Multiple Choice Score",
-      "openEndedCount": "Open-ended Questions"
+      "openEndedCount": "Open-ended Questions",
+      "addQuestionsHint": "Add questions in the assignment editor to see results here.",
+      "averageScore": "Average: {{score}}%",
+      "missedCorrect": "Missed correct option(s)",
+      "noQuestionsFound": "No questions found for this test.",
+      "noQuestionsWithResponsesWarning": "Some responses don't match current questions.",
+      "orphanResponseTitle": "Response {{index}} (question removed)",
+      "partial": "Partial ({{score}}%)",
+      "selectedOptions": "Selected options"
     },
     "teacherEvaluation": {
       "writeEvaluation": "Write Evaluation",
@@ -1297,7 +1376,8 @@
       "title": "Project Submission",
       "download": "Download File",
       "preview": "File Preview",
-      "noFile": "No file submitted"
+      "noFile": "No file submitted",
+      "downloadFailed": "Could not download the file."
     },
     "presentationView": {
       "title": "Presentation Submission",
@@ -1496,7 +1576,8 @@
       "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submitting.",
       "allQuestionsRequired": "Please answer all questions before submitting.",
       "submitSuccess": "Test submitted successfully!",
-      "submitError": "Error submitting test. Please try again."
+      "submitError": "Error submitting test. Please try again.",
+      "selectAllThatApply": "Select all that apply"
     },
     "project": {
       "uploadFile": "Upload Project File",
@@ -1507,7 +1588,8 @@
       "awaitingReview": "Your project has been submitted and is awaiting teacher review.",
       "fileSelected": "File selected",
       "uploadError": "Error uploading file. Please try again.",
-      "removeFile": "Remove file"
+      "removeFile": "Remove file",
+      "addMoreFiles": "Add more files"
     },
     "presentation": {
       "title": "Presentation",
@@ -1588,7 +1670,10 @@
         "llm": "LLM",
         "prompt": "Prompt Template",
         "chain": "Chain",
-        "memory": "Memory"
+        "memory": "Memory",
+        "trigger": "Trigger",
+        "email": "Email",
+        "database": "Database"
       },
       "nodeDescriptions": {
         "input": "User input entry point",
@@ -1596,7 +1681,10 @@
         "llm": "Large Language Model",
         "prompt": "Template for prompts",
         "chain": "Sequential processing chain",
-        "memory": "Conversation memory"
+        "memory": "Conversation memory",
+        "trigger": "Start or schedule pipeline runs",
+        "email": "Send email from the pipeline",
+        "database": "Read or write database records"
       },
       "inspector": {
         "title": "Node properties",
@@ -1610,24 +1698,42 @@
           "template": "Prompt template",
           "variablesHint": "Variables hint",
           "orderingNote": "Ordering / sequence note",
-          "strategy": "Memory strategy"
+          "strategy": "Memory strategy",
+          "systemPrompt": "System prompt",
+          "triggerMode": "Trigger mode",
+          "sendTo": "Send to"
         },
         "placeholders": {
-          "temperature": "e.g. 0.7"
+          "temperature": "e.g. 0.7",
+          "sendTo": "email@example.com"
         },
         "strategy": {
           "buffer": "Buffer window",
           "summary": "Summary memory",
           "other": "Other"
+        },
+        "triggerMode": {
+          "incoming_mail": "Incoming mail",
+          "manual": "Manual",
+          "webhook": "Webhook",
+          "form_submit": "Form submit"
         }
       },
       "validation": {
         "emptyGraph": "Add at least one node before submitting.",
         "noInputToOutputPath": "Connect nodes so there is a path from Input to Output.",
         "promptTemplateRequired": "Every Prompt node needs a filled-in prompt template.",
-        "llmModelRequired": "Every LLM node needs a model identifier."
+        "llmModelRequired": "Every LLM node needs a model identifier.",
+        "emailSendToRequired": "Every Email node needs a recipient address."
+      },
+      "actions": {
+        "collapseInspector": "Collapse panel",
+        "expandInspector": "Expand panel"
       }
-    }
+    },
+    "aiFeedbackFailed": "AI feedback could not be generated. Your teacher may review your work manually.",
+    "assessmentInProgress": "Your work is submitted. AI evaluation is in progress—you can continue when ready.",
+    "submittedAwaitingReview": "Your activity has been submitted and is awaiting teacher review."
   },
   "activityPage": {
     "notFound": "This activity could not be loaded.",
@@ -1730,7 +1836,10 @@
   },
   "settings": {
     "title": "Settings",
-    "profile": "Profile",
+    "profile": {
+      "title": "Profile",
+      "avatarHint": "Upload a profile photo (optional)."
+    },
     "fullName": "Full Name",
     "email": "Email",
     "avatarUrl": "Avatar URL",
@@ -1824,7 +1933,10 @@
       "assignmentNotifications": "Assignment Notifications",
       "assignmentNotificationsDesc": "Get notified when new assignments are posted",
       "feedbackNotifications": "Feedback Notifications",
-      "feedbackNotificationsDesc": "Get notified when you receive feedback"
+      "feedbackNotificationsDesc": "Get notified when you receive feedback",
+      "title": "Notification preferences",
+      "description": "Choose which notifications you receive.",
+      "save": "Save preferences"
     },
     "learningPreferences": "Learning Preferences",
     "learningPreferencesDesc": "Tell us about your learning style and preferences",
@@ -2195,7 +2307,9 @@
     "error": "Error",
     "areYouSure": "Are you sure?",
     "upcoming": "Upcoming",
-    "progress": "Progress"
+    "progress": "Progress",
+    "deleted": "Deleted",
+    "download": "Download"
   },
   "qedLayers": {
     "development": "Development",
@@ -2524,7 +2638,8 @@
       "markingRead": "Error marking notifications as read"
     },
     "messages": {
-      "feedbackUpdated": "Your feedback for \"{{title}}\" was updated by your teacher."
+      "feedbackUpdated": "Your feedback for \"{{title}}\" was updated by your teacher.",
+      "feedbackReady": "Feedback is ready for {{assignmentTitle}}"
     },
     "titles": {
       "feedbackReceived": "Feedback Received",
@@ -2885,7 +3000,8 @@
       "activityStepLabel": "Activity",
       "notes": "Notes",
       "closeDetails": "Close details",
-      "linkedAssignments": "Linked Assignments"
+      "linkedAssignments": "Linked Assignments",
+      "moduleStepsHeading": "Steps in this module"
     },
     "structureDesc": {
       "weeks": "Organize by calendar weeks",
@@ -3074,5 +3190,11 @@
     "today": "Today",
     "time": "Time",
     "apply": "Apply"
+  },
+  "contact": {
+    "email": "Email",
+    "phone": "Phone",
+    "office": "Office",
+    "success": "Message sent! We'll get back to you soon."
   }
 }

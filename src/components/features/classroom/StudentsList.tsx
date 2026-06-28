@@ -39,10 +39,10 @@ export const StudentsList = ({ students }: StudentsListProps) => {
         <CardContent className="flex flex-col items-center justify-center py-12">
           <User className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">
-            {t('classroomDetail.students.empty.title')}
+            {t('classroomDetail.studentsTab.empty.title')}
           </h3>
           <p className="text-muted-foreground text-center">
-            {t('classroomDetail.students.empty.description')}
+            {t('classroomDetail.studentsTab.empty.description')}
           </p>
         </CardContent>
       </Card>
@@ -68,7 +68,7 @@ export const StudentsList = ({ students }: StudentsListProps) => {
                 <div className="flex-1">
                   <p className="font-semibold">{student.full_name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {t('classroomDetail.students.joined')}:{' '}
+                    {t('classroomDetail.studentsTab.joined')}:{' '}
                     {new Date(enrollment.created_at).toLocaleDateString()}
                   </p>
                 </div>

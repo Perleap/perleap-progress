@@ -254,13 +254,13 @@ const StudentSettings = () => {
   const getTabLabel = () => {
     switch (activeTab) {
       case 'profile':
-        return t('settings.profile');
+        return t('settings.profile.title');
       case 'questions':
         return t('settings.learningPreferences');
       case 'notifications':
         return t('common.notifications');
       default:
-        return t('settings.profile');
+        return t('settings.profile.title');
     }
   };
 
@@ -274,7 +274,7 @@ const StudentSettings = () => {
           < TabsContent value="profile" className="space-y-6" >
             <Card>
               <CardHeader className={isRTL ? 'text-right' : 'text-left'}>
-                <CardTitle>{t('settings.profile')}</CardTitle>
+                <CardTitle>{t('settings.profile.title')}</CardTitle>
                 <CardDescription>{t('settings.profileDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

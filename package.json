@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
+    "check:i18n": "node scripts/check-i18n-keys.mjs",
     "test:edge": "deno test --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts supabase/functions/_shared/asyncPool.test.ts",
     "gen:types": "node scripts/gen-supabase-types.mjs",
     "extract:unit-memory-outliers": "node scripts/extract-unit-memory-outliers.mjs",

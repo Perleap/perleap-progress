@@ -21,7 +21,8 @@
     "monitoring": "ניטור",
     "aiPrompts": "בינה מלאכותית - הנחיות",
     "language": "שפה",
-    "toggleSidebar": "הרחבה או כיווץ תפריט צד"
+    "toggleSidebar": "הרחבה או כיווץ תפריט צד",
+    "backToDashboard": "חזרה ללוח הבקרה"
   },
   "teacherTry": {
     "bannerTitle": "תצוגה מקדימה למורה",
@@ -474,7 +475,8 @@
       "fileTooLarge": "הקובץ גדול מדי (מקסימום 10 מ״ב).",
       "fileTypeNotAllowed": "סוג הקובץ לא נתמך. השתמש ב-PDF, PNG, JPG או קבצי טקסט.",
       "completing": "שגיאה בהשלמת הפעילות",
-      "flag": "לא ניתן לשלוח את הדיווח. נסה שוב."
+      "flag": "לא ניתן לשלוח את הדיווח. נסה שוב.",
+      "sessionExpired": "פג תוקף ההתחברות. רעננו את הדף ונסו שוב."
     },
     "success": {
       "activityCompleted": "הפעילות הושלמה! משוב נוצר.",
@@ -510,6 +512,10 @@
       "rawModel": "פלט מודל גולמי",
       "afterPostprocess": "אחרי נרמול / Polish",
       "finalClient": "הודעה סופית ללקוח (נשמרת)"
+    },
+    "completeNotReady": "השלימו את השלבים הנדרשים לפני סיום הפעילות.",
+    "resources": {
+      "empty": "עדיין לא הועלו משאבים"
     }
   },
   "aiContentFlag": {
@@ -578,6 +584,7 @@
     "importFromFileBusy": "מייבא…",
     "importWizardHint": "תמיד יוצר כיתה חדשה וריקה מהגיבוי (תומך‎ v1‎ / ‎v2‎).",
     "errors": {
+      "creating": "שגיאה ביצירת כיתה",
       "creatingClassroom": "שגיאה ביצירת כיתה",
       "uploadPdf": "אנא העלה קובץ PDF",
       "fileSize": "קובץ גדול מדי",
@@ -665,7 +672,8 @@
       "progressPhaseFinishing": "שומר את התמלול במפגש החי",
       "success": "המפגש החי נוצר עם תמלול.",
       "error": "לא ניתן ליצור את המפגש החי.",
-      "submit": "צור"
+      "submit": "צור",
+      "runInBackground": "הרצה ברקע"
     },
     "status": {
       "processing": "מעבד את ההקלטה שלך",
@@ -698,6 +706,13 @@
       "notYet": "טרם",
       "preparing": "מכין הערכה...",
       "saved": "ההערכה נשמרה."
+    },
+    "processing": {
+      "bannerTitle": "מעבד: {{title}}",
+      "completeTitle": "המפגש החי מוכן",
+      "keepTabOpen": "השאירו את הלשונית פתוחה עד סיום העיבוד.",
+      "view": "צפייה",
+      "later": "אחר כך"
     }
   },
   "createAssignment": {
@@ -830,7 +845,9 @@
       "studentFacingPlaceholder": "התלמידים יקראו זאת לפני תחילת העבודה. לחצו ״יצירה״ כדי לטיוטה מההוראות.",
       "generateForStudents": "יצירה לתלמידים",
       "studentFacingGenerated": "נוצר תקציר — עברו עליו ושמרו כשמסיימים.",
-      "studentFacingGenerateFailed": "לא ניתן ליצור תקציר. נסו שוב או כתבו ידנית."
+      "studentFacingGenerateFailed": "לא ניתן ליצור תקציר. נסו שוב או כתבו ידנית.",
+      "testQuestionsInvalid": "תקנו את שאלות המבחן לפני השמירה.",
+      "testQuestionsSaveFailed": "לא ניתן לשמור את שאלות המבחן. נסו שוב."
     },
     "testBuilder": {
       "title": "שאלות מבחן",
@@ -846,7 +863,19 @@
       "selectCorrectAnswer": "בחר את התשובה הנכונה",
       "removeQuestion": "הסר שאלה",
       "removeOption": "הסר אפשרות",
-      "noQuestions": "לא נוספו שאלות עדיין. לחץ על \"הוסף שאלה\" כדי להתחיל לבנות את המבחן."
+      "noQuestions": "לא נוספו שאלות עדיין. לחץ על \"הוסף שאלה\" כדי להתחיל לבנות את המבחן.",
+      "markCorrectOptions": "סמנו תשובות נכונות",
+      "correctAnswers": "תשובות נכונות"
+    },
+    "form": {
+      "title": "כותרת",
+      "titlePlaceholder": "הזינו כותרת למשימה",
+      "instructions": "הוראות",
+      "instructionsPlaceholder": "תארו מה התלמידים צריכים לעשות...",
+      "type": "סוג",
+      "typePlaceholder": "בחרו סוג משימה",
+      "dueDate": "תאריך יעד",
+      "targetDimensions": "ממדי יעד"
     }
   },
   "editAssignment": {
@@ -952,6 +981,10 @@
       "title": "תלמידים רשומים",
       "subtitle": "צפה ונהל את התלמידים שלך",
       "joined": "הצטרף",
+      "empty": {
+        "title": "אין תלמידים עדיין",
+        "description": "שתפו את קוד ההצטרפות כדי שתלמידים יוכלו להצטרף."
+      },
       "noStudents": "אין תלמידים רשומים עדיין",
       "studentIncomplete": "תלמיד (פרופיל לא שלם)",
       "detailDialogTitle": "תלמיד/ה: {{name}}",
@@ -1068,7 +1101,8 @@
       "moduleReorderHint": "סדר המודולים מתעדכן במתווה הקורס.",
       "previewActivity": "פתיחת הפעילות בלשונית חדשה",
       "typeLesson": "שיעור",
-      "dueLabel": "יעד"
+      "dueLabel": "יעד",
+      "videoFileTooLarge": "קובץ הווידאו גדול מדי (מקסימום {{maxMb}} MB)."
     },
     "activitiesFlow": {
       "sheetTitle": "זרימת המודול",
@@ -1095,7 +1129,11 @@
       "viewAssignment": "צפייה במשימה",
       "tryAssignment": "נסה משימה (תצוגה מקדימה)",
       "tryActivity": "נסה פעילות (תצוגה מקדימה)",
-      "viewSubmissions": "צפייה בהגשות למשימה זו"
+      "viewSubmissions": "צפייה בהגשות למשימה זו",
+      "deleteAssignmentTitle": "להסיר משימה מהזרימה?",
+      "deleteAssignmentDescription": "להסיר את \"{{name}}\" מזרימת המודול? המשימה עצמה לא תימחק.",
+      "deleteLiveSessionTitle": "להסיר מפגש חי מהזרימה?",
+      "deleteLiveSessionDescription": "להסיר את \"{{name}}\" מזרימת המודול? המפגש החי לא יימחק."
     },
     "errors": {
       "loading": "שגיאה בטעינת כיתה",
@@ -1130,6 +1168,37 @@
       "deleteButton": "מחק כיתה",
       "deleting": "מוחק...",
       "cancel": "ביטול"
+    },
+    "code": "קוד הצטרפות",
+    "materials": "חומרים",
+    "resetDialog": {
+      "button": "איפוס כיתה",
+      "title": "איפוס נתוני כיתה",
+      "description": "פעולה זו מסירה את כל התלמידים, ההגשות וההתקדמות מהכיתה. מבנה הקורס והמשימות נשמרים.",
+      "cancel": "ביטול",
+      "confirmButton": "אפס כיתה",
+      "resetting": "מאפס…",
+      "success": "הכיתה אופסה בהצלחה.",
+      "error": "לא ניתן לאפס את הכיתה. נסו שוב.",
+      "previewLoading": "טוען תצוגה מקדימה…",
+      "previewError": "לא ניתן לטעון תצוגה מקדימה של האיפוס.",
+      "typeToConfirm": "הקלידו את שם הכיתה לאישור:",
+      "confirmPlaceholder": "שם הכיתה",
+      "confirmMismatch": "השם לא תואם.",
+      "willRemoveTitle": "יוסר",
+      "willRemoveStudents": "{{count}} תלמידים רשומים",
+      "willRemoveSubmissions": "{{count}} הגשות",
+      "willRemoveProgress": "כל ההתקדמות והציונים של התלמידים",
+      "willKeepTitle": "יישמר",
+      "willKeepCourse": "מתווה הקורס והסילבוס",
+      "willKeepAssignments": "{{count}} משימות",
+      "willKeepOutline": "מבנה המודולים והפעילויות",
+      "confirmPrompt": {
+        "title": "לאפס את הכיתה?",
+        "description": "אתם עומדים להסיר לצמיתות נתוני תלמידים מהכיתה. לא ניתן לבטל פעולה זו.",
+        "cancel": "חזרה",
+        "continue": "המשך"
+      }
     }
   },
   "submissionsTab": {
@@ -1171,7 +1240,9 @@
     "tableSubmitted": "הוגש",
     "tableMessages": "צ'אט",
     "tableChatFlow": "זרימת צ'אט",
-    "tableFeedback": "משוב"
+    "tableFeedback": "משוב",
+    "from": "מ-",
+    "to": "עד"
   },
   "submissionCard": {
     "chatMessages": "{{count}} הודעות בצ'אט",
@@ -1268,7 +1339,15 @@
       "noAnswer": "לא ניתנה תשובה",
       "summary": "{{correct}} מתוך {{total}} נכונות",
       "mcqScore": "ציון רב ברירה",
-      "openEndedCount": "שאלות פתוחות"
+      "openEndedCount": "שאלות פתוחות",
+      "addQuestionsHint": "הוסיפו שאלות בעורך המשימה כדי לראות תוצאות כאן.",
+      "averageScore": "ממוצע: {{score}}%",
+      "missedCorrect": "פספסתם תשובות נכונות",
+      "noQuestionsFound": "לא נמצאו שאלות למבחן זה.",
+      "noQuestionsWithResponsesWarning": "חלק מהתשובות לא תואמות לשאלות הנוכחיות.",
+      "orphanResponseTitle": "תשובה {{index}} (שאלה הוסרה)",
+      "partial": "חלקי ({{score}}%)",
+      "selectedOptions": "אפשרויות שנבחרו"
     },
     "teacherEvaluation": {
       "writeEvaluation": "כתוב הערכה",
@@ -1284,7 +1363,8 @@
       "title": "הגשת פרויקט",
       "download": "הורד קובץ",
       "preview": "תצוגה מקדימה",
-      "noFile": "לא הוגש קובץ"
+      "noFile": "לא הוגש קובץ",
+      "downloadFailed": "לא ניתן להוריד את הקובץ."
     },
     "presentationView": {
       "title": "הגשת מצגת",
@@ -1474,7 +1554,8 @@
       "confirmSubmit": "האם אתה בטוח שברצונך להגיש? לא ניתן לשנות תשובות לאחר ההגשה.",
       "allQuestionsRequired": "אנא ענה על כל השאלות לפני ההגשה.",
       "submitSuccess": "המבחן הוגש בהצלחה!",
-      "submitError": "שגיאה בהגשת המבחן. אנא נסה שוב."
+      "submitError": "שגיאה בהגשת המבחן. אנא נסה שוב.",
+      "selectAllThatApply": "בחרו את כל התשובות המתאימות"
     },
     "project": {
       "uploadFile": "העלה קובץ פרויקט",
@@ -1485,7 +1566,8 @@
       "awaitingReview": "הפרויקט שלך הוגש וממתין לבדיקת המורה.",
       "fileSelected": "קובץ נבחר",
       "uploadError": "שגיאה בהעלאת הקובץ. אנא נסה שוב.",
-      "removeFile": "הסר קובץ"
+      "removeFile": "הסר קובץ",
+      "addMoreFiles": "הוסיפו קבצים"
     },
     "presentation": {
       "title": "מצגת",
@@ -1566,7 +1648,10 @@
         "llm": "LLM",
         "prompt": "תבנית פרומפט",
         "chain": "שרשרת",
-        "memory": "זיכרון"
+        "memory": "זיכרון",
+        "trigger": "טריגר",
+        "email": "דוא״ל",
+        "database": "מסד נתונים"
       },
       "nodeDescriptions": {
         "input": "נקודת כניסת קלט משתמש",
@@ -1574,7 +1659,10 @@
         "llm": "מודל שפה גדול",
         "prompt": "תבנית לפרומפטים",
         "chain": "שרשרת עיבוד רציפה",
-        "memory": "זיכרון שיחה"
+        "memory": "זיכרון שיחה",
+        "trigger": "הפעלה או תזמון של הרצת pipeline",
+        "email": "שליחת דוא״ל מה-pipeline",
+        "database": "קריאה או כתיבה למסד נתונים"
       },
       "inspector": {
         "title": "מאפייני הצומת",
@@ -1588,24 +1676,42 @@
           "template": "תבנית פרומפט",
           "variablesHint": "רמז למשתנים",
           "orderingNote": "סדר / רצף",
-          "strategy": "אסטרטגיית זיכרון"
+          "strategy": "אסטרטגיית זיכרון",
+          "systemPrompt": "פרומпт מערכת",
+          "triggerMode": "מצב טריגר",
+          "sendTo": "שלח אל"
         },
         "placeholders": {
-          "temperature": "למשל ‎0.7"
+          "temperature": "למשל ‎0.7",
+          "sendTo": "email@example.com"
         },
         "strategy": {
           "buffer": "חלון חוצץ",
           "summary": "זיכרון סיכום",
           "other": "אחר"
+        },
+        "triggerMode": {
+          "incoming_mail": "דואר נכנס",
+          "manual": "ידני",
+          "webhook": "Webhook",
+          "form_submit": "שליחת טופס"
         }
       },
       "validation": {
         "emptyGraph": "הוסיפו צומת אחד לפחות לפני ההגשה.",
         "noInputToOutputPath": "חברו צמתים כך שיש מסלול מקלט לפלט.",
         "promptTemplateRequired": "כל צומת פרומפט זקוק לתבנית פרומפט מלאה.",
-        "llmModelRequired": "כל צומת LLM זקוק למזהה מודל."
+        "llmModelRequired": "כל צומת LLM זקוק למזהה מודל.",
+        "emailSendToRequired": "לכל צומת דוא״ל נדרשת כתובת נמען."
+      },
+      "actions": {
+        "collapseInspector": "כווץ פאנל",
+        "expandInspector": "הרחב פאנל"
       }
-    }
+    },
+    "aiFeedbackFailed": "לא ניתן ליצור משוב AI. המורה עשוי לבדוק את העבודה שלכם ידנית.",
+    "assessmentInProgress": "העבודה הוגשה. הערכת AI בתהליך—אפשר להמשיך כשמוכנים.",
+    "submittedAwaitingReview": "הפעילות הוגשה וממתינה לבדיקת המורה."
   },
   "studentClassroom": {
     "assignments": "משימות",
@@ -1621,13 +1727,13 @@
     "duration": "משך הקורס",
     "startDate": "תאריך התחלה",
     "endDate": "תאריך סיום",
-      "viewAssignment": "צפה במטלה",
-      "courseInfo": "מידע על הקורס",
-      "courseTitle": "שם הקורס",
-      "keyChallenges": "אתגרים מרכזיים",
-      "noAssignmentsDesc": "לא הוקצו עדיין מטלות לכיתה זו.",
-      "noFinishedAssignments": "אין משימות שהושלמו עדיין",
-      "noFinishedAssignmentsDesc": "משימות שהושלמו יעברו לכאן לאחר שתסיים אותן.",
+    "viewAssignment": "צפה במטלה",
+    "courseInfo": "מידע על הקורס",
+    "courseTitle": "שם הקורס",
+    "keyChallenges": "אתגרים מרכזיים",
+    "noAssignmentsDesc": "לא הוקצו עדיין מטלות לכיתה זו.",
+    "noFinishedAssignments": "אין משימות שהושלמו עדיין",
+    "noFinishedAssignmentsDesc": "משימות שהושלמו יעברו לכאן לאחר שתסיים אותן.",
     "leaveCourse": {
       "button": "עזוב את הקורס",
       "title": "לעזוב את הקורס?",
@@ -1707,7 +1813,10 @@
   },
   "settings": {
     "title": "הגדרות",
-    "profile": "פרופיל",
+    "profile": {
+      "title": "פרופיל",
+      "avatarHint": "העלו תמונת פרופיל (אופציונלי)."
+    },
     "fullName": "שם מלא",
     "email": "אימייל",
     "avatarUrl": "כתובת URL של תמונת פרופיל",
@@ -1801,7 +1910,10 @@
       "assignmentNotifications": "התראות על מטלות",
       "assignmentNotificationsDesc": "קבל התראה כאשר מטלות חדשות מתפרסמות",
       "feedbackNotifications": "התראות משוב",
-      "feedbackNotificationsDesc": "קבל התראה כאשר אתה מקבל משוב"
+      "feedbackNotificationsDesc": "קבל התראה כאשר אתה מקבל משוב",
+      "title": "העדפות התראות",
+      "description": "בחרו אילו התראות תקבלו.",
+      "save": "שמירת העדפות"
     },
     "learningPreferences": "העדפות למידה",
     "learningPreferencesDesc": "ספר לנו על סגנון הלמידה וההעדפות שלך",
@@ -2175,7 +2287,9 @@
     "error": "שגיאה",
     "areYouSure": "האם אתה בטוח?",
     "upcoming": "בקרוב",
-    "progress": "התקדמות"
+    "progress": "התקדמות",
+    "deleted": "נמחק",
+    "download": "הורדה"
   },
   "qedLayers": {
     "development": "התפתחות",
@@ -2504,7 +2618,8 @@
       "markingRead": "שגיאה בסימון התראות כנקראו"
     },
     "messages": {
-      "feedbackUpdated": "המשוב שלך עבור \"{{title}}\" עודכן על ידי המורה."
+      "feedbackUpdated": "המשוב שלך עבור \"{{title}}\" עודכן על ידי המורה.",
+      "feedbackReady": "משוב מוכן עבור {{assignmentTitle}}"
     },
     "titles": {
       "feedbackReceived": "משוב התקבל",
@@ -2865,7 +2980,8 @@
       "activityStepLabel": "פעילות",
       "notes": "הערות",
       "closeDetails": "סגור פרטים",
-      "linkedAssignments": "מטלות מקושרות"
+      "linkedAssignments": "מטלות מקושרות",
+      "moduleStepsHeading": "שלבים במודול זה"
     },
     "structureDesc": {
       "weeks": "ארגון לפי שבועות",
@@ -3054,5 +3170,11 @@
     "today": "היום",
     "time": "שעה",
     "apply": "החלה"
+  },
+  "contact": {
+    "email": "דוא״ל",
+    "phone": "טלפון",
+    "office": "משרד",
+    "success": "ההודעה נשלחה! נחזור אליכם בהקדם."
   }
 }
