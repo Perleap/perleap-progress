@@ -460,9 +460,8 @@
     "conversationComplete": "Conversation complete! You can now finish the activity. If you didn't understand something or want to continue asking questions, feel free to do so. Once you are done, click the 'Complete Activity' button.",
     "conversationEndedPlaceholder": "Conversation ended - please complete the activity",
     "completeActivity": "Complete Activity",
-    "completeNotReady": "Waiting for the conversation to load. Please wait a moment or refresh.",
-    "generatingFeedback": "Generating feedback...",
     "completingActivity": "Completing activity...",
+    "generatingFeedback": "Generating feedback...",
     "errors": {
       "startingConversation": "Error starting conversation",
       "loadingConversation": "Error loading conversation",
@@ -475,7 +474,6 @@
       "fileTooLarge": "File is too large (max 10 MB).",
       "fileTypeNotAllowed": "This file type is not supported. Use PDF, PNG, JPG, or text files.",
       "completing": "Error completing activity",
-      "sessionExpired": "Your session has expired. Please refresh the page and sign in again.",
       "flag": "Could not send your report. Please try again."
     },
     "success": {
@@ -802,12 +800,12 @@
       "aiFeedback": "AI feedback",
       "aiFeedbackHelper": "When on, students can see AI-generated feedback on eligible work.",
       "showFeedback": "Show feedback to students",
-      "showFeedbackHelper": "When on, students see AI feedback as soon as it is ready. When off, you release feedback manually before they can see it.",
-      "artifactFeedbackHint": "For projects, presentations, and pipelines, this is usually off so you can review submissions before students see feedback."
+      "showFeedbackHelper": "When on, students see AI feedback as soon as it is generated. When off, you release feedback when ready.",
+      "artifactFeedbackHint": "Project, presentation, and pipeline assignments default to teacher-released feedback."
     },
     "taskUnderstandingPrompt": {
-      "label": "Before you start prompt",
-      "helper": "When on, students confirm they understand the task in a short dialog before they begin."
+      "label": "Task understanding check",
+      "helper": "When on, students must confirm they understand the task in a \"Before you start\" step."
     },
     "wizard": {
       "steps": {
@@ -844,9 +842,7 @@
       "openEnded": "Open Ended",
       "optionPlaceholder": "Option {{index}}",
       "addOption": "Add Option",
-      "markCorrectOptions": "Mark the correct option(s)",
       "correctAnswer": "Correct Answer",
-      "correctAnswers": "Correct answers",
       "selectCorrectAnswer": "Select the correct answer",
       "removeQuestion": "Remove question",
       "removeOption": "Remove option",
@@ -1147,41 +1143,14 @@
       "deleteButton": "Delete Classroom",
       "deleting": "Deleting...",
       "cancel": "Cancel"
-    },
-    "resetDialog": {
-      "button": "Reset Course",
-      "confirmPrompt": {
-        "title": "Reset this course?",
-        "description": "You are about to reset this course. All enrolled students and their work will be removed. You will be asked to confirm again before anything is deleted.",
-        "continue": "Continue",
-        "cancel": "Cancel"
-      },
-      "title": "Reset Course",
-      "description": "This removes all enrolled students and their work from this course. The course structure, assignments, and activities will stay exactly as they are.",
-      "willRemoveTitle": "Will be removed",
-      "willRemoveStudents": "{{count}} enrolled student(s)",
-      "willRemoveSubmissions": "{{count}} submission(s)",
-      "willRemoveProgress": "All scores, chat history, progress, and analytics",
-      "willKeepTitle": "Will be kept",
-      "willKeepCourse": "Course name, invite code, and settings",
-      "willKeepAssignments": "All assignments ({{count}})",
-      "willKeepOutline": "Syllabus, modules, and activities",
-      "typeToConfirm": "Type confirm to proceed:",
-      "confirmPlaceholder": "confirm",
-      "confirmMismatch": "Type confirm exactly to proceed",
-      "confirmButton": "Reset Course",
-      "resetting": "Resetting...",
-      "cancel": "Cancel",
-      "previewLoading": "Loading preview…",
-      "previewError": "Could not load reset preview",
-      "success": "Course reset complete. {{students}} student(s) removed, {{submissions}} submission(s) cleared.",
-      "error": "Could not reset course. Please try again."
     }
   },
   "submissionsTab": {
     "attemptLabel": "Attempt {{n}}",
     "filterTitle": "Filter & Search Submissions",
     "exportAll": "Export All",
+    "exportAllLoading": "Preparing export…",
+    "exportAllSuccess": "Student work exported",
     "search": "Search",
     "searchPlaceholder": "Search conversations, feedback, names...",
     "assignment": "Assignment",
@@ -1233,6 +1202,9 @@
     "conversationFlowComplete": "Chat completed",
     "conversationFlowEarly": "Ended early",
     "flaggedSentencesBadge": "{{count}} flagged",
+    "clipboardCopiedBadge": "Copied",
+    "clipboardPastedBadge": "Pasted",
+    "clipboardBothBadge": "Copied & pasted",
     "fullReport": "Full Report"
   },
   "submissionDetail": {
@@ -1261,16 +1233,34 @@
     "generateFollowup": "Generate Follow-up",
     "viewConversation": "View Conversation",
     "generateFollowUp": "Generate Follow-up Assignment",
+    "exportJson": "Export JSON",
+    "exportJsonSuccess": "Submission exported as JSON",
+    "exportJsonLoading": "Exporting…",
     "teacherFeedbackDesc": "AI-generated analysis and recommendations based on the learning conversation",
     "studentFeedbackDesc": "What {{student}} saw after completing the assignment",
     "conversationHistory": "Conversation History",
     "conversationHistoryDesc": "Complete transcript between {{student}} and Perleap",
     "conversationEmpty": "No messages in this conversation yet.",
     "flaggedSentencesTitle": "Flagged assistant sentences",
+    "activitySignalsTitle": "Activity signals",
+    "clipboardActivityTitle": "Copy & paste activity",
+    "clipboard": {
+      "copiedBadge": "Copied",
+      "pastedBadge": "Pasted",
+      "sourceAssistant": "From assistant message {{message}}",
+      "sourceUserMessage": "From your message {{message}}",
+      "sourceChatInput": "From chat input",
+      "sourceStudentTask": "From task summary",
+      "sourceInstructions": "From assignment instructions",
+      "sourceEssay": "From essay response",
+      "sourceTestAnswer": "From test answer ({{question}})",
+      "sourceLangchainField": "From pipeline field ({{field}})",
+      "sourceUnknown": "Unknown source"
+    },
     "noStudentFacingTask": "No short student-facing task summary was saved for this assignment. You can generate or edit it in the assignment editor (Review step).",
     "fullAssignmentInstructions": "Full instructions",
     "feedbackEmpty": {
-      "chatPrompt": "No AI feedback yet. Use Generate AI evaluation on this tab after reviewing the student's chat on the Assignment tab."
+      "chatPrompt": "No AI feedback yet. Open the Assignment tab to read the student’s chat and generate AI feedback."
     },
     "noFeedbackDesc": "This student hasn't completed the assignment yet, or feedback is still being generated.",
     "tabs": {
@@ -1291,9 +1281,6 @@
       "noAnswer": "No answer provided",
       "summary": "{{correct}} of {{total}} correct",
       "mcqScore": "Multiple Choice Score",
-      "averageScore": "{{percent}}%",
-      "partial": "Partial ({{percent}}%)",
-      "missedCorrect": "Correct (missed)",
       "openEndedCount": "Open-ended Questions"
     },
     "teacherEvaluation": {
@@ -1304,12 +1291,11 @@
       "submitting": "Evaluating...",
       "success": "Evaluation submitted successfully! Scores have been generated.",
       "error": "Error submitting evaluation. Please try again.",
-      "awaitingEvaluation": "No AI feedback yet. Use Generate AI evaluation on this tab when you are ready."
+      "awaitingEvaluation": "Awaiting your evaluation in the Assignment tab"
     },
     "projectView": {
       "title": "Project Submission",
       "download": "Download File",
-      "downloadFailed": "Could not download the file. Opened in a new tab instead.",
       "preview": "File Preview",
       "noFile": "No file submitted"
     },
@@ -1457,6 +1443,7 @@
     "untitledAssignment": "Untitled assignment",
     "unitSectionLabel": "{{title}}",
     "studentTaskTitle": "Your task",
+    "studentTaskHelpAria": "How to use this assignment type",
     "referenceMaterials": "Reference materials ({{count}})",
     "loadingStudentTask": "Summarizing what you need to do…",
     "studentTaskNotSetYet": "We could not generate a short task summary. Your teacher can add or refine it in the assignment editor (Review → generate for students). For now, work through the activity in the chat below.",
@@ -1499,20 +1486,15 @@
       "generatingFeedbackButCompleted": "We couldn't generate AI feedback right now, but your activity was marked complete so you can continue."
     },
     "awaitingTeacherFeedback": "Your teacher has not released the AI feedback yet. You will be notified when it is available.",
-    "assessmentInProgress": "We're preparing your AI feedback. It will appear here when ready.",
     "testTaking": {
       "title": "Test",
       "submitTest": "Submit Test",
       "submitting": "Submitting...",
       "question": "Question {{number}}",
       "selectAnswer": "Select your answer",
-      "selectAllThatApply": "Select all that apply",
       "typeAnswer": "Type your answer here...",
       "confirmSubmit": "Are you sure you want to submit? You cannot change your answers after submitting.",
       "allQuestionsRequired": "Please answer all questions before submitting.",
-      "sessionExpired": "Your session has expired. Please refresh the page and sign in again.",
-      "questionsNotLoaded": "Questions are still loading. Please wait a moment and try again.",
-      "questionsLoadError": "Could not load test questions. Please try again.",
       "submitSuccess": "Test submitted successfully!",
       "submitError": "Error submitting test. Please try again."
     },
@@ -1604,21 +1586,17 @@
         "input": "Input",
         "output": "Output",
         "llm": "LLM",
-        "trigger": "Trigger",
-        "email": "Email",
-        "database": "Database"
+        "prompt": "Prompt Template",
+        "chain": "Chain",
+        "memory": "Memory"
       },
       "nodeDescriptions": {
         "input": "User input entry point",
         "output": "Final output node",
         "llm": "Large Language Model",
-        "trigger": "Starts the pipeline when an event occurs",
-        "email": "Sends output by email",
-        "database": "Query or store data in a database"
-      },
-      "actions": {
-        "collapseInspector": "Collapse inspector",
-        "expandInspector": "Expand inspector"
+        "prompt": "Template for prompts",
+        "chain": "Sequential processing chain",
+        "memory": "Conversation memory"
       },
       "inspector": {
         "title": "Node properties",
@@ -1626,24 +1604,28 @@
         "fields": {
           "label": "Title",
           "description": "Description",
-          "systemPrompt": "System prompt",
-          "triggerMode": "Trigger mode",
-          "sendTo": "Send to"
+          "model": "Model",
+          "systemOrRole": "System / role",
+          "temperature": "Temperature (optional)",
+          "template": "Prompt template",
+          "variablesHint": "Variables hint",
+          "orderingNote": "Ordering / sequence note",
+          "strategy": "Memory strategy"
         },
         "placeholders": {
-          "sendTo": "e.g. teacher@school.edu"
+          "temperature": "e.g. 0.7"
         },
-        "triggerMode": {
-          "incoming_mail": "Incoming mail",
-          "manual": "Manual",
-          "webhook": "Webhook",
-          "form_submit": "Form submit"
+        "strategy": {
+          "buffer": "Buffer window",
+          "summary": "Summary memory",
+          "other": "Other"
         }
       },
       "validation": {
         "emptyGraph": "Add at least one node before submitting.",
-        "noStartToOutputPath": "Connect nodes so there is a path from a start node (Input or Trigger) to Output.",
-        "emailSendToRequired": "Every Email node needs a recipient address."
+        "noInputToOutputPath": "Connect nodes so there is a path from Input to Output.",
+        "promptTemplateRequired": "Every Prompt node needs a filled-in prompt template.",
+        "llmModelRequired": "Every LLM node needs a model identifier."
       }
     }
   },
@@ -1871,14 +1853,33 @@
     "unplacedAssignments": "Unplaced (not in syllabus)",
     "allAssignmentsInScope": "All in this section",
     "emptyModuleOrScope": "No assignments in this scope. Choose another section or link assignments in the curriculum.",
-    "regenerateClassWideNote": "Regenerating 5D scores always processes the whole class, not only the current filter.",
+    "regenerateClassWideNote": "Refresh 5D re-runs AI evaluations for the whole class (5D, content skills, and AI feedback). Manual Write Evaluation submissions are skipped.",
     "coverageInScope": "{{covered}} / {{enrolled}} students have scored work in the current view",
     "compareSections": "Compare two sections (5D)",
+    "compare5dTitle": "Compare (5D)",
+    "compare5dHint": "Compare 5D profiles side by side. Choose sections, students, or assignments and narrow scope as needed.",
+    "compareBy": "Compare by",
+    "compareModeSections": "Sections",
+    "compareModeStudents": "Students",
+    "compareModeAssignments": "Assignments",
+    "compareScopeSection": "Limit to {{sectionType}}",
+    "compareScopeAssignment": "Limit to assignment",
+    "compareSideA": "A",
+    "compareSideB": "B",
+    "compareSelectItem": "Select…",
+    "compareSameItem": "Choose two different items to compare.",
+    "compareAssignmentsHint": "Compare class-wide average 5D between two assignments. Optionally limit to a syllabus section first.",
     "compareModuleA": "Section A",
     "compareModuleB": "Section B",
     "compareSelectSection": "Select a section",
     "compareHint": "Compare class-wide average 5D between two syllabus sections. Unplaced can be included if assignments are not linked.",
     "compareSameSection": "Choose two different sections to compare.",
+    "compareStudents": "Compare two students (5D)",
+    "compareStudentA": "Student A",
+    "compareStudentB": "Student B",
+    "compareSelectStudent": "Select a student",
+    "compareStudentsHint": "Compare 5D profiles for two students within the current filter scope.",
+    "compareSameStudent": "Choose two different students to compare.",
     "compareDelta": "Difference (B − A)",
     "exportCsv": "Export CSV",
     "compareDimension": "Dimension",
@@ -1907,12 +1908,33 @@
     "scoresError": "Error loading scores",
     "noAssignments": "No assignments found",
     "noCompletedSubmissions": "No completed submissions found",
-    "regenerateAll5DScores": "Regenerate All 5D Scores",
-    "regenerateScoresConfirmTitle": "Regenerate all 5D scores?",
-    "regenerateScoresConfirmDescription": "This runs for the whole class (not only your current filter). 5D scores are recomputed by AI from each student’s assignment chat, only for submissions that already have feedback. This replaces the stored 5D snapshot for those submissions and may take a while if there are many students.",
-    "regenerateScoresConfirmAction": "Regenerate",
+    "regenerateAll5DScores": "Refresh All AI Evaluations",
+    "regenerateScoresConfirmTitle": "Refresh all AI evaluations?",
+    "regenerateScoresConfirmDescription": "This runs for the whole class (not only your current filter). AI re-evaluates 5D scores, content skill assessments (CRA), and AI feedback text from each student's work, only for submissions that already have AI feedback. Submissions with a manual teacher evaluation (Write Evaluation) are skipped. If you edited AI-generated feedback text, Refresh will overwrite it with newly generated text. A backup is saved so you can Undo the last refresh. This may take a while for large classes.",
+    "regenerateScoresConfirmAction": "Refresh",
     "refresh5D": "Refresh 5D",
     "regeneratingScores": "Refreshing…",
+    "refreshError": "Error refreshing evaluations",
+    "refreshSuccess": "Refreshed {{count}} student evaluations",
+    "refreshFail": "Failed to refresh {{count}} evaluations",
+    "refreshManualSkipped": "{{count}} manual evaluations skipped.",
+    "refreshAllManualSkipped": "All {{count}} evaluated submissions use manual teacher evaluations and were skipped.",
+    "undoRefresh": "Undo",
+    "undoingRefresh": "Undoing…",
+    "undoRefreshSuccess": "Restored {{count}} student evaluations",
+    "undoRefreshFail": "Failed to restore {{count}} evaluations",
+    "undoRefreshError": "Error undoing refresh",
+    "undoRefreshEmpty": "Nothing to undo",
+    "refreshProgress": {
+      "title": "Refreshing evaluations…",
+      "label": "{{current}} of {{total}} students",
+      "eta": "{{time}} remaining",
+      "keepTabOpen": "Keep this tab open until the refresh finishes.",
+      "confirmEstimate": "About {{time}} for {{count}} students.",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Refresh cancelled. No evaluations were changed."
+    },
     "regenerateError": "Error regenerating scores",
     "regenerateSuccess": "Regenerated {{count}} student 5D profiles",
     "regenerateFail": "Failed to regenerate {{count}} profiles",
@@ -1927,7 +1949,20 @@
       "exportPdf": "Lesson Brief",
       "exportError": "Could not create the lesson brief PDF. Check your connection and try again.",
       "title": "Lesson preparation report",
+      "coverEyebrow": "Perleap Lesson Brief",
+      "subtitle": "Teacher-facing overview with class focus areas and student coaching guidance.",
       "classroom": "Classroom",
+      "generatedDateLabel": "Generated date",
+      "currentFiltersLabel": "Current filters",
+      "totalStudentsLabel": "Total students",
+      "totalSubmissionsLabel": "Total submissions",
+      "avgSubmissionsLabel": "Avg submissions / student",
+      "assignmentsInScopeLabel": "Assignments in scope",
+      "teachingPrioritiesTitle": "Teaching Priorities",
+      "studentTableTitle": "Student Table",
+      "studentTableDescription": "Compact classroom scan for completion, 5D performance, and lowest dimension.",
+      "coachingCardsTitle": "Student Coaching Cards",
+      "coachingCardsDescription": "Use these cards to plan targeted support before the next lesson.",
       "structure": "Course structure label",
       "exportedAt": "Generated",
       "scope": "Filtered view",
@@ -1936,7 +1971,28 @@
       "classAverage5D": "Class average 5D (filtered view)",
       "rosterTitle": "Students",
       "columnStudent": "Student",
-      "columnProgress": "Completed / in scope",
+      "columnProgress": "Completed / Scope",
+      "column5dScores": "5D scores",
+      "columnLowestDimension": "Lowest dimension",
+      "strengthsLabel": "Strengths",
+      "weaknessesLabel": "Weaknesses",
+      "improvementLabel": "Improvement",
+      "completedMeta": "{{completed}} / {{total}} completed",
+      "avg5dMeta": "Avg 5D {{score}}/10",
+      "statusHighPriority": "High priority",
+      "statusNeedsSupport": "Needs support",
+      "statusMonitor": "Monitor",
+      "statusStable": "Stable",
+      "priorityTitle1": "Prioritize {{dimension}} routines at lesson launch",
+      "priorityBody1": "Class average is {{score}}/10 in {{dimension}}. Begin with a quick model of strong work criteria and one concrete success example.",
+      "priorityTitle2": "Use structured peer moments to strengthen {{dimension}}",
+      "priorityBody2": "{{dimension}} is at {{score}}/10. Add a short peer explanation checkpoint so students justify choices before submitting.",
+      "priorityTitle3": "Target intervention for at-risk learners",
+      "priorityBody3": "{{count}} students are flagged as High priority or Needs support, and scoped assignment completion is {{completion}}%. End class with one personalized next step tied to each learner's lowest dimension.",
+      "defaultSummary": "{{name}} has limited scoped evidence. Use this card as a quick check-in baseline for the next lesson.",
+      "defaultStrength": "Keeps participating enough to provide evidence for coaching decisions.",
+      "defaultWeakness": "Needs stronger consistency in {{dimension}} to improve lesson outcomes.",
+      "defaultImprovement": "Set one concrete, measurable next step focused on {{dimension}}.",
       "footerDisclaimer": "This PDF shows student-performance data from Perleap as of the generation time above. Handle it like other confidential grade information.",
       "dash": "—",
       "narrativesSectionTitle": "At a glance",
@@ -1953,7 +2009,7 @@
       "summaryLine": "{{plays}} plays · {{viewers}} viewers · {{finishes}} completions · {{completion}}% avg. watched",
       "student": "Student",
       "plays": "Plays",
-      "lastStopped": "Last stopped",
+      "percentWatched": "% watched",
       "status": "Status",
       "finishedCount": "Finished ×{{count}}",
       "inProgress": "In progress"
@@ -1966,7 +2022,7 @@
     "classReference": "Class reference (all activities in this class in Nuance’s data): average response {{latency}}, time away from tab {{idle}}, work completed {{completion}} ({{n}} data points).",
     "classReferenceCompact": "Class: {{latency}} response · {{idle}} away from tab · {{completion}} done",
     "howNuanceTitle": "How Nuance works",
-    "howNuanceBody": "Nuance uses signals from the assignment experience: time to reply after a coach message, time with the tab in the background, how often an activity is opened, and whether work is finished, plus optional cues when phrasing in chat suggests confusion. It is not a grade. Flags are simple checks compared to the student and class, then phrased as practical teaching ideas. When in doubt, combine Nuance with your read of submissions and in-class discussion.",
+    "howNuanceBody": "Nuance uses signals from the assignment experience: time to reply after a coach message, time with the tab in the background or without mouse/keyboard activity for about 30 seconds, how often an activity is opened, and whether work is finished, plus optional cues when phrasing in chat suggests confusion. It is not a grade. Flags are simple checks compared to the student and class, then phrased as practical teaching ideas. When in doubt, combine Nuance with your read of submissions and in-class discussion.",
     "statusRow": {
       "typical": "Typical",
       "insight": "Nuance insight"
@@ -2026,18 +2082,20 @@
       "student": "Student",
       "activity": "Activity",
       "responseTime": "Avg Response",
-      "idleRatio": "Idle Ratio",
+      "idleRatio": "Time away from tab",
       "completion": "Completion",
       "sessions": "Sessions",
       "cuesInChat": "Cues in chat",
+      "timeOnAssignment": "Time on assignment",
       "status": "Status"
     },
     "tooltips": {
       "student": "The student's name, or the activity name when filtered to a specific student.",
       "responseTime": "Average time between the AI sending a message and the student replying.",
-      "idleRatio": "Percentage of session time the student spent inactive or tabbed away.",
+      "idleRatio": "Share of session time with the tab in the background or without mouse/keyboard activity for about 30 seconds.",
       "completion": "Percentage of started assignments the student actually finished.",
       "sessions": "Average number of times the student opened each assignment.",
+      "timeOnAssignment": "Wall-clock time from when the student started the assignment until they submitted. Unlike session or idle metrics, this spans the full attempt including time away from the tab.",
       "cuesInChat": "How often the student’s messages suggested confusion or a need to re-explain, in this activity’s chat.",
       "cuesInChatColumn": "Per-activity: how often the student’s phrasing looked like a clarification request. In the all-students view, the number is the average of those per-activity counts in your current filter. Expand a row to see when each cue happened; the list total is not the same as the rounded average in the cell.",
       "status": "Typical: patterns are in range. Nuance insight: a recommendation is available — expand the row to read it."
@@ -2134,33 +2192,49 @@
     "active": "Active",
     "finished": "Finished",
     "completed": "Completed",
-    "retry": "Retry",
     "error": "Error",
     "areYouSure": "Are you sure?",
     "upcoming": "Upcoming",
     "progress": "Progress"
   },
+  "qedLayers": {
+    "development": "Development",
+    "motivation": "Motivation",
+    "showDevelopment": "Show Development",
+    "showMotivation": "Show Motivation",
+    "phase": "Phase",
+    "phaseUp": "Up",
+    "phaseDown": "Down",
+    "developmentScore": "Development score",
+    "motivationScore": "Motivation score",
+    "nextStep": "Next step"
+  },
   "dimensions": {
     "score": "Score",
     "vision": {
-      "label": "Vision",
-      "description": "Imagining new possibilities and bold ideas; creative and adaptive thinking"
+      "label": "Creative",
+      "abbrev": "Cr",
+      "description": "Generating the new: reframing → combining unlike things → improvising"
     },
     "values": {
-      "label": "Values",
-      "description": "Guided by ethics and integrity; building trust and understanding boundaries"
+      "label": "Essence",
+      "abbrev": "Es",
+      "description": "Caring about what's true/right over what merely works"
     },
     "thinking": {
-      "label": "Thinking",
-      "description": "Strong analysis, deep insight, and sound judgment; critical and analytical skills"
+      "label": "Cognitive",
+      "abbrev": "Cg",
+      "description": "Sense-making: perception → structuring → connecting → abstracting"
     },
     "connection": {
-      "label": "Connection",
-      "description": "Empathy, clear communication, and effective collaboration"
+      "label": "Interpersonal",
+      "abbrev": "Ip",
+      "description": "Being understood and attuned: expression → listening → adapting"
     },
     "action": {
-      "label": "Action",
-      "description": "Turning plans into results with focus, determination, and practical skills"
+      "label": "Execution",
+      "abbrev": "Ex",
+      "description": "Turning intent into a finished result: starting → persisting → completing"
     }
   },
   "cra": {
@@ -2450,7 +2524,6 @@
       "markingRead": "Error marking notifications as read"
     },
     "messages": {
-      "feedbackReady": "Your feedback for \"{{title}}\" is ready to view.",
       "feedbackUpdated": "Your feedback for \"{{title}}\" was updated by your teacher."
     },
     "titles": {
@@ -2927,7 +3000,7 @@
     "sectionExecutiveSummary": "Executive Summary",
     "cohortParticipants": "Participants assessed",
     "cohortReady": "Ready for supervised real work",
-    "cohortCoach": "High potential — needs targeted coaching",
+    "cohortCoach": "Almost ready — needs targeted practice before real work",
     "cohortRedirect": "Better fit in another role",
     "cohortNotReady": "Not ready to continue as builder",
     "cohortNotAssessed": "Not assessed",
@@ -2951,7 +3024,7 @@
     "colNextAction": "Next action",
     "colConfidence": "Confidence",
     "readinessReady": "Ready",
-    "readinessCoach": "Coach",
+    "readinessCoach": "Almost ready",
     "readinessRedirect": "Redirect",
     "readinessNotReady": "Not ready",
     "roleBuilder": "Builder / implementer",
@@ -2978,7 +3051,7 @@
     "sectionMethodology": "How to read this report",
     "legendReadinessTitle": "Readiness labels",
     "legendReadinessReady": "Ready — can move into supervised real implementation work now.",
-    "legendReadinessCoach": "Coach — has potential but needs targeted practice before real work.",
+    "legendReadinessCoach": "Almost ready — has potential but needs targeted practice before real work.",
     "legendReadinessRedirect": "Redirect — not ideal as a hands-on builder; may fit another role.",
     "legendReadinessNotReady": "Not ready — should not continue into platform implementation yet.",
     "legendWeighting": "Readiness judgments weight builder execution 30%, platform fit 25%, debugging independence 20%, conceptual fluency 15%, and communication 10%.",
@@ -2991,7 +3064,9 @@
     "regenerate": "Regenerate",
     "generationFailed": "Report generation failed",
     "generationFailedHint": "We could not assess any participants. Try regenerating the report.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "exportPdf": "Export PDF",
+    "exportPdfError": "Could not create the pilot report PDF. Check your connection and try again."
   },
   "datetimePicker": {
     "placeholder": "Pick date and time",
