@@ -182,6 +182,9 @@ export function CompareSide5dNarrativeBlock({
         scores={sideScores}
         qedMeasures={sideQedMeasures}
         explanations={data?.explanations ?? null}
+        showLabels={false}
+        layerControlsLayout="stacked"
+        height={300}
       />
     </NarrativeFraming>
   );

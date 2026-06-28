@@ -1,18 +1,92 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
+  assembleClassroomStudentWorkEntries,
+  buildClassroomStudentWorkFilename,
   buildStudentWorkExport,
   buildSubmissionExportFilename,
   downloadJsonFile,
+  type ClassroomStudentWorkEntry,
   type SubmissionStudentWorkExport,
 } from '@/lib/submissionExportHelpers';
 import {
   getAssignmentChatSentenceFlags,
   getAssignmentClipboardEvents,
   getAssignmentConversationMessages,
+  getBulkAssignmentConversationMessages,
+  getBulkTestWorkData,
+  getClassroomSubmissionsForWorkExport,
   getFullSubmissionDetails,
 } from '@/services/submissionService';
 import type { Message } from '@/types';
+
+export type ClassroomStudentWorkExport = {
+  exported_at: string;
+  classroom_id: string;
+  submission_count: number;
+  submissions: ClassroomStudentWorkEntry[];
+};
+
+export async function buildClassroomStudentWorkExport(
+  classroomId: string,
+): Promise<ClassroomStudentWorkExport> {
+  const { data: rows, error: rowsError } = await getClassroomSubmissionsForWorkExport(classroomId);
+  if (rowsError) {
+    throw new Error(rowsError.message);
+  }
+
+  const submissions = rows ?? [];
+  const chatLikeSubmissionIds = submissions
+    .filter((s) => isChatLikeAssignmentType(s.assignment_type))
+    .map((s) => s.id);
+  const testAssignmentIds = [
+    ...new Set(
+      submissions.filter((s) => s.assignment_type === 'test').map((s) => s.assignment_id),
+    ),
+  ];
+  const testSubmissionIds = submissions
+    .filter((s) => s.assignment_type === 'test')
+    .map((s) => s.id);
+
+  const [conversationsResult, testDataResult] = await Promise.all([
+    getBulkAssignmentConversationMessages(chatLikeSubmissionIds),
+    getBulkTestWorkData(testAssignmentIds, testSubmissionIds),
+  ]);
+
+  if (conversationsResult.error) {
+    throw new Error(conversationsResult.error.message);
+  }
+  if (testDataResult.error) {
+    throw new Error(testDataResult.error.message);
+  }
+
+  const entries = assembleClassroomStudentWorkEntries(
+    submissions,
+    conversationsResult.data ?? new Map(),
+    testDataResult.data?.questionsByAssignmentId ?? new Map(),
+    testDataResult.data?.responsesBySubmissionId ?? new Map(),
+  );
+
+  return {
+    exported_at: new Date().toISOString(),
+    classroom_id: classroomId,
+    submission_count: entries.length,
+    submissions: entries,
+  };
+}
+
+export async function exportClassroomStudentWorkJson(classroomId: string): Promise<string> {
+  const { data: classroom } = await supabase
+    .from('classrooms')
+    .select('name')
+    .eq('id', classroomId)
+    .maybeSingle();
+
+  const payload = await buildClassroomStudentWorkExport(classroomId);
+  const filename = buildClassroomStudentWorkFilename(classroom?.name);
+  downloadJsonFile(payload, filename);
+  return filename;
+}
 
 export type SubmissionExportPayload = {
   exported_at: string;
@@ -229,9 +303,12 @@ export async function exportSubmissionJson(submissionId: string): Promise<string
 }
 
 export {
+  assembleClassroomStudentWorkEntries,
+  buildClassroomStudentWorkFilename,
   buildStudentWorkExport,
   buildSubmissionExportFilename,
   downloadJsonFile,
   parseLangchainPipeline,
   sanitizeExportFilenamePart,
+  slimMessagesForExport,
 } from '@/lib/submissionExportHelpers';

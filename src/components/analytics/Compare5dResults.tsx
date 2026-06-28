@@ -88,7 +88,7 @@ export function Compare5dResults({
               return (
                 <TableRow key={dim}>
                   <TableCell className="font-medium">
-                    {t(`submissionDetail.dimensions.${dim}`)}
+                    {t(`dimensions.${dim}.label`)}
                   </TableCell>
                   <TableCell className="text-center tabular-nums">
                     {formatCompareTableValue(a)}

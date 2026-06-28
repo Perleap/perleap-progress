@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import {
   FileText,
   Download,
+  Loader2,
   Search,
   ChevronDown,
   ChevronUp,
@@ -48,6 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { useEnrichedClassroomSubmissions, useSyllabus } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
+import { exportClassroomStudentWorkJson } from '@/lib/submissionExport';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
   applySubmissionFiltersToSearchParams,
@@ -111,6 +113,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const [endDate, setEndDate] = useState<string>(defaults.to);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<SubmissionViewMode>(defaults.view);
+  const [exporting, setExporting] = useState(false);
 
   const { data: submissions = [], isLoading: loading } = useEnrichedClassroomSubmissions(classroomId);
   const { data: syllabus } = useSyllabus(classroomId);
@@ -397,32 +400,18 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     applyFilters({ assignment });
   };
 
-  const handleBulkExport = () => {
-    if (submissions.length === 0) {
-      toast.error(t('submissionsTab.noSubmissions'));
-      return;
+  const handleBulkExport = async () => {
+    if (exporting) return;
+
+    setExporting(true);
+    try {
+      await exportClassroomStudentWorkJson(classroomId);
+      toast.success(t('submissionsTab.exportAllSuccess'));
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setExporting(false);
     }
-
-    const report = submissions.map((sub) => ({
-      student: sub.student_name,
-      assignment: sub.assignment_title,
-      submitted_at: new Date(sub.submitted_at).toLocaleString(),
-      conversation: sub.conversation_context || [],
-      teacher_feedback: sub.teacher_feedback || 'No feedback',
-      has_feedback: sub.has_feedback,
-    }));
-
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `submissions-report-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast.success(t('submissionsTab.exportSuccess'));
   };
 
   const ViewModeIcon = VIEW_MODE_ICONS[viewMode];
@@ -515,12 +504,18 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                   </Select>
 
                   <Button
-                    onClick={handleBulkExport}
-                    disabled={submissions.length === 0}
+                    onClick={() => void handleBulkExport()}
+                    disabled={exporting || loading}
                     variant="outline"
                     className="rounded-full h-12 px-4 border-border hover:bg-muted/50"
+                    title={t('submissionsTab.exportAll')}
+                    aria-label={t('submissionsTab.exportAll')}
                   >
-                    <Download className="h-4 w-4" />
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
