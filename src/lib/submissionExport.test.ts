@@ -1,11 +1,127 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assembleClassroomStudentWorkEntries,
+  buildClassroomStudentWorkFilename,
   buildStudentWorkExport,
   buildSubmissionExportFilename,
   parseLangchainPipeline,
   sanitizeExportFilenamePart,
+  slimMessagesForExport,
+  type ClassroomSubmissionWorkRow,
 } from '@/lib/submissionExportHelpers';
 import type { Message } from '@/types';
+
+describe('slimMessagesForExport', () => {
+  it('keeps role, content, and fileContext only', () => {
+    const messages: Message[] = [
+      {
+        role: 'assistant',
+        content: 'Hello',
+        raw_model_text: 'raw',
+        openai_chat_request_snapshot: { model: 'gpt-4' },
+        opik_client_trace_id: 'trace-1',
+      },
+      {
+        role: 'user',
+        content: 'Hi',
+        fileContext: { name: 'doc.pdf', content: 'body', type: 'pdf' },
+      },
+    ];
+
+    expect(slimMessagesForExport(messages)).toEqual([
+      { role: 'assistant', content: 'Hello' },
+      {
+        role: 'user',
+        content: 'Hi',
+        fileContext: { name: 'doc.pdf', content: 'body', type: 'pdf' },
+      },
+    ]);
+  });
+});
+
+describe('buildClassroomStudentWorkFilename', () => {
+  it('uses classroom name when provided', () => {
+    expect(buildClassroomStudentWorkFilename('My Class')).toMatch(/^My-Class-student-work-\d{4}-\d{2}-\d{2}\.json$/);
+  });
+
+  it('falls back to generic name', () => {
+    expect(buildClassroomStudentWorkFilename()).toMatch(/^classroom-student-work-\d{4}-\d{2}-\d{2}\.json$/);
+  });
+});
+
+describe('assembleClassroomStudentWorkEntries', () => {
+  const baseRow: ClassroomSubmissionWorkRow = {
+    id: 'sub-1',
+    student_id: 'stu-1',
+    student_name: 'Jane Doe',
+    assignment_id: 'asg-1',
+    assignment_title: 'Chat Task',
+    assignment_type: 'chatbot',
+    syllabus_section_id: null,
+    status: 'completed',
+    submitted_at: '2026-06-28T10:00:00.000Z',
+    attempt_number: 1,
+    text_body: null,
+    file_url: null,
+    file_urls: null,
+    artifact_transcript: null,
+  };
+
+  it('uses live conversation messages for chat-like assignments', () => {
+    const live: Message[] = [{ role: 'user', content: 'live', raw_model_text: 'strip-me' }];
+    const conversations = new Map([['sub-1', live]]);
+
+    const entries = assembleClassroomStudentWorkEntries(
+      [baseRow],
+      conversations,
+      new Map(),
+      new Map(),
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].student_work).toEqual({
+      type: 'chat',
+      messages: [{ role: 'user', content: 'live' }],
+    });
+  });
+
+  it('returns empty chat messages when no conversation exists', () => {
+    const entries = assembleClassroomStudentWorkEntries(
+      [baseRow],
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(entries[0].student_work).toEqual({ type: 'chat', messages: [] });
+  });
+
+  it('includes test questions and responses for test assignments', () => {
+    const testRow: ClassroomSubmissionWorkRow = {
+      ...baseRow,
+      id: 'sub-test',
+      assignment_id: 'asg-test',
+      assignment_type: 'test',
+    };
+    const questions = [{ id: 'q1', question_text: 'Q?' }];
+    const responses = [{ question_id: 'q1', text_answer: 'A' }];
+    const questionsByAssignment = new Map([['asg-test', questions]]);
+    const responsesBySubmission = new Map([['sub-test', responses]]);
+
+    const entries = assembleClassroomStudentWorkEntries(
+      [testRow],
+      new Map(),
+      questionsByAssignment,
+      responsesBySubmission,
+    );
+
+    expect(entries[0].student_work).toEqual({
+      type: 'test',
+      questions,
+      responses,
+    });
+  });
+});
 
 describe('sanitizeExportFilenamePart', () => {
   it('strips unsafe characters and collapses whitespace', () => {

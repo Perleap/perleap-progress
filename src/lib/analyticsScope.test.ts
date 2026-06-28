@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeAnalyticsKpiDisplay,
   filterReportableAssignments,
   getAllowedAssignmentIds,
   getClassroomAverage5D,
@@ -31,6 +32,68 @@ describe('getAllowedAssignmentIds', () => {
   });
   it('rejects single assignment if not in module', () => {
     expect(getAllowedAssignmentIds(sampleAssignments, 'm1', 'u1')).toEqual([]);
+  });
+});
+
+describe('computeAnalyticsKpiDisplay', () => {
+  const mixedAssignments: AnalyticsAssignmentRef[] = [
+    { id: 'pub1', title: 'Published 1', syllabusSectionId: 'm1', status: 'published', active: true, deletedAt: null },
+    { id: 'pub2', title: 'Published 2', syllabusSectionId: 'm1', status: 'published', active: true, deletedAt: null },
+    { id: 'draft', title: 'Draft', syllabusSectionId: 'm1', status: 'draft', active: true, deletedAt: null },
+  ];
+
+  it('counts only reportable assignments and feedback in the default (all) view', () => {
+    const result = computeAnalyticsKpiDisplay({
+      isNarrowingView: false,
+      allAssignments: mixedAssignments,
+      effectiveAssignmentIds: mixedAssignments.map((a) => a.id),
+      rawFeedback: [
+        { assignment_id: 'pub1', student_id: 's1' },
+        { assignment_id: 'pub1', student_id: 's1' },
+        { assignment_id: 'pub1', student_id: 's2' },
+        { assignment_id: 'draft', student_id: 's1' },
+      ],
+      enrolledStudentCount: 5,
+    });
+
+    expect(result.assignmentCount).toBe(2);
+    expect(result.totalSubmissions).toBe(2);
+    expect(result.activeStudents).toBe(2);
+    expect(result.completionPercent).toBe(40);
+  });
+
+  it('dedupes retakes: one count per student-assignment pair', () => {
+    const result = computeAnalyticsKpiDisplay({
+      isNarrowingView: false,
+      allAssignments: mixedAssignments,
+      effectiveAssignmentIds: ['pub1', 'pub2'],
+      rawFeedback: [
+        { assignment_id: 'pub1', student_id: 's1' },
+        { assignment_id: 'pub1', student_id: 's1' },
+        { assignment_id: 'pub1', student_id: 's1' },
+        { assignment_id: 'pub2', student_id: 's1' },
+      ],
+      enrolledStudentCount: 5,
+    });
+
+    expect(result.totalSubmissions).toBe(2);
+  });
+
+  it('uses scoped counts when filters narrow the view', () => {
+    const result = computeAnalyticsKpiDisplay({
+      isNarrowingView: true,
+      allAssignments: mixedAssignments,
+      effectiveAssignmentIds: ['pub1'],
+      rawFeedback: [
+        { assignment_id: 'pub1', student_id: 's1' },
+        { assignment_id: 'pub2', student_id: 's2' },
+      ],
+      enrolledStudentCount: 5,
+    });
+
+    expect(result.assignmentCount).toBe(1);
+    expect(result.totalSubmissions).toBe(1);
+    expect(result.activeStudents).toBe(1);
   });
 });
 

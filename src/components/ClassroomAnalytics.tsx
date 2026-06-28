@@ -48,6 +48,8 @@ import {
 } from '@/lib/analytics5dEvidence';
 import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
 import {
+  filterReportableAssignments,
+  computeAnalyticsKpiDisplay,
   getAllowedAssignmentIds,
   getClassroomAverage5D,
   getClassroomAverageQedMeasures,
@@ -96,10 +98,13 @@ export const ClassroomAnalytics = ({
   const students = data?.students || [];
   const allStudents = data?.allStudents || [];
   const assignments = data?.assignments || [];
+  const reportableAssignments = useMemo(
+    () => filterReportableAssignments(assignments),
+    [assignments],
+  );
   const modules = data?.modules || [];
   const structureType = data?.structureType;
   const studentCount = data?.studentCount || 0;
-  const fullAssignmentCount = data?.assignmentCount || 0;
 
   const readUrlRef = useRef(false);
   useEffect(() => {
@@ -139,15 +144,15 @@ export const ClassroomAnalytics = ({
   const allModulesLabel = t('analytics.allSyllabusSections', {
     sectionType: t(`syllabus.${structKey}`),
   });
-  const showUnplaced = hasUnplacedAssignments(assignments);
+  const showUnplaced = hasUnplacedAssignments(reportableAssignments);
 
   const visibleAssignments = useMemo(() => {
-    if (selectedModule === 'all') return assignments;
+    if (selectedModule === 'all') return reportableAssignments;
     if (selectedModule === 'unplaced') {
-      return assignments.filter((a) => a.syllabusSectionId == null);
+      return reportableAssignments.filter((a) => a.syllabusSectionId == null);
     }
-    return assignments.filter((a) => a.syllabusSectionId === selectedModule);
-  }, [assignments, selectedModule]);
+    return reportableAssignments.filter((a) => a.syllabusSectionId === selectedModule);
+  }, [reportableAssignments, selectedModule]);
 
   useEffect(() => {
     if (selectedAssignment === 'all') return;
@@ -157,13 +162,12 @@ export const ClassroomAnalytics = ({
   }, [visibleAssignments, selectedAssignment]);
 
   const effectiveAssignmentIds = useMemo(
-    () => getAllowedAssignmentIds(assignments, selectedModule, selectedAssignment),
-    [assignments, selectedModule, selectedAssignment]
+    () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
+    [reportableAssignments, selectedModule, selectedAssignment]
   );
-  const effectiveSet = useMemo(() => new Set(effectiveAssignmentIds), [effectiveAssignmentIds]);
   const moduleScopeIds = useMemo(
-    () => getAllowedAssignmentIds(assignments, selectedModule, 'all'),
-    [assignments, selectedModule]
+    () => getAllowedAssignmentIds(reportableAssignments, selectedModule, 'all'),
+    [reportableAssignments, selectedModule]
   );
 
   const isNarrowingView = !(
@@ -216,7 +220,7 @@ export const ClassroomAnalytics = ({
     return getClassroomAverage5D(
       snapshotRowsForAvg ?? [],
       data.rawSubmissions,
-      data.assignments,
+      reportableAssignments,
       selectedModule,
       selectedAssignment,
       selectedStudent,
@@ -229,7 +233,7 @@ export const ClassroomAnalytics = ({
     return getClassroomAverageQedMeasures(
       snapshotRowsForAvg ?? [],
       data.rawSubmissions,
-      data.assignments,
+      reportableAssignments,
       selectedModule,
       selectedAssignment,
       selectedStudent,
@@ -237,24 +241,22 @@ export const ClassroomAnalytics = ({
     );
   }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
 
-  const scopedFeedback = useMemo(() => {
-    if (!data) return { count: 0, activeStudents: 0 };
-    const rows = (data.rawFeedback || []).filter((f) => effectiveSet.has(f.assignment_id));
-    const stu = new Set(rows.map((r) => r.student_id));
-    return { count: rows.length, activeStudents: stu.size };
-  }, [data, effectiveSet]);
+  const kpiDisplay = useMemo(
+    () =>
+      computeAnalyticsKpiDisplay({
+        isNarrowingView,
+        allAssignments: assignments,
+        effectiveAssignmentIds,
+        rawFeedback: data?.rawFeedback || [],
+        enrolledStudentCount: studentCount,
+      }),
+    [isNarrowingView, assignments, effectiveAssignmentIds, data?.rawFeedback, studentCount],
+  );
 
-  const displayAssignmentCount = isNarrowingView
-    ? effectiveAssignmentIds.length
-    : fullAssignmentCount;
-  const displayTotalSubmissions = isNarrowingView
-    ? scopedFeedback.count
-    : students.reduce((s, st) => s + st.feedbackCount, 0);
-  const displayActiveStudents = isNarrowingView
-    ? scopedFeedback.activeStudents
-    : students.filter((s) => s.feedbackCount > 0).length;
-  const displayCompletion =
-    studentCount > 0 ? Math.round((displayActiveStudents / studentCount) * 100) : 0;
+  const displayAssignmentCount = kpiDisplay.assignmentCount;
+  const displayTotalSubmissions = kpiDisplay.totalSubmissions;
+  const displayActiveStudents = kpiDisplay.activeStudents;
+  const displayCompletion = kpiDisplay.completionPercent;
   const displayAvgSubmissions =
     studentCount > 0 ? (displayTotalSubmissions / studentCount).toFixed(1) : '0';
   const displayEngagement = displayCompletion;
@@ -340,7 +342,7 @@ export const ClassroomAnalytics = ({
     if (!data) {
       return new Map<string, { evidenceText: string; sourceCount: number }>();
     }
-    const allowed = getAllowedAssignmentIds(assignments, selectedModule, 'all');
+    const allowed = getAllowedAssignmentIds(reportableAssignments, selectedModule, 'all');
     const m = new Map<string, { evidenceText: string; sourceCount: number }>();
     const allStudentsNarr = data.students.map((st) => ({
       id: st.id,
@@ -487,7 +489,7 @@ export const ClassroomAnalytics = ({
     if (selectedModule === 'all') {
       return students;
     }
-    const scopeIds = getAllowedAssignmentIds(assignments, selectedModule, 'all');
+    const scopeIds = getAllowedAssignmentIds(reportableAssignments, selectedModule, 'all');
     if (scopeIds.length === 0) {
       return students.map((s) => ({
         ...s,
@@ -1141,7 +1143,7 @@ export const ClassroomAnalytics = ({
                           <span
                             className={`text-sm font-medium text-muted-foreground capitalize ${isRTL ? 'text-right' : 'text-left'}`}
                           >
-                            {t(`submissionDetail.dimensions.${dimension}`)}
+                            {t(`dimensions.${dimension}.label`)}
                           </span>
                           <div className="flex items-center gap-3">
                             <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">

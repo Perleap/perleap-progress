@@ -8,7 +8,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { FiveDChart } from '@/components/FiveDChart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { DIMENSION_CONFIG } from '@/config/constants';
 import {
   getLessonBriefPreloadStatus,
   getLessonBriefStudentNarrativesCache,
@@ -170,7 +169,7 @@ function normalizeNarrative(
   const improvement = asList(narrative?.nextSteps);
 
   const weakestLabel = weakestDimension
-    ? DIMENSION_CONFIG[weakestDimension].label
+    ? t(`dimensions.${weakestDimension}.label`)
     : t('analytics.lessonBrief.dash');
 
   return {
@@ -342,11 +341,11 @@ export default function LessonBriefPage() {
     const firstWeakDimension = weakestDimensions[0];
     const secondWeakDimension = weakestDimensions[1];
     const firstWeakLabel = firstWeakDimension
-      ? DIMENSION_CONFIG[firstWeakDimension].label
-      : DIMENSION_CONFIG.vision.label;
+      ? t(`dimensions.${firstWeakDimension}.label`)
+      : t('dimensions.vision.label');
     const secondWeakLabel = secondWeakDimension
-      ? DIMENSION_CONFIG[secondWeakDimension].label
-      : DIMENSION_CONFIG.thinking.label;
+      ? t(`dimensions.${secondWeakDimension}.label`)
+      : t('dimensions.thinking.label');
 
     const firstWeakScore = firstWeakDimension && classAverage ? safeScore(classAverage[firstWeakDimension]) : 0;
     const secondWeakScore =
@@ -746,7 +745,7 @@ export default function LessonBriefPage() {
                             <span className="text-xs leading-relaxed">
                               {DIMENSION_ORDER.map((dimension) => (
                                 <span key={dimension}>
-                                  {DIMENSION_CONFIG[dimension].label.slice(0, 1)}:
+                                  {t(`dimensions.${dimension}.abbrev`)}:
                                   {safeScore(student.scores![dimension]).toFixed(1)}
                                   {dimension !== 'action' ? ' · ' : ''}
                                 </span>
@@ -757,7 +756,7 @@ export default function LessonBriefPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-slate-700">
-                          {student.weakestDimension ? DIMENSION_CONFIG[student.weakestDimension].label : t('analytics.lessonBrief.dash')}
+                          {student.weakestDimension ? t(`dimensions.${student.weakestDimension}.label`) : t('analytics.lessonBrief.dash')}
                         </td>
                       </tr>
                     ))}

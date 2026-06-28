@@ -32,6 +32,61 @@ export function filterReportableAssignments(
   return assignments.filter(isReportableAssignment);
 }
 
+export type AnalyticsFeedbackRow = {
+  assignment_id: string;
+  student_id: string;
+};
+
+function uniqueStudentAssignmentPairCount(feedback: AnalyticsFeedbackRow[]): number {
+  const pairs = new Set(feedback.map((f) => `${f.student_id}:${f.assignment_id}`));
+  return pairs.size;
+}
+
+export type AnalyticsKpiDisplay = {
+  assignmentCount: number;
+  totalSubmissions: number;
+  activeStudents: number;
+  completionPercent: number;
+};
+
+/** KPI cards: published/active assignments and their feedback only (matches assignments tab). */
+export function computeAnalyticsKpiDisplay(params: {
+  isNarrowingView: boolean;
+  allAssignments: AnalyticsAssignmentRef[];
+  effectiveAssignmentIds: string[];
+  rawFeedback: AnalyticsFeedbackRow[];
+  enrolledStudentCount: number;
+}): AnalyticsKpiDisplay {
+  const reportable = filterReportableAssignments(params.allAssignments);
+  const reportableIds = new Set(reportable.map((a) => a.id));
+  const effectiveSet = new Set(params.effectiveAssignmentIds);
+
+  const feedbackInScope = params.rawFeedback.filter((f) => effectiveSet.has(f.assignment_id));
+  const feedbackReportable = params.rawFeedback.filter((f) => reportableIds.has(f.assignment_id));
+
+  const scopedStudents = new Set(feedbackInScope.map((f) => f.student_id));
+  const reportableStudents = new Set(feedbackReportable.map((f) => f.student_id));
+
+  const assignmentCount = params.isNarrowingView
+    ? params.effectiveAssignmentIds.length
+    : reportable.length;
+
+  const totalSubmissions = params.isNarrowingView
+    ? uniqueStudentAssignmentPairCount(feedbackInScope)
+    : uniqueStudentAssignmentPairCount(feedbackReportable);
+
+  const activeStudents = params.isNarrowingView
+    ? scopedStudents.size
+    : reportableStudents.size;
+
+  const completionPercent =
+    params.enrolledStudentCount > 0
+      ? Math.round((activeStudents / params.enrolledStudentCount) * 100)
+      : 0;
+
+  return { assignmentCount, totalSubmissions, activeStudents, completionPercent };
+}
+
 export type AnalyticsModuleRef = {
   id: string;
   title: string;

@@ -65,29 +65,28 @@ export const LEARNING_DIMENSIONS = {
 // Dimension Labels and Descriptions
 export const DIMENSION_CONFIG = {
   vision: {
-    label: 'Vision',
-    description: 'Imagining new possibilities and bold ideas; creative, adaptive thinking',
+    label: 'Creative',
+    description: 'Generating the new: reframing → combining unlike things → improvising',
     color: '#8B5CF6',
   },
   values: {
-    label: 'Values',
-    description: 'Guided by ethics and integrity; building trust and understanding limits',
+    label: 'Essence',
+    description: "Caring about what's true/right over what merely works",
     color: '#EF4444',
   },
   thinking: {
-    label: 'Thinking',
-    description:
-      'Strong analysis, deep insight, and sound judgment; critical and analytical skills',
+    label: 'Cognitive',
+    description: 'Sense-making: perception → structuring → connecting → abstracting',
     color: '#3B82F6',
   },
   connection: {
-    label: 'Connection',
-    description: 'Empathy, clear communication, and effective collaboration',
+    label: 'Interpersonal',
+    description: 'Being understood and attuned: expression → listening → adapting',
     color: '#10B981',
   },
   action: {
-    label: 'Action',
-    description: 'Turning plans into results with focus, determination, and practical skills',
+    label: 'Execution',
+    description: 'Turning intent into a finished result: starting → persisting → completing',
     color: '#F59E0B',
   },
 } as const;

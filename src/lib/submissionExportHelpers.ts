@@ -1,4 +1,5 @@
 import type { Message } from '@/types';
+import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 
 export type SubmissionStudentWorkExport =
   | { type: 'chat'; messages: Message[] }
@@ -102,4 +103,98 @@ export function buildStudentWorkExport(
       : feedbackConversationContext ?? [];
 
   return { type: 'chat', messages };
+}
+
+export type ExportMessage = Pick<Message, 'role' | 'content' | 'fileContext'>;
+
+export type ClassroomSubmissionWorkRow = {
+  id: string;
+  student_id: string;
+  student_name: string;
+  assignment_id: string;
+  assignment_title: string;
+  assignment_type: string;
+  status: string;
+  submitted_at: string;
+  attempt_number: number;
+  text_body: string | null;
+  file_url: string | null;
+  file_urls: string[] | null;
+  artifact_transcript: string | null;
+};
+
+export type ClassroomStudentWorkEntry = {
+  submission_id: string;
+  student: { id: string; name: string };
+  assignment: { id: string; title: string; type: string };
+  submitted_at: string;
+  status: string;
+  attempt_number: number;
+  student_work: SubmissionStudentWorkExport;
+};
+
+export function slimMessagesForExport(messages: Message[]): ExportMessage[] {
+  return messages.map((msg) => {
+    const slim: ExportMessage = { role: msg.role, content: msg.content };
+    if (msg.fileContext) {
+      slim.fileContext = msg.fileContext;
+    }
+    return slim;
+  });
+}
+
+function slimStudentWorkExport(work: SubmissionStudentWorkExport): SubmissionStudentWorkExport {
+  if (work.type !== 'chat') return work;
+  return { type: 'chat', messages: slimMessagesForExport(work.messages) as Message[] };
+}
+
+export function assembleClassroomStudentWorkEntries(
+  rows: ClassroomSubmissionWorkRow[],
+  conversationsBySubmissionId: Map<string, Message[]>,
+  questionsByAssignmentId: Map<string, Record<string, unknown>[]>,
+  responsesBySubmissionId: Map<string, Record<string, unknown>[]>,
+): ClassroomStudentWorkEntry[] {
+  return rows.map((row) => {
+    const assignmentType = row.assignment_type;
+    const isChatLike = isChatLikeAssignmentType(assignmentType);
+    const messages = isChatLike ? (conversationsBySubmissionId.get(row.id) ?? null) : null;
+
+    const studentWork = buildStudentWorkExport(
+      assignmentType,
+      {
+        text_body: row.text_body,
+        file_url: row.file_url,
+        file_urls: row.file_urls,
+        artifact_transcript: row.artifact_transcript,
+      },
+      {
+        messages,
+        testQuestions: questionsByAssignmentId.get(row.assignment_id) ?? [],
+        testResponses: responsesBySubmissionId.get(row.id) ?? [],
+      },
+    );
+
+    return {
+      submission_id: row.id,
+      student: { id: row.student_id, name: row.student_name },
+      assignment: {
+        id: row.assignment_id,
+        title: row.assignment_title,
+        type: assignmentType,
+      },
+      submitted_at: row.submitted_at,
+      status: row.status,
+      attempt_number: row.attempt_number,
+      student_work: slimStudentWorkExport(studentWork),
+    };
+  });
+}
+
+export function buildClassroomStudentWorkFilename(classroomName?: string | null): string {
+  const date = new Date().toISOString().split('T')[0];
+  if (classroomName?.trim()) {
+    const slug = sanitizeExportFilenamePart(classroomName);
+    return `${slug}-student-work-${date}.json`;
+  }
+  return `classroom-student-work-${date}.json`;
 }

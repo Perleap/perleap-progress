@@ -141,6 +141,8 @@ export const RadarChart = ({
     setShowDevelopment(true);
   }, [dualLayer]);
 
+  const stacked = layerControlsLayout === 'stacked';
+
   const data: ChartPoint[] = useMemo(
     () =>
       FIVE_D_DIMENSION_KEYS.map((dimension) => {
@@ -174,7 +176,6 @@ export const RadarChart = ({
   const motConfig = QED_LAYER_CONFIG.motivation;
   const devOpacity = layerOpacity('development', hoveredLayer, showDevelopment);
   const motOpacity = layerOpacity('motivation', hoveredLayer, dualLayer && showMotivation);
-  const stacked = layerControlsLayout === 'stacked';
 
   return (
     <div className="w-full">
@@ -185,9 +186,16 @@ export const RadarChart = ({
             : 'flex flex-col sm:flex-row gap-4 items-stretch'
         }
       >
-        <div className={stacked ? 'w-full max-w-md mx-auto' : 'flex-1 min-w-0'}>
+        <div className={stacked ? 'w-full' : 'flex-1 min-w-0'}>
           <ResponsiveContainer width="100%" height={height}>
-            <RechartsRadarChart data={data}>
+            <RechartsRadarChart
+              data={data}
+              margin={
+                stacked
+                  ? { top: 12, right: 28, bottom: 12, left: 28 }
+                  : { top: 8, right: 36, bottom: 8, left: 36 }
+              }
+            >
               <PolarGrid stroke="hsl(var(--border))" />
               <PolarAngleAxis
                 dataKey="label"
@@ -195,11 +203,13 @@ export const RadarChart = ({
                   const dimension = data[payload.index].dimension;
                   const isHovered = hoveredDimension === dimension;
                   const color = DIMENSION_CONFIG[dimension].color;
+                  const isTopAxis = dimension === 'vision';
+                  const tickY = typeof y === 'number' ? y : Number(y);
 
                   return (
                     <text
                       x={x}
-                      y={y}
+                      y={isTopAxis ? tickY - 10 : tickY}
                       textAnchor={textAnchor}
                       fill={isHovered ? color : 'hsl(var(--foreground))'}
                       fontSize={isHovered ? 14 : 12}
