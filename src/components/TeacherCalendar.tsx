@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { format, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Calendar as CalendarIcon, AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -250,7 +252,7 @@ export function TeacherCalendar({
                             {assignment.incompleteStudents.slice(0, 5).map((student) => (
                               <Avatar key={student.user_id} className="h-6 w-6 border-2 border-background shadow-sm ring-1 ring-destructive/20">
                                 {student.avatar_url && (
-                                  <AvatarImage src={student.avatar_url} alt={student.full_name} />
+                                  <SecureAvatarImage src={student.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt={student.full_name} />
                                 )}
                                 <AvatarFallback className="text-[8px] bg-destructive/10 text-destructive font-semibold">
                                   {student.full_name?.charAt(0) || '?'}

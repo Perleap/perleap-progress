@@ -25,6 +25,9 @@ import {
 } from '@/components/features/syllabus/content-blocks';
 import type { SectionResource } from '@/types/syllabus';
 import type { VideoWatchTrackingBase } from '@/types/videoWatch';
+import { useResolvedSectionResources } from '@/hooks/useResolvedSectionResources';
+import { resolveSectionResourceFileUrl } from '@/services/syllabusResourceService';
+import { isSupabaseStorageUrl, SYLLABUS_RESOURCES_BUCKET } from '@/utils/storageUrls';
 
 interface ResourceViewerProps {
   resources: SectionResource[];
@@ -91,10 +94,24 @@ function shouldShowInlinePreview(resource: SectionResource, videoRevealed: boole
   return resourceHasInlinePreview(resource);
 }
 
-/** Fetch then save via blob URL so browsers save instead of navigating (e.g. JSON). */
+/** Save via blob URL or authenticated fetch — never opens shareable Supabase signed URLs. */
 async function triggerBrowserDownload(url: string, filename: string): Promise<boolean> {
   const safeName = filename.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'download';
   try {
+    if (url.startsWith('blob:')) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = safeName;
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    }
+    if (isSupabaseStorageUrl(SYLLABUS_RESOURCES_BUCKET, url)) {
+      return false;
+    }
     const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) throw new Error(String(res.status));
     const blob = await res.blob();
@@ -112,6 +129,13 @@ async function triggerBrowserDownload(url: string, filename: string): Promise<bo
   } catch {
     return false;
   }
+}
+
+function canOpenUrlInBrowser(url: string): boolean {
+  if (!url) return false;
+  if (url.startsWith('blob:')) return true;
+  if (isSupabaseStorageUrl(SYLLABUS_RESOURCES_BUCKET, url)) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
 }
 
 export type LessonResourceBodyVariant = 'embedded' | 'reading';
@@ -321,12 +345,24 @@ function ResourceCard({
       setVideoRevealed(true);
       return;
     }
-    if (!useOpenAction && url) {
-      const ok = await triggerBrowserDownload(url, resource.title);
-      if (ok) return;
-      toast.message(t('syllabus.resources.downloadOpenedInTab'));
+
+    let openUrl = url;
+    if (!canOpenUrlInBrowser(openUrl)) {
+      const resolved = await resolveSectionResourceFileUrl(resource);
+      if (resolved) openUrl = resolved;
     }
-    if (url) window.open(url, '_blank', 'noopener');
+
+    if (!useOpenAction && openUrl) {
+      const ok = await triggerBrowserDownload(openUrl, resource.title);
+      if (ok) return;
+      toast.error(t('syllabus.resources.downloadFailed'));
+      return;
+    }
+    if (canOpenUrlInBrowser(openUrl)) {
+      window.open(openUrl, '_blank', 'noopener');
+      return;
+    }
+    toast.error(t('syllabus.resources.downloadFailed'));
   };
 
   if (compact) {
@@ -435,8 +471,9 @@ export const ResourceViewer = ({
   videoTracking,
 }: ResourceViewerProps) => {
   const { t } = useTranslation();
+  const { resources: displayResources } = useResolvedSectionResources(resources);
 
-  if (resources.length === 0) return null;
+  if (displayResources.length === 0) return null;
 
   const listMode = compact && compactVariant === 'list';
   const showInnerHeading = !hideListHeader;
@@ -450,7 +487,7 @@ export const ResourceViewer = ({
             isRTL && 'flex-row-reverse text-right',
           )}
         >
-          <FileText className="h-3 w-3" /> {t('syllabus.resources.title')} ({resources.length})
+          <FileText className="h-3 w-3" /> {t('syllabus.resources.title')} ({displayResources.length})
         </h4>
       ) : null}
       <div
@@ -461,7 +498,7 @@ export const ResourceViewer = ({
           !listMode && !compact && 'space-y-3',
         )}
       >
-        {resources.map((resource) => (
+        {displayResources.map((resource) => (
           <ResourceCard
             key={resource.id}
             resource={resource}
@@ -475,3 +512,29 @@ export const ResourceViewer = ({
     </div>
   );
 };
+
+export function ResolvedLessonResourceBody({
+  resource,
+  className,
+  variant = 'embedded',
+  isRTL = false,
+  videoTracking,
+}: {
+  resource: SectionResource;
+  className?: string;
+  variant?: LessonResourceBodyVariant;
+  isRTL?: boolean;
+  videoTracking?: VideoWatchTrackingBase;
+}) {
+  const { resources } = useResolvedSectionResources([resource]);
+  const resolved = resources[0] ?? resource;
+  return (
+    <LessonResourceBody
+      resource={resolved}
+      className={className}
+      variant={variant}
+      isRTL={isRTL}
+      videoTracking={videoTracking}
+    />
+  );
+}

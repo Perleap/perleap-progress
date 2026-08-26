@@ -3,6 +3,13 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import {
+  authFailureToResponse,
+  requireAuth,
+  requireAuthenticatedTeacher,
+} from '../_shared/authorizeResource.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 
 function lastUserMessageContent(messages: unknown): string {
     if (!Array.isArray(messages)) return '';
@@ -18,10 +25,6 @@ function lastUserMessageContent(messages: unknown): string {
     return '';
 }
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const SYSTEM_PROMPT = `You are a helpful, professional AI Assistant for teachers using the PerLeap platform.
 Your goal is to assist teachers with education-related tasks, such as:
@@ -45,10 +48,27 @@ CONTEXT usage:
 
 serve(async (req: Request) => {
     if (req.method === 'OPTIONS') {
-        return new Response(null, { headers: corsHeaders });
-    }
+    return handleCorsPreflight(req);
+  }
+
+  const corsHeaders = getCorsHeaders(req);
 
     try {
+        const auth = await requireAuth(req);
+        if ('status' in auth) {
+            return authFailureToResponse(auth, corsHeaders);
+        }
+
+        const teacherGate = await requireAuthenticatedTeacher(auth.user.id);
+        if (teacherGate) {
+            return authFailureToResponse(teacherGate, corsHeaders);
+        }
+
+        const rateLimit = await checkRateLimit(auth.user.id, 'teacher-assistant-chat');
+        if (rateLimit) {
+            return rateLimitFailureToResponse(rateLimit, corsHeaders);
+        }
+
         const body = await req.json();
         const { messages, context } = body;
         const threadId =

@@ -9,7 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -164,15 +166,9 @@ const StudentSettings = () => {
         return;
       }
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('student-avatars').getPublicUrl(fileName);
+      await updateProfileMutation.mutateAsync({ avatar_url: fileName });
 
-      // Update profile with avatar URL using mutation
-      await updateProfileMutation.mutateAsync({ avatar_url: publicUrl });
-
-      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      setProfile(prev => ({ ...prev, avatar_url: fileName }));
       toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -282,7 +278,7 @@ const StudentSettings = () => {
                   <div className="relative">
                     <Avatar className="h-20 w-20">
                       {profile.avatar_url ? (
-                        <AvatarImage src={profile.avatar_url} alt="Profile" />
+                        <SecureAvatarImage src={profile.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt="Profile" />
                       ) : null}
                       <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
                     </Avatar>

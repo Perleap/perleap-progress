@@ -5,7 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -266,14 +268,14 @@ const StudentDashboard = () => {
     try {
       const trimmedCode = inviteCode.trim().toUpperCase();
 
-      // Find classroom by invite code
-      const { data: classroom, error: findError } = await supabase
-        .from('classrooms')
-        .select('id, name, teacher_id')
-        .eq('invite_code', trimmedCode)
-        .maybeSingle();
+      const { data: rpcData, error: findError } = await supabase.rpc(
+        'find_classroom_by_invite_code',
+        { p_invite_code: trimmedCode },
+      );
 
-      if (findError || !classroom) {
+      const classroom = rpcData as { id?: string; name?: string; teacher_id?: string } | null;
+
+      if (findError || !classroom?.id) {
         toast.error(t('studentDashboard.errors.noClassroomFound', { code: trimmedCode }));
         return;
       }
@@ -569,7 +571,7 @@ const StudentDashboard = () => {
                             <div className="flex items-center gap-2 pt-1">
                               <Avatar className="h-6 w-6 border border-background">
                                 {classroom.teacher_profiles.avatar_url && (
-                                  <AvatarImage src={classroom.teacher_profiles.avatar_url} />
+                                  <SecureAvatarImage src={classroom.teacher_profiles.avatar_url} bucket={TEACHER_AVATARS_BUCKET} alt="" />
                                 )}
                                 <AvatarFallback className="text-[10px] bg-primary/5 text-primary">
                                   {(classroom.teacher_profiles.full_name || 'T').charAt(0)}
@@ -610,7 +612,7 @@ const StudentDashboard = () => {
                             <div className="flex items-center gap-1.5 pt-1">
                               <Avatar className="h-4 w-4">
                                 {classroom.teacher_profiles.avatar_url && (
-                                  <AvatarImage src={classroom.teacher_profiles.avatar_url} />
+                                  <SecureAvatarImage src={classroom.teacher_profiles.avatar_url} bucket={TEACHER_AVATARS_BUCKET} alt="" />
                                 )}
                                 <AvatarFallback className="text-[8px] bg-primary/5 text-primary">
                                   {(classroom.teacher_profiles.full_name || 'T').charAt(0)}
@@ -653,7 +655,7 @@ const StudentDashboard = () => {
                                 <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                                   <Avatar className="h-4 w-4">
                                     {classroom.teacher_profiles.avatar_url && (
-                                      <AvatarImage src={classroom.teacher_profiles.avatar_url} />
+                                      <SecureAvatarImage src={classroom.teacher_profiles.avatar_url} bucket={TEACHER_AVATARS_BUCKET} alt="" />
                                     )}
                                     <AvatarFallback className="text-[8px] bg-primary/5 text-primary">
                                       {(classroom.teacher_profiles.full_name || 'T').charAt(0)}
@@ -710,7 +712,7 @@ const StudentDashboard = () => {
                             <div className="flex items-center gap-3 pt-2">
                               <Avatar className="h-8 w-8">
                                 {classroom.teacher_profiles.avatar_url && (
-                                  <AvatarImage src={classroom.teacher_profiles.avatar_url} />
+                                  <SecureAvatarImage src={classroom.teacher_profiles.avatar_url} bucket={TEACHER_AVATARS_BUCKET} alt="" />
                                 )}
                                 <AvatarFallback className="bg-primary/5 text-primary">
                                   {(classroom.teacher_profiles.full_name || 'T').charAt(0)}
@@ -841,8 +843,9 @@ const StudentDashboard = () => {
                               </div>
                               <Avatar className="h-10 w-10 border-2 border-card shadow-sm">
                                 {teacherProfile?.avatar_url && (
-                                  <AvatarImage
+                                  <SecureAvatarImage
                                     src={teacherProfile.avatar_url}
+                                    bucket={TEACHER_AVATARS_BUCKET}
                                     alt={teacherName}
                                   />
                                 )}
@@ -908,8 +911,9 @@ const StudentDashboard = () => {
                             <div className="flex items-center gap-3 sm:ps-4 sm:border-s border-border shrink-0">
                               <Avatar className="h-8 w-8 grayscale opacity-70">
                                 {teacherProfile?.avatar_url && (
-                                  <AvatarImage
+                                  <SecureAvatarImage
                                     src={teacherProfile.avatar_url}
+                                    bucket={TEACHER_AVATARS_BUCKET}
                                     alt={teacherName}
                                   />
                                 )}

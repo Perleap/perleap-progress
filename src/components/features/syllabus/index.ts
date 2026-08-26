@@ -11,7 +11,7 @@ export { SyllabusEditor } from './SyllabusEditor';
 export { GradingCategoriesManager } from './GradingCategoriesManager';
 export { AssignmentLinker } from './AssignmentLinker';
 export { ResourceUploader } from './ResourceUploader';
-export { LessonResourceBody, ResourceViewer } from './ResourceViewer';
+export { LessonResourceBody, ResolvedLessonResourceBody, ResourceViewer } from './ResourceViewer';
 export * from './content-blocks';
 export { StudentPoliciesView } from './StudentPoliciesView';
 export { GradingBreakdownView } from './GradingBreakdownView';

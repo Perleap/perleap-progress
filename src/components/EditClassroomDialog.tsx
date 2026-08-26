@@ -18,6 +18,8 @@ import { useAuth } from '@/contexts/useAuth';
 import { toast } from 'sonner';
 import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';
+import { openOrDownloadMaterial } from '@/services/materialService';
+import { COURSE_MATERIALS_BUCKET } from '@/utils/storageUrls';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -266,14 +268,11 @@ export const EditClassroomDialog = ({
         throw uploadError;
       }
 
-      console.log('Upload successful, getting public URL...', data);
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('course-materials').getPublicUrl(fileName);
+      console.log('Upload successful', data);
 
       setFormData({
         ...formData,
-        materials: [...formData.materials, { type: 'pdf', url: publicUrl, name: file.name }],
+        materials: [...formData.materials, { type: 'pdf', file_path: fileName, name: file.name }],
       });
 
       toast.success(t('createClassroom.success.pdfUploaded'));
@@ -582,7 +581,7 @@ export const EditClassroomDialog = ({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => window.open(material.url, '_blank')}
+                          onClick={() => void openOrDownloadMaterial(material, COURSE_MATERIALS_BUCKET)}
                           className="h-8 w-8 text-muted-foreground hover:text-primary"
                           title={t('common.view')}
                         >

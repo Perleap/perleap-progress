@@ -207,17 +207,31 @@ export const findClassroomByInviteCode = async (
   inviteCode: string
 ): Promise<{ data: Classroom | null; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase
-      .from('classrooms')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .maybeSingle();
+    const { data: rpcData, error } = await supabase.rpc('find_classroom_by_invite_code', {
+      p_invite_code: inviteCode.toUpperCase(),
+    });
 
     if (error) {
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    return { data: data as unknown as Classroom, error: null };
+    if (!rpcData || typeof rpcData !== 'object') {
+      return { data: null, error: null };
+    }
+
+    const row = rpcData as { id?: string; name?: string; teacher_id?: string };
+    if (!row.id) {
+      return { data: null, error: null };
+    }
+
+    return {
+      data: {
+        id: row.id,
+        name: row.name ?? '',
+        teacher_id: row.teacher_id ?? '',
+      } as Classroom,
+      error: null,
+    };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

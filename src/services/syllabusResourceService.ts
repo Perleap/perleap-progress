@@ -10,6 +10,14 @@ import {
   type UploadProgressCallback,
 } from '@/lib/resumableStorageUpload';
 import { isStoragePayloadTooLarge } from '@/lib/storageUploadErrors';
+import { parseLessonContent } from '@/lib/lessonContent';
+import { isYoutubeUrl } from '@/lib/youtube';
+import {
+  downloadStorageBlob,
+  extractStorageObjectPath,
+  resolveSyllabusResourceStoredValue,
+  SYLLABUS_RESOURCES_BUCKET,
+} from '@/utils/storageUrls';
 import { ACTIVITY_LIST_OPTIONAL_COLUMNS } from '@/lib/activityListOptionalColumns';
 import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
@@ -58,14 +66,14 @@ function extractOutlineLinkUrl(lessonContent: unknown): string | null {
 
 function outlineFileLessonJson(meta: {
   file_path: string;
-  url: string;
+  url?: string | null;
   mime_type: string;
   file_size: number;
 }): Json {
   return {
     [OUTLINE_FILE_V1]: {
       file_path: meta.file_path,
-      url: meta.url,
+      url: meta.url ?? null,
       mime_type: meta.mime_type,
       file_size: meta.file_size,
     },
@@ -85,7 +93,7 @@ function extractOutlineFileMeta(lessonContent: unknown): {
   const file_path = o.file_path;
   const url = o.url;
   if (typeof file_path !== 'string' || !file_path.trim()) return null;
-  if (typeof url !== 'string' || !url.trim()) return null;
+  const urlVal = typeof url === 'string' && url.trim() ? url.trim() : null;
   const mime_type = typeof o.mime_type === 'string' ? o.mime_type : null;
   const rawSize = o.file_size;
   let file_size: number | null = null;
@@ -93,7 +101,90 @@ function extractOutlineFileMeta(lessonContent: unknown): {
   else if (typeof rawSize === 'string' && rawSize.trim() !== '' && Number.isFinite(Number(rawSize))) {
     file_size = Number(rawSize);
   }
-  return { file_path: file_path.trim(), url: url.trim(), mime_type, file_size };
+  return { file_path: file_path.trim(), url: urlVal, mime_type, file_size };
+}
+
+export type BlobRevokeRegistry = {
+  register: (revoke: () => void) => void;
+};
+
+function syllabusResourceStoragePath(resource: SectionResource): string | null {
+  return (
+    resource.file_path?.trim() ||
+    (resource.url?.trim()
+      ? extractStorageObjectPath(SYLLABUS_RESOURCES_BUCKET, resource.url.trim())
+      : null)
+  );
+}
+
+/** Download file bytes using the logged-in user's session (RLS enforced). */
+export async function downloadSectionResourceFile(resource: SectionResource): Promise<Blob | null> {
+  if (resource.resource_type === 'link') return null;
+  const path = syllabusResourceStoragePath(resource);
+  if (!path) return null;
+  return downloadStorageBlob(STORAGE_BUCKET, path);
+}
+
+/** Resolve file-backed syllabus resource to an in-app blob URL (or external link as-is). */
+export async function resolveSectionResourceFileUrl(
+  resource: SectionResource,
+  registry?: BlobRevokeRegistry,
+): Promise<string | null> {
+  if (resource.resource_type === 'link') {
+    return resource.url?.trim() || null;
+  }
+  const resolved = await resolveSyllabusResourceStoredValue(resource.file_path, resource.url);
+  if (!resolved) return null;
+  registry?.register(resolved.revoke);
+  return resolved.url;
+}
+
+/** Resolve storage-backed URLs inside lesson blocks and top-level file fields for display. */
+export async function resolveSectionResourceForDisplay(
+  resource: SectionResource,
+  registry?: BlobRevokeRegistry,
+): Promise<SectionResource> {
+  if (resource.resource_type === 'link') {
+    return resource;
+  }
+
+  let next: SectionResource = { ...resource };
+
+  if (FILE_BACKED_RESOURCE_TYPES.has(resource.resource_type)) {
+    const resolved = await resolveSyllabusResourceStoredValue(resource.file_path, resource.url);
+    if (resolved) {
+      registry?.register(resolved.revoke);
+      next = { ...next, url: resolved.url };
+    }
+  }
+
+  if (resource.resource_type === 'lesson') {
+    const v1 = parseLessonContent(resource.lesson_content as unknown);
+    if (v1?.blocks?.length) {
+      const blocks = await Promise.all(
+        v1.blocks.map(async (block) => {
+          if (block.type !== 'video') return block;
+          if (block.source === 'youtube' || isYoutubeUrl(block.url ?? '')) return block;
+          const resolved = await resolveSyllabusResourceStoredValue(block.file_path, block.url);
+          if (!resolved) return block;
+          registry?.register(resolved.revoke);
+          return { ...block, url: resolved.url };
+        }),
+      );
+      next = {
+        ...next,
+        lesson_content: { ...v1, blocks },
+      };
+    } else if (resource.file_path || resource.url) {
+      const resolved = await resolveSyllabusResourceStoredValue(resource.file_path, resource.url);
+      if (resolved) {
+        registry?.register(resolved.revoke);
+        next = { ...next, url: resolved.url };
+      }
+    }
+  }
+
+  return next;
 }
 
 const FILE_BACKED_RESOURCE_TYPES = new Set<SectionResource['resource_type']>([
@@ -117,13 +208,13 @@ export function mapActivityListRowToSectionResource(row: SectionResource | null 
   if (FILE_BACKED_RESOURCE_TYPES.has(row.resource_type)) {
     const hasPath = row.file_path?.trim();
     const hasUrl = row.url?.trim();
-    if (hasPath && hasUrl) return row;
+    if (hasPath || hasUrl) return row;
     const meta = extractOutlineFileMeta(row.lesson_content);
     if (!meta) return row;
     return {
       ...row,
       file_path: hasPath ?? meta.file_path,
-      url: hasUrl ?? meta.url,
+      url: hasUrl ?? meta.url ?? null,
       mime_type: row.mime_type ?? meta.mime_type,
       file_size: row.file_size ?? meta.file_size,
     };
@@ -238,9 +329,7 @@ export const createSectionResource = async (
     const isFileBackedOutline =
       FILE_BACKED_RESOURCE_TYPES.has(normalizedInput.resource_type) &&
       typeof normalizedInput.file_path === 'string' &&
-      normalizedInput.file_path.trim() !== '' &&
-      typeof normalizedInput.url === 'string' &&
-      normalizedInput.url.trim() !== '';
+      normalizedInput.file_path.trim() !== '';
 
     const row =
       normalizedInput.resource_type === 'link' && typeof normalizedInput.url === 'string'
@@ -267,7 +356,7 @@ export const createSectionResource = async (
                 status: normalizedInput.status ?? 'published',
                 lesson_content: outlineFileLessonJson({
                   file_path: normalizedInput.file_path!,
-                  url: normalizedInput.url!,
+                  url: normalizedInput.url,
                   mime_type: normalizedInput.mime_type ?? '',
                   file_size: normalizedInput.file_size ?? 0,
                 }),
@@ -388,7 +477,7 @@ export const uploadResourceFile = async (
   sectionId: string,
   file: File,
   options?: UploadResourceFileOptions,
-): Promise<{ filePath: string; publicUrl: string } | { error: string }> => {
+): Promise<{ filePath: string } | { error: string }> => {
   try {
     if (options?.signal?.aborted) {
       return { error: UPLOAD_CANCELLED_ERROR };
@@ -418,11 +507,7 @@ export const uploadResourceFile = async (
       return { error: UPLOAD_CANCELLED_ERROR };
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(fileName);
-
-    return { filePath: fileName, publicUrl };
+    return { filePath: fileName };
   } catch (error) {
     if (
       options?.signal?.aborted ||
@@ -440,12 +525,8 @@ export const uploadResourceFile = async (
   }
 };
 
-export const getResourcePublicUrl = (filePath: string): string => {
-  const { data: { publicUrl } } = supabase.storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(filePath);
-  return publicUrl;
-};
+/** @deprecated Use resolveSectionResourceFileUrl — public bucket URLs are no longer stored. */
+export const getResourcePublicUrl = (filePath: string): string => filePath;
 
 function deriveResourceType(mimeType: string): SectionResource['resource_type'] {
   if (mimeType.startsWith('video/')) return 'video';
@@ -470,7 +551,7 @@ export const uploadAndCreateResource = async (
     title: file.name,
     resource_type: deriveResourceType(file.type),
     file_path: uploadResult.filePath,
-    url: uploadResult.publicUrl,
+    url: null,
     mime_type: file.type,
     file_size: file.size,
     order_index: orderIndex,

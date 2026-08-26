@@ -276,8 +276,8 @@ export function CoursePackageCard({
             ref={fileInputRef}
             type="file"
             accept="application/json,.json"
-            className="sr-only"
-            aria-hidden
+            className="hidden"
+            tabIndex={-1}
             onChange={handleIncomingPackageFileSelected}
           />
           <Button

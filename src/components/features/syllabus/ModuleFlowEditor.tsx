@@ -49,11 +49,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Link, useNavigate } from 'react-router-dom';
 import { GripVertical, Trash2, Plus, Pencil, Eye, PlayCircle, Radio } from 'lucide-react';
-import { buttonVariants } from '@/components/ui/button';
 import type { ActivityLinkState } from '@/types/navigation';
 import { toast } from 'sonner';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import { cn } from '@/lib/utils';
+import {
+  syllabusRowActionClass,
+  syllabusRowDestructiveActionClass,
+  syllabusRowDragHandleClass,
+} from './syllabusRowActionStyles';
+import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
 import {
   isActivityCenterResource,
   moduleFlowLocalStepsEqual,
@@ -547,7 +552,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                         >
                           <button
                             type="button"
-                            className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded-md shrink-0"
+                            className={syllabusRowDragHandleClass}
                             aria-label={t('classroomDetail.activitiesFlow.dragReorder')}
                             {...dragListeners}
                             {...dragAttributes}
@@ -575,98 +580,126 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                           <div className="flex shrink-0 items-center gap-0.5">
                             {step.kind === 'resource' ? (
                               <>
-                                <Link
-                                  to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
-                                  state={activityLinkState}
-                                  className={cn(
-                                    buttonVariants({ variant: 'ghost', size: 'icon' }),
-                                    'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
-                                  )}
-                                  aria-label={t('classroomDetail.activitiesFlow.viewActivity')}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                  to={`/teacher/classroom/${classroomId}/try/activity/${step.resourceId}`}
-                                  state={activityLinkState}
-                                  className={cn(
-                                    buttonVariants({ variant: 'ghost', size: 'icon' }),
-                                    'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
-                                  )}
-                                  aria-label={t('classroomDetail.activitiesFlow.tryActivity')}
-                                >
-                                  <PlayCircle className="h-4 w-4" />
-                                </Link>
+                                <SyllabusRowActionTooltip
+                                label={t('common.view')}
+                                render={
+                                  <Link
+                                    to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
+                                    state={activityLinkState}
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('common.view')}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Link>
+                                  }
+                                />
+                                <SyllabusRowActionTooltip
+                                  label={t('classroomDetail.activitiesFlow.tryActivity')}
+                                  render={
+                                    <Link
+                                      to={`/teacher/classroom/${classroomId}/try/activity/${step.resourceId}`}
+                                      state={activityLinkState}
+                                      className={syllabusRowActionClass}
+                                      aria-label={t('classroomDetail.activitiesFlow.tryActivity')}
+                                    >
+                                      <PlayCircle className="h-4 w-4" />
+                                    </Link>
+                                  }
+                                />
                               </>
                             ) : isLiveSession ? (
-                              <Link
-                                to={`/teacher/classroom/${classroomId}/live-session/${step.assignmentId}`}
-                                className={cn(
-                                  buttonVariants({ variant: 'ghost', size: 'icon' }),
-                                  'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
-                                )}
-                                aria-label={t('liveSession.open')}
-                              >
-                                <Radio className="h-4 w-4" />
-                              </Link>
+                              <SyllabusRowActionTooltip
+                                label={t('liveSession.open')}
+                                render={
+                                  <Link
+                                    to={`/teacher/classroom/${classroomId}/live-session/${step.assignmentId}`}
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('liveSession.open')}
+                                  >
+                                    <Radio className="h-4 w-4" />
+                                  </Link>
+                                }
+                              />
                             ) : onViewAssignment ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                                aria-label={t('classroomDetail.activitiesFlow.viewAssignment')}
-                                onClick={() => onViewAssignment(step.assignmentId)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                              <SyllabusRowActionTooltip
+                                label={t('common.view')}
+                                render={
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('common.view')}
+                                    onClick={() => onViewAssignment(step.assignmentId)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
                             ) : null}
                             {step.kind === 'assignment' && !isLiveSession ? (
-                              <Link
-                                to={`/teacher/classroom/${classroomId}/try/assignment/${step.assignmentId}`}
-                                className={cn(
-                                  buttonVariants({ variant: 'ghost', size: 'icon' }),
-                                  'h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground',
-                                )}
-                                aria-label={t('classroomDetail.activitiesFlow.tryAssignment')}
-                              >
-                                <PlayCircle className="h-4 w-4" />
-                              </Link>
+                              <SyllabusRowActionTooltip
+                                label={t('classroomDetail.activitiesFlow.tryAssignment')}
+                                render={
+                                  <Link
+                                    to={`/teacher/classroom/${classroomId}/try/assignment/${step.assignmentId}`}
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('classroomDetail.activitiesFlow.tryAssignment')}
+                                  >
+                                    <PlayCircle className="h-4 w-4" />
+                                  </Link>
+                                }
+                              />
                             ) : null}
                             {step.kind === 'assignment' && !isLiveSession && onEditAssignment ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                                aria-label={t('classroomDetail.activitiesFlow.editStep')}
-                                onClick={() => onEditAssignment(step.assignmentId)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              <SyllabusRowActionTooltip
+                                label={t('classroomDetail.activitiesFlow.editStep')}
+                                render={
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('classroomDetail.activitiesFlow.editStep')}
+                                    onClick={() => onEditAssignment(step.assignmentId)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
                             ) : null}
                             {step.kind === 'resource' && onEditResource ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                                aria-label={t('classroomDetail.activitiesFlow.editStep')}
-                                onClick={() => onEditResource(step.resourceId)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              <SyllabusRowActionTooltip
+                                label={t('classroomDetail.activitiesFlow.editStep')}
+                                render={
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('classroomDetail.activitiesFlow.editStep')}
+                                    onClick={() => onEditResource(step.resourceId)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
                             ) : null}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 shrink-0 text-destructive"
-                              aria-label={t('common.delete')}
-                              onClick={() => setDeleteConfirmIndex(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <SyllabusRowActionTooltip
+                              label={t('common.delete')}
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className={syllabusRowDestructiveActionClass}
+                                  aria-label={t('common.delete')}
+                                  onClick={() => setDeleteConfirmIndex(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
                           </div>
                         </div>
                       </div>

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { Camera, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +10,7 @@ interface AvatarUploadProps {
   fullName: string;
   uploading: boolean;
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  bucket?: string;
 }
 
 /**
@@ -20,6 +22,7 @@ export const AvatarUpload = ({
   fullName,
   uploading,
   onFileSelect,
+  bucket,
 }: AvatarUploadProps) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +40,7 @@ export const AvatarUpload = ({
     <div className="flex flex-col items-center gap-4">
       <div className="relative">
         <Avatar className="h-32 w-32">
-          {avatarUrl && <AvatarImage src={avatarUrl} alt={fullName} />}
+          {avatarUrl && <SecureAvatarImage src={avatarUrl} bucket={bucket} alt={fullName} />}
           <AvatarFallback className="text-4xl">{getInitials()}</AvatarFallback>
         </Avatar>
         <Button

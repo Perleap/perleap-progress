@@ -325,7 +325,7 @@ export const provisionSyllabusBundle = async (
             title: item.title || item.file.name,
             resource_type: rType,
             file_path: result.filePath,
-            url: result.publicUrl,
+            url: null,
             mime_type: item.file.type || null,
             file_size: item.file.size,
             order_index: orderIdx++,

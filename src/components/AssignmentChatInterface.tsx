@@ -28,6 +28,11 @@ import { useStudentProfile } from '@/hooks/queries';
 import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
 import { syncOpikChatSentenceFlag } from '@/services/submissionService';
 import { validateChatAttachmentFile } from '@/lib/chatAttachment';
+import { SubmissionStoragePreview } from '@/components/features/submission/SubmissionStoragePreview';
+import {
+  isSubmissionPdfAttachment,
+  openSubmissionFileInNewTab,
+} from '@/services/submissionFileService';
 import {
   formatInlineListsForChatMarkdown,
   isPerleapAssistantIntro,
@@ -375,13 +380,11 @@ export function AssignmentChatInterface({
             throw error;
           }
 
-          const { data: urlData } = supabase.storage.from('submission-files').getPublicUrl(filePath);
-
           const isImage = file.type.startsWith('image/');
           setAttachedFile({
             name: safeName,
-            content: `[File: ${safeName}]\nURL: ${urlData.publicUrl}`,
-            url: urlData.publicUrl,
+            content: `[File: ${safeName}]\nStorage path: ${filePath}`,
+            url: filePath,
             type: isImage ? 'image' : 'pdf',
           });
         }
@@ -763,6 +766,21 @@ export function AssignmentChatInterface({
     }, 100);
   };
 
+  const handlePreviewAttachment = useCallback(
+    async (
+      fileContext: { name: string; content: string; url?: string; type?: string },
+      messageIndex: number,
+    ) => {
+      if (isSubmissionPdfAttachment(fileContext.name, fileContext.type) && fileContext.url) {
+        const ok = await openSubmissionFileInNewTab(fileContext.url);
+        if (!ok) toast.error(t('submissionDetail.projectView.downloadFailed'));
+        return;
+      }
+      setPreviewResource({ ...fileContext, messageIndex });
+    },
+    [t],
+  );
+
   const resources = messages
     .map((m, i) => ({ ...m, originalIndex: i }))
     .filter(m => m.role === 'user' && m.fileContext);
@@ -920,7 +938,7 @@ export function AssignmentChatInterface({
                       {message.fileContext && (
                         <div 
                           className={`p-2 rounded-md border bg-background/50 flex items-center gap-2 cursor-pointer hover:bg-background transition-colors max-w-full ${!message.content ? 'mt-0' : ''}`}
-                          onClick={() => setPreviewResource({ ...message.fileContext!, messageIndex: index })}
+                          onClick={() => void handlePreviewAttachment(message.fileContext!, index)}
                         >
                           {message.fileContext.type === 'image' ? (
                             <ImageIcon className="h-4 w-4 text-primary" />
@@ -1127,7 +1145,7 @@ export function AssignmentChatInterface({
                 <Card 
                   key={idx} 
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setPreviewResource({ ...msg.fileContext!, messageIndex: msg.originalIndex })}
+                  onClick={() => void handlePreviewAttachment(msg.fileContext!, msg.originalIndex)}
                 >
                   <CardContent className="p-3 flex items-start gap-3">
                     <div className="bg-primary/10 p-2 rounded-md shrink-0">
@@ -1320,26 +1338,13 @@ export function AssignmentChatInterface({
             </div>
           </DialogHeader>
           <div className="flex-1 overflow-auto min-h-[50vh] border rounded-md p-4 bg-muted/30">
-            {previewResource?.type === 'image' && previewResource.url ? (
-              <div className="flex items-center justify-center min-h-full">
-                <img 
-                  src={previewResource.url} 
-                  alt={previewResource.name} 
-                  className="w-full h-auto object-contain transition-transform duration-200"
-                  style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
-                />
-              </div>
-            ) : previewResource?.type === 'pdf' && previewResource.url ? (
-              <iframe 
-                src={previewResource.url} 
-                className="w-full h-full min-h-[500px]" 
-                title={previewResource.name}
-              />
-            ) : (
-              <pre className="whitespace-pre-wrap font-mono text-sm">
-                {previewResource?.content}
-              </pre>
-            )}
+            <SubmissionStoragePreview
+              storedUrl={previewResource?.url}
+              type={previewResource?.type}
+              name={previewResource?.name ?? ''}
+              content={previewResource?.content ?? ''}
+              zoomLevel={zoomLevel}
+            />
           </div>
         </DialogContent>
       </Dialog>

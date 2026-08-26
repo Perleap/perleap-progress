@@ -29,13 +29,10 @@ export const enrollInClassroom = async (
   try {
     const trimmedCode = inviteCode.trim().toUpperCase();
 
-    // Find classroom by invite code
-    const { data: classroom, error: classroomError } = await supabase
-      .from('classrooms')
-      .select('id, name, teacher_id')
-      .eq('invite_code', trimmedCode)
-      .eq('active', true)
-      .maybeSingle();
+    const { data: rpcData, error: classroomError } = await supabase.rpc(
+      'find_classroom_by_invite_code',
+      { p_invite_code: trimmedCode },
+    );
 
     if (classroomError) {
       return {
@@ -44,7 +41,9 @@ export const enrollInClassroom = async (
       };
     }
 
-    if (!classroom) {
+    const classroom = rpcData as { id?: string; name?: string; teacher_id?: string } | null;
+
+    if (!classroom?.id) {
       return {
         success: false,
         error: `No classroom found with code: ${trimmedCode}`,

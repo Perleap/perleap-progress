@@ -8,18 +8,29 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { authFailureToResponse, requireAuth } from '../_shared/authorizeResource.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
+    const rateLimit = await checkRateLimit(auth.user.id, 'rephrase-text');
+    if (rateLimit) {
+      return rateLimitFailureToResponse(rateLimit, corsHeaders);
+    }
+
     const { text, language = 'en', referenceContext } = await req.json();
 
     const referenceBlock =

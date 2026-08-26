@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,7 +121,12 @@ export function DashboardHeader({
               <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-primary/10 hover:border-primary/20 transition-colors">
                 <Avatar className="h-full w-full">
                   {profile.avatar_url && (
-                    <AvatarImage src={profile.avatar_url} alt={profile.full_name} className="object-cover" />
+                    <SecureAvatarImage
+                      src={profile.avatar_url}
+                      bucket={userType === 'teacher' ? TEACHER_AVATARS_BUCKET : STUDENT_AVATARS_BUCKET}
+                      alt={profile.full_name}
+                      className="object-cover"
+                    />
                   )}
                   <AvatarFallback className="bg-primary/5 text-primary font-medium">{getHeaderInitials()}</AvatarFallback>
                 </Avatar>

@@ -9,18 +9,27 @@ import { extractUnitMemoryFromSubmission } from '../shared/unitMemoryExtract.ts'
 import { handleOpenAIError } from '../shared/openai.ts';
 import { logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertSubmissionEvaluationAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
     const body = await req.json().catch(() => ({}));
     const submissionId = typeof body.submissionId === 'string' ? body.submissionId.trim() : '';
     if (!submissionId) {
@@ -30,7 +39,12 @@ serve(async (req) => {
       });
     }
 
-    const result = await extractUnitMemoryFromSubmission(submissionId);
+    const access = await assertSubmissionEvaluationAccess(auth.user.id, submissionId);
+    if ('status' in access) {
+      return authFailureToResponse(access, corsHeaders);
+    }
+
+    const result = await extractUnitMemoryFromSubmission(access.submissionId);
 
     if (!result.ok) {
       return new Response(JSON.stringify(result), {
@@ -45,12 +59,16 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = handleOpenAIError(error);
     logError('Error in extract-unit-memory', error);
-    await persistEdgeFunctionLog({
-      functionName: 'extract-unit-memory',
-      level: 'error',
-      errorMessage,
-      stackSnippet: errorToStack(error),
-    }).catch(() => undefined);
+    await persistEdgeFunctionLog(
+      {
+        functionName: 'extract-unit-memory',
+        level: 'error',
+        httpStatus: 500,
+        message: errorMessage,
+        stack: errorToStack(error),
+      },
+      req,
+    ).catch(() => undefined);
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

@@ -11,7 +11,9 @@ import { useAuth } from '@/contexts/useAuth';
 import { MessageSquare, Sparkles, Calendar, BookOpen, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { useFullSubmissionDetails, useClassroom, useTeacherResetStudentAssignmentProgress } from '@/hooks/queries';
 import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
 import { isAppAdminRole } from '@/utils/role';
@@ -131,6 +133,7 @@ const SubmissionDetail = () => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-followup-assignment', {
         body: {
+          submissionId: submission.id,
           teacherFeedback: feedback.teacher_feedback,
           studentFeedback: feedback.student_feedback,
           conversationContext: feedback.conversation_context,
@@ -265,7 +268,7 @@ const SubmissionDetail = () => {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm">
             <div className="flex items-center gap-4 flex-1 min-w-0 w-full md:w-auto">
               <Avatar className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-md shrink-0">
-                <AvatarImage src={studentAvatar} alt={studentName} />
+                <SecureAvatarImage src={studentAvatar} bucket={STUDENT_AVATARS_BUCKET} alt={studentName} />
                 <AvatarFallback className="bg-primary/10 text-primary text-xl">{studentName.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">

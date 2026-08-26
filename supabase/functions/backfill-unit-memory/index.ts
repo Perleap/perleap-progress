@@ -9,17 +9,16 @@ import { createSupabaseClient, isAppAdmin } from '../shared/supabase.ts';
 import { extractUnitMemoryFromSubmission } from '../shared/unitMemoryExtract.ts';
 import { handleOpenAIError } from '../shared/openai.ts';
 import { logError } from '../shared/logger.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const authHeader = req.headers.get('Authorization');

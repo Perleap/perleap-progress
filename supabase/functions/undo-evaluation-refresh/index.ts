@@ -11,17 +11,16 @@ import {
   restoreSubmissionBackup,
   type SubmissionEvaluationBackup,
 } from '../_shared/evaluationRefreshBackup.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { assertClassroomTeacherOrAdmin } from '../_shared/classroomAuth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const body = await req.json();

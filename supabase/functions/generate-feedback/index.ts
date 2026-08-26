@@ -24,15 +24,17 @@ import { parseHardSkillsFromDb } from '../_shared/hardSkillsFormat.ts';
 import { buildStudentWorkContext } from '../_shared/evaluationContext.ts';
 import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
 import { persistAiEvaluation } from '../_shared/evaluationPersist.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertSubmissionEvaluationAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
 declare const EdgeRuntime: {
   waitUntil(promise: Promise<unknown>): void;
 };
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 type EvaluationStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
@@ -387,28 +389,45 @@ async function handlePipelineFailure(
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   let submissionId: string | undefined;
   const supabase = createSupabaseClient();
 
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
     const body = (await req.json()) as FeedbackRequestBody;
     submissionId = body.submissionId;
-    const { studentId, assignmentId, language = 'en', background = false } = body;
+    const { assignmentId, language = 'en', background = false } = body;
 
-    if (!submissionId || !studentId || !assignmentId) {
+    if (!submissionId || !assignmentId) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const pipelineParams: FeedbackRequestBody = {
+    const access = await assertSubmissionEvaluationAccess(
+      auth.user.id,
       submissionId,
-      studentId,
       assignmentId,
+      supabase,
+    );
+    if ('status' in access) {
+      return authFailureToResponse(access, corsHeaders);
+    }
+
+    const pipelineParams: FeedbackRequestBody = {
+      submissionId: access.submissionId,
+      studentId: access.studentId,
+      assignmentId: access.assignmentId,
       language,
     };
 

@@ -3,7 +3,8 @@
  * Reusable avatar component with fallback initials
  */
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { Button } from '@/components/ui/button';
 
 interface ProfileAvatarProps {
@@ -11,6 +12,7 @@ interface ProfileAvatarProps {
   initials: string;
   onClick?: () => void;
   className?: string;
+  bucket?: string;
 }
 
 /**
@@ -21,6 +23,7 @@ export const ProfileAvatar = ({
   initials,
   onClick,
   className = 'h-12 w-12',
+  bucket,
 }: ProfileAvatarProps) => {
   if (onClick) {
     return (
@@ -31,7 +34,7 @@ export const ProfileAvatar = ({
         onClick={onClick}
       >
         <Avatar className={`${className} cursor-pointer`}>
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt="Profile" /> : null}
+          {avatarUrl ? <SecureAvatarImage src={avatarUrl} bucket={bucket} alt="Profile" /> : null}
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       </Button>
@@ -40,7 +43,7 @@ export const ProfileAvatar = ({
 
   return (
     <Avatar className={className}>
-      {avatarUrl ? <AvatarImage src={avatarUrl} alt="Profile" /> : null}
+      {avatarUrl ? <SecureAvatarImage src={avatarUrl} bucket={bucket} alt="Profile" /> : null}
       <AvatarFallback>{initials}</AvatarFallback>
     </Avatar>
   );

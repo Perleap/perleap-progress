@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +21,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
+import { openOrDownloadMaterial } from '@/services/materialService';
+import { COURSE_MATERIALS_BUCKET } from '@/utils/storageUrls';
 import { USER_ROLES } from '@/config/constants';
 import { logAdminEvent } from '@/services/adminAuditService';
 import { useAuth } from '@/contexts/useAuth';
@@ -598,7 +601,7 @@ const ClassroomDetail = () => {
                         key={index}
                         variant="outline"
                         className="justify-start h-auto py-4 px-4 rounded-lg border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
-                        onClick={() => window.open(material.url, '_blank')}
+                        onClick={() => void openOrDownloadMaterial(material, COURSE_MATERIALS_BUCKET)}
                       >
                         <div className="p-2 bg-muted rounded-xl me-3 group-hover:bg-card transition-colors">
                           {material.type === 'pdf' ? (
@@ -733,8 +736,9 @@ const ClassroomDetail = () => {
                         >
                           <Avatar className="h-12 w-12 border-2 border-card shadow-sm">
                             {enrollment.student_profiles?.avatar_url && (
-                              <AvatarImage
+                              <SecureAvatarImage
                                 src={enrollment.student_profiles.avatar_url}
+                                bucket={STUDENT_AVATARS_BUCKET}
                                 alt={displayName}
                               />
                             )}

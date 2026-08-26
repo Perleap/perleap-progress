@@ -5,12 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Download, Loader2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeacherEvaluationForm } from './TeacherEvaluationForm';
+import { useAuthenticatedBlobUrl } from '@/hooks/useAuthenticatedBlobUrl';
+import { SUBMISSION_FILES_BUCKET } from '@/utils/storageUrls';
+import {
+  downloadSubmissionFile,
+  extractSubmissionStoragePath,
+} from '@/services/submissionFileService';
 
-function extensionFromVideo(blobType: string, fileUrl: string): string {
+function extensionFromVideo(blobType: string, storedPath: string): string {
   if (blobType.includes('webm')) return 'webm';
   if (blobType.includes('mp4')) return 'mp4';
   if (blobType.includes('quicktime')) return 'mov';
-  const fromPath = fileUrl.match(/\.(webm|mp4|mov|mkv)(?:\?|$)/i);
+  const fromPath = storedPath.match(/\.(webm|mp4|mov|mkv)(?:\?|$)/i);
   if (fromPath) return fromPath[1].toLowerCase();
   return 'webm';
 }
@@ -36,15 +42,20 @@ export function PresentationSubmissionView({
 }: PresentationSubmissionViewProps) {
   const { t } = useTranslation();
   const [downloading, setDownloading] = useState(false);
+  const { blobUrl, isLoading, error: blobError } = useAuthenticatedBlobUrl(
+    SUBMISSION_FILES_BUCKET,
+    fileUrl,
+    Boolean(fileUrl),
+  );
 
   const handleDownloadVideo = useCallback(async () => {
     if (!fileUrl) return;
     setDownloading(true);
     try {
-      const res = await fetch(fileUrl, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const ext = extensionFromVideo(blob.type || '', fileUrl);
+      const path = extractSubmissionStoragePath(fileUrl) ?? fileUrl;
+      const blob = await downloadSubmissionFile(path);
+      if (!blob) throw new Error('download failed');
+      const ext = extensionFromVideo(blob.type || '', path);
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objectUrl;
@@ -57,11 +68,6 @@ export function PresentationSubmissionView({
     } catch (err) {
       console.error('Download failed:', err);
       toast.error(t('submissionDetail.presentationView.downloadFailed'));
-      try {
-        window.open(fileUrl, '_blank', 'noopener,noreferrer');
-      } catch {
-        /* ignore */
-      }
     } finally {
       setDownloading(false);
     }
@@ -78,12 +84,22 @@ export function PresentationSubmissionView({
           {fileUrl ? (
             <div className="space-y-4">
               <div className="rounded-lg overflow-hidden bg-black aspect-video">
-                <video
-                  src={fileUrl}
-                  controls
-                  className="w-full h-full"
-                  preload="metadata"
-                />
+                {isLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : blobUrl ? (
+                  <video
+                    src={blobUrl}
+                    controls
+                    className="w-full h-full"
+                    preload="metadata"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    {t('submissionDetail.presentationView.noVideo')}
+                  </div>
+                )}
               </div>
               <div className="flex justify-end">
                 <Button
@@ -93,7 +109,7 @@ export function PresentationSubmissionView({
                   className="shrink-0"
                   title={t('submissionDetail.presentationView.download')}
                   aria-label={t('submissionDetail.presentationView.download')}
-                  disabled={downloading}
+                  disabled={downloading || !blobUrl}
                   onClick={handleDownloadVideo}
                 >
                   {downloading ? (

@@ -344,7 +344,7 @@ export const LessonBlocksEditor = ({
                 ...b,
                 source: 'upload' as const,
                 file_path: up.filePath,
-                url: up.publicUrl,
+                url: null,
                 mime_type: file.type || null,
                 file_size: file.size,
                 display_name: file.name,

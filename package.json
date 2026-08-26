@@ -15,10 +15,11 @@
     "test": "vitest",
     "test:run": "vitest run",
     "check:i18n": "node scripts/check-i18n-keys.mjs",
-    "test:edge": "deno test --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts supabase/functions/_shared/asyncPool.test.ts",
+    "test:edge": "npx --yes deno test --no-check --allow-env --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts supabase/functions/_shared/asyncPool.test.ts supabase/functions/_shared/authorizeResource.test.ts supabase/functions/_shared/cors.test.ts",
     "gen:types": "node scripts/gen-supabase-types.mjs",
     "extract:unit-memory-outliers": "node scripts/extract-unit-memory-outliers.mjs",
-    "migrate:section-memory-to-course": "node scripts/migrate-section-memory-to-course.mjs"
+    "migrate:section-memory-to-course": "node scripts/migrate-section-memory-to-course.mjs",
+    "deploy:functions": "node scripts/deploy-all-edge-functions.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

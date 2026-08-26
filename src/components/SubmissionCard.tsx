@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { Clock, Flag, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
@@ -208,7 +210,7 @@ export function SubmissionCard({
           'shrink-0 rounded-full border-2 border-border shadow-sm overflow-hidden',
         )}
       >
-        <AvatarImage src={submission.student_avatar_url} alt="" className="h-full w-full object-cover" />
+        <SecureAvatarImage src={submission.student_avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt="" className="h-full w-full object-cover" />
         <AvatarFallback
           className={cn(
             'bg-primary/10 text-primary font-bold',
@@ -384,7 +386,7 @@ export function SubmissionCard({
         'h-10 w-10 shrink-0 rounded-full border-2 border-border bg-muted/40 shadow-sm overflow-hidden',
       )}
     >
-      <AvatarImage src={submission.student_avatar_url} alt="" className="h-full w-full object-cover" />
+      <SecureAvatarImage src={submission.student_avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt="" className="h-full w-full object-cover" />
       <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{initials}</AvatarFallback>
     </Avatar>
   );

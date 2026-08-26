@@ -1,6 +1,7 @@
 import type { Database } from '@/integrations/supabase/types';
 import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
 import type { HardSkillPair } from '@/lib/hardSkillsFormat';
+import type { CourseMaterial } from '@/types/models';
 
 export type { HardSkillPair } from '@/lib/hardSkillsFormat';
 
@@ -43,7 +44,7 @@ export type AssignmentWizardFormData = {
   enable_ai_feedback: boolean;
   /** When true (default), students see AI feedback as soon as it is generated. */
   auto_publish_ai_feedback: boolean;
-  materials: Array<{ type: 'pdf' | 'link'; url: string; name: string }>;
+  materials: CourseMaterial[];
   attempt_mode: Database['public']['Enums']['assignment_attempt_mode'];
   /** When true, tutor may recall distilled facts from earlier units in this course. */
   use_course_memory: boolean;

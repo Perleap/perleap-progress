@@ -15,12 +15,9 @@ import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../sh
 import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const PILOT_DIMENSIONS = [
   'builderExecution',
@@ -84,8 +81,10 @@ async function assertCanAccessClassroom(
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const authHeader = req.headers.get('Authorization');

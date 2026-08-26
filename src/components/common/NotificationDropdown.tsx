@@ -11,7 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import type { NotificationWithProfile } from '@/types/notifications';
 import { useNotificationList, useMarkAsRead, useMarkAllAsRead } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
@@ -175,7 +176,7 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <Avatar className="h-10 w-10 border border-border/50 shrink-0">
-                    <AvatarImage src={notification.actor_profile?.avatar_url || undefined} />
+                    <SecureAvatarImage src={notification.actor_profile?.avatar_url || undefined} alt="" />
                     <AvatarFallback className="text-[10px] bg-muted uppercase">
                       {getInitials(notification.actor_profile?.full_name || '', notification.type)}
                     </AvatarFallback>

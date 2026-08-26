@@ -1,5 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -61,7 +63,7 @@ export const StudentsList = ({ students }: StudentsListProps) => {
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
                   {student.avatar_url && (
-                    <AvatarImage src={student.avatar_url} alt={student.full_name} />
+                    <SecureAvatarImage src={student.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt={student.full_name} />
                   )}
                   <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
                 </Avatar>

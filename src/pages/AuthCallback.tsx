@@ -67,29 +67,7 @@ const AuthCallback = () => {
         if (tError) console.error('Error fetching teacher profile:', tError);
         if (sError) console.error('Error fetching student profile:', sError);
 
-        // Also check by email to detect orphaned data or conflicts
         const userEmail = user.email?.toLowerCase().trim();
-        let teacherProfileByEmail = null;
-        let studentProfileByEmail = null;
-
-        if (userEmail) {
-          const { data: tpEmail } = await supabase
-            .from('teacher_profiles')
-            .select('id, user_id, email')
-            .eq('email', userEmail)
-            .maybeSingle();
-          teacherProfileByEmail = tpEmail;
-
-          const { data: spEmail } = await supabase
-            .from('student_profiles')
-            .select('id, user_id, email')
-            .eq('email', userEmail)
-            .maybeSingle();
-          studentProfileByEmail = spEmail;
-        }
-
-        // IMPORTANT: Only trust profiles that match the current user_id
-        // Profiles found by email with different user_id are orphaned data
         const hasTeacherProfile = !!teacherProfile;
         const hasStudentProfile = !!studentProfile;
 
@@ -121,41 +99,17 @@ const AuthCallback = () => {
           studentProfileUserId: studentProfile?.user_id,
           currentUserId: user.id,
           userEmail,
-          orphanedTeacherProfile:
-            teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id,
-          orphanedStudentProfile:
-            studentProfileByEmail && studentProfileByEmail.user_id !== user.id,
         });
 
-        // Detect and CLEAN UP orphaned profiles immediately
-        // Note: Wrapped in try-catch to prevent blocking the main flow if RLS or other errors occur
+        // Clean up orphaned profiles for this email (authenticated RPC; no anon PII leak)
         try {
-          if (teacherProfileByEmail && teacherProfileByEmail.user_id !== user.id) {
-            console.warn(
-              '⚠️ AuthCallback: Found orphaned teacher_profile with email',
-              userEmail,
-              'but different user_id. Attempting cleanup...'
-            );
-            await supabase
-              .from('teacher_profiles')
-              .delete()
-              .eq('user_id', teacherProfileByEmail.user_id);
-          }
-          if (studentProfileByEmail && studentProfileByEmail.user_id !== user.id) {
-            console.warn(
-              '⚠️ AuthCallback: Found orphaned student_profile with email',
-              userEmail,
-              'but different user_id. Attempting cleanup...'
-            );
-            await supabase
-              .from('student_profiles')
-              .delete()
-              .eq('user_id', studentProfileByEmail.user_id);
+          if (userEmail) {
+            await supabase.rpc('cleanup_orphaned_profiles_by_email', { p_email: userEmail });
           }
         } catch (cleanupError) {
           console.error(
             '⚠️ AuthCallback: Non-blocking error during orphaned data cleanup:',
-            cleanupError
+            cleanupError,
           );
         }
 

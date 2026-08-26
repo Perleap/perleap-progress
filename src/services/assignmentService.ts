@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
@@ -203,9 +204,29 @@ type GenerateStudentFacingResponse = {
   studentFacingTask?: string;
   opikTraceId?: string;
   source?: string;
+  generated?: boolean;
+  fallback?: boolean;
   persisted?: boolean;
   error?: string;
 };
+
+export async function parseEdgeFunctionErrorMessage(error: unknown): Promise<string | null> {
+  if (!(error instanceof FunctionsHttpError)) return null;
+  try {
+    const payload = (await error.context.clone().json()) as { error?: unknown };
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim();
+    }
+  } catch {
+    try {
+      const text = await error.context.clone().text();
+      return text.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export type GenerateStudentFacingDraftResult = {
   task: string;
@@ -249,7 +270,8 @@ export async function generateStudentFacingTaskDraft(
     },
   );
   if (error) {
-    console.warn('generateStudentFacingTaskDraft', error);
+    const serverMsg = await parseEdgeFunctionErrorMessage(error);
+    console.warn('generateStudentFacingTaskDraft', serverMsg ?? error);
     return null;
   }
   const task = data?.studentFacingTask?.trim() ?? '';

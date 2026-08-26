@@ -30,6 +30,7 @@ import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 import { getAssignmentSubmittedOrCompletedMap } from '@/services/syllabusService';
 import { STUDENT_TIMELINE_CACHE_GC_MS, STUDENT_TIMELINE_CACHE_STALE_MS } from '@/lib/studentTimelineCache';
 import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
+import { isUuidLike } from '@/lib/utils';
 import { syllabusKeys } from './useSyllabusQueries';
 
 /** Client-only rows so the module-flow query matches the save payload before refetch (instant UI). */
@@ -153,6 +154,10 @@ export const useAssignmentSubmittedOrCompletedMap = (
 
 const MODULE_FLOW_BULK_STALE_MS = STUDENT_TIMELINE_CACHE_STALE_MS;
 
+function persistedSectionIds(sectionIds: string[]): string[] {
+  return sectionIds.filter(isUuidLike);
+}
+
 /** Warm bulk module-flow steps (matches useModuleFlowStepsBulk query key). */
 export function prefetchModuleFlowStepsBulk(
   queryClient: QueryClient,
@@ -160,15 +165,16 @@ export function prefetchModuleFlowStepsBulk(
   staleTimeMs = MODULE_FLOW_BULK_STALE_MS,
   gcTimeMs: number = STUDENT_TIMELINE_CACHE_GC_MS,
 ) {
-  if (sectionIds.length === 0) return Promise.resolve();
-  const sortedKey = [...sectionIds].sort().join(',');
+  const persistedIds = persistedSectionIds(sectionIds);
+  if (persistedIds.length === 0) return Promise.resolve();
+  const sortedKey = [...persistedIds].sort().join(',');
   return queryClient.prefetchQuery({
     queryKey: [...moduleFlowKeys.all, 'bulk', sortedKey] as const,
     queryFn: async () => {
-      const { data, error } = await getModuleFlowStepsBySections(sectionIds);
+      const { data, error } = await getModuleFlowStepsBySections(persistedIds);
       if (error) throw error;
       const map: Record<string, ModuleFlowStep[]> = {};
-      sectionIds.forEach((id) => {
+      persistedIds.forEach((id) => {
         map[id] = [];
       });
       (data ?? []).forEach((row) => {
@@ -183,15 +189,16 @@ export function prefetchModuleFlowStepsBulk(
 }
 
 export const useModuleFlowStepsBulk = (sectionIds: string[]) => {
-  const sortedKey = [...sectionIds].sort().join(',');
+  const persistedIds = useMemo(() => persistedSectionIds(sectionIds), [sectionIds]);
+  const sortedKey = [...persistedIds].sort().join(',');
   return useQuery({
     queryKey: [...moduleFlowKeys.all, 'bulk', sortedKey] as const,
     queryFn: async () => {
-      if (sectionIds.length === 0) return {} as Record<string, ModuleFlowStep[]>;
-      const { data, error } = await getModuleFlowStepsBySections(sectionIds);
+      if (persistedIds.length === 0) return {} as Record<string, ModuleFlowStep[]>;
+      const { data, error } = await getModuleFlowStepsBySections(persistedIds);
       if (error) throw error;
       const map: Record<string, ModuleFlowStep[]> = {};
-      sectionIds.forEach((id) => {
+      persistedIds.forEach((id) => {
         map[id] = [];
       });
       (data ?? []).forEach((row) => {
@@ -200,7 +207,7 @@ export const useModuleFlowStepsBulk = (sectionIds: string[]) => {
       });
       return map;
     },
-    enabled: sectionIds.length > 0,
+    enabled: persistedIds.length > 0,
     staleTime: MODULE_FLOW_BULK_STALE_MS,
     gcTime: STUDENT_TIMELINE_CACHE_GC_MS,
   });
@@ -215,7 +222,7 @@ export const useModuleFlowSteps = (sectionId: string | undefined) => {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!sectionId,
+    enabled: isUuidLike(sectionId),
     staleTime: 60 * 1000,
   });
 };

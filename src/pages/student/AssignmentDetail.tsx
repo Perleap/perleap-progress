@@ -31,7 +31,7 @@ import {
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
 import { studentModuleFlowStepOptions, type AssignmentRow } from '@/lib/moduleFlow';
-import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight, ChevronDown, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Clock, RefreshCw, Lock, ChevronRight, ChevronDown, CheckCircle, FileText, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
@@ -52,6 +52,12 @@ import { cn } from '@/lib/utils';
 import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import {
+  openOrDownloadMaterial,
+  parseCourseMaterials,
+  resolveMaterialBucket,
+} from '@/services/materialService';
+import { ASSIGNMENT_MATERIALS_BUCKET } from '@/utils/storageUrls';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
 import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
 import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
@@ -524,6 +530,13 @@ const AssignmentDetail = () => {
     });
   }, [assignmentData?.syllabus_section_id, syllabusForNav?.section_resources]);
 
+  const assignmentMaterials = useMemo(
+    () => parseCourseMaterials(assignmentData?.materials),
+    [assignmentData?.materials],
+  );
+
+  const totalReferenceMaterialsCount = assignmentMaterials.length + unitOutlineMaterials.length;
+
   const nuanceTracking = useNuanceTracking({
     studentId: user?.id,
     assignmentId: assignmentId || undefined,
@@ -818,7 +831,7 @@ const AssignmentDetail = () => {
             />
           ) : null}
 
-          {unitOutlineMaterials.length > 0 ? (
+          {totalReferenceMaterialsCount > 0 ? (
             <Collapsible
               open={referenceMaterialsOpen}
               onOpenChange={setReferenceMaterialsOpen}
@@ -832,7 +845,7 @@ const AssignmentDetail = () => {
                 )}
               >
                 <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-                  {t('assignmentDetail.referenceMaterials', { count: unitOutlineMaterials.length })}
+                  {t('assignmentDetail.referenceMaterials', { count: totalReferenceMaterialsCount })}
                 </span>
                 <ChevronDown
                   className={cn(
@@ -842,16 +855,56 @@ const AssignmentDetail = () => {
                   aria-hidden
                 />
               </CollapsibleTrigger>
-              <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-1">
-                <div {...clipboardZoneProps({ sourceKind: 'assignment_instructions' })}>
-                  <ResourceViewer
-                    resources={unitOutlineMaterials}
-                    isRTL={isRTL}
-                    compact
-                    compactVariant="list"
-                    hideListHeader
-                  />
-                </div>
+              <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-1 space-y-4">
+                {assignmentMaterials.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {t('assignmentDetail.assignmentOnlyMaterials')}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {assignmentMaterials.map((material, index) => (
+                        <Button
+                          key={`assignment-material-${index}`}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() =>
+                            void openOrDownloadMaterial(
+                              material,
+                              resolveMaterialBucket(material, ASSIGNMENT_MATERIALS_BUCKET),
+                            )
+                          }
+                        >
+                          {material.type === 'pdf' ? (
+                            <FileText className="h-3 w-3" />
+                          ) : (
+                            <LinkIcon className="h-3 w-3" />
+                          )}
+                          {material.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {unitOutlineMaterials.length > 0 ? (
+                  <div className="space-y-2">
+                    {assignmentMaterials.length > 0 ? (
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {t('assignmentDetail.moduleSharedResources')}
+                      </p>
+                    ) : null}
+                    <div {...clipboardZoneProps({ sourceKind: 'assignment_instructions' })}>
+                      <ResourceViewer
+                        resources={unitOutlineMaterials}
+                        isRTL={isRTL}
+                        compact
+                        compactVariant="list"
+                        hideListHeader
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </CollapsibleContent>
             </Collapsible>
           ) : null}

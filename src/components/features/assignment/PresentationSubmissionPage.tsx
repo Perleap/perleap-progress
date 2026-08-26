@@ -318,19 +318,13 @@ export function PresentationSubmissionPage({
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('submission-files')
-        .getPublicUrl(filePath);
-
-      const publicUrl = urlData.publicUrl;
-
       await supabase
         .from('submissions')
-        .update({ file_url: publicUrl })
+        .update({ file_url: filePath })
         .eq('id', submissionId);
 
-      setUploadedUrl(publicUrl);
-      return publicUrl;
+      setUploadedUrl(filePath);
+      return filePath;
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(t('assignmentDetail.presentation.uploadError'));

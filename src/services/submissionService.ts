@@ -28,6 +28,7 @@ export const studentAssignmentDetailLink = (
   return `${base}?submission=${encodeURIComponent(submissionId)}`;
 };
 import { rehydrateMessages } from '@/lib/conversationMessages';
+import { enrichConversationMessagesWithAttachmentPaths } from '@/services/submissionFileService';
 import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
 import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
@@ -435,7 +436,9 @@ export const getAssignmentConversationMessages = async (
     }
 
     const raw = data.messages as unknown as Message[];
-    return { data: rehydrateMessages(raw), error: null };
+    const rehydrated = rehydrateMessages(raw);
+    const enriched = await enrichConversationMessagesWithAttachmentPaths(submissionId, rehydrated);
+    return { data: enriched, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
