@@ -50,7 +50,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { useAuth } from '@/contexts/useAuth';
 import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -291,7 +293,11 @@ export function ClassroomSidebar({
               )}
             >
               <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || ''} />
+                <SecureAvatarImage
+                  src={profile?.avatar_url || undefined}
+                  bucket={isTeacher ? TEACHER_AVATARS_BUCKET : STUDENT_AVATARS_BUCKET}
+                  alt={profile?.full_name || ''}
+                />
                 <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs">
                   {userInitials}
                 </AvatarFallback>

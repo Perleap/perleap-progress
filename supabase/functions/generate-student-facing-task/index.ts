@@ -3,48 +3,53 @@
  * Deploy: supabase functions deploy generate-student-facing-task
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion, resolveChatModel } from '../shared/openai.ts';
-import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
+import { createSupabaseClient, isAppAdmin } from '../shared/supabase.ts';
 import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertClassroomTeacherOrAdminAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+function buildStudentFacingTaskFallback(
+  title: string,
+  instructions: string,
+  language: 'en' | 'he',
+): string {
+  const paragraphs = instructions
+    .trim()
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').trim())
+    .filter(
+      (p) =>
+        p.length > 20 &&
+        !/^(step\s+\d|mandatory|perleap|bot\b|system prompt)/i.test(p),
+    );
+
+  const excerpt = paragraphs[0]?.slice(0, 400).trim() ?? '';
+  if (excerpt) return excerpt;
+
+  const titleTrim = title.trim() || (language === 'he' ? 'משימה זו' : 'this assignment');
+  return language === 'he' ? `השלימ/י: ${titleTrim}` : `Complete: ${titleTrim}`;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceKey = getServiceRoleKey();
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    const supabase = createSupabaseClient();
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const language = body.language === 'he' ? 'he' : 'en';
     const assignmentIdRaw = typeof body.assignmentId === 'string' ? body.assignmentId.trim() : '';
@@ -98,8 +103,8 @@ serve(async (req) => {
         });
       }
       const teacherId = (classroomRow as { teacher_id: string }).teacher_id;
-      const isTeacher = teacherId === user.id;
-      const isAdmin = await isAppAdmin(user.id);
+      const isTeacher = teacherId === auth.user.id;
+      const isAdmin = await isAppAdmin(auth.user.id);
 
       let canStudent = false;
       if (!isTeacher && !isAdmin) {
@@ -109,7 +114,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        if (a.assigned_student_id && a.assigned_student_id !== user.id) {
+        if (a.assigned_student_id && a.assigned_student_id !== auth.user.id) {
           return new Response(JSON.stringify({ error: 'Forbidden' }), {
             status: 403,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -119,7 +124,7 @@ serve(async (req) => {
           .from('enrollments')
           .select('student_id')
           .eq('classroom_id', a.classroom_id)
-          .eq('student_id', user.id)
+          .eq('student_id', auth.user.id)
           .eq('active', true)
           .maybeSingle();
         if (enrErr || !enr) {
@@ -161,27 +166,13 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      const { data: classroom, error: classErr } = await supabase
-        .from('classrooms')
-        .select('teacher_id')
-        .eq('id', classroomId)
-        .maybeSingle();
-
-      if (classErr || !classroom) {
-        return new Response(JSON.stringify({ error: 'Classroom not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      if ((classroom as { teacher_id: string }).teacher_id !== user.id) {
-        const admin = await isAppAdmin(user.id);
-        if (!admin) {
-          return new Response(JSON.stringify({ error: 'Forbidden' }), {
-            status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
+      const classroomAccess = await assertClassroomTeacherOrAdminAccess(
+        auth.user.id,
+        classroomId,
+        supabase,
+      );
+      if ('status' in classroomAccess) {
+        return authFailureToResponse(classroomAccess, corsHeaders);
       }
     }
 
@@ -261,6 +252,7 @@ ${instructions.trim()}`;
     }).catch(() => undefined);
 
     let studentFacingTask = '';
+    let usedFallback = false;
     try {
       const p = JSON.parse(content || '{}') as { studentFacingTask?: unknown };
       if (typeof p.studentFacingTask === 'string') {
@@ -271,10 +263,8 @@ ${instructions.trim()}`;
     }
 
     if (!studentFacingTask) {
-      return new Response(JSON.stringify({ error: 'Could not generate student summary' }), {
-        status: 422,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      studentFacingTask = buildStudentFacingTaskFallback(title, instructions, language);
+      usedFallback = true;
     }
 
     if (persistAssignmentId) {
@@ -317,7 +307,9 @@ ${instructions.trim()}`;
       JSON.stringify({
         studentFacingTask,
         opikTraceId: clientTraceId,
-        source: 'generated',
+        source: usedFallback ? 'fallback' : 'generated',
+        generated: !usedFallback,
+        fallback: usedFallback,
         persisted: Boolean(persistAssignmentId),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

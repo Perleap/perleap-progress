@@ -1,5 +1,7 @@
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { useTranslation } from 'react-i18next';
 
 interface AssignmentCardProps {
@@ -45,8 +47,9 @@ export const AssignmentCard = ({ assignment, onClick }: AssignmentCardProps) => 
         <div className="flex items-center gap-2 mt-2">
           <Avatar className="h-6 w-6">
             {assignment.classrooms.teacher_profiles?.avatar_url && (
-              <AvatarImage
+              <SecureAvatarImage
                 src={assignment.classrooms.teacher_profiles.avatar_url}
+                bucket={TEACHER_AVATARS_BUCKET}
                 alt={assignment.classrooms.teacher_profiles.full_name || t('common.teacher')}
               />
             )}

@@ -295,7 +295,7 @@ export const getAssignmentDetails = async (assignmentId: string) => {
 
   const { data, error } = await supabase
     .from('assignments')
-    .select('hard_skills, hard_skill_domain, materials, instructions, student_facing_task, classroom_id')
+    .select('hard_skills, hard_skill_domain, materials, instructions, student_facing_task, classroom_id, type')
     .eq('id', assignmentId)
     .single();
 

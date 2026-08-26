@@ -8,17 +8,16 @@ import { handleOpenAIError } from '../shared/openai.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { assertClassroomTeacherOrAdmin } from '../_shared/classroomAuth.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { cancelRefreshJob, getRunningJobForClassroom } from '../_shared/evaluationRefreshJob.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const body = await req.json();

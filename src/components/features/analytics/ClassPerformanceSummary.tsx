@@ -5,6 +5,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { FiveDScores } from '@/types';
+import { formatFiveDScoreDisplay } from '@/lib/fiveDScores';
 
 interface ClassPerformanceSummaryProps {
   studentCount: number;
@@ -62,7 +63,7 @@ export const ClassPerformanceSummary = ({
                     <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">
                       {dimension}
                     </p>
-                    <p className="text-base md:text-xl font-bold text-foreground">{score.toFixed(1)}/10</p>
+                    <p className="text-base md:text-xl font-bold text-foreground">{formatFiveDScoreDisplay(score, 1)}/10</p>
                   </div>
                 ))}
               </div>

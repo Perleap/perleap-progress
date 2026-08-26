@@ -86,8 +86,9 @@ describe('isSectionActivityFlowFullyComplete', () => {
     const r = lessonResource('res-1', sid);
     const stepR = flowResourceStep('step-r', sid, r.id, 0);
     const stepA = flowAssignmentStep('step-a', sid, 'a1', 1);
+    const assigns = [{ id: 'a1', syllabus_section_id: sid, due_at: null }];
     expect(
-      isSectionActivityFlowFullyComplete(sid, [stepR, stepA], [r], [], {
+      isSectionActivityFlowFullyComplete(sid, [stepR, stepA], [r], assigns, {
         progressByStep: {},
         assignmentDoneMap: { a1: true },
       }, refNow),
@@ -109,14 +110,15 @@ describe('isSectionActivityFlowFullyComplete', () => {
 
   it('persisted path: assignment step follows assignmentDoneMap', () => {
     const step = flowAssignmentStep('step-1', sid, 'a1', 0);
+    const assigns = [{ id: 'a1', syllabus_section_id: sid, due_at: null }];
     expect(
-      isSectionActivityFlowFullyComplete(sid, [step], [], [], {
+      isSectionActivityFlowFullyComplete(sid, [step], [], assigns, {
         progressByStep: {},
         assignmentDoneMap: { a1: false },
       }, refNow),
     ).toBe(false);
     expect(
-      isSectionActivityFlowFullyComplete(sid, [step], [], [], {
+      isSectionActivityFlowFullyComplete(sid, [step], [], assigns, {
         progressByStep: {},
         assignmentDoneMap: { a1: true },
       }, refNow),

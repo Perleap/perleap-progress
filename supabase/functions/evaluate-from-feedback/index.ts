@@ -18,11 +18,13 @@ import { parseHardSkillsFromDb } from '../_shared/hardSkillsFormat.ts';
 import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
 import { persistAiEvaluation } from '../_shared/evaluationPersist.ts';
 import { notifyStudentFeedbackReceived } from '../_shared/notifyStudentFeedbackReceived.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertAssignmentTeacherOrAdmin,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 async function clearPriorEvaluation(
   supabase: ReturnType<typeof createSupabaseClient>,
@@ -36,24 +38,58 @@ async function clearPriorEvaluation(
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
     const {
       submissionId,
-      studentId,
-      assignmentId,
+      assignmentId: assignmentIdFromBody,
       teacherFeedback,
       language = 'en',
       sessionContext,
     } = await req.json();
 
-    if (!submissionId || !studentId || !assignmentId || !teacherFeedback) {
-      throw new Error('Missing required fields: submissionId, studentId, assignmentId, teacherFeedback');
+    if (!submissionId || !teacherFeedback) {
+      throw new Error('Missing required fields: submissionId, teacherFeedback');
     }
 
     const supabase = createSupabaseClient();
+
+    const { data: submission, error: subErr } = await supabase
+      .from('submissions')
+      .select('id, student_id, assignment_id')
+      .eq('id', submissionId)
+      .maybeSingle();
+
+    if (subErr || !submission) {
+      return authFailureToResponse(
+        { status: 404, body: JSON.stringify({ error: 'Submission not found.' }) },
+        corsHeaders,
+      );
+    }
+
+    const assignmentId = submission.assignment_id as string;
+    if (assignmentIdFromBody && assignmentIdFromBody !== assignmentId) {
+      return authFailureToResponse(
+        { status: 403, body: JSON.stringify({ error: 'Assignment does not match this submission.' }) },
+        corsHeaders,
+      );
+    }
+
+    const teacherAuthErr = await assertAssignmentTeacherOrAdmin(auth.user.id, assignmentId, supabase);
+    if (teacherAuthErr) {
+      return authFailureToResponse(teacherAuthErr, corsHeaders);
+    }
+
+    const studentId = submission.student_id as string;
     const startTime = Date.now();
 
     const [studentName, assignmentResult] = await Promise.all([

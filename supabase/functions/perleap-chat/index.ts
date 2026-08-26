@@ -29,6 +29,8 @@ import { generateEnhancedChatSystemPrompt } from '../_shared/prompts.ts';
 import {
   explainTaskAppend,
   postExplainTutorAppend,
+  companionExplainTaskAppend,
+  companionPostExplainAppend,
 } from '../_shared/composeSystemPrompt.ts';
 import { mergeStreamingTextChunk, normalizeAssistantDashes } from './typography.ts';
 import {
@@ -70,6 +72,7 @@ import { getCourseMemoryForPrompt, getUnitMemoryForPrompt } from '../shared/unit
 import { createMarkerSink } from './markerSink.ts';
 import { createProgressSink, extractProgressFromFullText } from './progressSink.ts';
 import { consumeChatCompletionsStream, consumeResponsesApiStream } from './streamOpenAI.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 const CHAT_TEMPERATURE = 0.2;
@@ -86,12 +89,6 @@ function isResponsesApiEnabled(): boolean {
   return Deno.env.get('PERLEAP_CHAT_USE_RESPONSES_API') === 'true';
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Expose-Headers':
-    'X-Perleap-Prior-N, X-Perleap-Prior-Parts, X-Perleap-Prior-Parts-Pre, X-Perleap-Prior-Verbatim, X-Perleap-Prior-Summary, X-Perleap-Prior-Section-Len, X-Perleap-Prior-Section-Db, X-Perleap-Prior-Client, X-Perleap-Unit-Memory-Facts, X-Perleap-Course-Memory-Facts',
-};
 
 /** Budget for merged prior excerpts (characters), after accounting for separators between submissions. */
 function computePerPriorMergeCap(
@@ -147,11 +144,10 @@ function sessionStartUserCueForLanguage(
   return isHe ? SESSION_START_USER_CUE_HE : SESSION_START_USER_CUE_EN;
 }
 
-const jsonResponse = (status: number, payload: Record<string, unknown>) =>
-  new Response(JSON.stringify(payload), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+const corsExtra = {
+  'Access-Control-Expose-Headers':
+    'X-Perleap-Prior-N, X-Perleap-Prior-Parts, X-Perleap-Prior-Parts-Pre, X-Perleap-Prior-Verbatim, X-Perleap-Prior-Summary, X-Perleap-Prior-Section-Len, X-Perleap-Prior-Section-Db, X-Perleap-Prior-Client, X-Perleap-Unit-Memory-Facts, X-Perleap-Course-Memory-Facts',
+};
 
 /** CRLF normalization + tame runaway blank lines before sending system prompt to OpenAI */
 function normalizeSystemPromptWhitespace(system: string): string {
@@ -162,8 +158,15 @@ function normalizeSystemPromptWhitespace(system: string): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req, corsExtra);
   }
+
+  const corsHeaders = getCorsHeaders(req, corsExtra);
+  const jsonResponse = (status: number, payload: Record<string, unknown>) =>
+    new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   let body: Record<string, unknown>;
   try {
@@ -215,7 +218,7 @@ serve(async (req) => {
       isInitialGreeting?: boolean;
       initialGreetingMode?: InitialGreetingMode;
       language?: string;
-      fileContext?: { name: string; content: string };
+      fileContext?: { name: string; content: string; url?: string; type?: string };
     };
 
     const initialGreetingMode: InitialGreetingMode =
@@ -228,6 +231,8 @@ serve(async (req) => {
 
     const postExplainTutoring =
       body.postExplainTutoring === true || body.postExplainTutoring === 'true';
+
+    const companionMode = body.companionMode === true || body.companionMode === 'true';
 
     const debugChatRequested = body.debugChat === true || body.debugChat === 'true';
     const allowAdminDebug = Boolean(
@@ -322,7 +327,11 @@ serve(async (req) => {
     }
 
     if (!isInitialGreeting) {
-      messages.push({ role: 'user', content: userMessageContent });
+      messages.push({
+        role: 'user',
+        content: userMessageContent,
+        ...(fileContext ? { fileContext } : {}),
+      });
     }
 
     const courseRecall = isCourseRecallRequest(userMessageContent);
@@ -504,7 +513,11 @@ serve(async (req) => {
     );
 
     if (isExplainTaskGreeting) {
-      systemPrompt += '\n\n' + (await explainTaskAppend(language)).trim();
+      systemPrompt += '\n\n' + (
+        companionMode
+          ? companionExplainTaskAppend(language)
+          : (await explainTaskAppend(language))
+      ).trim();
     }
 
     const hasPriorAssistantTurn = messages.some((m) => m.role === 'assistant');
@@ -513,7 +526,11 @@ serve(async (req) => {
       !isExplainTaskGreeting &&
       (hasPriorAssistantTurn || !isInitialGreeting);
     if (applyPostExplainTutor) {
-      systemPrompt += '\n\n' + (await postExplainTutorAppend(language)).trim();
+      systemPrompt += '\n\n' + (
+        companionMode
+          ? companionPostExplainAppend(language)
+          : (await postExplainTutorAppend(language))
+      ).trim();
     }
 
     if (courseRecall) {

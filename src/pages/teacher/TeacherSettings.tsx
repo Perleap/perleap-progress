@@ -8,7 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/useAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -155,15 +157,9 @@ const TeacherSettings = () => {
         return;
       }
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('teacher-avatars').getPublicUrl(fileName);
+      await updateProfileMutation.mutateAsync({ avatar_url: fileName });
 
-      // Update profile with avatar URL using mutation
-      await updateProfileMutation.mutateAsync({ avatar_url: publicUrl });
-
-      setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      setProfile(prev => ({ ...prev, avatar_url: fileName }));
       toast.success(t('settings.photoUploadSuccess'));
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -242,13 +238,13 @@ const TeacherSettings = () => {
   const getTabLabel = () => {
     switch (activeTab) {
       case 'profile':
-        return t('settings.profile');
+        return t('settings.profile.title');
       case 'questions':
         return t('settings.teachingPreferences');
       case 'notifications':
         return t('common.notifications');
       default:
-        return t('settings.profile');
+        return t('settings.profile.title');
     }
   };
 
@@ -266,7 +262,7 @@ const TeacherSettings = () => {
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>{t('settings.profile')}</CardTitle>
+                <CardTitle>{t('settings.profile.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div
@@ -276,7 +272,7 @@ const TeacherSettings = () => {
                   <div className="relative">
                     <Avatar className="h-20 w-20">
                       {profile.avatar_url ? (
-                        <AvatarImage src={profile.avatar_url} alt="Profile" />
+                        <SecureAvatarImage src={profile.avatar_url} bucket={TEACHER_AVATARS_BUCKET} alt="Profile" />
                       ) : null}
                       <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
                     </Avatar>

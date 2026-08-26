@@ -19,6 +19,7 @@ import {
 } from '@/services/assignmentModuleActivityService';
 import {
   generateStudentFacingTaskDraft,
+  parseEdgeFunctionErrorMessage,
   prefillStudentFacingTaskForAssignment,
 } from '@/services/assignmentService';
 import {
@@ -61,6 +62,8 @@ import {
 } from './assignmentWizardTypes';
 import type { HardSkillsSuggestionStatus } from './steps/AssignmentSkillsMaterialsStep';
 import { dueAtLocalInputToIso } from '@/components/ui/datetime-picker';
+import { materialsMatch, isPdfUploadFile } from '@/services/materialService';
+import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 
 type DialogOpenProps = {
   open: boolean;
@@ -193,6 +196,13 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   const policyFrozen = !isCreate && hasSubmissions && hasDueDateInDb;
 
   const stepOrder = useMemo(() => assignmentWizardStepOrder(formData.type), [formData.type]);
+
+  const moduleOutlineResources = useMemo(() => {
+    if (!syllabusSectionId || !syllabus?.section_resources) return [];
+    return filterOutlineMaterialResources(syllabus.section_resources[syllabusSectionId] ?? [], {
+      excludeDrafts: false,
+    });
+  }, [syllabusSectionId, syllabus?.section_resources]);
 
   const indicatorSteps: WizardStep[] = useMemo(
     () =>
@@ -768,7 +778,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.type !== 'application/pdf') {
+    if (!isPdfUploadFile(file)) {
       toast.error(t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving'));
       return;
     }
@@ -780,12 +790,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         .from('assignment-materials')
         .upload(fileName, file, { cacheControl: '3600', upsert: true });
       if (uploadError) throw uploadError;
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('assignment-materials').getPublicUrl(fileName);
       setFormData((prev) => ({
         ...prev,
-        materials: [...prev.materials, { type: 'pdf', url: publicUrl, name: file.name }],
+        materials: [...prev.materials, { type: 'pdf', file_path: fileName, name: file.name }],
       }));
       toast.success(t('createClassroom.success.pdfUploaded'));
       e.target.value = '';
@@ -835,12 +842,12 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         newSet.delete(index);
         setFormData((fd) => ({
           ...fd,
-          materials: fd.materials.filter((m) => !(m.url === material.url && m.name === material.name)),
+          materials: fd.materials.filter((m) => !materialsMatch(m, material)),
         }));
       } else {
         newSet.add(index);
         setFormData((fd) => {
-          if (!fd.materials.some((m) => m.url === material.url && m.name === material.name)) {
+          if (!fd.materials.some((m) => materialsMatch(m, material))) {
             return { ...fd, materials: [...fd.materials, material] };
           }
           return fd;
@@ -981,7 +988,8 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         },
       });
       if (error) {
-        toast.error(error.message || t('common.error'));
+        const serverMsg = await parseEdgeFunctionErrorMessage(error);
+        toast.error(serverMsg || t('createAssignment.wizard.studentFacingGenerateFailed'));
         return;
       }
       const payload = data as { studentFacingTask?: string; opikTraceId?: string; error?: string };
@@ -1462,6 +1470,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
                 onRemoveMaterial={handleRemoveMaterial}
                 uploadingMaterial={uploadingMaterial}
                 uploadProgress={uploadProgress}
+                moduleOutlineResources={moduleOutlineResources}
                 hardSkillsSuggestionStatus={hardSkillsSuggestionStatus}
                 hardSkillsSuggestionSource={hardSkillsSuggestionSource}
                 onRetrySuggestHardSkills={() =>

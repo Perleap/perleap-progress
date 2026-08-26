@@ -1,10 +1,16 @@
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Download, FileIcon, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Download, ExternalLink, FileIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { TeacherEvaluationForm } from './TeacherEvaluationForm';
+import {
+  downloadSubmissionFile,
+  extractSubmissionStoragePath,
+  fileNameFromSubmissionStored,
+  resolveSubmissionFileDisplayUrls,
+} from '@/services/submissionFileService';
 
 interface ProjectSubmissionViewProps {
   fileUrl?: string | null;
@@ -17,15 +23,17 @@ interface ProjectSubmissionViewProps {
   headerAction?: ReactNode;
 }
 
-function resolveProjectFileUrls(fileUrl?: string | null, fileUrls?: string[] | null): string[] {
+function resolveProjectFileStored(fileUrl?: string | null, fileUrls?: string[] | null): string[] {
   if (fileUrls && fileUrls.length > 0) return fileUrls;
   if (fileUrl) return [fileUrl];
   return [];
 }
 
-function fileNameFromUrl(fileUrl: string): string {
-  return decodeURIComponent(fileUrl.split('/').pop() || '');
-}
+type ResolvedFile = {
+  stored: string;
+  displayUrl: string;
+  fileName: string;
+};
 
 export function ProjectSubmissionView({
   fileUrl,
@@ -38,7 +46,75 @@ export function ProjectSubmissionView({
   headerAction,
 }: ProjectSubmissionViewProps) {
   const { t } = useTranslation();
-  const urls = resolveProjectFileUrls(fileUrl, fileUrls);
+  const storedFiles = useMemo(
+    () => resolveProjectFileStored(fileUrl, fileUrls),
+    [fileUrl, fileUrls],
+  );
+  const [resolvedFiles, setResolvedFiles] = useState<ResolvedFile[]>([]);
+  const [isResolving, setIsResolving] = useState(false);
+  const [downloadingStored, setDownloadingStored] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revokeAll = () => {};
+    if (storedFiles.length === 0) {
+      setResolvedFiles([]);
+      setIsResolving(false);
+      return;
+    }
+
+    setIsResolving(true);
+    void (async () => {
+      const { urls, revokeAll: revoke } = await resolveSubmissionFileDisplayUrls(null, storedFiles);
+      revokeAll = revoke;
+      if (urls.length === 0) {
+        setResolvedFiles([]);
+        setIsResolving(false);
+        return;
+      }
+      setResolvedFiles(
+        storedFiles.map((stored, i) => ({
+          stored,
+          displayUrl: urls[i] ?? '',
+          fileName: fileNameFromSubmissionStored(stored),
+        })).filter((f) => f.displayUrl),
+      );
+      setIsResolving(false);
+    })();
+
+    return () => revokeAll();
+  }, [storedFiles]);
+
+  const handleDownload = useCallback(
+    async (stored: string, fileName: string) => {
+      setDownloadingStored(stored);
+      try {
+        const path = extractSubmissionStoragePath(stored) ?? stored;
+        const fileBlob = await downloadSubmissionFile(path);
+        if (!fileBlob) throw new Error('download failed');
+        const objectUrl = URL.createObjectURL(fileBlob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = fileName;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch (err) {
+        console.error('Download failed:', err);
+        toast.error(t('submissionDetail.projectView.downloadFailed'));
+      } finally {
+        setDownloadingStored(null);
+      }
+    },
+    [t],
+  );
+
+  const handlePreview = useCallback((displayUrl: string) => {
+    if (displayUrl.startsWith('blob:')) {
+      window.open(displayUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -48,50 +124,64 @@ export function ProjectSubmissionView({
           {headerAction}
         </CardHeader>
         <CardContent>
-          {urls.length > 0 ? (
+          {isResolving ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : resolvedFiles.length > 0 ? (
             <div className="space-y-4">
-              {urls.map((url) => {
-                const fileName = fileNameFromUrl(url);
-                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                const isPdf = /\.pdf$/i.test(url);
+              {resolvedFiles.map((file) => {
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.fileName);
+                const isPdf = /\.pdf$/i.test(file.fileName);
+                const isDownloading = downloadingStored === file.stored;
 
                 return (
-                  <div key={url} className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <FileIcon className="h-8 w-8 text-primary shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{fileName}</p>
+                  <div key={file.stored} className="space-y-4">
+                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/50 p-4 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
+                          <FileIcon className="size-4 text-muted-foreground" />
+                        </div>
+                        <p className="truncate text-sm font-medium text-foreground">{file.fileName}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                        {(isImage || isPdf) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePreview(file.displayUrl)}
+                            className="h-8 rounded-full gap-1.5 px-3 text-xs font-medium"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                            {t('submissionDetail.projectView.preview')}
+                          </Button>
+                        )}
                         <Button
-                          variant="outline"
+                          type="button"
+                          variant="secondary"
                           size="sm"
-                          onClick={() => window.open(url, '_blank')}
-                          className="gap-1.5"
+                          disabled={isDownloading}
+                          onClick={() => void handleDownload(file.stored, file.fileName)}
+                          className="h-8 rounded-full gap-1.5 px-3 text-xs font-medium"
                         >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          {t('submissionDetail.projectView.preview')}
-                        </Button>
-                        <a
-                          href={url}
-                          download
-                          className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'gap-1.5')}
-                        >
-                          <Download className="h-3.5 w-3.5" />
+                          {isDownloading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" aria-hidden />
+                          )}
                           {t('submissionDetail.projectView.download')}
-                        </a>
+                        </Button>
                       </div>
                     </div>
 
                     {isImage && (
-                      <div className="rounded-lg overflow-hidden border">
-                        <img src={url} alt={fileName} className="w-full max-h-[500px] object-contain" />
-                      </div>
-                    )}
-
-                    {isPdf && (
-                      <div className="rounded-lg overflow-hidden border h-[500px]">
-                        <iframe src={url} className="w-full h-full" title={`PDF Preview: ${fileName}`} />
+                      <div className="overflow-hidden rounded-lg border">
+                        <img
+                          src={file.displayUrl}
+                          alt={file.fileName}
+                          className="max-h-[500px] w-full object-contain"
+                        />
                       </div>
                     )}
                   </div>
@@ -99,7 +189,7 @@ export function ProjectSubmissionView({
               })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {t('submissionDetail.projectView.noFile')}
             </p>
           )}

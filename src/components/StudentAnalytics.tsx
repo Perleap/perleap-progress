@@ -163,6 +163,8 @@ export function StudentAnalytics({
         .select('scores, score_explanations, qed_measures')
         .eq('user_id', studentId)
         .eq('submission_id', selectedSubmissionId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       setPerSubmissionScores(

@@ -1,4 +1,4 @@
-import { Target, FileText, X, Upload, Link as LinkIcon, Plus, Eye, Loader2, RefreshCw } from 'lucide-react';
+import { Target, FileText, X, Upload, Link as LinkIcon, Plus, Eye, Loader2, RefreshCw, BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,11 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { pairKey } from '@/lib/hardSkillsFormat';
+import { openOrDownloadMaterial, resolveMaterialBucket } from '@/services/materialService';
+import { ASSIGNMENT_MATERIALS_BUCKET } from '@/utils/storageUrls';
+import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import type { CourseMaterial } from '@/types/models';
+import type { SectionResource } from '@/types/syllabus';
 import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
 
 const MAX_HARD_SKILLS = 5;
@@ -40,6 +45,7 @@ interface AssignmentSkillsMaterialsStepProps {
   onRemoveMaterial: (index: number) => void;
   uploadingMaterial: boolean;
   uploadProgress: number;
+  moduleOutlineResources?: SectionResource[];
   hardSkillsSuggestionStatus?: HardSkillsSuggestionStatus;
   hardSkillsSuggestionSource?: 'catalog' | 'custom' | null;
   onRetrySuggestHardSkills?: () => void;
@@ -65,6 +71,7 @@ export function AssignmentSkillsMaterialsStep({
   onRemoveMaterial,
   uploadingMaterial,
   uploadProgress,
+  moduleOutlineResources = [],
   hardSkillsSuggestionStatus = 'idle',
   hardSkillsSuggestionSource = null,
   onRetrySuggestHardSkills,
@@ -282,9 +289,33 @@ export function AssignmentSkillsMaterialsStep({
         <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <FileText className="h-5 w-5" />
           <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
-            {t('createAssignment.assignmentMaterials')}
+            {t('createAssignment.assignmentOnlyMaterials')}
           </h3>
         </div>
+        <p className={`text-sm text-subtle ${isRTL ? 'text-right' : 'text-left'}`}>
+          {t('createAssignment.assignmentOnlyMaterialsHelper')}
+        </p>
+
+        {moduleOutlineResources.length > 0 && (
+          <div className="space-y-3 rounded-xl border border-dashed border-border bg-muted/5 p-4">
+            <div className={`flex items-center gap-2 text-muted-foreground ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <BookOpen className="h-4 w-4 shrink-0" />
+              <Label className={`text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('createAssignment.moduleSharedResources')}
+              </Label>
+            </div>
+            <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('createAssignment.moduleSharedResourcesHelper')}
+            </p>
+            <ResourceViewer
+              resources={moduleOutlineResources}
+              isRTL={isRTL}
+              compact
+              compactVariant="list"
+              hideListHeader
+            />
+          </div>
+        )}
 
         {classroomMaterials.length > 0 && (
           <div className="space-y-2">
@@ -403,7 +434,12 @@ export function AssignmentSkillsMaterialsStep({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => window.open(material.url, '_blank')}
+                    onClick={() =>
+                      void openOrDownloadMaterial(
+                        material as CourseMaterial,
+                        resolveMaterialBucket(material as CourseMaterial, ASSIGNMENT_MATERIALS_BUCKET),
+                      )
+                    }
                     className="h-8 w-8 text-muted-foreground hover:text-primary"
                     title={t('common.view')}
                   >

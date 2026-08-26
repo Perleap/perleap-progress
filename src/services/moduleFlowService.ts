@@ -4,6 +4,7 @@
 
 import { supabase, handleSupabaseError } from '@/api/client';
 import { SUBMISSION_STATUS } from '@/config/constants';
+import { isUuidLike } from '@/lib/utils';
 import type { Json } from '@/integrations/supabase/types';
 import type { ApiError } from '@/types';
 import type {
@@ -16,11 +17,12 @@ export const getModuleFlowStepsBySections = async (
   sectionIds: string[],
 ): Promise<{ data: ModuleFlowStep[] | null; error: ApiError | null }> => {
   try {
-    if (sectionIds.length === 0) return { data: [], error: null };
+    const persistedIds = sectionIds.filter(isUuidLike);
+    if (persistedIds.length === 0) return { data: [], error: null };
     const { data, error } = await supabase
       .from('module_flow_steps')
       .select('*')
-      .in('section_id', sectionIds);
+      .in('section_id', persistedIds);
 
     if (error) return { data: null, error: handleSupabaseError(error) };
     const rows = ((data ?? []) as unknown as ModuleFlowStep[]).slice();
@@ -38,6 +40,7 @@ export const getModuleFlowSteps = async (
   sectionId: string,
 ): Promise<{ data: ModuleFlowStep[] | null; error: ApiError | null }> => {
   try {
+    if (!isUuidLike(sectionId)) return { data: [], error: null };
     const { data, error } = await supabase
       .from('module_flow_steps')
       .select('*')
@@ -64,13 +67,6 @@ export type FlowStepInput = {
  * interleave delete/insert and hit UNIQUE(section_id, order_index) with 409.
  */
 const __replaceModuleFlowTailBySection = new Map<string, Promise<unknown>>();
-
-/** Must look like a UUID so Postgres ::uuid cast and FK checks don't throw from junk strings. */
-function isUuidLike(value: unknown): value is string {
-  if (value == null || typeof value !== 'string') return false;
-  const t = value.trim();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t);
-}
 
 async function replaceModuleFlowStepsImpl(
   sectionId: string,

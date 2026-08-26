@@ -11,12 +11,9 @@ import {
   queueOpikFeedbackScore,
 } from '../shared/opikTrace.ts';
 import { createSupabaseClient, getServiceRoleKey } from '../shared/supabase.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { persistEdgeFunctionLog, errorToMessage, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 type ChatSentenceBody = {
   type: 'chat_sentence';
@@ -63,8 +60,10 @@ const TEACHER_CONTENT_TRACE_KEYS: Record<
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const authHeader = req.headers.get('Authorization');

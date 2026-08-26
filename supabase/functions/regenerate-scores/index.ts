@@ -6,7 +6,6 @@
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import {
-  createSupabaseClient,
   getAssignmentModuleActivityContextText,
   getStudentName,
   getTeacherNameByAssignment,
@@ -22,18 +21,27 @@ import {
 } from '../_shared/evaluationContext.ts';
 import { runEvaluation, seedFromSubmissionId } from '../_shared/evaluation.ts';
 import { persistAiEvaluation } from '../_shared/evaluationPersist.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertSubmissionEvaluationAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
     const { submissionId } = await req.json();
     logInfo('Regenerate scores request', { submissionId });
 
@@ -41,7 +49,12 @@ serve(async (req) => {
       throw new Error('submissionId is required');
     }
 
-    const supabase = createSupabaseClient();
+    const access = await assertSubmissionEvaluationAccess(auth.user.id, submissionId);
+    if ('status' in access) {
+      return authFailureToResponse(access, corsHeaders);
+    }
+
+    const supabase = access.supabase;
 
     const { data: feedbackRow } = await supabase
       .from('assignment_feedback')

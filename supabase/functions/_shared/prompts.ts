@@ -391,8 +391,12 @@ export async function formatCourseMaterials(
         : assignmentDetails.materials;
       if (Array.isArray(assignmentMaterials) && assignmentMaterials.length > 0) {
         const lines = [`Assignment Materials:`];
-        assignmentMaterials.forEach((material: any) => {
-          lines.push(`- ${material.name || 'Material'} (${material.type}): ${material.url}`);
+        assignmentMaterials.forEach((material: { name?: string; type?: string; url?: string; file_path?: string }) => {
+          const ref =
+            material.type === 'link'
+              ? (material.url?.trim() ?? material.name ?? 'Material')
+              : (material.file_path?.trim() ?? material.name ?? 'Material');
+          lines.push(`- ${material.name || 'Material'} (${material.type}): ${ref}`);
         });
         blocks.push(truncateContextBlock(lines.join('\n'), CHAT_MATERIALS_ASSIGNMENT_MAX));
       }

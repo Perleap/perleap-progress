@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { getLiveSessionAudioUrl } from '@/services/liveSessionService';
+import { getLiveSessionAudioBlobUrl } from '@/services/liveSessionService';
 
 export type LiveSessionAudioPlaybackHandle = {
   seek: (seconds: number) => void;
@@ -27,15 +27,26 @@ export const LiveSessionAudioPlayback = forwardRef<
 
   useEffect(() => {
     let cancelled = false;
+    const revokes: (() => void)[] = [];
     void (async () => {
-      const urls = await Promise.all(storagePaths.map((path) => getLiveSessionAudioUrl(path)));
-      if (!cancelled) {
-        setChunkUrls(urls.filter((url): url is string => Boolean(url)));
-        setActiveChunk(0);
+      const resolved = await Promise.all(storagePaths.map((path) => getLiveSessionAudioBlobUrl(path)));
+      if (cancelled) {
+        resolved.forEach((r) => r?.revoke());
+        return;
       }
+      const urls: string[] = [];
+      for (const item of resolved) {
+        if (item) {
+          revokes.push(item.revoke);
+          urls.push(item.url);
+        }
+      }
+      setChunkUrls(urls);
+      setActiveChunk(0);
     })();
     return () => {
       cancelled = true;
+      revokes.forEach((revoke) => revoke());
     };
   }, [storagePaths]);
 
@@ -102,7 +113,7 @@ export const LiveSessionAudioPlayback = forwardRef<
         void el.play().catch(() => {});
       });
     },
-    [chunkDurations, chunkStarts, durationSeconds, isMultiChunk]
+    [chunkDurations, chunkStarts, durationSeconds, isMultiChunk],
   );
 
   useImperativeHandle(ref, () => ({ seek }), [seek]);

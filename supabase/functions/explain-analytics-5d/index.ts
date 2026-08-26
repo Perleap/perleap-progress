@@ -9,17 +9,18 @@ const EVIDENCE_MAX_TOTAL_CHARS = 10_000;
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
-import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
+import { createSupabaseClient } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertClassroomTeacherOrAdminAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 type FiveD = {
   vision: number;
@@ -44,53 +45,20 @@ function parseScores(raw: unknown): FiveD | null {
   return out as FiveD;
 }
 
-async function assertCanAccessClassroom(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  classroomId: string,
-): Promise<boolean> {
-  const { data: classroom, error } = await supabase
-    .from('classrooms')
-    .select('teacher_id')
-    .eq('id', classroomId)
-    .maybeSingle();
-
-  if (error || !classroom) return false;
-  if ((classroom as { teacher_id: string }).teacher_id === userId) return true;
-  return isAppAdmin(userId);
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceKey = getServiceRoleKey();
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    const supabase = createSupabaseClient();
     const body = await req.json();
     const classroomId = typeof body.classroomId === 'string' ? body.classroomId.trim() : '';
     const language = body.language === 'he' ? 'he' : 'en';
@@ -137,12 +105,13 @@ serve(async (req) => {
       });
     }
 
-    const canAccess = await assertCanAccessClassroom(supabase, user.id, classroomId);
-    if (!canAccess) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const classroomAccess = await assertClassroomTeacherOrAdminAccess(
+      auth.user.id,
+      classroomId,
+      supabase,
+    );
+    if ('status' in classroomAccess) {
+      return authFailureToResponse(classroomAccess, corsHeaders);
     }
 
     const langLine =

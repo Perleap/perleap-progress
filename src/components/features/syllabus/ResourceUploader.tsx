@@ -44,6 +44,7 @@ import {
   File,
   GripVertical,
   ExternalLink,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -52,9 +53,19 @@ import {
   useDeleteResource,
   useReorderSectionResources,
 } from '@/hooks/queries';
+import {
+  downloadSectionResourceFile,
+  resolveSectionResourceFileUrl,
+} from '@/services/syllabusResourceService';
 import type { SectionResource } from '@/types/syllabus';
 import { formatResourceFileSize, getMaxResourceFileSizeLabel, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
 import { Progress, ProgressValue } from '@/components/ui/progress';
+import {
+  syllabusRowActionClass,
+  syllabusRowDestructiveActionClass,
+  syllabusRowDragHandleClass,
+} from './syllabusRowActionStyles';
+import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
 
 interface ResourceUploaderProps {
   sectionId: string;
@@ -406,34 +417,49 @@ export const ResourceUploader = ({
   const activeResource =
     activeDragId != null ? ordered.find((r) => r.id === activeDragId) : null;
 
-  const openOrDownloadResource = useCallback(
+  const openResourceInNewTab = useCallback(
     async (resource: SectionResource) => {
-      const u = resource.url?.trim();
-      if (!u) return;
-
       if (resource.resource_type === 'link') {
-        window.open(u, '_blank', 'noopener,noreferrer');
+        const linkUrl = resource.url?.trim();
+        if (linkUrl) window.open(linkUrl, '_blank', 'noopener,noreferrer');
         return;
       }
 
-      try {
-        const res = await fetch(u, { mode: 'cors' });
-        if (!res.ok) throw new Error('fetch failed');
-        const blob = await res.blob();
-        const filename = downloadFilenameForResource(resource);
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(objectUrl);
-      } catch {
-        window.open(u, '_blank', 'noopener,noreferrer');
-        toast.info(t('syllabus.resources.downloadOpenedInTab'));
+      const url = await resolveSectionResourceFileUrl(resource);
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
       }
+
+      toast.error(t('syllabus.resources.downloadFailed'));
+    },
+    [t],
+  );
+
+  const openOrDownloadResource = useCallback(
+    async (resource: SectionResource) => {
+      if (resource.resource_type === 'link') {
+        const linkUrl = resource.url?.trim();
+        if (linkUrl) window.open(linkUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      const blob = await downloadSectionResourceFile(resource);
+      if (!blob) {
+        toast.error(t('syllabus.resources.downloadFailed'));
+        return;
+      }
+
+      const filename = downloadFilenameForResource(resource);
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
     },
     [t],
   );
@@ -598,7 +624,10 @@ export const ResourceUploader = ({
             <ul className="min-w-0 space-y-2 [contain:layout]">
               {ordered.map((resource) => {
                 const Icon = resourceTypeIcon[resource.resource_type] || File;
-                const canOpen = Boolean(resource.url?.trim());
+                const canOpen =
+                  resource.resource_type === 'link'
+                    ? Boolean(resource.url?.trim())
+                    : Boolean(resource.file_path?.trim() || resource.url?.trim());
                 const isLink = resource.resource_type === 'link';
                 return (
                   <SortableResourceRow key={resource.id} id={resource.id}>
@@ -618,7 +647,7 @@ export const ResourceUploader = ({
                         >
                           <button
                             type="button"
-                            className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded-md shrink-0"
+                            className={syllabusRowDragHandleClass}
                             aria-label={t('classroomDetail.activitiesFlow.dragReorder')}
                             {...dragListeners}
                             {...dragAttributes}
@@ -639,32 +668,63 @@ export const ResourceUploader = ({
                           </div>
                           <div className="flex shrink-0 items-center gap-0.5">
                             {canOpen ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                                aria-label={
+                              <SyllabusRowActionTooltip
+                                label={t('common.view')}
+                                render={
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className={syllabusRowActionClass}
+                                    aria-label={t('common.view')}
+                                    onClick={() => void openResourceInNewTab(resource)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
+                            ) : null}
+                            {canOpen ? (
+                              <SyllabusRowActionTooltip
+                                label={
                                   isLink
                                     ? t('syllabus.resources.openInNewTab')
                                     : t('syllabus.resources.download')
                                 }
-                                onClick={() => void openOrDownloadResource(resource)}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
+                                render={
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className={syllabusRowActionClass}
+                                    aria-label={
+                                      isLink
+                                        ? t('syllabus.resources.openInNewTab')
+                                        : t('syllabus.resources.download')
+                                    }
+                                    onClick={() => void openOrDownloadResource(resource)}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
                             ) : null}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 shrink-0 text-destructive"
-                              onClick={() => void handleDelete(resource)}
-                              disabled={deleteMutation.isPending}
-                              aria-label={t('syllabus.resources.deleteResourceAria')}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <SyllabusRowActionTooltip
+                              label={t('syllabus.resources.deleteResourceAria')}
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className={syllabusRowDestructiveActionClass}
+                                  onClick={() => void handleDelete(resource)}
+                                  disabled={deleteMutation.isPending}
+                                  aria-label={t('syllabus.resources.deleteResourceAria')}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
                           </div>
                         </div>
                       </div>

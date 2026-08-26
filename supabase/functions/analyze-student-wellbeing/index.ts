@@ -1,23 +1,25 @@
 /**
  * Analyze Student Wellbeing - OpenAI Integration
- * Detects concerning signs in student conversations
+ * Detects concerning signs in student conversations.
+ * Internal-only: callable from other edge functions with service role bearer.
  */
 
 import 'https://deno.land/x/xhr@0.1.0/mod.ts';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../shared/openai.ts';
-import { createSupabaseClient } from '../shared/supabase.ts';
+import { createSupabaseClient, getStudentName } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 import { generateWellbeingAnalysisPrompt } from '../_shared/prompts.ts';
 import type { WellbeingAnalysisResult, Message } from './types.ts';
 import { sendAlertEmail } from './email.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertInternalServiceCaller,
+  authFailureToResponse,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 /**
  * Parse AI response into structured wellbeing analysis
@@ -48,22 +50,72 @@ const parseWellbeingResponse = (responseText: string): WellbeingAnalysisResult =
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
+  }
+
+  const corsHeaders = getCorsHeaders(req);
+
+  const internalAuth = assertInternalServiceCaller(req);
+  if (internalAuth) {
+    return authFailureToResponse(internalAuth, corsHeaders);
   }
 
   try {
-    const { 
-      studentId, 
-      studentName, 
-      submissionId, 
-      assignmentId, 
-      teacherId, 
-      assignmentTitle, 
-      conversationMessages 
+    const {
+      studentName: studentNameFromBody,
+      submissionId,
+      assignmentTitle: assignmentTitleFromBody,
+      conversationMessages,
     } = await req.json();
 
-    if (!studentName || !conversationMessages || !Array.isArray(conversationMessages)) {
-      throw new Error('Invalid request: studentName and conversationMessages required');
+    if (!conversationMessages || !Array.isArray(conversationMessages)) {
+      throw new Error('Invalid request: conversationMessages required');
+    }
+
+    let studentId: string | undefined;
+    let assignmentId: string | undefined;
+    let teacherId: string | undefined;
+    let studentName = typeof studentNameFromBody === 'string' ? studentNameFromBody.trim() : '';
+    let assignmentTitle = typeof assignmentTitleFromBody === 'string' ? assignmentTitleFromBody : '';
+
+    if (typeof submissionId === 'string' && submissionId.trim()) {
+      const supabase = createSupabaseClient();
+      const { data: submission, error: subErr } = await supabase
+        .from('submissions')
+        .select('student_id, assignment_id')
+        .eq('id', submissionId.trim())
+        .maybeSingle();
+
+      if (subErr || !submission) {
+        return authFailureToResponse(
+          { status: 404, body: JSON.stringify({ error: 'Submission not found.' }) },
+          corsHeaders,
+        );
+      }
+
+      studentId = submission.student_id as string;
+      assignmentId = submission.assignment_id as string;
+
+      const [{ data: assignment }, resolvedStudentName] = await Promise.all([
+        supabase
+          .from('assignments')
+          .select('title, classrooms(teacher_id)')
+          .eq('id', assignmentId)
+          .maybeSingle(),
+        studentName ? Promise.resolve(studentName) : getStudentName(studentId),
+      ]);
+
+      if (!studentName) {
+        studentName = resolvedStudentName;
+      }
+      if (!assignmentTitle && assignment?.title) {
+        assignmentTitle = assignment.title as string;
+      }
+      teacherId = (assignment?.classrooms as { teacher_id?: string } | null)?.teacher_id;
+    }
+
+    if (!studentName) {
+      throw new Error('Invalid request: studentName required when submissionId is omitted');
     }
 
     // Prepare conversation text with message indices for tracking
@@ -198,4 +250,3 @@ serve(async (req) => {
     });
   }
 });
-

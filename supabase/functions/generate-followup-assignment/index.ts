@@ -9,18 +9,62 @@ import { createChatCompletion, handleOpenAIError, resolveChatModel } from '../sh
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { createSupabaseClient } from '../shared/supabase.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertAssignmentTeacherOrAdmin,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
+    const body = await req.json();
+    const submissionId =
+      typeof body.submissionId === 'string' ? body.submissionId.trim() : '';
+
+    if (!submissionId) {
+      return new Response(JSON.stringify({ error: 'submissionId is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = createSupabaseClient();
+    const { data: submission, error: submissionError } = await supabase
+      .from('submissions')
+      .select('assignment_id')
+      .eq('id', submissionId)
+      .maybeSingle();
+
+    if (submissionError || !submission) {
+      return new Response(JSON.stringify({ error: 'Submission not found.' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const assignmentGate = await assertAssignmentTeacherOrAdmin(
+      auth.user.id,
+      submission.assignment_id as string,
+      supabase,
+    );
+    if (assignmentGate) {
+      return authFailureToResponse(assignmentGate, corsHeaders);
+    }
+
     const {
       teacherFeedback,
       studentFeedback,
@@ -28,7 +72,7 @@ serve(async (req) => {
       originalAssignmentTitle,
       originalAssignmentInstructions,
       studentName,
-    } = await req.json();
+    } = body;
 
     logInfo('Generating follow-up assignment', {
       studentName,

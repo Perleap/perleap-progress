@@ -24,11 +24,13 @@ import { createSupabaseClient } from '../shared/supabase.ts';
 import { logInfo, logError } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertLiveSessionTeacherOrAdminAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const AUDIO_BUCKET = 'live-session-audio';
 
@@ -139,12 +141,19 @@ async function generateSummaryAndKeyMoments(
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   let liveSessionId: string | undefined;
 
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
     const body = await req.json();
     liveSessionId = body.liveSessionId;
     const language = body.language ?? 'en';
@@ -155,7 +164,12 @@ serve(async (req) => {
       throw new Error('Missing required field: liveSessionId');
     }
 
-    const supabase = createSupabaseClient();
+    const sessionAccess = await assertLiveSessionTeacherOrAdminAccess(auth.user.id, liveSessionId);
+    if ('status' in sessionAccess) {
+      return authFailureToResponse(sessionAccess, corsHeaders);
+    }
+
+    const supabase = sessionAccess.supabase;
     const startTime = Date.now();
 
     const { data: session, error: sessionError } = await supabase

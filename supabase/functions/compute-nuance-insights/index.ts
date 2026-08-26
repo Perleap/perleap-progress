@@ -12,11 +12,13 @@ import {
   type StudentMetrics,
   type SubmissionTimingRow,
 } from './computeMetrics.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import {
+  assertClassroomTeacherOrAdminAccess,
+  authFailureToResponse,
+  requireAuth,
+} from '../_shared/authorizeResource.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -259,10 +261,17 @@ function getFallbackText(type: string): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
 
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const auth = await requireAuth(req);
+    if ('status' in auth) {
+      return authFailureToResponse(auth, corsHeaders);
+    }
+
     const { classroom_id, student_id, assignment_id, force_refresh } = await req.json();
 
     if (!classroom_id) {
@@ -272,7 +281,12 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createSupabaseClient();
+    const classroomAccess = await assertClassroomTeacherOrAdminAccess(auth.user.id, classroom_id);
+    if ('status' in classroomAccess) {
+      return authFailureToResponse(classroomAccess, corsHeaders);
+    }
+
+    const supabase = classroomAccess.supabase;
 
     // Fetch all assignments in this classroom
     const { data: assignments, error: assignErr } = await supabase
@@ -312,7 +326,7 @@ serve(async (req) => {
         const age = Date.now() - lastMetricAt;
         if (age < 2 * 60 * 1000 && lastEventAt <= lastMetricAt) {
           logInfo('Returning cached nuance data', { classroom_id, age_ms: age, lastEventAt, lastMetricAt });
-          return await returnCachedData(supabase, classroom_id, student_id, assignment_id);
+          return await returnCachedData(supabase, classroom_id, student_id, assignment_id, corsHeaders);
         }
         logInfo('Skipping nuance cache (stale or new events after last recompute)', {
           classroom_id,
@@ -516,6 +530,7 @@ async function returnCachedData(
   classroomId: string,
   studentId?: string,
   assignmentId?: string,
+  corsHeaders: Record<string, string> = {},
 ) {
   let metricsQuery = supabase
     .from('student_nuance_metrics')
@@ -544,11 +559,7 @@ async function returnCachedData(
       cached: true,
     }),
     {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Content-Type': 'application/json',
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     },
   );
 }

@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Edit, Trash2, FileText, Link as LinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { openOrDownloadMaterial, parseCourseMaterials, resolveMaterialBucket } from '@/services/materialService';
+import { ASSIGNMENT_MATERIALS_BUCKET } from '@/utils/storageUrls';
+import type { CourseMaterial } from '@/types/models';
 
 interface Assignment {
   id: string;
@@ -42,23 +45,10 @@ export const AssignmentsList = ({ assignments, onEdit, onDelete }: AssignmentsLi
     }
   };
 
-  const parseMaterials = (materialsData: any) => {
-    if (!materialsData) return null;
-    try {
-      // Handle both JSONB (object) and old TEXT (string) formats
-      const materials = typeof materialsData === 'string'
-        ? JSON.parse(materialsData)
-        : materialsData;
-      return Array.isArray(materials) && materials.length > 0 ? materials : null;
-    } catch {
-      return null;
-    }
-  };
-
   return (
     <div className="space-y-4">
       {assignments.map((assignment) => {
-        const materials = parseMaterials(assignment.materials);
+        const materials = parseCourseMaterials(assignment.materials);
 
         return (
           <Card key={assignment.id}>
@@ -94,19 +84,24 @@ export const AssignmentsList = ({ assignments, onEdit, onDelete }: AssignmentsLi
                 {assignment.instructions}
               </p>
 
-              {materials && (
+              {materials.length > 0 && (
                 <div className="pt-2 border-t mt-2">
                   <p className="text-xs font-semibold text-muted-foreground mb-2">
                     {t('classroomDetail.materials')} ({materials.length})
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {materials.map(
-                      (material: { url: string; name: string; type: string }, index: number) => (
+                      (material: CourseMaterial, index: number) => (
                         <Button
                           key={index}
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(material.url, '_blank')}
+                          onClick={() =>
+                            void openOrDownloadMaterial(
+                              material,
+                              resolveMaterialBucket(material, ASSIGNMENT_MATERIALS_BUCKET),
+                            )
+                          }
                           className="gap-2"
                         >
                           {material.type === 'pdf' ? (

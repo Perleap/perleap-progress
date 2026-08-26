@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { cn } from '@/lib/utils';
 import { Send, Loader2, Trash2, MessageSquare, Reply } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
@@ -36,7 +37,7 @@ function CommentItem({
   return (
     <div className={cn('group flex gap-2.5', isRTL && 'flex-row-reverse')}>
       <Avatar size="sm" className="size-7 flex-shrink-0">
-        {comment.user_avatar ? <AvatarImage src={comment.user_avatar} alt="" /> : null}
+        {comment.user_avatar ? <SecureAvatarImage src={comment.user_avatar} alt="" /> : null}
         <AvatarFallback className="text-[10px] font-bold">{initial}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">

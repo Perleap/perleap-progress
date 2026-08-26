@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, FileOutput, Brain, Zap, Mail } from 'lucide-react';
+import { MessageSquare, FileOutput, Brain, Zap, Mail, Database } from 'lucide-react';
 
 const NODE_TYPES_CONFIG = [
   { type: 'inputNode', icon: MessageSquare, color: 'text-blue-600 bg-blue-50 border-blue-200' },
@@ -8,6 +8,7 @@ const NODE_TYPES_CONFIG = [
   { type: 'llmNode', icon: Brain, color: 'text-purple-600 bg-purple-50 border-purple-200' },
   { type: 'triggerNode', icon: Zap, color: 'text-orange-600 bg-orange-50 border-orange-200' },
   { type: 'emailNode', icon: Mail, color: 'text-teal-600 bg-teal-50 border-teal-200' },
+  { type: 'databaseNode', icon: Database, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
 ] as const;
 
 const NODE_KEY_MAP: Record<string, string> = {
@@ -16,6 +17,7 @@ const NODE_KEY_MAP: Record<string, string> = {
   llmNode: 'llm',
   triggerNode: 'trigger',
   emailNode: 'email',
+  databaseNode: 'database',
 };
 
 export function NodePalette() {

@@ -34,4 +34,24 @@ function RadioGroupItem({ className, ...props }: RadioPrimitive.Root.Props) {
   )
 }
 
-export { RadioGroup, RadioGroupItem }
+function ToggleDot({ className, checked = false }: { checked?: boolean; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-slot="toggle-dot"
+      data-checked={checked ? "" : undefined}
+      className={cn(
+        "border-input text-primary dark:bg-input/30 data-[checked]:bg-primary data-[checked]:border-primary flex size-4 rounded-full transition-none relative aspect-square shrink-0 border pointer-events-none",
+        className
+      )}
+    >
+      {checked ? (
+        <span className="flex size-4 items-center justify-center text-white">
+          <CircleIcon className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 fill-current" />
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+export { RadioGroup, RadioGroupItem, ToggleDot }

@@ -5,12 +5,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getServiceRoleKey, isAppAdmin } from '../shared/supabase.ts';
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -21,8 +18,10 @@ function json(data: unknown, status = 200): Response {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflight(req);
   }
+
+  const corsHeaders = getCorsHeaders(req);
 
   if (req.method !== 'GET' && req.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405);

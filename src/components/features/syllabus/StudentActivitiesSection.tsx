@@ -34,6 +34,8 @@ import { useModuleFlowStepsBulk } from '@/hooks/queries/useModuleFlowQueries';
 import { isSectionUnlocked, type SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
 import {
   computeDefaultModuleFlow,
+  filterStudentVisibleAssignments,
+  filterStudentVisibleSectionResources,
   getOrderedActivityCenterFlowSteps,
   studentModuleFlowStepOptions,
   type AssignmentRow,
@@ -153,6 +155,15 @@ export function StudentActivitiesSection({
   const { data: assignments = [] } = useClassroomAssignments(classroomId);
   const { data: studentProgressData } = useStudentProgress(syllabus?.id, effectiveProgressUserId);
 
+  /** Teacher read-only student progress: match student RLS (published assignments + activities only). */
+  const curriculumAssignments = useMemo(
+    () =>
+      readOnly
+        ? filterStudentVisibleAssignments(assignments as Assignment[])
+        : (assignments as Assignment[]),
+    [assignments, readOnly],
+  );
+
   const studentProgressMap = useMemo(() => {
     const map: Record<string, StudentProgressStatus> = {};
     (studentProgressData ?? []).forEach((p) => {
@@ -171,13 +182,16 @@ export function StudentActivitiesSection({
   const sectionIds = useMemo(() => sections.map((s) => s.id), [sections]);
   const { data: flowBulk = {}, isLoading: flowLoading } = useModuleFlowStepsBulk(sectionIds);
 
-  const resourceMap = syllabus?.section_resources ?? {};
+  const resourceMap = useMemo(() => {
+    const raw = syllabus?.section_resources ?? {};
+    return readOnly ? filterStudentVisibleSectionResources(raw) : raw;
+  }, [syllabus?.section_resources, readOnly]);
 
-  const assignRows = assignments as AssignmentRow[];
+  const assignRows = curriculumAssignments as AssignmentRow[];
 
   const studentFlowOpts = useMemo(
-    () => studentModuleFlowStepOptions(assignments as Assignment[]),
-    [assignments],
+    () => studentModuleFlowStepOptions(curriculumAssignments),
+    [curriculumAssignments],
   );
 
   const classroomAssignmentIdSet = useMemo(
@@ -580,7 +594,7 @@ export function StudentActivitiesSection({
                           );
                         }
                         if (step.step_kind === 'assignment' && step.assignment_id) {
-                          const a = (assignments as { id: string; title: string; type?: string }[]).find(
+                          const a = (curriculumAssignments as { id: string; title: string; type?: string }[]).find(
                             (x) => x.id === step.assignment_id,
                           );
                           const label = a?.title ?? t('studentClassroom.activities.assignment');
@@ -630,7 +644,7 @@ export function StudentActivitiesSection({
                             </li>
                           );
                         }
-                        const a = (assignments as { id: string; title: string; type?: string }[]).find(
+                        const a = (curriculumAssignments as { id: string; title: string; type?: string }[]).find(
                           (x) => x.id === c.assignment_id,
                         );
                         const label = a?.title ?? t('studentClassroom.activities.assignment');
@@ -770,7 +784,7 @@ export function StudentActivitiesSection({
                       }
 
                       if (step.step_kind === 'assignment' && step.assignment_id) {
-                        const a = (assignments as { id: string; title: string; type?: string }[]).find(
+                        const a = (curriculumAssignments as { id: string; title: string; type?: string }[]).find(
                           (x) => x.id === step.assignment_id,
                         );
                         const assignmentUnavailable = !a;
@@ -996,7 +1010,7 @@ export function StudentActivitiesSection({
                             </li>
                           );
                         }
-                        const a = (assignments as { id: string; title: string; type?: string }[]).find(
+                        const a = (curriculumAssignments as { id: string; title: string; type?: string }[]).find(
                           (x) => x.id === c.assignment_id,
                         );
                         const assignmentUnavailable = !a;

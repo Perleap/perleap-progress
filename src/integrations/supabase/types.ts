@@ -2437,6 +2437,18 @@ export type Database = {
         Args: { classroom_uuid: string; student_uuid: string }
         Returns: boolean
       }
+      cleanup_orphaned_profiles_by_email: {
+        Args: { p_email: string }
+        Returns: number
+      }
+      find_classroom_by_invite_code: {
+        Args: { p_invite_code: string }
+        Returns: Json
+      }
+      profile_email_exists: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       check_is_teacher_of_student: {
         Args: { student_uuid: string; teacher_uuid: string }
         Returns: boolean
@@ -2514,6 +2526,14 @@ export type Database = {
       teacher_reset_student_assignment_progress: {
         Args: { _submission_id: string }
         Returns: string
+      }
+      teacher_preview_classroom_reset: {
+        Args: { p_classroom_id: string }
+        Returns: Json
+      }
+      teacher_reset_classroom: {
+        Args: { p_classroom_id: string }
+        Returns: Json
       }
       upsert_video_watch_progress: {
         Args: {

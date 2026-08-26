@@ -1,5 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,10 +41,10 @@ export const StudentsList = ({ students }: StudentsListProps) => {
         <CardContent className="flex flex-col items-center justify-center py-12">
           <User className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">
-            {t('classroomDetail.students.empty.title')}
+            {t('classroomDetail.studentsTab.empty.title')}
           </h3>
           <p className="text-muted-foreground text-center">
-            {t('classroomDetail.students.empty.description')}
+            {t('classroomDetail.studentsTab.empty.description')}
           </p>
         </CardContent>
       </Card>
@@ -61,14 +63,14 @@ export const StudentsList = ({ students }: StudentsListProps) => {
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
                   {student.avatar_url && (
-                    <AvatarImage src={student.avatar_url} alt={student.full_name} />
+                    <SecureAvatarImage src={student.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt={student.full_name} />
                   )}
                   <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <p className="font-semibold">{student.full_name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {t('classroomDetail.students.joined')}:{' '}
+                    {t('classroomDetail.studentsTab.joined')}:{' '}
                     {new Date(enrollment.created_at).toLocaleDateString()}
                   </p>
                 </div>

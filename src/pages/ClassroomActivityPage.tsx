@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { ClassroomLayout } from '@/components/layouts';
 import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 import { lessonActivityColumnClass } from '@/components/features/syllabus/content-blocks';
-import { LessonResourceBody, ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import { ResolvedLessonResourceBody, ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import {
   useClassroom,
   useSyllabus,
@@ -424,7 +424,7 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
             <div className={cn(lessonActivityColumnClass, 'flex min-h-0 flex-1 flex-col gap-8')}>
               {activityHeader}
               <div className="min-h-0 w-full flex-1">
-                <LessonResourceBody
+                <ResolvedLessonResourceBody
                   resource={resource}
                   variant="reading"
                   isRTL={isRTL}

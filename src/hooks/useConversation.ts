@@ -130,6 +130,7 @@ export const useConversation = ({
             : {}),
           ...(debugChat ? { debugChat: true } : {}),
           ...(postExplainTutoringRef.current ? { postExplainTutoring: true } : {}),
+          ...(companionMode ? { companionMode: true } : {}),
         };
 
         const aiMessage: Message = { role: 'assistant', content: '' };
@@ -270,6 +271,7 @@ export const useConversation = ({
           : {}),
         ...(debugChat ? { debugChat: true } : {}),
         ...(postExplainTutoringRef.current ? { postExplainTutoring: true } : {}),
+        ...(companionMode ? { companionMode: true } : {}),
       };
 
       const { data, error: chatError } = await streamChatMessage(

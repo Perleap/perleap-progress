@@ -8,6 +8,11 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import {
+  createAuthenticatedBlobUrl,
+  LIVE_SESSION_AUDIO_BUCKET,
+  type AuthenticatedBlobUrl,
+} from '@/utils/storageUrls';
 import { contentTypeForAudioExtension, inferAudioExtension } from '@/lib/audioFormat';
 import { createAssignment } from './assignmentService';
 import type { ApiError } from '@/types';
@@ -319,12 +324,16 @@ export const getLiveSessionByAssignment = async (
   return { data: data ? rowToLiveSession(data as Record<string, unknown>) : null, error: null };
 };
 
+export const getLiveSessionAudioBlobUrl = async (
+  audioPath: string,
+): Promise<AuthenticatedBlobUrl | null> => {
+  return createAuthenticatedBlobUrl(LIVE_SESSION_AUDIO_BUCKET, audioPath);
+};
+
+/** @deprecated Use getLiveSessionAudioBlobUrl — returns session-scoped blob URL. */
 export const getLiveSessionAudioUrl = async (audioPath: string): Promise<string | null> => {
-  const { data, error } = await supabase.storage
-    .from(AUDIO_BUCKET)
-    .createSignedUrl(audioPath, 60 * 60);
-  if (error || !data) return null;
-  return data.signedUrl;
+  const resolved = await getLiveSessionAudioBlobUrl(audioPath);
+  return resolved?.url ?? null;
 };
 
 export interface StudentEvaluationState {

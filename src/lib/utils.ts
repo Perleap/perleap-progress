@@ -46,3 +46,10 @@ export async function copyToClipboard(text: string): Promise<void> {
     }
   }
 }
+
+/** True when `value` looks like a Postgres UUID (excludes optimistic `temp-*` client ids). */
+export function isUuidLike(value: unknown): value is string {
+  if (value == null || typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+}

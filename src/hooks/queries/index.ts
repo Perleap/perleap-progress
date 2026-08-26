@@ -57,6 +57,8 @@ export {
   useIsEnrolled,
   useEnrollInClassroom,
   useUnenrollFromClassroom,
+  useClassroomResetPreview,
+  useResetClassroom,
 } from './useEnrollmentQueries';
 
 // Profile Queries

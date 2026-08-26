@@ -4,6 +4,7 @@
  */
 
 import { supabase, handleSupabaseError } from '@/api/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
@@ -128,7 +129,7 @@ export const getAssignmentById = async (
 export const getStudentAssignmentDetails = async (
   assignmentId: string,
   studentId: string,
-  opts?: { isTeacherTry?: boolean },
+  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string },
 ): Promise<{ data: any | null; error: ApiError | null }> => {
   try {
     // 1. Fetch assignment with classroom and teacher info in one join
@@ -153,7 +154,12 @@ export const getStudentAssignmentDetails = async (
     const { data: ctx, error: subError } = await getStudentSubmissionContext(
       assignmentId,
       studentId,
-      opts?.isTeacherTry ? { isTeacherTry: true } : undefined,
+      opts?.isTeacherTry || opts?.preferredSubmissionId
+        ? {
+            isTeacherTry: opts?.isTeacherTry,
+            preferredSubmissionId: opts?.preferredSubmissionId,
+          }
+        : undefined,
       {
         id: assignment.id,
         attempt_mode: assignment.attempt_mode,
@@ -163,17 +169,18 @@ export const getStudentAssignmentDetails = async (
     );
     if (subError) throw subError;
 
-    const submission = ctx.submission;
+    let submission = ctx.submission;
 
-    // 3. Fetch feedback if submission exists
+    // 3. Fetch feedback for the resolved submission only (never cross-attempt fallback)
     let feedback = null;
     if (submission) {
-      const { data: feedbackData } = await supabase
+      const { data: feedbackRows } = await supabase
         .from('assignment_feedback')
         .select('*')
         .eq('submission_id', submission.id)
-        .maybeSingle();
-      feedback = feedbackData;
+        .order('created_at', { ascending: false })
+        .limit(1);
+      feedback = feedbackRows?.[0] ?? null;
     }
 
     return {
@@ -197,9 +204,29 @@ type GenerateStudentFacingResponse = {
   studentFacingTask?: string;
   opikTraceId?: string;
   source?: string;
+  generated?: boolean;
+  fallback?: boolean;
   persisted?: boolean;
   error?: string;
 };
+
+export async function parseEdgeFunctionErrorMessage(error: unknown): Promise<string | null> {
+  if (!(error instanceof FunctionsHttpError)) return null;
+  try {
+    const payload = (await error.context.clone().json()) as { error?: unknown };
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      return payload.error.trim();
+    }
+  } catch {
+    try {
+      const text = await error.context.clone().text();
+      return text.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 export type GenerateStudentFacingDraftResult = {
   task: string;
@@ -243,7 +270,8 @@ export async function generateStudentFacingTaskDraft(
     },
   );
   if (error) {
-    console.warn('generateStudentFacingTaskDraft', error);
+    const serverMsg = await parseEdgeFunctionErrorMessage(error);
+    console.warn('generateStudentFacingTaskDraft', serverMsg ?? error);
     return null;
   }
   const task = data?.studentFacingTask?.trim() ?? '';

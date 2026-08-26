@@ -14,10 +14,12 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:edge": "deno test --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts supabase/functions/_shared/asyncPool.test.ts",
+    "check:i18n": "node scripts/check-i18n-keys.mjs",
+    "test:edge": "npx --yes deno test --no-check --allow-env --config supabase/functions/deno.json supabase/functions/shared/opikTrace.test.ts supabase/functions/_shared/evaluationValidation.test.ts supabase/functions/_shared/asyncPool.test.ts supabase/functions/_shared/authorizeResource.test.ts supabase/functions/_shared/cors.test.ts",
     "gen:types": "node scripts/gen-supabase-types.mjs",
     "extract:unit-memory-outliers": "node scripts/extract-unit-memory-outliers.mjs",
-    "migrate:section-memory-to-course": "node scripts/migrate-section-memory-to-course.mjs"
+    "migrate:section-memory-to-course": "node scripts/migrate-section-memory-to-course.mjs",
+    "deploy:functions": "node scripts/deploy-all-edge-functions.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
@@ -96,6 +98,7 @@
     "ghostmark": "^2.2.0",
     "globals": "^15.15.0",
     "lovable-tagger": "^1.0.20",
+    "playwright": "^1.51.0",
     "postcss": "^8.5.10",
     "prettier": "^3.8.3",
     "supabase": "^2.92.1",

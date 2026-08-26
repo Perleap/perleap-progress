@@ -15,6 +15,11 @@ import {
 import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
 import { ACCOUNT_JUST_DELETED_SESSION_KEY } from '@/utils/accountDeletionRedirect';
 import { USER_ROLES } from '@/config/constants';
+import {
+  prefetchAvatarBlob,
+  STUDENT_AVATARS_BUCKET,
+  TEACHER_AVATARS_BUCKET,
+} from '@/utils/storageUrls';
 
 interface UserProfile {
   full_name: string;
@@ -116,6 +121,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // hasProfile: null if not yet determined, true if data exists, false if no profile found
   const isAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   const hasProfile = isProfileFetched ? (!!profileData || isAdmin) : null;
+
+  useEffect(() => {
+    const avatarUrl = profile?.avatar_url;
+    if (!avatarUrl) return;
+
+    const role = user?.user_metadata?.role;
+    const bucket =
+      role === 'teacher' || role === USER_ROLES.ADMIN
+        ? TEACHER_AVATARS_BUCKET
+        : STUDENT_AVATARS_BUCKET;
+    prefetchAvatarBlob(avatarUrl, bucket);
+  }, [profile?.avatar_url, user?.user_metadata?.role]);
 
   // Token refresh failure recovery
   const handleTokenRefreshFailure = async () => {

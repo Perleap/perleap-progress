@@ -10,8 +10,8 @@ import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/s
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
+import { cn } from '@/lib/utils';
 import type { AssignmentCompletionTone } from '@/types/submission';
-
 interface ProjectSubmissionPageProps {
   assignmentId: string;
   submissionId: string;
@@ -25,7 +25,7 @@ interface ProjectSubmissionPageProps {
 type SelectedFile = {
   id: string;
   file: File;
-  uploadedUrl?: string;
+  uploadedPath?: string;
 };
 
 function makeFileId() {
@@ -53,7 +53,7 @@ export function ProjectSubmissionPage({
   const [dragOver, setDragOver] = useState(false);
 
   const allUploaded =
-    selectedFiles.length > 0 && selectedFiles.every((entry) => Boolean(entry.uploadedUrl));
+    selectedFiles.length > 0 && selectedFiles.every((entry) => Boolean(entry.uploadedPath));
 
   const addFiles = (files: FileList | File[]) => {
     const next = Array.from(files).map((file) => ({
@@ -86,7 +86,7 @@ export function ProjectSubmissionPage({
   };
 
   const uploadFiles = async () => {
-    const pending = selectedFiles.filter((entry) => !entry.uploadedUrl);
+    const pending = selectedFiles.filter((entry) => !entry.uploadedPath);
     if (pending.length === 0) return;
 
     setUploading(true);
@@ -107,14 +107,9 @@ export function ProjectSubmissionPage({
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from('submission-files')
-          .getPublicUrl(filePath);
-
-        const publicUrl = urlData.publicUrl;
         const index = uploadedEntries.findIndex((item) => item.id === entry.id);
         if (index >= 0) {
-          uploadedEntries[index] = { ...uploadedEntries[index]!, uploadedUrl: publicUrl };
+          uploadedEntries[index] = { ...uploadedEntries[index]!, uploadedPath: filePath };
         }
 
         completed += 1;
@@ -122,8 +117,8 @@ export function ProjectSubmissionPage({
       }
 
       const fileUrls = uploadedEntries
-        .map((entry) => entry.uploadedUrl)
-        .filter((url): url is string => Boolean(url));
+        .map((entry) => entry.uploadedPath)
+        .filter((path): path is string => Boolean(path));
 
       const { error: updateError } = await supabase
         .from('submissions')
@@ -147,8 +142,8 @@ export function ProjectSubmissionPage({
 
   const handleSubmit = async () => {
     const fileUrls = selectedFiles
-      .map((entry) => entry.uploadedUrl)
-      .filter((url): url is string => Boolean(url));
+      .map((entry) => entry.uploadedPath)
+      .filter((path): path is string => Boolean(path));
 
     if (fileUrls.length === 0) return;
 
@@ -205,23 +200,27 @@ export function ProjectSubmissionPage({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{t('assignmentDetail.project.uploadFile')}</CardTitle>
+    <Card className="rounded-xl border-border shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">{t('assignmentDetail.project.uploadFile')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div
-          className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-            dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
-          }`}
+          className={cn(
+            'cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-all sm:p-12',
+            dragOver
+              ? 'scale-[1.01] border-primary bg-primary/5'
+              : 'border-border bg-muted/10 hover:border-primary/40',
+          )}
           onClick={() => fileInputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
+          role="presentation"
         >
-          <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-sm font-medium">{t('assignmentDetail.project.dragDrop')}</p>
-          <p className="text-xs text-muted-foreground mt-1">{t('assignmentDetail.project.fileTypes')}</p>
+          <Upload className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">{t('assignmentDetail.project.dragDrop')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('assignmentDetail.project.fileTypes')}</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -239,17 +238,27 @@ export function ProjectSubmissionPage({
         {selectedFiles.length > 0 && (
           <div className="space-y-3">
             {selectedFiles.map((entry) => (
-              <div key={entry.id} className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <FileIcon className="h-8 w-8 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{entry.file.name}</p>
+              <div
+                key={entry.id}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <FileIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{entry.file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {(entry.file.size / (1024 * 1024)).toFixed(2)} MB
-                    {entry.uploadedUrl ? ` · ${t('assignmentDetail.project.fileSelected')} ✓` : ''}
+                    {entry.uploadedPath ? ` · ${t('assignmentDetail.project.fileSelected')} ✓` : ''}
                   </p>
                 </div>
                 {!uploading && (
-                  <Button variant="ghost" size="icon" onClick={() => removeFile(entry.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeFile(entry.id)}
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 )}
@@ -262,7 +271,7 @@ export function ProjectSubmissionPage({
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="gap-2 rounded-xl"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Plus className="h-4 w-4" />
@@ -272,9 +281,9 @@ export function ProjectSubmissionPage({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           {selectedFiles.length > 0 && !allUploaded && (
-            <Button onClick={uploadFiles} disabled={uploading} className="gap-2">
+            <Button onClick={uploadFiles} disabled={uploading} className="gap-2 rounded-xl">
               {uploading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -293,7 +302,7 @@ export function ProjectSubmissionPage({
               onClick={handleSubmit}
               disabled={submitting}
               size="lg"
-              className="gap-2 rounded-full shadow-md"
+              className="gap-2 rounded-xl shadow-sm"
             >
               {submitting ? (
                 <>

@@ -55,6 +55,24 @@ export function filterOutlineMaterialResources(
   return [...out].sort((a, b) => a.order_index - b.order_index);
 }
 
+/** Published assignments only — mirrors student RLS on teacher read-only curriculum views. */
+export function filterStudentVisibleAssignments<T extends { status?: string | null }>(
+  assignments: T[],
+): T[] {
+  return assignments.filter((a) => a.status === 'published');
+}
+
+/** Published activity_list rows only — mirrors student RLS on teacher read-only curriculum views. */
+export function filterStudentVisibleSectionResources(
+  sectionResources: Record<string, SectionResource[]>,
+): Record<string, SectionResource[]> {
+  const out: Record<string, SectionResource[]> = {};
+  for (const [sectionId, resources] of Object.entries(sectionResources)) {
+    out[sectionId] = resources.filter((r) => r.status !== 'draft');
+  }
+  return out;
+}
+
 /** Assignment steps plus resource steps whose linked material is lesson/text/video (not outline-only files/links). */
 export function filterActivityCenterModuleFlowSteps(
   steps: ModuleFlowStep[],
@@ -97,6 +115,12 @@ export function getOrderedActivityCenterFlowSteps(
   options?: OrderedActivityCenterFlowStepsOptions,
 ): ModuleFlowStep[] {
   let filtered = filterActivityCenterModuleFlowSteps(steps, sectionResources);
+  if (options?.assignmentsById) {
+    filtered = filtered.filter((step) => {
+      if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
+      return step.assignment_id in options.assignmentsById!;
+    });
+  }
   if (options?.hideLiveSessions && options.assignmentsById) {
     filtered = filtered.filter((step) => {
       if (step.step_kind !== 'assignment' || !step.assignment_id) return true;

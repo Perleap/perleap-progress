@@ -350,8 +350,8 @@ export const CreateClassroomWizard = ({
               ref={wizardImportFileRef}
               type="file"
               accept="application/json,.json"
-              className="sr-only"
-              aria-hidden
+              className="hidden"
+              tabIndex={-1}
               onChange={handleWizardImportFileChange}
             />
             <Button

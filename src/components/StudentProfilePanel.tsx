@@ -1,4 +1,6 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { Badge } from '@/components/ui/badge';
 import {
   Loader2,
@@ -79,7 +81,9 @@ export function StudentProfilePanel({ studentId, studentName, queryEnabled = tru
     <div className="space-y-6">
       <div className="flex flex-col items-center gap-3 pt-2 pb-4 border-b border-border">
         <Avatar className="h-20 w-20 border-2 border-border shadow-md">
-          {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
+          {profile?.avatar_url && (
+            <SecureAvatarImage src={profile.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt={displayName} />
+          )}
           <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">{initials}</AvatarFallback>
         </Avatar>
         <div className="text-center">

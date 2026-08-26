@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Clock, Loader2, Sparkles } from 'lucide-react';
+import { AlertTriangle, Clock, FileText, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -9,6 +9,11 @@ import { PresentationSubmissionView } from './PresentationSubmissionView';
 import { ProjectSubmissionView } from './ProjectSubmissionView';
 import { TestResultsView } from './TestResultsView';
 import { SubmissionExportJsonButton } from './SubmissionExportJsonButton';
+import { SubmissionStoragePreview } from './SubmissionStoragePreview';
+import {
+  isSubmissionPdfAttachment,
+  openSubmissionFileInNewTab,
+} from '@/services/submissionFileService';
 import {
   SubmissionActivitySignalsCard,
   type ActivitySignalScrollTarget,
@@ -23,6 +28,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -37,6 +48,7 @@ import {
   formatInlineListsForChatMarkdown,
   splitAssistantMessageIntoSentences,
 } from '@/lib/chatDisplay';
+import { rehydrateMessages } from '@/lib/conversationMessages';
 import { cn } from '@/lib/utils';
 import {
   generateFeedback,
@@ -144,6 +156,24 @@ export const SubmissionTabs = ({
     messageIndex: number;
     sentenceIndex: number;
   } | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    name: string;
+    content: string;
+    url?: string;
+    type?: string;
+  } | null>(null);
+
+  const handleAttachmentOpen = useCallback(
+    async (fileContext: { name: string; content: string; url?: string; type?: string }) => {
+      if (isSubmissionPdfAttachment(fileContext.name, fileContext.type) && fileContext.url) {
+        const ok = await openSubmissionFileInNewTab(fileContext.url);
+        if (!ok) toast.error(t('submissionDetail.projectView.downloadFailed'));
+        return;
+      }
+      setPreviewAttachment(fileContext);
+    },
+    [t],
+  );
 
   useEffect(() => {
     if (!highlightSentence) return;
@@ -669,7 +699,7 @@ export const SubmissionTabs = ({
                   return liveConversationMessages;
                 }
                 const ctx = feedback?.conversation_context;
-                if (ctx && Array.isArray(ctx)) return ctx as Message[];
+                if (ctx && Array.isArray(ctx)) return rehydrateMessages(ctx as Message[]);
                 return [];
               })();
 
@@ -783,10 +813,30 @@ export const SubmissionTabs = ({
                                   )}
 
                                   {isUser ? (
-                                    <SafeMathMarkdown
-                                      content={msg.content}
-                                      className="text-sm leading-relaxed"
-                                    />
+                                    <div className="flex flex-col gap-2">
+                                      {msg.content?.trim() ? (
+                                        <SafeMathMarkdown
+                                          content={msg.content}
+                                          className="text-sm leading-relaxed"
+                                        />
+                                      ) : null}
+                                      {msg.fileContext?.url ? (
+                                        <button
+                                          type="button"
+                                          className="flex items-center gap-2 rounded-md border border-border bg-background/80 px-2 py-1.5 text-start transition-colors hover:bg-background"
+                                          onClick={() => void handleAttachmentOpen(msg.fileContext!)}
+                                        >
+                                          {msg.fileContext.type === 'image' ? (
+                                            <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
+                                          ) : (
+                                            <FileText className="h-4 w-4 shrink-0 text-primary" />
+                                          )}
+                                          <span className="truncate text-sm font-medium">
+                                            {msg.fileContext.name}
+                                          </span>
+                                        </button>
+                                      ) : null}
+                                    </div>
                                   ) : (
                                     (() => {
                                       const rawText = String(msg.content || '');
@@ -869,6 +919,24 @@ export const SubmissionTabs = ({
           <SubmissionPrivateNotesTab submissionId={submission.id} isRTL={isRTL} />
         ) : null}
       </TabsContent>
+
+      <Dialog open={Boolean(previewAttachment)} onOpenChange={(open) => !open && setPreviewAttachment(null)}>
+        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
+          <DialogHeader>
+            <DialogTitle className="truncate">{previewAttachment?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-[50vh] flex-1 overflow-auto rounded-md border bg-muted/30 p-4">
+            {previewAttachment ? (
+              <SubmissionStoragePreview
+                storedUrl={previewAttachment.url}
+                type={previewAttachment.type}
+                name={previewAttachment.name}
+                content={previewAttachment.content}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   );
 };

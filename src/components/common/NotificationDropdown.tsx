@@ -10,7 +10,9 @@ import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import i18n from 'i18next';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import type { NotificationWithProfile } from '@/types/notifications';
 import { useNotificationList, useMarkAsRead, useMarkAllAsRead } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
@@ -34,6 +36,17 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
 
   const unreadCount = notifications.length;
 
+  const resolveNotificationMessage = (notification: NotificationWithProfile) => {
+    const { message, metadata } = notification;
+    if (i18n.exists(message)) {
+      return t(message, {
+        title: metadata?.assignment_title,
+        assignmentTitle: metadata?.assignment_title,
+      });
+    }
+    return message;
+  };
+
   const handleNotificationClick = async (notification: NotificationWithProfile) => {
     try {
       await markAsReadMutation.mutateAsync(notification.id);
@@ -41,8 +54,24 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
       
       // Navigate if link exists and is a valid string
       if (notification.link && typeof notification.link === 'string' && notification.link.trim() !== '') {
-        console.log('Navigating to:', notification.link);
-        navigate(notification.link);
+        let targetLink = notification.link.trim();
+        const submissionId = notification.metadata?.submission_id;
+        if (
+          submissionId &&
+          (notification.type === 'feedback_received' || notification.type === 'feedback_updated')
+        ) {
+          try {
+            const url = new URL(targetLink, window.location.origin);
+            if (!url.searchParams.has('submission')) {
+              url.searchParams.set('submission', String(submissionId));
+              targetLink = `${url.pathname}${url.search}`;
+            }
+          } catch {
+            // keep original link
+          }
+        }
+        console.log('Navigating to:', targetLink);
+        navigate(targetLink);
       } else {
         console.warn('Notification clicked but no valid link to navigate to:', {
           id: notification.id,
@@ -147,14 +176,16 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <Avatar className="h-10 w-10 border border-border/50 shrink-0">
-                    <AvatarImage src={notification.actor_profile?.avatar_url || undefined} />
+                    <SecureAvatarImage src={notification.actor_profile?.avatar_url || undefined} alt="" />
                     <AvatarFallback className="text-[10px] bg-muted uppercase">
                       {getInitials(notification.actor_profile?.full_name || '', notification.type)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-1 min-w-0">
                     <p className="font-medium leading-none">{notification.title}</p>
-                    <p className="text-xs text-muted-foreground leading-normal">{notification.message}</p>
+                    <p className="text-xs text-muted-foreground leading-normal">
+                      {resolveNotificationMessage(notification)}
+                    </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {new Date(notification.created_at).toLocaleDateString()}
                     </p>

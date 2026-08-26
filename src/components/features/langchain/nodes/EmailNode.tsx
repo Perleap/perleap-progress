@@ -2,6 +2,7 @@ import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 import { Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NodeDeleteButton } from '../NodeDeleteButton';
 import {
   ensureLangchainNodeData,
@@ -16,6 +17,7 @@ import {
 } from './langchainNodeShell';
 
 function EmailNodeComponent({ id, selected, ...node }: NodeProps) {
+  const { t } = useTranslation();
   const data = ensureLangchainNodeData({ id, selected, ...node }).data as LangchainEmailNodeData;
   const preview = truncateLangchainPreview(data.sendTo || '', 48);
 
@@ -26,7 +28,7 @@ function EmailNodeComponent({ id, selected, ...node }: NodeProps) {
         <div className="flex items-center gap-2 mb-1">
           <Mail className="h-4 w-4 text-teal-600 shrink-0" />
           <span className="text-xs font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wide">
-            Email
+            {t('assignmentDetail.langchain.nodes.email')}
           </span>
         </div>
         <p className={`text-teal-600/90 dark:text-teal-400/90 ${LANGCHAIN_NODE_LABEL_CLASS}`}>{data.label}</p>

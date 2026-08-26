@@ -8,6 +8,19 @@ export const FIVE_D_DIMENSION_KEYS: FiveDDimensionKey[] = [
   'action',
 ];
 
+/** True when a dimension has a numeric score (not null / NaN). */
+export function isFiveDScoreAssessed(v: number | null | undefined): v is number {
+  return typeof v === 'number' && !Number.isNaN(v);
+}
+
+/** Dimensions with numeric scores, in stable display order. */
+export function getAssessedFiveDDimensions(
+  scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined,
+): (keyof FiveDScores)[] {
+  if (!scores) return [];
+  return FIVE_D_DIMENSION_KEYS.filter((key) => isFiveDScoreAssessed(scores[key]));
+}
+
 /** Mean of non-null dimension values. */
 export function meanNonNullFiveDScores(
   scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined,
@@ -17,7 +30,7 @@ export function meanNonNullFiveDScores(
   let n = 0;
   for (const key of FIVE_D_DIMENSION_KEYS) {
     const v = scores[key];
-    if (typeof v === 'number' && !Number.isNaN(v)) {
+    if (isFiveDScoreAssessed(v)) {
       sum += v;
       n++;
     }
@@ -50,7 +63,7 @@ export function averageFiveDScoresAcrossSnapshots(
     const scores = snapshot.scores as Partial<FiveDScores>;
     for (const key of FIVE_D_DIMENSION_KEYS) {
       const v = scores[key];
-      if (typeof v === 'number' && !Number.isNaN(v)) {
+      if (isFiveDScoreAssessed(v)) {
         totals[key] += v;
         counts[key]++;
       }
@@ -75,21 +88,32 @@ export function averageFiveDScoresAcrossSnapshots(
   return hasAny ? result : null;
 }
 
+/** Stable cache-key fragment for one dimension (null-safe). */
+export function formatFiveDScoreForStableKey(v: number | null): string {
+  return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(2) : 'null';
+}
+
+/** UI-safe score label (null / missing dimensions show em dash). */
+export function formatFiveDScoreDisplay(
+  v: number | null | undefined,
+  decimals = 1,
+): string {
+  return isFiveDScoreAssessed(v) ? v.toFixed(decimals) : '—';
+}
+
+/** Stable cache-key string for a full 5D score object (null-safe). */
+export function stableFiveDScoresKey(scores: FiveDScores | null | undefined): string {
+  if (!scores) return 'no-scores';
+  return FIVE_D_DIMENSION_KEYS.map((k) => formatFiveDScoreForStableKey(scores[k])).join(',');
+}
+
 /** Chart-safe numeric value (null dimensions render as 0). */
 export function fiveDScoreForChart(
   scores: Partial<FiveDScores> | null | undefined,
   key: keyof FiveDScores,
 ): number {
   const v = scores?.[key];
-  return typeof v === 'number' && !Number.isNaN(v) ? v : 0;
-}
-
-/** Table/display formatting — null dimensions render as em dash. */
-export function formatFiveDScoreDisplay(
-  score: number | null | undefined,
-  decimals = 2,
-): string {
-  return typeof score === 'number' && !Number.isNaN(score) ? score.toFixed(decimals) : '—';
+  return isFiveDScoreAssessed(v) ? v : 0;
 }
 
 export function formatFiveDScoreDelta(
@@ -111,8 +135,5 @@ export function formatFiveDScoreDelta(
 
 /** Stable cache-key fragment for FiveDScores (null dimensions serialize as "null"). */
 export function stableFiveDScoreKey(scores: FiveDScores): string {
-  return FIVE_D_DIMENSION_KEYS.map((k) => {
-    const v = scores[k];
-    return typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(2) : 'null';
-  }).join(',');
+  return stableFiveDScoresKey(scores);
 }

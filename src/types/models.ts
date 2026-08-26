@@ -71,8 +71,11 @@ export interface Domain {
 
 export interface CourseMaterial {
   type: 'pdf' | 'link';
-  url: string;
   name: string;
+  /** External links only */
+  url?: string;
+  /** Storage uploads only (course-materials / assignment-materials bucket path) */
+  file_path?: string;
 }
 
 export interface Classroom {

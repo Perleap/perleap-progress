@@ -138,7 +138,7 @@ export const useStudentAssignments = (options?: { enabled?: boolean }) => {
  */
 export const useStudentAssignmentDetails = (
   assignmentId: string | undefined,
-  opts?: { isTeacherTry?: boolean }
+  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string },
 ) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -149,6 +149,7 @@ export const useStudentAssignmentDetails = (
     'student',
     user?.id,
     isTeacherTry,
+    opts?.preferredSubmissionId ?? null,
   ] as const;
 
   const detailQuery = useQuery({

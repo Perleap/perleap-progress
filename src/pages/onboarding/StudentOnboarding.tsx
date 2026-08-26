@@ -66,23 +66,9 @@ const StudentOnboarding = () => {
     setLoading(true);
     try {
 
-      // Check for orphaned profile with same email but different user_id
+      // Clean up orphaned profiles for this email via RPC
       if (user.email) {
-        const { data: orphanedProfile } = await supabase
-          .from('student_profiles')
-          .select('user_id, email')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (orphanedProfile && orphanedProfile.user_id !== user.id) {
-          console.warn('Found orphaned profile with same email, cleaning up...');
-          // Delete the orphaned profile
-          await supabase
-            .from('student_profiles')
-            .delete()
-            .eq('email', user.email)
-            .neq('user_id', user.id);
-        }
+        await supabase.rpc('cleanup_orphaned_profiles_by_email', { p_email: user.email });
       }
 
       let avatarUrl = '';
@@ -97,10 +83,7 @@ const StudentOnboarding = () => {
           .upload(fileName, avatarFile);
 
         if (!uploadError) {
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from('student-avatars').getPublicUrl(fileName);
-          avatarUrl = publicUrl;
+          avatarUrl = fileName;
         } else {
           toast.error(t('studentOnboarding.errors.uploadAvatar'));
         }

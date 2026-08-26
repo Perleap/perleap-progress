@@ -11,7 +11,7 @@ file_size_limit = "1GiB"
 # Auth settings for config push — staging project (otjfoeyqiuerrgrdtgqx)
 [auth]
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://staging.perleap.ai/**", "https://staging.perleap.ai"]
+additional_redirect_urls = ["https://staging.perleap.ai/**", "https://staging.perleap.ai", "https://perleap.ai/**", "https://perleap.ai"]
 
 [auth.mfa.totp]
 enroll_enabled = true
@@ -24,17 +24,18 @@ max_frequency = "1m0s"
 [functions.perleap-chat]
 verify_jwt = true
 
+# Tier-A evaluation pipeline (SEC-003 handler auth + SEC-005 gateway JWT)
 [functions.generate-feedback]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-unit-memory]
-verify_jwt = false
+verify_jwt = true
 
 [functions.backfill-unit-memory]
 verify_jwt = true
 
 [functions.regenerate-scores]
-verify_jwt = false
+verify_jwt = true
 
 [functions.refresh-class-evaluations]
 verify_jwt = true
@@ -47,34 +48,56 @@ verify_jwt = true
 [functions.undo-evaluation-refresh]
 verify_jwt = true
 
-[functions.rephrase-text]
-verify_jwt = false
-
 [functions.compute-nuance-insights]
-verify_jwt = false
-
-[functions.suggest-assignment-hard-skills]
-verify_jwt = false
-
-[functions.generate-student-facing-task]
-verify_jwt = false
-
-[functions.explain-analytics-5d]
-verify_jwt = false
-
-[functions.pilot-readiness]
-verify_jwt = false
-
-[functions.admin-monitoring-probe]
-verify_jwt = false
-
-[functions.collect-metric-snapshot]
-verify_jwt = false
-
-[functions.admin-vercel-insights]
-verify_jwt = false
+verify_jwt = true
 
 [functions.transcribe-live-session]
+verify_jwt = true
+
+[functions.evaluate-from-feedback]
+verify_jwt = true
+
+# Tier-B tools with in-handler auth (SEC-005)
+[functions.suggest-assignment-hard-skills]
+verify_jwt = true
+
+[functions.generate-student-facing-task]
+verify_jwt = true
+
+[functions.explain-analytics-5d]
+verify_jwt = true
+
+[functions.pilot-readiness]
+verify_jwt = true
+
+[functions.admin-monitoring-probe]
+verify_jwt = true
+
+[functions.admin-vercel-insights]
+verify_jwt = true
+
+# OpenAI proxies — handler auth added in SEC-004; gateway JWT in SEC-005b
+[functions.rephrase-text]
+verify_jwt = true
+
+[functions.teacher-assistant-chat]
+verify_jwt = true
+
+[functions.speech-to-text]
+verify_jwt = true
+
+[functions.text-to-speech]
+verify_jwt = true
+
+[functions.generate-followup-assignment]
+verify_jwt = true
+
+# Internal-only: service role bearer from generate-feedback (must stay false)
+[functions.analyze-student-wellbeing]
+verify_jwt = false
+
+# Cron path via x-cron-secret (must stay false)
+[functions.collect-metric-snapshot]
 verify_jwt = false
 
 [edge_runtime]

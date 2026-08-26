@@ -3,7 +3,8 @@ import { useAuth } from '@/contexts/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { useRecentActivity } from '@/hooks/queries';
 import { USER_ROLES } from '@/config/constants';
 
@@ -47,7 +48,7 @@ export function RecentActivity() {
                         {activities.map((activity) => (
                             <div key={activity.id} className="flex items-start gap-3 pb-3 border-b border-border/40 last:border-0 last:pb-0">
                                 <Avatar className="h-9 w-9 border border-border/50">
-                                    <AvatarImage src={activity.performer?.avatar_url} />
+                                    <SecureAvatarImage src={activity.performer?.avatar_url} alt="" />
                                     <AvatarFallback className="text-[10px] bg-muted">
                                         {activity.performer ? getInitials(activity.performer.name) : '??'}
                                     </AvatarFallback>
