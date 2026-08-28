@@ -1,4 +1,4 @@
-import { buildPieChartSvg, READINESS_PIE_COLORS } from './buildPieChartSvg';
+import { buildPieChartSvg, READINESS_PIE_COLORS, type PieChartSegment } from './buildPieChartSvg';
 import {
   PILOT_DIMENSION_KEYS,
   PILOT_READINESS_VALUES,
@@ -361,7 +361,7 @@ function buildReadinessPieChart(
   staticCopy: PilotReportStaticCopy,
   notAssessedCount: number,
 ): string {
-  const segments = PILOT_READINESS_VALUES.map((key) => ({
+  const segments: PieChartSegment[] = PILOT_READINESS_VALUES.map((key) => ({
     label: staticCopy.readinessLabels[key],
     value: cohort.readinessCounts[key],
     color: READINESS_PIE_COLORS[key],

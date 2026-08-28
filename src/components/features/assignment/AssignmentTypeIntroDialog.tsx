@@ -18,6 +18,7 @@ import {
   getAssignmentTypeIntroTitle,
   getAssignmentTypeTutorial,
 } from '@/lib/assignmentTypeIntroCopy';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 
 type WizardStep = 'type' | 'task';
 
@@ -32,6 +33,7 @@ type AssignmentTypeIntroDialogProps = {
   taskLoading?: boolean;
   onTypeStepComplete?: () => void;
   onTaskConfirm: (understood: boolean) => void;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 };
 
 export function AssignmentTypeIntroDialog({
@@ -44,6 +46,7 @@ export function AssignmentTypeIntroDialog({
   taskLoading = false,
   onTypeStepComplete,
   onTaskConfirm,
+  clipboardTracking,
 }: AssignmentTypeIntroDialogProps) {
   const { t, i18n } = useTranslation();
   const { isRTL } = useLanguage();
@@ -143,6 +146,7 @@ export function AssignmentTypeIntroDialog({
                 taskLoading={taskLoading}
                 variant="plain"
                 showHelp={false}
+                clipboardTracking={clipboardTracking}
               />
               <p className="text-sm font-medium text-foreground">{t('taskUnderstanding.question')}</p>
             </div>

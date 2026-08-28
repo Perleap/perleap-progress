@@ -13,6 +13,7 @@ export {
   useCreateClassroom,
   useUpdateClassroom,
   useJoinClassroom,
+  useSoftDeleteClassroom,
 } from './useClassroomQueries';
 
 // Assignment Queries
@@ -42,6 +43,7 @@ export {
   useEnrichedClassroomSubmissions,
   useFullSubmissionDetails,
   useTeacherConversationMessages,
+  useAssignmentConversationHasMessages,
   useTeacherChatSentenceFlags,
   useTeacherClipboardEvents,
   useSubmissionTeacherPrivateNoteEntries,
@@ -114,6 +116,7 @@ export {
 export {
   testKeys,
   useTestQuestions,
+  useStudentTestQuestions,
   useTestResponses,
   useSubmitTestResponses,
 } from './useTestQueries';

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { copyToClipboard, cn } from '@/lib/utils';
+import { formatClassroomDate } from '@/lib/classroomViewMode';
 import { useWholeCourseCurriculumProgress } from '@/hooks/useWholeCourseCurriculumProgress';
 import type { StudentTimelineCurriculumProgressMap } from '@/hooks/useStudentTimelineCurriculaProgress';
 
@@ -119,14 +120,7 @@ function TimelineClassroomCard({
 
   const showTeacherProgressBar = !isStudent && teacherProgressPct !== undefined;
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  const unavailableDate = t('classroomList.dateUnavailable');
 
   const teacherFilledMuted =
     teacherProgressPct !== undefined &&
@@ -227,7 +221,7 @@ function TimelineClassroomCard({
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />
                 <span>
-                  {formatDate(classroom.start_date)} – {formatDate(classroom.end_date)}
+                  {formatClassroomDate(classroom.start_date, { format: 'long', unavailable: unavailableDate })} – {formatClassroomDate(classroom.end_date, { format: 'long', unavailable: unavailableDate })}
                 </span>
               </div>
             ) : null}
@@ -244,7 +238,7 @@ function TimelineClassroomCard({
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 flex-1 pr-2">
                   <Calendar className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">
-                    {formatDate(classroom.start_date)} – {formatDate(classroom.end_date)}
+                    {formatClassroomDate(classroom.start_date, { format: 'long', unavailable: unavailableDate })} – {formatClassroomDate(classroom.end_date, { format: 'long', unavailable: unavailableDate })}
                   </span>
                 </div>
               )}

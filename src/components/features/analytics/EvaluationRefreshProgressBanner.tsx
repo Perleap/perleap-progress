@@ -61,7 +61,7 @@ export function EvaluationRefreshProgressBanner({ job }: EvaluationRefreshProgre
             ) : null}
           </div>
           <ProgressValue className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-            {t('liveSession.create.progressPercent', { percent: clamped })}
+            {() => t('liveSession.create.progressPercent', { percent: clamped })}
           </ProgressValue>
         </div>
       </Progress>

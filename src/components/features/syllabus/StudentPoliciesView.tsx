@@ -35,7 +35,8 @@ export const StudentPoliciesView = ({
 }: StudentPoliciesViewProps) => {
   const { t } = useTranslation();
 
-  const activePolicies = policies.filter((p) => p.content?.trim());
+  const policyList = Array.isArray(policies) ? policies : [];
+  const activePolicies = policyList.filter((p) => p.content?.trim());
 
   if (activePolicies.length === 0) return null;
 

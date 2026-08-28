@@ -27,12 +27,13 @@ import {
   type TriggerMode,
 } from './langchainNodeData';
 
-const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email'> = {
+const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'> = {
   inputNode: 'input',
   outputNode: 'output',
   llmNode: 'llm',
   triggerNode: 'trigger',
   emailNode: 'email',
+  databaseNode: 'database',
 };
 
 function InspectorHeader({

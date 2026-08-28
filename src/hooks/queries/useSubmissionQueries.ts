@@ -13,6 +13,7 @@ import {
   getSubmissionById,
   getFullSubmissionDetails,
   getAssignmentConversationMessages,
+  assignmentConversationHasMessages,
   getAssignmentChatSentenceFlags,
   getAssignmentClipboardEvents,
   getClassroomSubmissions,
@@ -42,6 +43,8 @@ export const submissionKeys = {
   feedback: (submissionId: string) => [...submissionKeys.all, 'feedback', submissionId] as const,
   conversation: (submissionId: string) =>
     [...submissionKeys.all, 'conversation', submissionId] as const,
+  conversationHasMessages: (submissionId: string) =>
+    [...submissionKeys.all, 'conversation-has-messages', submissionId] as const,
   chatSentenceFlags: (submissionId: string) =>
     [...submissionKeys.all, 'chat-sentence-flags', submissionId] as const,
   clipboardEvents: (submissionId: string) =>
@@ -228,6 +231,24 @@ export const useTeacherConversationMessages = (
     },
     enabled: !!submissionId && enabled,
     staleTime: 30 * 1000,
+  });
+};
+
+/** Whether a student submission already has chat messages (intro / task-understanding gating). */
+export const useAssignmentConversationHasMessages = (
+  submissionId: string | undefined,
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: submissionKeys.conversationHasMessages(submissionId || ''),
+    queryFn: async () => {
+      if (!submissionId) return false;
+      const { data, error } = await assignmentConversationHasMessages(submissionId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: Boolean(submissionId && enabled),
+    staleTime: 30_000,
   });
 };
 

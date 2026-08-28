@@ -59,8 +59,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { USER_ROLES } from '@/config/constants';
 
 import { ClassroomSection } from '@/config/classroomSections';
-import { MonitoringInlineNav } from '@/pages/admin/monitoring/MonitoringInlineNav';
-import { AdminAiPromptsSidebarLink } from '@/pages/admin/AdminAiPromptsSidebarLink';
+import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
 import { cn } from '@/lib/utils';
 
 interface ClassroomSidebarProps {

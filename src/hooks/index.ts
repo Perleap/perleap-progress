@@ -14,3 +14,4 @@ export * from './useNotifications';
 export * from './useAvatarUpload';
 export * from './useNavigateBack';
 export * from './useStudentSectionModuleFlow';
+export * from './useTeacherProfilesMap';

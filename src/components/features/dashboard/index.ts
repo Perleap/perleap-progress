@@ -3,6 +3,15 @@
  */
 
 export * from './AssignmentCard';
-export * from './ClassroomCard';
 export * from './EmptyAssignments';
 export * from './EmptyClassrooms';
+export * from './JoinClassroomDialog';
+export * from './StudentClassroomsSection';
+export * from './StudentAssignmentsSection';
+export * from './StudentDashboardCalendarSidebar';
+export * from './StudentDashboardContent';
+export * from './StudentDashboardAssignmentRow';
+export * from './TeacherDashboardContent';
+export * from './TeacherClassroomsSection';
+export * from './ClassroomTableView';
+export * from './ClassroomTimelineView';

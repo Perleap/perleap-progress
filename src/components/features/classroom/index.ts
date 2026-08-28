@@ -2,8 +2,14 @@
  * Classroom Feature Components Export
  */
 
-export * from './AssignmentsList';
-export * from './ClassroomAssignments';
-export * from './ClassroomOverview';
-export * from './ClassroomStudents';
-export * from './StudentsList';
+export * from './TeacherClassroomOverviewSection';
+export * from './TeacherClassroomStudentsSection';
+export * from './TeacherClassroomSubmissionsSection';
+export * from './TeacherClassroomAnalyticsSection';
+export * from './ClassroomDeleteDialog';
+export * from './ClassroomResetDialogs';
+export * from './ClassroomDetailContent';
+export * from './StudentClassroomOverviewSection';
+export * from './StudentClassroomCurriculumSection';
+export * from './StudentLeaveCourseDialog';
+export * from './StudentClassroomDetailContent';

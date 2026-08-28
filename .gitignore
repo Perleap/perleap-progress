@@ -30,3 +30,10 @@ dist-ssr
 
 supabase/.temp/
 supabase/.branches/
+
+# Verification skill runtime artifacts (skill + feature map stay tracked)
+.env.verify
+.cursor/skills/verify-perleap/evidence/
+.cursor/skills/verify-perleap/.auth/
+.cursor/skills/verify-perleap/.run/
+.cursor/skills/verify-perleap/fixtures/sandbox.json

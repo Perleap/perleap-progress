@@ -41,5 +41,3 @@ interface Window {
   };
   onYouTubeIframeAPIReady?: () => void;
 }
-
-export {};

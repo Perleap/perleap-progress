@@ -1,0 +1,15 @@
+import { StudentCalendar } from '@/components/StudentCalendar';
+import { useAuth } from '@/contexts/useAuth';
+
+export function StudentDashboardCalendarSidebar() {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  return (
+    <div className="lg:col-span-1">
+      <div className="sticky top-24">
+        <StudentCalendar studentId={user.id} />
+      </div>
+    </div>
+  );
+}

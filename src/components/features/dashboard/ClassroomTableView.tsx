@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { copyToClipboard } from '@/lib/utils';
+import { formatClassroomDate } from '@/lib/classroomViewMode';
 import { toast } from 'sonner';
 
 interface Classroom {
@@ -109,14 +110,7 @@ export function ClassroomTableView({
     return <ArrowDown className="h-4 w-4" />;
   };
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  const unavailableDate = t('classroomList.dateUnavailable');
 
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card">
@@ -209,7 +203,7 @@ export function ClassroomTableView({
                 ) : null}
                 <TableCell>
                   <div className="text-sm text-muted-foreground">
-                    {formatDate(classroom.start_date)} - {formatDate(classroom.end_date)}
+                    {formatClassroomDate(classroom.start_date, { format: 'long', unavailable: unavailableDate })} - {formatClassroomDate(classroom.end_date, { format: 'long', unavailable: unavailableDate })}
                   </div>
                 </TableCell>
                 {!isStudent ? (

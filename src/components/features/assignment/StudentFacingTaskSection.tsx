@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
 import { getAssignmentTypeTutorial } from '@/lib/assignmentTypeIntroCopy';
 import { cn } from '@/lib/utils';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import type { DbAssignmentType } from '@/types/models';
 
 type StudentFacingTaskSectionProps = {
@@ -17,6 +18,7 @@ type StudentFacingTaskSectionProps = {
   variant?: 'collapsible' | 'plain';
   /** When false, hide the help tooltip (e.g. inside a modal that already showed tutorial). */
   showHelp?: boolean;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 };
 
 function TaskHelpTooltip({
@@ -60,11 +62,13 @@ function TaskBody({
   trimmedTask,
   isRTL,
   t,
+  clipboardTracking,
 }: {
   taskLoading: boolean;
   trimmedTask: string;
   isRTL: boolean;
   t: (key: string) => string;
+  clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 }) {
   if (taskLoading) {
     return (
@@ -84,6 +88,16 @@ function TaskBody({
         )}
         dir="auto"
         {...clipboardZoneProps({ sourceKind: 'student_facing_task' })}
+        onPaste={(e) => {
+          if (!clipboardTracking) return;
+          const text = e.clipboardData.getData('text/plain');
+          if (text.trim()) {
+            clipboardTracking.trackPaste({
+              pastedText: text,
+              sourceKind: 'student_facing_task',
+            });
+          }
+        }}
       >
         {trimmedTask}
       </p>
@@ -104,6 +118,7 @@ export function StudentFacingTaskSection({
   className,
   variant = 'collapsible',
   showHelp = true,
+  clipboardTracking,
 }: StudentFacingTaskSectionProps) {
   const { t, i18n } = useTranslation();
   const { isRTL } = useLanguage();
@@ -131,7 +146,13 @@ export function StudentFacingTaskSection({
             />
           ) : null}
         </div>
-        <TaskBody taskLoading={taskLoading} trimmedTask={trimmedTask} isRTL={isRTL} t={t} />
+        <TaskBody
+          taskLoading={taskLoading}
+          trimmedTask={trimmedTask}
+          isRTL={isRTL}
+          t={t}
+          clipboardTracking={clipboardTracking}
+        />
       </section>
     );
   }
@@ -176,7 +197,13 @@ export function StudentFacingTaskSection({
         ) : null}
       </div>
       <CollapsibleContent className="border-t border-border/50 px-3 pb-3 pt-2 text-sm">
-        <TaskBody taskLoading={taskLoading} trimmedTask={trimmedTask} isRTL={isRTL} t={t} />
+        <TaskBody
+          taskLoading={taskLoading}
+          trimmedTask={trimmedTask}
+          isRTL={isRTL}
+          t={t}
+          clipboardTracking={clipboardTracking}
+        />
       </CollapsibleContent>
     </Collapsible>
   );

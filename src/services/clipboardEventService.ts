@@ -1,4 +1,5 @@
 import { supabase } from '@/api/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export type ClipboardEventType = 'copy' | 'paste';
 
@@ -48,7 +49,7 @@ function stopFlushTimer() {
 
 async function flushOne(payload: ClipboardEventPayload): Promise<boolean> {
   const { data, error } = await supabase.rpc('record_assignment_clipboard_event', {
-    p_payload: payload,
+    p_payload: payload as unknown as Json,
   });
   if (error) {
     console.error('[Clipboard] RPC failed:', error.message);

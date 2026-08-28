@@ -23,6 +23,7 @@ type PreloadStudent = {
 };
 
 type RawSubmission = {
+  id: string;
   student_id: string;
   assignment_id: string;
   status: string;
