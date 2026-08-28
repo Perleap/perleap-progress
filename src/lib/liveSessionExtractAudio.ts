@@ -147,7 +147,7 @@ async function getFfmpeg(onProgress?: (p: ExtractProgress) => void): Promise<FFm
 function blobFromFfmpegFile(data: Uint8Array | string): Blob {
   if (typeof data === 'string') return new Blob([], { type: 'audio/mp4' });
 
-  return new Blob([data], { type: 'audio/mp4' });
+  return new Blob([data as BlobPart], { type: 'audio/mp4' });
 }
 
 async function splitAudioIfNeeded(

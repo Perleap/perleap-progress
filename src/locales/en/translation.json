@@ -424,6 +424,18 @@
       "progressUnavailable": "Progress isn’t shown for this course yet."
     }
   },
+  "classroomList": {
+    "viewLabel": "View:",
+    "dateUnavailable": "N/A",
+    "viewModes": {
+      "grid": "Grid",
+      "compact": "Compact",
+      "list": "List",
+      "detailed": "Detailed",
+      "table": "Table",
+      "timeline": "Timeline"
+    }
+  },
   "teacherDashboard": {
     "title": "Teacher Dashboard",
     "welcome": "Welcome {{name}} to your dashboard",

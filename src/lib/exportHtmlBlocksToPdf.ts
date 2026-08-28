@@ -281,7 +281,7 @@ function prepareClonedBlock(clonedBlock: HTMLElement, clonedDoc?: Document): voi
 
   clonedBlock.querySelectorAll<HTMLElement>('*').forEach((el) => {
     el.style.backdropFilter = 'none';
-    el.style.webkitBackdropFilter = 'none';
+    el.style.setProperty('-webkit-backdrop-filter', 'none');
   });
 
   if (clonedDoc) {
@@ -315,7 +315,7 @@ async function captureBlock(
     onclone: (clonedDoc, clonedBlock) => {
       prepareClonedBlock(clonedBlock, clonedDoc);
     },
-  });
+  } as Parameters<typeof html2canvas>[1]);
 }
 
 function collectPdfBlocks(root: Element): HTMLElement[] {

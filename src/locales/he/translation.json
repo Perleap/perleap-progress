@@ -424,6 +424,18 @@
       "progressUnavailable": "ההתקדמות בקורס זה אינה מוצגת בשלב זה."
     }
   },
+  "classroomList": {
+    "viewLabel": "תצוגה:",
+    "dateUnavailable": "לא זמין",
+    "viewModes": {
+      "grid": "רשת",
+      "compact": "קומפקטי",
+      "list": "רשימה",
+      "detailed": "מפורט",
+      "table": "טבלה",
+      "timeline": "ציר זמן"
+    }
+  },
   "teacherDashboard": {
     "title": "לוח מורה",
     "welcome": "ברוך הבא {{name}} ללוח הבקרה שלך",

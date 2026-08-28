@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { legacySingleOptionId } from '@/lib/testMcq';
 
 export const testKeys = {
@@ -9,22 +10,38 @@ export const testKeys = {
   responses: (submissionId: string) => [...testKeys.all, 'responses', submissionId] as const,
 };
 
-const STUDENT_QUESTION_SELECT =
-  'id, question_text, question_type, options, order_index, allow_multiple_selections';
+export type StudentTestQuestion = Pick<
+  Tables<'test_questions'>,
+  'id' | 'question_text' | 'question_type' | 'options' | 'order_index' | 'allow_multiple_selections'
+>;
 
-export function useTestQuestions(
-  assignmentId: string | undefined,
-  options?: { forStudent?: boolean },
-) {
-  const forStudent = options?.forStudent ?? false;
-
+export function useTestQuestions(assignmentId: string | undefined) {
   return useQuery({
-    queryKey: testKeys.questions(assignmentId!, forStudent),
+    queryKey: testKeys.questions(assignmentId!, false),
     enabled: !!assignmentId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('test_questions')
-        .select(forStudent ? STUDENT_QUESTION_SELECT : '*')
+        .select('*')
+        .eq('assignment_id', assignmentId!)
+        .order('order_index', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useStudentTestQuestions(assignmentId: string | undefined) {
+  return useQuery({
+    queryKey: testKeys.questions(assignmentId!, true),
+    enabled: !!assignmentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('test_questions')
+        .select(
+          'id, question_text, question_type, options, order_index, allow_multiple_selections',
+        )
         .eq('assignment_id', assignmentId!)
         .order('order_index', { ascending: true });
 

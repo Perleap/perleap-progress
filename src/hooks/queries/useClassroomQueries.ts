@@ -15,6 +15,7 @@ import {
   getEnrolledStudents,
   findClassroomByInviteCode,
   joinClassroom,
+  softDeleteClassroom,
 } from '@/services/classroomService';
 import type { Classroom } from '@/types';
 
@@ -171,6 +172,32 @@ export const useJoinClassroom = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
+    },
+  });
+};
+
+/**
+ * Soft-delete a classroom (teacher-scoped when restrictToTeacherId is set).
+ */
+export const useSoftDeleteClassroom = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      classroomId,
+      restrictToTeacherId,
+    }: {
+      classroomId: string;
+      restrictToTeacherId?: string;
+    }) => {
+      const { deleted, error } = await softDeleteClassroom(classroomId, { restrictToTeacherId });
+      if (error) throw error;
+      if (!deleted) throw new Error('Classroom not deleted');
+      return classroomId;
+    },
+    onSuccess: (classroomId) => {
+      queryClient.invalidateQueries({ queryKey: classroomKeys.lists() });
+      queryClient.removeQueries({ queryKey: classroomKeys.detail(classroomId) });
     },
   });
 };

@@ -57,7 +57,6 @@ describe('assembleClassroomStudentWorkEntries', () => {
     assignment_id: 'asg-1',
     assignment_title: 'Chat Task',
     assignment_type: 'chatbot',
-    syllabus_section_id: null,
     status: 'completed',
     submitted_at: '2026-06-28T10:00:00.000Z',
     attempt_number: 1,

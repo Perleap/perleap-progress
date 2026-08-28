@@ -150,6 +150,34 @@ export const updateClassroom = async (
 };
 
 /**
+ * Soft-delete a classroom (set active=false, deleted_at). Returns whether a row was updated.
+ * When restrictToTeacherId is set, only that teacher's classroom can be deleted.
+ */
+export const softDeleteClassroom = async (
+  classroomId: string,
+  options?: { restrictToTeacherId?: string },
+): Promise<{ deleted: boolean; error: ApiError | null }> => {
+  try {
+    const deletedAt = new Date().toISOString();
+    let query = supabase
+      .from('classrooms')
+      .update({ active: false, deleted_at: deletedAt })
+      .eq('id', classroomId)
+      .eq('active', true);
+    if (options?.restrictToTeacherId) {
+      query = query.eq('teacher_id', options.restrictToTeacherId);
+    }
+    const { data, error } = await query.select('id');
+    if (error) {
+      return { deleted: false, error: handleSupabaseError(error) };
+    }
+    return { deleted: (data?.length ?? 0) > 0, error: null };
+  } catch (error) {
+    return { deleted: false, error: handleSupabaseError(error) };
+  }
+};
+
+/**
  * Get enrollments for a classroom
  */
 export const getClassroomEnrollments = async (

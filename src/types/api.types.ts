@@ -58,6 +58,10 @@ export interface AssignmentWithClassroom extends Assignment {
   submissions?: Submission[];
 }
 
+export type StudentDashboardAssignment = AssignmentWithClassroom & {
+  is_completed: boolean;
+};
+
 export interface CreateAssignmentInput {
   classroom_id: string;
   title: string;

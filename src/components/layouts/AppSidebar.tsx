@@ -60,8 +60,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { PerleapLogo } from '@/components/PerleapLogo';
 import { cn } from '@/lib/utils';
 import { isAppAdminRole } from '@/utils/role';
-import { MonitoringInlineNav } from '@/pages/admin/monitoring/MonitoringInlineNav';
-import { AdminAiPromptsSidebarLink } from '@/pages/admin/AdminAiPromptsSidebarLink';
+import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
 
 interface NavItem {
   title: string;

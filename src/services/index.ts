@@ -9,5 +9,7 @@ export * from './avatarService';
 export * from './classroomService';
 export * from './adminAuditService';
 export * from './enrollmentService';
+export * from './onboardingService';
+export * from './plannerService';
 export * from './profileService';
 export * from './submissionService';

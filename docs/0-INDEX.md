@@ -18,7 +18,7 @@ Welcome to the Perleap documentation! This index helps you navigate all document
    - Design patterns
    - Code organization principles
 
-3. **[Development Guide](./5-DEVELOPMENT-GUIDE.md)**
+3. **[Development Guide](./5-DEVELOPMENT-GUIDE.md)** *(if present)*
    - How to add new features
    - Code style guidelines
    - Common patterns
@@ -41,12 +41,10 @@ Welcome to the Perleap documentation! This index helps you navigate all document
 
 ### For Continuing Development
 
-6. **[Remaining Work](./6-REMAINING-WORK.md)** ⚠️ **IMPORTANT**
-   - What still needs to be done
-   - Pages that need refactoring
-   - Missing hooks and services
-   - Detailed refactoring plan
-   - Phase-by-phase implementation guide
+6. **[Remaining Work](./6-REMAINING-WORK.md)**
+   - Post-refactor backlog (dialogs, legacy components)
+   - Verify-perleap regression matrix
+   - Ongoing conventions
 
 ## 🎯 Quick Reference by Task
 
@@ -59,33 +57,27 @@ Welcome to the Perleap documentation! This index helps you navigate all document
 ### "I need to understand what was refactored"
 → Read [Refactoring Summary](./3-REFACTORING-SUMMARY.md) and [Implementation Complete](./4-IMPLEMENTATION-COMPLETE.md)
 
-### "I need to continue the refactoring"
-→ Read [Remaining Work](./6-REMAINING-WORK.md) for detailed plan
+### "I need to continue development after the page refactor"
+→ Read [Remaining Work](./6-REMAINING-WORK.md) for the post-M backlog
 
 ### "I need to understand the architecture"
 → Read [Frontend Architecture](./2-FRONTEND-ARCHITECTURE.md)
 
 ## 📊 Refactoring Status
 
-### ✅ Completed (Phase 1)
+### ✅ Completed (Phase 1 + page refactors A–M)
 - Configuration & tooling setup
-- Directory structure created
-- Type system defined
-- Service layer built (core services)
-- Custom hooks created (core hooks)
-- Edge functions refactored
-- Common/Layout components created
-- Feature components created (analytics, classroom)
-- Comprehensive documentation
+- Directory structure and feature modules under `components/features/`
+- Type system and service layer (including onboarding, planner, submission services)
+- Custom hooks and edge function refactors
+- Page shells → `*Content` orchestrators for all major product routes
+- Feature barrels, shared dashboard helpers (`classroomViewMode`), i18n polish
+- verify-perleap features for classroom, assignment, activity, submission flows
 
-### ⏳ In Progress (Phase 2)
-- Updating existing pages to use services/hooks
-- Refactoring large dashboard components
-- Creating missing hooks
-- Refactoring dialog components
-- Settings and onboarding pages
-
-See [Remaining Work](./6-REMAINING-WORK.md) for complete details.
+### ⏳ Backlog (post-refactor)
+- Root-level dialogs and legacy components (see [Remaining Work](./6-REMAINING-WORK.md))
+- Marketing pages (low priority)
+- Optional admin monitoring file renames
 
 ## 🏗️ Architecture Overview
 
@@ -148,7 +140,7 @@ See [Remaining Work](./6-REMAINING-WORK.md) for complete details.
 | 3-REFACTORING-SUMMARY.md | 250 | What changed | Everyone |
 | 4-IMPLEMENTATION-COMPLETE.md | 450 | Implementation details | Technical leads |
 | 5-DEVELOPMENT-GUIDE.md | 400 | How to develop | Developers |
-| 6-REMAINING-WORK.md | 550 | What's left to do | Technical leads |
+| 6-REMAINING-WORK.md | ~120 | Post-refactor backlog | Technical leads |
 
 ## 🚀 Next Steps
 
@@ -157,11 +149,10 @@ See [Remaining Work](./6-REMAINING-WORK.md) for complete details.
    - Review existing code patterns
    - Start with small tasks from Remaining Work
 
-2. **For Continuing Refactoring:**
-   - Review Remaining Work document
-   - Start with Phase 1 (notification service)
-   - Work through phases systematically
-   - Test thoroughly after each change
+2. **For ongoing product work:**
+   - Follow [Frontend Architecture](./2-FRONTEND-ARCHITECTURE.md) page-shell pattern
+   - Pick items from [Remaining Work](./6-REMAINING-WORK.md) backlog as needed
+   - Run unit tests + verify-perleap smoke for touched routes
 
 3. **For Adding Features:**
    - Follow patterns in Development Guide
@@ -182,6 +173,6 @@ Questions? Check relevant documentation first, then ask team members.
 
 ---
 
-**Last Updated**: During comprehensive refactoring
-**Status**: Documentation complete, implementation 60% complete
+**Last Updated**: Aug 2026 (Track M complete)
+**Status**: Page refactor tracks A–M complete; see Remaining Work for backlog
 

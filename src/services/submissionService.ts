@@ -18,6 +18,7 @@ import type {
 } from '@/types';
 import { SUBMISSION_STATUS, EVALUATION_STATUS, type EvaluationStatus } from '@/config/constants';
 import { createNotification } from '@/lib/notificationService';
+import { parseEdgeFunctionErrorMessage } from '@/services/assignmentService';
 
 export const studentAssignmentDetailLink = (
   assignmentId: string,
@@ -441,6 +442,34 @@ export const getAssignmentConversationMessages = async (
     return { data: enriched, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
+  }
+};
+
+/**
+ * Whether a submission has any persisted chat messages (task-understanding / intro gating).
+ */
+export const assignmentConversationHasMessages = async (
+  submissionId: string,
+): Promise<{ data: boolean; error: ApiError | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('assignment_conversations')
+      .select('messages')
+      .eq('submission_id', submissionId)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      return { data: false, error: handleSupabaseError(error) };
+    }
+
+    return {
+      data: Boolean(
+        data?.messages && Array.isArray(data.messages) && data.messages.length > 0,
+      ),
+      error: null,
+    };
+  } catch (error) {
+    return { data: false, error: handleSupabaseError(error) };
   }
 };
 
@@ -1624,3 +1653,60 @@ export const teacherResetStudentAssignmentProgress = async (
     return { data: null, error: handleSupabaseError(error) };
   }
 };
+
+export type GenerateFollowupAssignmentInput = {
+  submissionId: string;
+  teacherFeedback: string;
+  studentFeedback: string;
+  conversationContext: unknown;
+  originalAssignmentTitle: string;
+  originalAssignmentInstructions: string;
+  studentName: string;
+};
+
+export type GenerateFollowupAssignmentResult = {
+  title: string;
+  instructions: string;
+  type: string;
+  difficulty_level?: string;
+  success_criteria?: string[];
+  scaffolding_tips?: string;
+  target_dimensions: Record<string, boolean>;
+  opikTraceId?: string;
+};
+
+/**
+ * Calls `generate-followup-assignment` edge function for teacher follow-up assignment drafts.
+ */
+export async function generateFollowupAssignment(
+  input: GenerateFollowupAssignmentInput,
+): Promise<GenerateFollowupAssignmentResult> {
+  const { data, error } = await supabase.functions.invoke<GenerateFollowupAssignmentResult & { error?: string; opikTraceId?: string }>(
+    'generate-followup-assignment',
+    { body: input },
+  );
+
+  if (error) {
+    const serverMsg = await parseEdgeFunctionErrorMessage(error);
+    throw new Error(serverMsg || error.message);
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  if (!data?.title || !data.instructions || !data.type) {
+    throw new Error('Failed to generate assignment. Please try again.');
+  }
+
+  return {
+    title: data.title,
+    instructions: data.instructions,
+    type: data.type,
+    difficulty_level: data.difficulty_level,
+    success_criteria: data.success_criteria,
+    scaffolding_tips: data.scaffolding_tips,
+    target_dimensions: data.target_dimensions,
+    opikTraceId: data.opikTraceId,
+  };
+}

@@ -20,3 +20,15 @@ export { SyllabusPDFExport } from './SyllabusPDFExport';
 export { SectionCommentThread } from './SectionCommentThread';
 export { ChangelogViewer } from './ChangelogViewer';
 export { CoursePackageCard } from './CoursePackageCard';
+export { ClassroomActivityPageContent } from './ClassroomActivityPageContent';
+export { ClassroomActivityContent } from './ClassroomActivityContent';
+export {
+  useClassroomActivityNav,
+  ClassroomActivityBackButton,
+  ClassroomActivityNavShell,
+} from './ClassroomActivityNav';
+export type {
+  UseClassroomActivityNavOptions,
+  ClassroomActivityBackButtonProps,
+  ClassroomActivityNavShellProps,
+} from './ClassroomActivityNav';

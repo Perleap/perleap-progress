@@ -187,7 +187,7 @@ export const useStudentAssignmentDetails = (
       const cachedHasFeedback = !!cached?.feedback;
 
       if (statusChanged && data != null) {
-        queryClient.setQueryData(detailQueryKey, (old) => {
+        queryClient.setQueryData(detailQueryKey, (old: typeof detailQuery.data) => {
           if (!old?.submission) return old;
           return {
             ...old,

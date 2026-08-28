@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Send, CircleDot, AlignLeft, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
+import { useTestQuestions, useStudentTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
 import { submitWithBackgroundAiFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useAuth } from '@/contexts/useAuth';
@@ -71,7 +71,7 @@ export function TestTakingPage({
     nuanceTracking.trackResponseStarted(0);
   };
 
-  const { data: questions, isLoading } = useTestQuestions(assignmentId, { forStudent: true });
+  const { data: questions, isLoading } = useStudentTestQuestions(assignmentId);
   const submitResponses = useSubmitTestResponses();
 
   const [answers, setAnswers] = useState<Record<string, TestAnswer>>({});

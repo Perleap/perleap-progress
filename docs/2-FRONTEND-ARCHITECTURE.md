@@ -14,9 +14,21 @@ src/
 │   │   ├── ErrorBoundary.tsx
 │   │   ├── LoadingSpinner.tsx
 │   │   └── ProfileAvatar.tsx
-│   ├── features/     # Feature-specific components
-│   │   ├── analytics/   # Analytics components
-│   │   └── classroom/   # Classroom components
+│   ├── features/     # Feature-specific components (barrel: index.ts per module)
+│   │   ├── admin/       # AI prompts, platform monitoring
+│   │   ├── analytics/   # Classroom analytics, lesson brief, pilot report
+│   │   ├── assignment/  # Assignment detail, submissions, wizard
+│   │   ├── auth/        # Sign-in, callback, role selection
+│   │   ├── classroom/   # Teacher/student classroom detail sections
+│   │   ├── dashboard/   # Dashboard content and classroom list views
+│   │   ├── langchain/   # Visual pipeline editor
+│   │   ├── liveSession/ # Live session teacher flow
+│   │   ├── onboarding/  # Student/teacher onboarding wizards
+│   │   ├── planner/     # Teacher assignment calendar
+│   │   ├── settings/    # Student/teacher settings tabs
+│   │   ├── submission/  # Submission detail tabs
+│   │   ├── syllabus/    # Syllabus editor, activity page
+│   │   └── index.ts     # Re-exports all feature modules
 │   ├── layouts/      # Layout components
 │   │   ├── DashboardHeader.tsx
 │   │   └── PageHeader.tsx
@@ -44,6 +56,8 @@ src/
 │   ├── assignmentService.ts
 │   ├── classroomService.ts
 │   ├── profileService.ts
+│   ├── onboardingService.ts
+│   ├── plannerService.ts
 │   └── submissionService.ts
 └── types/            # TypeScript type definitions
     ├── api.types.ts
@@ -112,13 +126,35 @@ export const useClassrooms = (role: 'teacher' | 'student') => {
 };
 ```
 
+### Page shell → Content pattern
+
+Refactored routes use a thin page shell and a feature orchestrator:
+
+```typescript
+// src/pages/teacher/ClassroomDetail.tsx (~30 lines)
+import { ClassroomDetailContent } from '@/components/features/classroom';
+
+export default function ClassroomDetail() {
+  const { id } = useParams();
+  // loading / null guards, normalize route params
+  return <ClassroomDetailContent classroomId={id!} />;
+}
+```
+
+- **Page:** routing, auth guards, lazy-load boundary, minimal props
+- **`*Content`:** hooks, layout, section routing, dialog state
+- **Sections / dialogs:** presentational UI; callbacks from content
+- **Imports:** pages use `@/components/features/<feature>` barrels, not deep paths
+
+Shared helpers (e.g. classroom list view modes) live in `src/lib/` (`classroomViewMode.ts`).
+
 ### Component Pattern
 
 Components focus on presentation:
 
 ```typescript
-export const ClassroomCard = ({ classroom }: ClassroomCardProps) => {
-  // Pure presentation, no business logic
+export const ClassroomOverviewSection = ({ classroom }: Props) => {
+  // Pure presentation, no direct Supabase calls
   return <Card>...</Card>;
 };
 ```
