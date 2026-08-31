@@ -1,19 +1,19 @@
+import { ChevronDown, FileText, Link as LinkIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { SectionResource } from '@/types/syllabus';
+import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, FileText, Link as LinkIcon } from 'lucide-react';
-import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
 import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
-import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
+import { cn } from '@/lib/utils';
 import {
   openOrDownloadMaterial,
   parseCourseMaterials,
   resolveMaterialBucket,
 } from '@/services/materialService';
 import { ASSIGNMENT_MATERIALS_BUCKET } from '@/utils/storageUrls';
-import { cn } from '@/lib/utils';
-import type { SectionResource } from '@/types/syllabus';
 
 export type AssignmentDetailMaterialsPanelProps = {
   assignmentMaterialsRaw: unknown;
@@ -22,12 +22,12 @@ export type AssignmentDetailMaterialsPanelProps = {
   isRTL: boolean;
 };
 
-export function AssignmentDetailMaterialsPanel({
+export const AssignmentDetailMaterialsPanel = ({
   assignmentMaterialsRaw,
   syllabusSectionId,
   sectionResources,
   isRTL,
-}: AssignmentDetailMaterialsPanelProps) {
+}: AssignmentDetailMaterialsPanelProps) => {
   const { t } = useTranslation();
   const [referenceMaterialsOpen, setReferenceMaterialsOpen] = useState(false);
 
@@ -40,7 +40,7 @@ export function AssignmentDetailMaterialsPanel({
 
   const assignmentMaterials = useMemo(
     () => parseCourseMaterials(assignmentMaterialsRaw),
-    [assignmentMaterialsRaw],
+    [assignmentMaterialsRaw]
   );
 
   const totalReferenceMaterialsCount = assignmentMaterials.length + unitOutlineMaterials.length;
@@ -57,7 +57,7 @@ export function AssignmentDetailMaterialsPanel({
       <CollapsibleTrigger
         className={cn(
           'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
-          isRTL ? 'text-end' : 'text-start',
+          isRTL ? 'text-end' : 'text-start'
         )}
       >
         <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
@@ -66,7 +66,7 @@ export function AssignmentDetailMaterialsPanel({
         <ChevronDown
           className={cn(
             'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-            referenceMaterialsOpen && 'rotate-180',
+            referenceMaterialsOpen && 'rotate-180'
           )}
           aria-hidden
         />
@@ -88,7 +88,7 @@ export function AssignmentDetailMaterialsPanel({
                   onClick={() =>
                     void openOrDownloadMaterial(
                       material,
-                      resolveMaterialBucket(material, ASSIGNMENT_MATERIALS_BUCKET),
+                      resolveMaterialBucket(material, ASSIGNMENT_MATERIALS_BUCKET)
                     )
                   }
                 >
@@ -124,4 +124,4 @@ export function AssignmentDetailMaterialsPanel({
       </CollapsibleContent>
     </Collapsible>
   );
-}
+};

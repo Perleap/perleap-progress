@@ -1,18 +1,15 @@
 import type { Json } from '@/integrations/supabase/types';
-import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
+import type { Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import type {
   AnalyticsAssignmentRef,
   AnalyticsModuleFilter,
   AnalyticsModuleRef,
 } from '@/lib/analyticsScope';
-import type { Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
+import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
 
 export type Compare5dMode = 'sections' | 'students' | 'assignments';
 
-export type Compare5dNarrativeContext =
-  | 'module_compare'
-  | 'student_compare'
-  | 'assignment_compare';
+export type Compare5dNarrativeContext = 'module_compare' | 'student_compare' | 'assignment_compare';
 
 export type Compare5dStudentRow = {
   id: string;

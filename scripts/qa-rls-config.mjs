@@ -34,7 +34,7 @@ const forbiddenSignedUrlUploads = [
   'src/components/features/assignment/ProjectSubmissionPage.tsx',
   'src/components/features/assignment/PresentationSubmissionPage.tsx',
   'src/components/AssignmentChatInterface.tsx',
-  'src/components/EditClassroomDialog.tsx',
+  'src/components/features/classroom/dialogs/EditClassroomDialog.tsx',
   'src/components/features/assignment/wizard/AssignmentWizardDialog.tsx',
 ];
 

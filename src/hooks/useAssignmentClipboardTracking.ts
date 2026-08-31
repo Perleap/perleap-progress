@@ -1,15 +1,15 @@
 import { useEffect, useRef, useCallback } from 'react';
 import {
+  resolveClipboardCopyFromSelection,
+  type ResolvedClipboardCopy,
+} from '@/lib/clipboardSourceResolution';
+import {
   queueClipboardEvent,
   flushClipboardEvents,
   flushClipboardEventsBeacon,
   linkChatPasteToMessage,
   type ClipboardSourceKind,
 } from '@/services/clipboardEventService';
-import {
-  resolveClipboardCopyFromSelection,
-  type ResolvedClipboardCopy,
-} from '@/lib/clipboardSourceResolution';
 
 export interface TrackCopyParams {
   copiedText: string;
@@ -88,14 +88,14 @@ export function useAssignmentClipboardTracking({
         context_key: params.contextKey,
       });
     },
-    [canTrack, submissionId, assignmentId],
+    [canTrack, submissionId, assignmentId]
   );
 
   const trackCopy = useCallback(
     (params: TrackCopyParams) => {
       emitCopy(params);
     },
-    [emitCopy],
+    [emitCopy]
   );
 
   const trackPaste = useCallback(
@@ -113,7 +113,7 @@ export function useAssignmentClipboardTracking({
         context_key: params.contextKey,
       });
     },
-    [canTrack, submissionId, assignmentId],
+    [canTrack, submissionId, assignmentId]
   );
 
   const linkRecentChatPastes = useCallback(
@@ -121,7 +121,7 @@ export function useAssignmentClipboardTracking({
       if (!canTrack || !submissionId) return;
       void linkChatPasteToMessage(submissionId, messageIndex);
     },
-    [canTrack, submissionId],
+    [canTrack, submissionId]
   );
 
   const handleWorkspaceCopy = useCallback(
@@ -130,7 +130,7 @@ export function useAssignmentClipboardTracking({
       if (!resolved) return;
       emitCopy(resolved);
     },
-    [emitCopy],
+    [emitCopy]
   );
 
   return {

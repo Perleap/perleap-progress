@@ -1,20 +1,12 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Database } from '@/integrations/supabase/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -23,7 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
 import { EDGE_FUNCTION_NAMES } from '@/lib/edgeFunctionNames';
 import { cn } from '@/lib/utils';
 
@@ -37,10 +37,20 @@ function edgeRowIsSevere(row: EdgeFnRow) {
   return row.level === 'error' || (row.http_status != null && row.http_status >= 500);
 }
 
-const ACTIVITY_TYPES: Database['public']['Enums']['activity_type'][] = ['create', 'update', 'delete', 'view'];
-const ENTITY_TYPES: Database['public']['Enums']['entity_type'][] = ['classroom', 'assignment', 'submission', 'student'];
+const ACTIVITY_TYPES: Database['public']['Enums']['activity_type'][] = [
+  'create',
+  'update',
+  'delete',
+  'view',
+];
+const ENTITY_TYPES: Database['public']['Enums']['entity_type'][] = [
+  'classroom',
+  'assignment',
+  'submission',
+  'student',
+];
 
-export function MonitoringLogsContent() {
+export const MonitoringLogsContent = () => {
   const { t } = useTranslation();
   const [showAdminAudit, setShowAdminAudit] = useState(true);
   const [showActivity, setShowActivity] = useState(true);
@@ -126,7 +136,9 @@ export function MonitoringLogsContent() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-mono text-lg font-semibold tracking-tight">{t('monitoring.navLogs')}</h1>
+        <h1 className="font-mono text-lg font-semibold tracking-tight">
+          {t('monitoring.navLogs')}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">{t('monitoring.logsDescription')}</p>
       </div>
 
@@ -171,7 +183,13 @@ export function MonitoringLogsContent() {
               <Label className="font-mono text-[10px] uppercase text-muted-foreground">
                 {t('monitoring.edgeFunctionNameFilter')}
               </Label>
-              <Select value={edgeFunctionName} onValueChange={setEdgeFunctionName}>
+              <Select
+                value={edgeFunctionName}
+                onValueChange={(v: string | null) => {
+                  if (v == null) return;
+                  setEdgeFunctionName(v);
+                }}
+              >
                 <SelectTrigger className="h-8 w-full min-w-[200px] max-w-[280px] font-mono text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -192,7 +210,13 @@ export function MonitoringLogsContent() {
                 <Label className="font-mono text-[10px] uppercase text-muted-foreground">
                   {t('monitoring.logsActivityType')}
                 </Label>
-                <Select value={activityTypeFilter} onValueChange={setActivityTypeFilter}>
+                <Select
+                  value={activityTypeFilter}
+                  onValueChange={(v: string | null) => {
+                    if (v == null) return;
+                    setActivityTypeFilter(v);
+                  }}
+                >
                   <SelectTrigger className="h-8 w-[140px] font-mono text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -210,7 +234,13 @@ export function MonitoringLogsContent() {
                 <Label className="font-mono text-[10px] uppercase text-muted-foreground">
                   {t('monitoring.logsEntityType')}
                 </Label>
-                <Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
+                <Select
+                  value={entityTypeFilter}
+                  onValueChange={(v: string | null) => {
+                    if (v == null) return;
+                    setEntityTypeFilter(v);
+                  }}
+                >
                   <SelectTrigger className="h-8 w-[160px] font-mono text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -247,12 +277,24 @@ export function MonitoringLogsContent() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-[180px] font-mono text-xs">{t('monitoring.colCreatedAt')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.colAction')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.colEntityType')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.colEntityId')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.colAdminUserId')}</TableHead>
-                      <TableHead className="w-[100px] font-mono text-xs">{t('monitoring.colMetadata')}</TableHead>
+                      <TableHead className="w-[180px] font-mono text-xs">
+                        {t('monitoring.colCreatedAt')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.colAction')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.colEntityType')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.colEntityId')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.colAdminUserId')}
+                      </TableHead>
+                      <TableHead className="w-[100px] font-mono text-xs">
+                        {t('monitoring.colMetadata')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -261,12 +303,22 @@ export function MonitoringLogsContent() {
                         <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
                           {new Date(row.created_at).toLocaleString()}
                         </TableCell>
-                        <TableCell className="font-mono text-xs font-medium">{row.action}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{row.entity_type ?? '—'}</TableCell>
-                        <TableCell className="max-w-[140px] truncate font-mono text-xs" title={row.entity_id ?? ''}>
+                        <TableCell className="font-mono text-xs font-medium">
+                          {row.action}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {row.entity_type ?? '—'}
+                        </TableCell>
+                        <TableCell
+                          className="max-w-[140px] truncate font-mono text-xs"
+                          title={row.entity_id ?? ''}
+                        >
                           {row.entity_id ?? '—'}
                         </TableCell>
-                        <TableCell className="max-w-[120px] truncate font-mono text-xs" title={row.admin_user_id}>
+                        <TableCell
+                          className="max-w-[120px] truncate font-mono text-xs"
+                          title={row.admin_user_id}
+                        >
                           {row.admin_user_id}
                         </TableCell>
                         <TableCell>
@@ -334,7 +386,9 @@ export function MonitoringLogsContent() {
       {showActivity ? (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle className="font-mono text-sm">{t('monitoring.logsActivityFeedTitle')}</CardTitle>
+            <CardTitle className="font-mono text-sm">
+              {t('monitoring.logsActivityFeedTitle')}
+            </CardTitle>
             <CardDescription>{t('monitoring.logsActivityFeedDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -349,13 +403,27 @@ export function MonitoringLogsContent() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-[180px] font-mono text-xs">{t('monitoring.colCreatedAt')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.logsColType')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.logsEntityType')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.colEntityId')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.logsColTeacher')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.logsColTitle')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.logsColRoute')}</TableHead>
+                      <TableHead className="w-[180px] font-mono text-xs">
+                        {t('monitoring.colCreatedAt')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.logsColType')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.logsEntityType')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.colEntityId')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.logsColTeacher')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.logsColTitle')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.logsColRoute')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -366,9 +434,15 @@ export function MonitoringLogsContent() {
                         </TableCell>
                         <TableCell className="font-mono text-xs">{row.type}</TableCell>
                         <TableCell className="font-mono text-xs">{row.entity_type}</TableCell>
-                        <TableCell className="max-w-[120px] truncate font-mono text-xs">{row.entity_id}</TableCell>
-                        <TableCell className="max-w-[100px] truncate font-mono text-xs">{row.teacher_id}</TableCell>
-                        <TableCell className="max-w-[200px] truncate text-xs">{row.title}</TableCell>
+                        <TableCell className="max-w-[120px] truncate font-mono text-xs">
+                          {row.entity_id}
+                        </TableCell>
+                        <TableCell className="max-w-[100px] truncate font-mono text-xs">
+                          {row.teacher_id}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-xs">
+                          {row.title}
+                        </TableCell>
                         <TableCell className="max-w-[160px] truncate font-mono text-[10px] text-muted-foreground">
                           {row.route}
                         </TableCell>
@@ -418,7 +492,9 @@ export function MonitoringLogsContent() {
       {showEdgeFunctions ? (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle className="font-mono text-sm">{t('monitoring.edgeFunctionsTitle')}</CardTitle>
+            <CardTitle className="font-mono text-sm">
+              {t('monitoring.edgeFunctionsTitle')}
+            </CardTitle>
             <CardDescription>{t('monitoring.edgeFunctionsDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -433,14 +509,30 @@ export function MonitoringLogsContent() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-[180px] font-mono text-xs">{t('monitoring.colCreatedAt')}</TableHead>
-                      <TableHead className="font-mono text-xs">{t('monitoring.edgeColFunction')}</TableHead>
-                      <TableHead className="w-[72px] font-mono text-xs">{t('monitoring.edgeColLevel')}</TableHead>
-                      <TableHead className="w-[64px] font-mono text-xs">{t('monitoring.edgeColHttpStatus')}</TableHead>
-                      <TableHead className="min-w-[200px] font-mono text-xs">{t('monitoring.edgeColMessage')}</TableHead>
-                      <TableHead className="max-w-[120px] font-mono text-xs">{t('monitoring.edgeColRequestId')}</TableHead>
-                      <TableHead className="w-[88px] font-mono text-xs">{t('monitoring.edgeColEmailSent')}</TableHead>
-                      <TableHead className="w-[100px] font-mono text-xs">{t('monitoring.edgeColContext')}</TableHead>
+                      <TableHead className="w-[180px] font-mono text-xs">
+                        {t('monitoring.colCreatedAt')}
+                      </TableHead>
+                      <TableHead className="font-mono text-xs">
+                        {t('monitoring.edgeColFunction')}
+                      </TableHead>
+                      <TableHead className="w-[72px] font-mono text-xs">
+                        {t('monitoring.edgeColLevel')}
+                      </TableHead>
+                      <TableHead className="w-[64px] font-mono text-xs">
+                        {t('monitoring.edgeColHttpStatus')}
+                      </TableHead>
+                      <TableHead className="min-w-[200px] font-mono text-xs">
+                        {t('monitoring.edgeColMessage')}
+                      </TableHead>
+                      <TableHead className="max-w-[120px] font-mono text-xs">
+                        {t('monitoring.edgeColRequestId')}
+                      </TableHead>
+                      <TableHead className="w-[88px] font-mono text-xs">
+                        {t('monitoring.edgeColEmailSent')}
+                      </TableHead>
+                      <TableHead className="w-[100px] font-mono text-xs">
+                        {t('monitoring.edgeColContext')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -451,26 +543,29 @@ export function MonitoringLogsContent() {
                           key={row.id}
                           className={cn(
                             i % 2 === 1 ? 'bg-muted/20' : '',
-                            severe && 'bg-destructive/5',
+                            severe && 'bg-destructive/5'
                           )}
                         >
                           <TableCell
                             className={cn(
                               'whitespace-nowrap font-mono text-xs text-muted-foreground',
-                              severe && 'text-destructive',
+                              severe && 'text-destructive'
                             )}
                           >
                             {new Date(row.created_at).toLocaleString()}
                           </TableCell>
                           <TableCell
-                            className={cn('font-mono text-xs', severe && 'text-destructive font-medium')}
+                            className={cn(
+                              'font-mono text-xs',
+                              severe && 'text-destructive font-medium'
+                            )}
                           >
                             {row.function_name}
                           </TableCell>
                           <TableCell
                             className={cn(
                               'font-mono text-xs',
-                              severe ? 'text-destructive' : 'text-muted-foreground',
+                              severe ? 'text-destructive' : 'text-muted-foreground'
                             )}
                           >
                             {row.level}
@@ -486,7 +581,7 @@ export function MonitoringLogsContent() {
                                 <CollapsibleTrigger
                                   className={cn(
                                     'flex items-center gap-1 text-left font-mono text-xs hover:underline',
-                                    severe ? 'text-destructive' : 'text-primary',
+                                    severe ? 'text-destructive' : 'text-primary'
                                   )}
                                 >
                                   <ChevronDown className="size-3 shrink-0 opacity-70" />
@@ -501,7 +596,7 @@ export function MonitoringLogsContent() {
                                   <pre
                                     className={cn(
                                       'mt-2 max-h-40 overflow-auto rounded-md border bg-muted/50 p-2 font-mono text-[10px] leading-relaxed',
-                                      severe && 'text-destructive',
+                                      severe && 'text-destructive'
                                     )}
                                   >
                                     {row.error_message}
@@ -510,7 +605,10 @@ export function MonitoringLogsContent() {
                               </Collapsible>
                             ) : (
                               <span
-                                className={cn('font-mono text-xs', severe && 'text-destructive font-medium')}
+                                className={cn(
+                                  'font-mono text-xs',
+                                  severe && 'text-destructive font-medium'
+                                )}
                               >
                                 {row.error_message}
                               </span>
@@ -519,7 +617,7 @@ export function MonitoringLogsContent() {
                           <TableCell
                             className={cn(
                               'max-w-[120px] truncate font-mono text-[10px]',
-                              severe ? 'text-destructive' : 'text-muted-foreground',
+                              severe ? 'text-destructive' : 'text-muted-foreground'
                             )}
                             title={row.request_id ?? ''}
                           >
@@ -540,7 +638,7 @@ export function MonitoringLogsContent() {
                                 <CollapsibleTrigger
                                   className={cn(
                                     'flex items-center gap-1 font-mono text-xs hover:underline',
-                                    severe ? 'text-destructive' : 'text-primary',
+                                    severe ? 'text-destructive' : 'text-primary'
                                   )}
                                 >
                                   <ChevronDown className="size-3 opacity-70" />
@@ -601,4 +699,4 @@ export function MonitoringLogsContent() {
       ) : null}
     </div>
   );
-}
+};

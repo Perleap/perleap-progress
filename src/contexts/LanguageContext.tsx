@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import type { ReactNode } from 'react';
 import i18n from '@/i18n/config';
+import { supabase } from '@/integrations/supabase/client';
 
 type Language = 'en' | 'he';
 
@@ -61,7 +62,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (!user) return;
 
     console.log('🌐 LanguageContext: Loading language preference for user:', user.id);
-    
+
     try {
       let dbLanguage: Language | null = null;
       const userRole = user.user_metadata?.role;
@@ -72,7 +73,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
           .select('preferred_language')
           .eq('user_id', user.id)
           .maybeSingle();
-          
+
         if (studentProfile?.preferred_language) {
           dbLanguage = studentProfile.preferred_language as Language;
         }
@@ -82,7 +83,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
           .select('preferred_language')
           .eq('user_id', user.id)
           .maybeSingle();
-          
+
         if (teacherProfile?.preferred_language) {
           dbLanguage = teacherProfile.preferred_language as Language;
         }
@@ -101,7 +102,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         // If DB has no preference, use localStorage and keep it synced
         const localPref = getStoredLanguage();
         console.log('🌐 No DB preference, checking localStorage:', localPref);
-        
+
         // Apply the localStorage language preference immediately
         if (localPref !== language) {
           console.log('🌐 ✅ APPLYING localStorage language:', localPref, '(was:', language, ')');
@@ -114,14 +115,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (localPref === 'he') {
           const userRole = user.user_metadata?.role;
           const table =
-            userRole === 'teacher' || userRole === 'admin' ? 'teacher_profiles' : 'student_profiles';
-          
+            userRole === 'teacher' || userRole === 'admin'
+              ? 'teacher_profiles'
+              : 'student_profiles';
+
           if (userRole === 'teacher' || userRole === 'student' || userRole === 'admin') {
             console.log(`🌐 Attempting to sync Hebrew to ${table}...`);
-            supabase
-              .from(table)
-              .update({ preferred_language: localPref })
-              .eq('user_id', user.id);
+            supabase.from(table).update({ preferred_language: localPref }).eq('user_id', user.id);
           }
         }
       }
@@ -132,7 +132,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setLanguage = (lang: Language) => {
     console.log('🌐 setLanguage called with:', lang);
-    
+
     // Update local state
     setLanguageState(lang);
 

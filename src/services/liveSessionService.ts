@@ -7,16 +7,16 @@
  * transcribe-live-session edge fn fills transcript/summary/timestamps.
  */
 
+import { createAssignment } from './assignmentService';
+import type { ApiError } from '@/types';
+import type { LiveSession, LiveSessionType } from '@/types/liveSession';
 import { supabase, handleSupabaseError } from '@/api/client';
+import { contentTypeForAudioExtension, inferAudioExtension } from '@/lib/audioFormat';
 import {
   createAuthenticatedBlobUrl,
   LIVE_SESSION_AUDIO_BUCKET,
   type AuthenticatedBlobUrl,
 } from '@/utils/storageUrls';
-import { contentTypeForAudioExtension, inferAudioExtension } from '@/lib/audioFormat';
-import { createAssignment } from './assignmentService';
-import type { ApiError } from '@/types';
-import type { LiveSession, LiveSessionType } from '@/types/liveSession';
 
 const AUDIO_BUCKET = 'live-session-audio';
 
@@ -188,7 +188,7 @@ async function invokeTranscribeLiveSession(body: TranscribeLiveSessionBody): Pro
     }
   );
 
-  const data = await response.json().catch(() => ({} as { error?: string }));
+  const data = await response.json().catch(() => ({}) as { error?: string });
 
   return { ok: response.ok, status: response.status, data };
 }
@@ -211,9 +211,7 @@ export const startLiveSessionTranscription = async (
     });
     if (!ok) {
       return {
-        error: handleSupabaseError(
-          new Error(data.error || `Transcription failed (${status})`)
-        ),
+        error: handleSupabaseError(new Error(data.error || `Transcription failed (${status})`)),
       };
     }
   }
@@ -274,9 +272,7 @@ export const startLiveSessionTranscriptionWithProgress = async (
 
     if (!ok) {
       return {
-        error: handleSupabaseError(
-          new Error(data.error || `Transcription failed (${status})`)
-        ),
+        error: handleSupabaseError(new Error(data.error || `Transcription failed (${status})`)),
       };
     }
 
@@ -325,7 +321,7 @@ export const getLiveSessionByAssignment = async (
 };
 
 export const getLiveSessionAudioBlobUrl = async (
-  audioPath: string,
+  audioPath: string
 ): Promise<AuthenticatedBlobUrl | null> => {
   return createAuthenticatedBlobUrl(LIVE_SESSION_AUDIO_BUCKET, audioPath);
 };

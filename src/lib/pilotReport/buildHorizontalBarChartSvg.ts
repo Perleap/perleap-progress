@@ -24,7 +24,7 @@ function escapeSvgText(value: string): string {
 function truncateLabel(label: string, max = 28): string {
   const t = label.trim();
   if (t.length <= max) return t;
-  return t.slice(0, Math.max(0, max - 1)) + '…';
+  return `${t.slice(0, Math.max(0, max - 1))}…`;
 }
 
 /** Self-contained SVG horizontal bar chart for offline HTML export. */

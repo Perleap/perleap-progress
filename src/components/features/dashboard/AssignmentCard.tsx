@@ -1,8 +1,8 @@
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { useTranslation } from 'react-i18next';
 
 interface AssignmentCardProps {
   assignment: {
@@ -37,7 +37,10 @@ export const AssignmentCard = ({ assignment, onClick }: AssignmentCardProps) => 
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-card border-border" onClick={onClick}>
+    <Card
+      className="hover:shadow-lg transition-shadow cursor-pointer bg-card border-border"
+      onClick={onClick}
+    >
       <CardHeader className="p-4 pb-3">
         <CardTitle className="text-base mb-1 text-foreground">{assignment.title}</CardTitle>
         <CardDescription className="text-sm mb-2 text-muted-foreground">
@@ -53,7 +56,9 @@ export const AssignmentCard = ({ assignment, onClick }: AssignmentCardProps) => 
                 alt={assignment.classrooms.teacher_profiles.full_name || t('common.teacher')}
               />
             )}
-            <AvatarFallback className="text-xs bg-primary/10 text-primary">{getTeacherInitials()}</AvatarFallback>
+            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+              {getTeacherInitials()}
+            </AvatarFallback>
           </Avatar>
           <span className="text-xs text-muted-foreground">
             {assignment.classrooms.teacher_profiles?.full_name || t('common.teacher')}

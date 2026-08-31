@@ -1,20 +1,20 @@
+import { Loader2, Upload, Video, Square, Circle, RotateCcw, Send } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { DeviceSelector, NO_AUDIO, type DeviceSelection } from './DeviceSelector';
+import { VideoEditor } from './VideoEditor';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, Video, Square, Circle, RotateCcw, Send } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/submissionService';
-import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
-import type { AssignmentCompletionTone } from '@/types/submission';
-import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import { extractAudioFromVideo } from '@/lib/liveSessionExtractAudio';
-import { DeviceSelector, NO_AUDIO, type DeviceSelection } from './DeviceSelector';
-import { VideoEditor } from './VideoEditor';
+import { cn } from '@/lib/utils';
+import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/submissionService';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
 
 /** Immediate revoke can race Chromium range requests on <video src="blob:…"> → net::ERR_REQUEST_RANGE_NOT_SATISFIABLE */
 function scheduleRevokeObjectURL(url: string, delayMs = 750) {
@@ -33,7 +33,7 @@ interface PresentationSubmissionPageProps {
 
 type RecordPhase = 'idle' | 'recording' | 'editing' | 'ready';
 
-export function PresentationSubmissionPage({
+export const PresentationSubmissionPage = ({
   assignmentId,
   submissionId,
   assignmentInstructions,
@@ -41,7 +41,7 @@ export function PresentationSubmissionPage({
   showAiFeedbackToStudents = true,
   isTeacherTry = false,
   onComplete,
-}: PresentationSubmissionPageProps) {
+}: PresentationSubmissionPageProps) => {
   const { t } = useTranslation();
   const { language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
@@ -147,8 +147,10 @@ export function PresentationSubmissionPage({
 
   const pickRecorderMimeType = useCallback(() => {
     if (typeof MediaRecorder === 'undefined') return '';
-    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) return 'video/webm;codecs=vp9,opus';
-    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) return 'video/webm;codecs=vp8,opus';
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus'))
+      return 'video/webm;codecs=vp9,opus';
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus'))
+      return 'video/webm;codecs=vp8,opus';
     if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) return 'video/webm;codecs=vp9';
     if (MediaRecorder.isTypeSupported('video/webm')) return 'video/webm';
     return '';
@@ -223,7 +225,8 @@ export function PresentationSubmissionPage({
     }
 
     if (!stream) {
-      const err = lastError instanceof DOMException ? lastError : new DOMException(String(lastError));
+      const err =
+        lastError instanceof DOMException ? lastError : new DOMException(String(lastError));
       console.error('Camera access error:', lastError);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         toast.error(t('assignmentDetail.presentation.cameraPermission'));
@@ -318,10 +321,7 @@ export function PresentationSubmissionPage({
 
       if (uploadError) throw uploadError;
 
-      await supabase
-        .from('submissions')
-        .update({ file_url: filePath })
-        .eq('id', submissionId);
+      await supabase.from('submissions').update({ file_url: filePath }).eq('id', submissionId);
 
       setUploadedUrl(filePath);
       return filePath;
@@ -448,7 +448,9 @@ export function PresentationSubmissionPage({
             {!selectedFile ? (
               <div
                 className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-                  dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                  dragOver
+                    ? 'border-primary bg-primary/5'
+                    : 'border-muted-foreground/25 hover:border-primary/50'
                 }`}
                 onClick={() => fileInputRef.current?.click()}
                 onDrop={handleDrop}
@@ -460,7 +462,9 @@ export function PresentationSubmissionPage({
               >
                 <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-sm font-medium">{t('assignmentDetail.presentation.dragDrop')}</p>
-                <p className="text-xs text-muted-foreground mt-1">{t('assignmentDetail.presentation.fileTypes')}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('assignmentDetail.presentation.fileTypes')}
+                </p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -502,7 +506,11 @@ export function PresentationSubmissionPage({
 
           <TabsContent value="record" className="space-y-4">
             {recordPhase === 'editing' && urlForCurrentBlob && (
-              <VideoEditor videoUrl={urlForCurrentBlob} onSave={onEditorSave} onDiscard={onEditorDiscard} />
+              <VideoEditor
+                videoUrl={urlForCurrentBlob}
+                onSave={onEditorSave}
+                onDiscard={onEditorDiscard}
+              />
             )}
 
             {recordPhase !== 'editing' && (
@@ -513,8 +521,12 @@ export function PresentationSubmissionPage({
 
                 {recordPhase === 'ready' && urlForCurrentBlob && (
                   <div className="space-y-1">
-                    <h3 className="text-sm font-medium">{t('assignmentDetail.presentation.reviewHeading')}</h3>
-                    <p className="text-xs text-muted-foreground">{t('assignmentDetail.presentation.reviewHelper')}</p>
+                    <h3 className="text-sm font-medium">
+                      {t('assignmentDetail.presentation.reviewHeading')}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {t('assignmentDetail.presentation.reviewHelper')}
+                    </p>
                   </div>
                 )}
 
@@ -524,11 +536,15 @@ export function PresentationSubmissionPage({
                     ref={videoPreviewRef}
                     className={cn(
                       'absolute inset-0 h-full w-full',
-                      recordPhase === 'ready' && urlForCurrentBlob ? 'object-cover' : 'object-contain'
+                      recordPhase === 'ready' && urlForCurrentBlob
+                        ? 'object-cover'
+                        : 'object-contain'
                     )}
                     playsInline
                     controls={recordPhase === 'ready' && !!urlForCurrentBlob && !recording}
-                    src={recordPhase === 'ready' && urlForCurrentBlob ? urlForCurrentBlob : undefined}
+                    src={
+                      recordPhase === 'ready' && urlForCurrentBlob ? urlForCurrentBlob : undefined
+                    }
                   />
                   {recordPhase === 'idle' && !recording && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -601,4 +617,4 @@ export function PresentationSubmissionPage({
       </CardContent>
     </Card>
   );
-}
+};

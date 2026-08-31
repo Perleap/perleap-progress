@@ -30,6 +30,7 @@ import {
   authFailureToResponse,
   requireAuth,
 } from '../_shared/authorizeResource.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 
 declare const EdgeRuntime: {
   waitUntil(promise: Promise<unknown>): void;
@@ -401,6 +402,11 @@ serve(async (req) => {
     const auth = await requireAuth(req);
     if ('status' in auth) {
       return authFailureToResponse(auth, corsHeaders);
+    }
+
+    const rateLimit = await checkRateLimit(auth.user.id, 'generate-feedback');
+    if (rateLimit) {
+      return rateLimitFailureToResponse(rateLimit, corsHeaders);
     }
 
     const body = (await req.json()) as FeedbackRequestBody;

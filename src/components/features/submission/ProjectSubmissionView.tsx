@@ -1,10 +1,10 @@
+import { Download, ExternalLink, FileIcon, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, ExternalLink, FileIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeacherEvaluationForm } from './TeacherEvaluationForm';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   downloadSubmissionFile,
   extractSubmissionStoragePath,
@@ -35,7 +35,7 @@ type ResolvedFile = {
   fileName: string;
 };
 
-export function ProjectSubmissionView({
+export const ProjectSubmissionView = ({
   fileUrl,
   fileUrls,
   submissionId,
@@ -44,11 +44,11 @@ export function ProjectSubmissionView({
   hasFeedback,
   onEvaluationComplete,
   headerAction,
-}: ProjectSubmissionViewProps) {
+}: ProjectSubmissionViewProps) => {
   const { t } = useTranslation();
   const storedFiles = useMemo(
     () => resolveProjectFileStored(fileUrl, fileUrls),
-    [fileUrl, fileUrls],
+    [fileUrl, fileUrls]
   );
   const [resolvedFiles, setResolvedFiles] = useState<ResolvedFile[]>([]);
   const [isResolving, setIsResolving] = useState(false);
@@ -72,11 +72,13 @@ export function ProjectSubmissionView({
         return;
       }
       setResolvedFiles(
-        storedFiles.map((stored, i) => ({
-          stored,
-          displayUrl: urls[i] ?? '',
-          fileName: fileNameFromSubmissionStored(stored),
-        })).filter((f) => f.displayUrl),
+        storedFiles
+          .map((stored, i) => ({
+            stored,
+            displayUrl: urls[i] ?? '',
+            fileName: fileNameFromSubmissionStored(stored),
+          }))
+          .filter((f) => f.displayUrl)
       );
       setIsResolving(false);
     })();
@@ -107,7 +109,7 @@ export function ProjectSubmissionView({
         setDownloadingStored(null);
       }
     },
-    [t],
+    [t]
   );
 
   const handlePreview = useCallback((displayUrl: string) => {
@@ -142,7 +144,9 @@ export function ProjectSubmissionView({
                         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
                           <FileIcon className="size-4 text-muted-foreground" />
                         </div>
-                        <p className="truncate text-sm font-medium text-foreground">{file.fileName}</p>
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {file.fileName}
+                        </p>
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
                         {(isImage || isPdf) && (
@@ -205,4 +209,4 @@ export function ProjectSubmissionView({
       />
     </div>
   );
-}
+};

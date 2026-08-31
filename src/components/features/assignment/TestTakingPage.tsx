@@ -1,7 +1,10 @@
+import { Loader2, Send, CircleDot, AlignLeft, ListChecks } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,22 +15,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, CircleDot, AlignLeft, ListChecks } from 'lucide-react';
-import { toast } from 'sonner';
-import { useTestQuestions, useStudentTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { TrackedTextarea } from '@/components/ui/tracked-textarea';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useStudentTestQuestions, useSubmitTestResponses } from '@/hooks/queries';
+import { isMultiSelectMcq, toggleOptionId } from '@/lib/testMcq';
 import { submitWithBackgroundAiFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
-import { useAuth } from '@/contexts/useAuth';
-import type { AssignmentCompletionTone } from '@/types/submission';
-import { TrackedTextarea } from '@/components/ui/tracked-textarea';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
-import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
-import { isMultiSelectMcq, toggleOptionId } from '@/lib/testMcq';
 
 interface TestTakingPageProps {
   assignmentId: string;
@@ -49,7 +49,7 @@ type TestAnswer = {
   text_answer?: string;
 };
 
-export function TestTakingPage({
+export const TestTakingPage = ({
   assignmentId,
   assignmentInstructions,
   submissionId,
@@ -59,7 +59,7 @@ export function TestTakingPage({
   nuanceTracking,
   clipboardTracking,
   onComplete,
-}: TestTakingPageProps) {
+}: TestTakingPageProps) => {
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
@@ -85,7 +85,7 @@ export function TestTakingPage({
 
   const isMcqAnswered = (
     question: { question_type: string; allow_multiple_selections?: boolean | null },
-    answer: TestAnswer | undefined,
+    answer: TestAnswer | undefined
   ) => {
     if (!answer) return false;
     if (question.question_type !== 'multiple_choice') return false;
@@ -149,12 +149,14 @@ export function TestTakingPage({
         }
       } else {
         const language = getAssignmentLanguage(assignmentInstructions, uiLanguage);
-        const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback({
-          submissionId,
-          studentId: user.id,
-          assignmentId,
-          language,
-        });
+        const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback(
+          {
+            submissionId,
+            studentId: user.id,
+            assignmentId,
+            language,
+          }
+        );
 
         if (submitError) {
           console.error('Error completing submission:', submitError);
@@ -198,7 +200,9 @@ export function TestTakingPage({
         <AlertDialogContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('assignmentDetail.testTaking.submitTest')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('assignmentDetail.testTaking.confirmSubmit')}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t('assignmentDetail.testTaking.confirmSubmit')}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
@@ -215,92 +219,71 @@ export function TestTakingPage({
       </AlertDialog>
 
       <div className="space-y-4">
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">{t('assignmentDetail.testTaking.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {questions.length} {t('submissionDetail.testResults.question').toLowerCase()}
-            {questions.length !== 1 ? 's' : ''}
-          </p>
-        </CardContent>
-      </Card>
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">{t('assignmentDetail.testTaking.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {questions.length} {t('submissionDetail.testResults.question').toLowerCase()}
+              {questions.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
 
-      {questions.map((question, index) => {
-        const options = (question.options as { id: string; text: string }[] | null) || [];
-        const multiSelect = isMultiSelectMcq(question.allow_multiple_selections);
-        const selectedIds = answers[question.id]?.selected_option_ids ?? [];
+        {questions.map((question, index) => {
+          const options = (question.options as { id: string; text: string }[] | null) || [];
+          const multiSelect = isMultiSelectMcq(question.allow_multiple_selections);
+          const selectedIds = answers[question.id]?.selected_option_ids ?? [];
 
-        return (
-          <Card key={question.id} className="overflow-hidden">
-            <CardHeader className="pb-3 bg-transparent">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="shrink-0">
-                  {t('assignmentDetail.testTaking.question', { number: index + 1 })}
-                </Badge>
+          return (
+            <Card key={question.id} className="overflow-hidden">
+              <CardHeader className="pb-3 bg-transparent">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    {t('assignmentDetail.testTaking.question', { number: index + 1 })}
+                  </Badge>
+                  {question.question_type === 'multiple_choice' ? (
+                    multiSelect ? (
+                      <ListChecks className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <CircleDot className="h-4 w-4 text-muted-foreground" />
+                    )
+                  ) : (
+                    <AlignLeft className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <p className={`text-sm font-medium mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {question.question_text}
+                </p>
+                {question.question_type === 'multiple_choice' && multiSelect && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('assignmentDetail.testTaking.selectAllThatApply')}
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="pt-4">
                 {question.question_type === 'multiple_choice' ? (
                   multiSelect ? (
-                    <ListChecks className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <CircleDot className="h-4 w-4 text-muted-foreground" />
-                  )
-                ) : (
-                  <AlignLeft className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-              <p className={`text-sm font-medium mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {question.question_text}
-              </p>
-              {question.question_type === 'multiple_choice' && multiSelect && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('assignmentDetail.testTaking.selectAllThatApply')}
-                </p>
-              )}
-            </CardHeader>
-            <CardContent className="pt-4">
-              {question.question_type === 'multiple_choice' ? (
-                multiSelect ? (
-                  <div className="space-y-2" dir={isRTL ? 'rtl' : 'ltr'}>
-                    {options.map((option) => (
-                      <div
-                        key={option.id}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <Checkbox
-                          id={`${question.id}-${option.id}`}
-                          checked={selectedIds.includes(option.id)}
-                          onCheckedChange={(checked) =>
-                            updateAnswer(question.id, {
-                              selected_option_ids: toggleOptionId(
-                                selectedIds,
-                                option.id,
-                                checked === true,
-                              ),
-                            })
-                          }
-                        />
-                        <Label
-                          htmlFor={`${question.id}-${option.id}`}
-                          className="flex-1 cursor-pointer text-sm"
-                        >
-                          {option.text}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <RadioGroup
-                    value={selectedIds[0] || ''}
-                    onValueChange={(val) =>
-                      updateAnswer(question.id, { selected_option_ids: val ? [val] : [] })
-                    }
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  >
-                    <div className="space-y-2">
+                    <div className="space-y-2" dir={isRTL ? 'rtl' : 'ltr'}>
                       {options.map((option) => (
-                        <div key={option.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                          <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
+                        <div
+                          key={option.id}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <Checkbox
+                            id={`${question.id}-${option.id}`}
+                            checked={selectedIds.includes(option.id)}
+                            onCheckedChange={(checked) =>
+                              updateAnswer(question.id, {
+                                selected_option_ids: toggleOptionId(
+                                  selectedIds,
+                                  option.id,
+                                  checked === true
+                                ),
+                              })
+                            }
+                          />
                           <Label
                             htmlFor={`${question.id}-${option.id}`}
                             className="flex-1 cursor-pointer text-sm"
@@ -310,47 +293,71 @@ export function TestTakingPage({
                         </div>
                       ))}
                     </div>
-                  </RadioGroup>
-                )
-              ) : (
-                <TrackedTextarea
-                  value={answers[question.id]?.text_answer || ''}
-                  onChange={(e) => updateAnswer(question.id, { text_answer: e.target.value })}
-                  placeholder={t('assignmentDetail.testTaking.typeAnswer')}
-                  className="min-h-[100px] resize-none"
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                  clipboardTracking={clipboardTracking}
-                  pasteSourceKind="test_answer"
-                  pasteContextKey={question.id}
-                  copySourceKind="test_answer"
-                />
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                  ) : (
+                    <RadioGroup
+                      value={selectedIds[0] || ''}
+                      onValueChange={(val) =>
+                        updateAnswer(question.id, { selected_option_ids: val ? [val] : [] })
+                      }
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <div className="space-y-2">
+                        {options.map((option) => (
+                          <div
+                            key={option.id}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
+                            <Label
+                              htmlFor={`${question.id}-${option.id}`}
+                              className="flex-1 cursor-pointer text-sm"
+                            >
+                              {option.text}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </RadioGroup>
+                  )
+                ) : (
+                  <TrackedTextarea
+                    value={answers[question.id]?.text_answer || ''}
+                    onChange={(e) => updateAnswer(question.id, { text_answer: e.target.value })}
+                    placeholder={t('assignmentDetail.testTaking.typeAnswer')}
+                    className="min-h-[100px] resize-none"
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    clipboardTracking={clipboardTracking}
+                    pasteSourceKind="test_answer"
+                    pasteContextKey={question.id}
+                    copySourceKind="test_answer"
+                  />
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
 
-      <div className="flex justify-end pt-4 pb-8">
-        <Button
-          onClick={requestSubmit}
-          disabled={submitting}
-          size="lg"
-          className="gap-2 rounded-full shadow-md"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t('assignmentDetail.testTaking.submitting')}
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4" />
-              {t('assignmentDetail.testTaking.submitTest')}
-            </>
-          )}
-        </Button>
-      </div>
+        <div className="flex justify-end pt-4 pb-8">
+          <Button
+            onClick={requestSubmit}
+            disabled={submitting}
+            size="lg"
+            className="gap-2 rounded-full shadow-md"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('assignmentDetail.testTaking.submitting')}
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                {t('assignmentDetail.testTaking.submitTest')}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </>
   );
-}
+};

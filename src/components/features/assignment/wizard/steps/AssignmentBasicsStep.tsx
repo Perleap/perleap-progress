@@ -1,9 +1,9 @@
 import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
 
 interface AssignmentBasicsStepProps {
   formData: AssignmentWizardFormData;
@@ -14,19 +14,21 @@ interface AssignmentBasicsStepProps {
   basicsTextareaKey: string;
 }
 
-export function AssignmentBasicsStep({
+export const AssignmentBasicsStep = ({
   formData,
   onFormChange,
   isRTL,
   rephrasingInstructions,
   onRephrase,
   basicsTextareaKey,
-}: AssignmentBasicsStepProps) {
+}: AssignmentBasicsStepProps) => {
   const { t } = useTranslation();
 
   return (
     <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-      <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      <div
+        className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+      >
         <BookOpen className="h-5 w-5" />
         <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
           {t('createClassroom.courseBasics')}
@@ -59,7 +61,9 @@ export function AssignmentBasicsStep({
         >
           {t('createAssignment.instructionsLabel')} <span className="text-destructive">*</span>
         </Label>
-        <p className={`text-[11px] text-muted-foreground leading-snug ${isRTL ? 'text-right' : 'text-left'}`}>
+        <p
+          className={`text-[11px] text-muted-foreground leading-snug ${isRTL ? 'text-right' : 'text-left'}`}
+        >
           {t('createAssignment.rephraseUsesModuleContext')}
         </p>
         <ExpandableTextarea
@@ -78,4 +82,4 @@ export function AssignmentBasicsStep({
       </div>
     </div>
   );
-}
+};

@@ -3,9 +3,9 @@
  * Display 5D chart for class average or individual student
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FiveDChart } from '@/components/FiveDChart';
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
+import { FiveDChart } from '@/components/FiveDChart';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ClassAverageChartProps {
   scores: FiveDScores;

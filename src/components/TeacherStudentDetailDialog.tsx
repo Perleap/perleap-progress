@@ -1,15 +1,10 @@
+import { ListOrdered, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ListOrdered, User } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StudentProfilePanel } from '@/components/StudentProfilePanel';
 import { StudentActivitiesSection } from '@/components/features/syllabus';
+import { StudentProfilePanel } from '@/components/StudentProfilePanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export interface TeacherStudentDetailDialogProps {
   open: boolean;
@@ -20,14 +15,14 @@ export interface TeacherStudentDetailDialogProps {
   isRTL: boolean;
 }
 
-export function TeacherStudentDetailDialog({
+export const TeacherStudentDetailDialog = ({
   open,
   onClose,
   classroomId,
   studentId,
   studentName,
   isRTL,
-}: TeacherStudentDetailDialogProps) {
+}: TeacherStudentDetailDialogProps) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState('profile');
 
@@ -40,13 +35,17 @@ export function TeacherStudentDetailDialog({
   const studentLabel = studentName ?? t('common.student');
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <DialogContent
-        dir={isRTL ? 'rtl' : 'ltr'}
-        className={cnDialog}
-      >
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
+      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className={cnDialog}>
         <DialogHeader>
-          <DialogTitle>{t('classroomDetail.studentsTab.detailDialogTitle', { name: studentLabel })}</DialogTitle>
+          <DialogTitle>
+            {t('classroomDetail.studentsTab.detailDialogTitle', { name: studentLabel })}
+          </DialogTitle>
         </DialogHeader>
         <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-col gap-4">
           <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
@@ -85,7 +84,6 @@ export function TeacherStudentDetailDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
 
-const cnDialog =
-  'flex max-h-[min(90vh,880px)] flex-col gap-4 overflow-hidden p-6 sm:max-w-4xl';
+const cnDialog = 'flex max-h-[min(90vh,880px)] flex-col gap-4 overflow-hidden p-6 sm:max-w-4xl';

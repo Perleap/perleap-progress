@@ -1,17 +1,17 @@
-import { useTranslation } from 'react-i18next';
-import { type ReactNode } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, XCircle, CircleDot, AlignLeft, Loader2, AlertCircle } from 'lucide-react';
+import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useTestQuestions, useTestResponses } from '@/hooks/queries';
-import { cn } from '@/lib/utils';
 import {
   averageMcqScores,
   formatMcqScorePercent,
   parseOptionIds,
   scoreMcqQuestion,
 } from '@/lib/testMcq';
+import { cn } from '@/lib/utils';
 
 interface TestResultsViewProps {
   assignmentId: string;
@@ -19,7 +19,11 @@ interface TestResultsViewProps {
   headerAction?: ReactNode;
 }
 
-export function TestResultsView({ assignmentId, submissionId, headerAction }: TestResultsViewProps) {
+export const TestResultsView = ({
+  assignmentId,
+  submissionId,
+  headerAction,
+}: TestResultsViewProps) => {
   const { t } = useTranslation();
   const { data: questions, isLoading: loadingQuestions } = useTestQuestions(assignmentId);
   const { data: responses, isLoading: loadingResponses } = useTestResponses(submissionId);
@@ -47,7 +51,7 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
           {responseList.map((response, index) => {
             const selectedIds = parseOptionIds(
               response.selected_option_ids,
-              response.selected_option_id,
+              response.selected_option_id
             );
             return (
               <Card key={response.id}>
@@ -99,9 +103,7 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
     );
   }
 
-  const responseMap = new Map(
-    responseList.map((r) => [r.question_id, r])
-  );
+  const responseMap = new Map(responseList.map((r) => [r.question_id, r]));
 
   const mcqQuestions = questions.filter((q) => q.question_type === 'multiple_choice');
   const mcqScores = mcqQuestions.map((q) => {
@@ -155,14 +157,21 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
         const response = responseMap.get(question.id);
         const options = (question.options as { id: string; text: string }[] | null) || [];
         const correctIds = parseOptionIds(question.correct_option_ids, question.correct_option_id);
-        const selectedIds = parseOptionIds(response?.selected_option_ids, response?.selected_option_id);
+        const selectedIds = parseOptionIds(
+          response?.selected_option_ids,
+          response?.selected_option_id
+        );
         const mcqScore =
           question.question_type === 'multiple_choice'
             ? scoreMcqQuestion({ correctIds, selectedIds })
             : null;
 
         return (
-          <Card key={question.id} id={`teacher-test-question-${question.id}`} className="overflow-hidden">
+          <Card
+            key={question.id}
+            id={`teacher-test-question-${question.id}`}
+            className="overflow-hidden"
+          >
             <CardHeader className="pb-3 bg-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -175,8 +184,10 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
                     <AlignLeft className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
-                {question.question_type === 'multiple_choice' && response && mcqScore && (
-                  mcqScore.isExactMatch ? (
+                {question.question_type === 'multiple_choice' &&
+                  response &&
+                  mcqScore &&
+                  (mcqScore.isExactMatch ? (
                     <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       {t('submissionDetail.testResults.correct')}
@@ -193,8 +204,7 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
                         percent: formatMcqScorePercent(mcqScore.score),
                       })}
                     </Badge>
-                  )
-                )}
+                  ))}
               </div>
               <p className="text-sm font-medium mt-2">{question.question_text}</p>
             </CardHeader>
@@ -211,9 +221,14 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
                         key={option.id}
                         className={cn(
                           'flex items-center gap-3 p-3 rounded-lg border text-sm',
-                          isCorrectOption && isSelected && 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800',
-                          isMissedCorrect && 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800',
-                          isSelected && !isCorrectOption && 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800',
+                          isCorrectOption &&
+                            isSelected &&
+                            'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800',
+                          isMissedCorrect &&
+                            'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800',
+                          isSelected &&
+                            !isCorrectOption &&
+                            'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800',
                           !isSelected && !isCorrectOption && 'bg-muted/30 border-transparent'
                         )}
                       >
@@ -229,11 +244,15 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
                         {!isSelected && !isCorrectOption && (
                           <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
                         )}
-                        <span className={cn(
-                          isCorrectOption && isSelected && 'font-medium text-green-700 dark:text-green-300',
-                          isMissedCorrect && 'font-medium text-amber-700 dark:text-amber-300',
-                          isSelected && !isCorrectOption && 'text-red-700 dark:text-red-300',
-                        )}>
+                        <span
+                          className={cn(
+                            isCorrectOption &&
+                              isSelected &&
+                              'font-medium text-green-700 dark:text-green-300',
+                            isMissedCorrect && 'font-medium text-amber-700 dark:text-amber-300',
+                            isSelected && !isCorrectOption && 'text-red-700 dark:text-red-300'
+                          )}
+                        >
                           {option.text}
                         </span>
                         {isSelected && (
@@ -242,7 +261,10 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
                           </Badge>
                         )}
                         {isMissedCorrect && (
-                          <Badge variant="outline" className="ml-auto text-xs border-amber-500/30 text-amber-700 dark:text-amber-300">
+                          <Badge
+                            variant="outline"
+                            className="ml-auto text-xs border-amber-500/30 text-amber-700 dark:text-amber-300"
+                          >
                             {t('submissionDetail.testResults.missedCorrect')}
                           </Badge>
                         )}
@@ -270,4 +292,4 @@ export function TestResultsView({ assignmentId, submissionId, headerAction }: Te
       })}
     </div>
   );
-}
+};

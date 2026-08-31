@@ -1,4 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
 import {
   Briefcase,
   ClipboardList,
@@ -14,8 +13,9 @@ import {
   Workflow,
   Radio,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import type { DbAssignmentType } from '@/types/models';
+import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const CURRICULUM_ICON_SIZE_PX = 14;
 
@@ -43,24 +43,20 @@ export function curriculumAssignmentIconForType(type: string | null | undefined)
   return curriculumIconForType(type);
 }
 
-export function CurriculumAssignmentTypeIcon({
+export const CurriculumAssignmentTypeIcon = ({
   type,
   className,
 }: {
   type?: string | null;
   className?: string | undefined;
-}) {
+}) => {
   const Icon = curriculumIconForType(type);
   return (
     <span
       className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-foreground"
       aria-hidden
     >
-      <Icon
-        size={CURRICULUM_ICON_SIZE_PX}
-        strokeWidth={2}
-        className={cn('shrink-0', className)}
-      />
+      <Icon size={CURRICULUM_ICON_SIZE_PX} strokeWidth={2} className={cn('shrink-0', className)} />
     </span>
   );
-}
+};

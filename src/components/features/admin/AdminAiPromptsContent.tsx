@@ -142,7 +142,7 @@ type SubmissionPickRow = {
   submitted_at: string | null;
 };
 
-export function AdminAiPromptsContent() {
+export const AdminAiPromptsContent = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -237,7 +237,13 @@ export function AdminAiPromptsContent() {
   );
 
   const submissionsPickQuery = useQuery({
-    queryKey: ['admin_ai_prompts_student_submissions', courseId, moduleId, studentId, filteredAssignmentIds],
+    queryKey: [
+      'admin_ai_prompts_student_submissions',
+      courseId,
+      moduleId,
+      studentId,
+      filteredAssignmentIds,
+    ],
     queryFn: async () => {
       if (!studentId || filteredAssignmentIds.length === 0) return [];
       const { data, error } = await supabase
@@ -276,7 +282,8 @@ export function AdminAiPromptsContent() {
     }
   }, [submissionId, sortedSubmissionOptions, submissionsPickQuery.isFetched]);
 
-  const handleCourseChange = (v: string) => {
+  const handleCourseChange = (v: string | null) => {
+    if (v == null) return;
     void prefetchSyllabusOutlineByClassroom(queryClient, v, ADMIN_COURSE_DATA_STALE_MS);
     if (user?.id) {
       void prefetchClassroomAssignments(queryClient, v, ADMIN_COURSE_DATA_STALE_MS);
@@ -419,7 +426,10 @@ export function AdminAiPromptsContent() {
             <Label>{t('admin.aiPrompts.comparison.module')}</Label>
             <Select
               value={courseId ? moduleId : null}
-              onValueChange={setModuleId}
+              onValueChange={(v: string | null) => {
+                if (v == null) return;
+                setModuleId(v);
+              }}
               disabled={!courseId}
               modal={false}
             >
@@ -454,7 +464,10 @@ export function AdminAiPromptsContent() {
             <Label>{t('admin.aiPrompts.comparison.student')}</Label>
             <Select
               value={studentId || null}
-              onValueChange={setStudentId}
+              onValueChange={(v: string | null) => {
+                if (v == null) return;
+                setStudentId(v);
+              }}
               disabled={!courseId || (studentsPending && enrolledData === undefined)}
               modal={false}
             >
@@ -491,7 +504,10 @@ export function AdminAiPromptsContent() {
             <Label>{t('admin.aiPrompts.comparison.submission')}</Label>
             <Select
               value={submissionId || null}
-              onValueChange={setSubmissionId}
+              onValueChange={(v: string | null) => {
+                if (v == null) return;
+                setSubmissionId(v);
+              }}
               disabled={
                 !courseId ||
                 !studentId ||
@@ -510,7 +526,8 @@ export function AdminAiPromptsContent() {
                           const row = sortedSubmissionOptions.find((s) => s.id === v);
                           if (!row) return t('admin.aiPrompts.comparison.unknownItem');
                           const title =
-                            assignments.find((a: Assignment) => a.id === row.assignment_id)
+                            assignments
+                              .find((a: Assignment) => a.id === row.assignment_id)
                               ?.title?.trim() || t('admin.aiPrompts.comparison.unknownItem');
                           const n = row.attempt_number ?? 1;
                           return `${title} · ${t('submissionsTab.attemptLabel', { n })}`;
@@ -523,8 +540,9 @@ export function AdminAiPromptsContent() {
               <SelectContent>
                 {sortedSubmissionOptions.map((row) => {
                   const title =
-                    assignments.find((a: Assignment) => a.id === row.assignment_id)?.title?.trim() ||
-                    t('admin.aiPrompts.comparison.unknownItem');
+                    assignments
+                      .find((a: Assignment) => a.id === row.assignment_id)
+                      ?.title?.trim() || t('admin.aiPrompts.comparison.unknownItem');
                   const n = row.attempt_number ?? 1;
                   const label = `${title} · ${t('submissionsTab.attemptLabel', { n })}`;
                   return (
@@ -633,4 +651,4 @@ export function AdminAiPromptsContent() {
       </section>
     </div>
   );
-}
+};

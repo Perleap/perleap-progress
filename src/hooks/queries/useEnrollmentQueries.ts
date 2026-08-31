@@ -4,21 +4,26 @@
  */
 
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/useAuth';
-import { enrollInClassroom, unenrollFromClassroom, isEnrolled } from '@/services/enrollmentService';
-import { getEnrolledStudents, previewClassroomReset, resetClassroom } from '@/services/classroomService';
-import { classroomKeys } from './useClassroomQueries';
 import { assignmentKeys } from './useAssignmentQueries';
-import { submissionKeys } from './useSubmissionQueries';
+import { classroomKeys } from './useClassroomQueries';
 import { moduleFlowKeys } from './useModuleFlowQueries';
-import { syllabusKeys } from './useSyllabusQueries';
 import { pilotReportKeys } from './usePilotReportQueries';
+import { submissionKeys } from './useSubmissionQueries';
+import { syllabusKeys } from './useSyllabusQueries';
+import { useAuth } from '@/contexts/useAuth';
+import {
+  getEnrolledStudents,
+  previewClassroomReset,
+  resetClassroom,
+} from '@/services/classroomService';
+import { enrollInClassroom, unenrollFromClassroom, isEnrolled } from '@/services/enrollmentService';
 
 // Query Keys
 export const enrollmentKeys = {
   all: ['enrollments'] as const,
   lists: () => [...enrollmentKeys.all, 'list'] as const,
-  listByClassroom: (classroomId: string) => [...enrollmentKeys.lists(), 'classroom', classroomId] as const,
+  listByClassroom: (classroomId: string) =>
+    [...enrollmentKeys.lists(), 'classroom', classroomId] as const,
   check: (classroomId: string, studentId: string) =>
     [...enrollmentKeys.all, 'check', classroomId, studentId] as const,
 };
@@ -29,7 +34,7 @@ export const enrollmentKeys = {
 export function prefetchEnrolledStudentsList(
   queryClient: QueryClient,
   classroomId: string | undefined,
-  staleTimeMs = 5 * 60 * 1000,
+  staleTimeMs = 5 * 60 * 1000
 ) {
   if (!classroomId) return;
   return queryClient.prefetchQuery({
@@ -48,7 +53,7 @@ export function prefetchEnrolledStudentsList(
  */
 export const useEnrolledStudents = (
   classroomId: string | undefined,
-  options?: { staleTime?: number },
+  options?: { staleTime?: number }
 ) => {
   return useQuery({
     queryKey: enrollmentKeys.listByClassroom(classroomId || ''),
@@ -136,10 +141,7 @@ export const useUnenrollFromClassroom = () => {
 /**
  * Preview counts for classroom reset (read-only).
  */
-export const useClassroomResetPreview = (
-  classroomId: string | undefined,
-  enabled: boolean,
-) => {
+export const useClassroomResetPreview = (classroomId: string | undefined, enabled: boolean) => {
   return useQuery({
     queryKey: [...enrollmentKeys.all, 'reset-preview', classroomId ?? ''] as const,
     queryFn: async () => {
@@ -183,11 +185,3 @@ export const useResetClassroom = () => {
     },
   });
 };
-
-
-
-
-
-
-
-

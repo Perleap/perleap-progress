@@ -195,6 +195,27 @@ npm run verify:proof -- <run-id>
 - Hebrew/RTL — verify English only
 - Mocking AI — chat feature hits real edge functions (may be slow)
 
+## Staging (remote target)
+
+Run the same refactor QA suite against **staging.perleap.ai** (no local Vite server):
+
+1. Copy [`.env.verify.staging.example`](../../.env.verify.staging.example) → `.env.verify.staging` (gitignored)
+2. Set `VERIFY_BASE_URL=https://staging.perleap.ai` and QA account emails/passwords
+3. Staging must use the **same Supabase project** as `.env.local` (for `verify:seed`)
+4. If Vercel Deployment Protection blocks Playwright, set one of:
+   - `VERCEL_AUTOMATION_BYPASS_SECRET` — long-lived bypass secret from Vercel project settings (Deployment Protection → Protection Bypass for Automation)
+   - `VERCEL_SHARE_TOKEN` — short-lived shareable link token (~24h) from a Vercel deployment share URL (`?share=…`). Refresh when staging QA starts failing with auth/403 on page load. Used by `login.mjs`, `doctor.mjs`, and Playwright context setup.
+   - `VERCEL_OIDC_TOKEN` — optional; some CI environments inject this instead of a share token
+
+When both bypass secret and share token are set, the verify helpers prefer the share token for remote staging drives.
+
+```bash
+npm run qa:refactor:staging          # headless
+npm run qa:refactor:staging:watch    # visible browser
+```
+
+Evidence: `.cursor/skills/verify-perleap/evidence/refactor-qa-staging-<date>/index.html`
+
 ## Maintenance
 
 Run `/maintain-verification-skill` when routes or UI copy change.

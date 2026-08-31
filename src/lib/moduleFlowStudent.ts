@@ -48,7 +48,7 @@ function assignmentsInOpenIntervalComplete(
   fromIndex: number,
   toIndex: number,
   getAssignmentId: (index: number) => string | null,
-  ctx: StudentFlowProgressContext,
+  ctx: StudentFlowProgressContext
 ): boolean {
   for (let k = fromIndex + 1; k <= toIndex; k++) {
     const assignmentId = getAssignmentId(k);
@@ -65,7 +65,7 @@ function resourceInferredDoneFromLaterAssignments(
   length: number,
   stepIndex: number,
   getAssignmentId: (index: number) => string | null,
-  ctx: StudentFlowProgressContext,
+  ctx: StudentFlowProgressContext
 ): boolean {
   for (let k = stepIndex + 1; k < length; k++) {
     const assignmentId = getAssignmentId(k);
@@ -96,13 +96,13 @@ function localStepAssignmentId(local: ModuleFlowLocalStep[], index: number): str
 export function localResourceInferredDoneFromLaterAssignments(
   local: ModuleFlowLocalStep[],
   index: number,
-  ctx: StudentFlowProgressContext,
+  ctx: StudentFlowProgressContext
 ): boolean {
   return resourceInferredDoneFromLaterAssignments(
     local.length,
     index,
     (k) => localStepAssignmentId(local, k),
-    ctx,
+    ctx
   );
 }
 
@@ -126,7 +126,7 @@ export function persistedStepDone(
       steps.length,
       stepIndex,
       (k) => persistedStepAssignmentId(steps, k),
-      ctx,
+      ctx
     );
   }
   return false;
@@ -238,7 +238,7 @@ export function computedFlowItemDoneForProgress(
     items.length,
     index,
     (k) => computedStepAssignmentId(items, k),
-    ctx,
+    ctx
   );
 }
 
@@ -356,13 +356,13 @@ export function isSectionActivityFlowFullyComplete(
   const orderedPersisted = getOrderedActivityCenterFlowSteps(
     persistedSteps,
     sectionResources,
-    studentFlowOpts,
+    studentFlowOpts
   );
   const computed = computeDefaultModuleFlow(
     sectionId,
     sectionResources,
     assignments,
-    studentFlowOpts,
+    studentFlowOpts
   );
   if (orderedPersisted.length > 0) {
     return firstIncompleteActionablePersistedIndex(orderedPersisted, ctx, assignments, now) === -1;

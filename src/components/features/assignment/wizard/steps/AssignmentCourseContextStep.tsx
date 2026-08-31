@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
 import type { SyllabusWithSections } from '@/types/syllabus';
 import { AssignmentCourseOutlineLinkCard } from '@/components/AssignmentCourseOutlineLinkCard';
 import { ModuleActivityLinksField } from '@/components/features/syllabus/ModuleActivityLinksField';
+import { cn } from '@/lib/utils';
 
 interface AssignmentCourseContextStepProps {
   syllabus: SyllabusWithSections | null | undefined;
@@ -18,7 +18,7 @@ interface AssignmentCourseContextStepProps {
   loading: boolean;
 }
 
-export function AssignmentCourseContextStep({
+export const AssignmentCourseContextStep = ({
   syllabus,
   syllabusLoading,
   syllabusSectionId,
@@ -30,11 +30,14 @@ export function AssignmentCourseContextStep({
   isRTL,
   lockSyllabusSection = false,
   loading,
-}: AssignmentCourseContextStepProps) {
+}: AssignmentCourseContextStepProps) => {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div
+      className="space-y-4 p-6 rounded-xl border border-border shadow-sm"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       <div className="space-y-1 pt-0.5">
         <AssignmentCourseOutlineLinkCard
           variant="inline"
@@ -60,7 +63,7 @@ export function AssignmentCourseContextStep({
           <p
             className={cn(
               'text-muted-foreground text-xs leading-relaxed',
-              isRTL ? 'text-right' : 'text-left',
+              isRTL ? 'text-right' : 'text-left'
             )}
           >
             {t('createAssignment.metadata.linkedModuleHelper')}
@@ -69,4 +72,4 @@ export function AssignmentCourseContextStep({
       </div>
     </div>
   );
-}
+};

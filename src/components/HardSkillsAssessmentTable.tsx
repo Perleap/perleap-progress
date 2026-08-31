@@ -1,8 +1,14 @@
+import { ChevronDown, FolderOpen, Info, Loader2, TrendingUp } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
+import type { HardSkillAssessmentWithStudent } from '@/types/hard-skills';
+import type { TFunction } from 'i18next';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -12,19 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronDown, FolderOpen, Info, Loader2, TrendingUp } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
-import type { HardSkillAssessmentWithStudent } from '@/types/hard-skills';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const CRA_SELECT = `
@@ -68,7 +63,7 @@ interface HardSkillsAssessmentTableProps {
 
 function enrichAssessments(
   rows: HardSkillAssessmentWithStudent[],
-  t: TFunction,
+  t: TFunction
 ): EnrichedAssessment[] {
   return rows.map((a) => {
     const aj = a.assignments;
@@ -113,7 +108,7 @@ function scopeSummaryText(rows: EnrichedAssessment[], t: TFunction) {
 }
 
 /** Simple bar only (avoids Base UI Progress extra nodes that can show a stray end control in some UAs). */
-function CraPercentBar({ value, barClassName }: { value: number; barClassName: string }) {
+const CraPercentBar = ({ value, barClassName }: { value: number; barClassName: string }) => {
   const v = Math.min(100, Math.max(0, value));
   return (
     <div
@@ -124,12 +119,15 @@ function CraPercentBar({ value, barClassName }: { value: number; barClassName: s
       aria-valuenow={v}
     >
       <div
-        className={cn('h-full min-w-0 rounded-s-full transition-[width] duration-300', barClassName)}
+        className={cn(
+          'h-full min-w-0 rounded-s-full transition-[width] duration-300',
+          barClassName
+        )}
         style={{ width: `${v}%` }}
       />
     </div>
   );
-}
+};
 
 function sortEnrichedRows(rows: EnrichedAssessment[]) {
   return [...rows].sort((a, b) => {
@@ -142,20 +140,28 @@ function sortEnrichedRows(rows: EnrichedAssessment[]) {
   });
 }
 
-function CraDetailBody({ assessment, t }: { assessment: EnrichedAssessment; t: TFunction }) {
+const CraDetailBody = ({ assessment, t }: { assessment: EnrichedAssessment; t: TFunction }) => {
   return (
     <div className="rounded-md bg-muted/30 p-3 space-y-3">
       <div>
-        <p className="text-xs font-semibold text-muted-foreground">{t('cra.table.detailsProficiencyPrefix')}</p>
-        <p className="text-sm text-muted-foreground leading-relaxed mt-0.5">{assessment.proficiency_description}</p>
+        <p className="text-xs font-semibold text-muted-foreground">
+          {t('cra.table.detailsProficiencyPrefix')}
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed mt-0.5">
+          {assessment.proficiency_description}
+        </p>
       </div>
       <div>
-        <p className="text-xs font-semibold text-muted-foreground">{t('cra.table.detailsNextStepsPrefix')}</p>
-        <p className="text-sm text-muted-foreground leading-relaxed mt-0.5">{assessment.actionable_challenge}</p>
+        <p className="text-xs font-semibold text-muted-foreground">
+          {t('cra.table.detailsNextStepsPrefix')}
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed mt-0.5">
+          {assessment.actionable_challenge}
+        </p>
       </div>
     </div>
   );
-}
+};
 
 type CraRowOpts = {
   showStudentCol: boolean;
@@ -169,11 +175,16 @@ type CraRowOpts = {
   onToggle: (id: string) => void;
   getPerformanceColor: (n: number) => string;
   getPerformanceBarClass: (n: number) => string;
-  getPerformanceBadge: (n: number) => { label: string; variant: 'default' | 'secondary' | 'outline' };
+  getPerformanceBadge: (n: number) => {
+    label: string;
+    variant: 'default' | 'secondary' | 'outline';
+  };
   t: TFunction;
 };
 
-function craColCount(opts: Pick<CraRowOpts, 'showStudentCol' | 'showModuleCol' | 'showAssignmentCol'>) {
+function craColCount(
+  opts: Pick<CraRowOpts, 'showStudentCol' | 'showModuleCol' | 'showAssignmentCol'>
+) {
   return (
     (opts.showStudentCol ? 1 : 0) +
     (opts.showModuleCol ? 1 : 0) +
@@ -182,15 +193,17 @@ function craColCount(opts: Pick<CraRowOpts, 'showStudentCol' | 'showModuleCol' |
   );
 }
 
-function CraTableHeaderRow(opts: {
+const CraTableHeaderRow = (opts: {
   showStudentCol: boolean;
   showModuleCol: boolean;
   showAssignmentCol: boolean;
   t: TFunction;
-}) {
+}) => {
   return (
     <TableRow>
-      {opts.showStudentCol ? <TableHead className="whitespace-nowrap">{opts.t('cra.table.student')}</TableHead> : null}
+      {opts.showStudentCol ? (
+        <TableHead className="whitespace-nowrap">{opts.t('cra.table.student')}</TableHead>
+      ) : null}
       {opts.showModuleCol ? <TableHead>{opts.t('cra.table.module')}</TableHead> : null}
       {opts.showAssignmentCol ? <TableHead>{opts.t('cra.table.assignment')}</TableHead> : null}
       <TableHead>{opts.t('cra.table.domain')}</TableHead>
@@ -200,11 +213,11 @@ function CraTableHeaderRow(opts: {
       <TableHead className="w-[5.5rem]" />
     </TableRow>
   );
-}
+};
 
 type CraDataRowsListProps = CraRowOpts & { rows: EnrichedAssessment[] };
 
-function CraDataRowsList({ rows: rowsIn, ...o }: CraDataRowsListProps) {
+const CraDataRowsList = ({ rows: rowsIn, ...o }: CraDataRowsListProps) => {
   const rows = sortEnrichedRows(rowsIn);
   const cc = craColCount(o);
   const renderList = (list: EnrichedAssessment[]) =>
@@ -223,7 +236,9 @@ function CraDataRowsList({ rows: rowsIn, ...o }: CraDataRowsListProps) {
                 {assessment.student_profiles?.full_name || o.t('cra.unknown')}
               </TableCell>
             ) : null}
-            {o.showModuleCol ? <TableCell className="min-w-[7rem] text-sm">{assessment._sectionTitle}</TableCell> : null}
+            {o.showModuleCol ? (
+              <TableCell className="min-w-[7rem] text-sm">{assessment._sectionTitle}</TableCell>
+            ) : null}
             {o.showAssignmentCol ? (
               <TableCell className="min-w-[8rem] text-sm">{assessment._assignmentTitle}</TableCell>
             ) : null}
@@ -238,7 +253,7 @@ function CraDataRowsList({ rows: rowsIn, ...o }: CraDataRowsListProps) {
                 <div
                   className={cn(
                     'text-base font-bold tabular-nums',
-                    o.getPerformanceColor(assessment.current_level_percent),
+                    o.getPerformanceColor(assessment.current_level_percent)
                   )}
                 >
                   {assessment.current_level_percent}%
@@ -263,7 +278,9 @@ function CraDataRowsList({ rows: rowsIn, ...o }: CraDataRowsListProps) {
                 className="h-8 w-8 shrink-0 -my-0.5 rounded-full"
                 onClick={() => o.onToggle(id)}
                 aria-expanded={open}
-                aria-controls={open ? (o.isMobile ? CRA_MOBILE_DIALOG_CONTENT_ID : panelId) : undefined}
+                aria-controls={
+                  open ? (o.isMobile ? CRA_MOBILE_DIALOG_CONTENT_ID : panelId) : undefined
+                }
                 aria-haspopup={o.isMobile ? 'dialog' : undefined}
                 aria-label={open ? o.t('cra.table.hideDetails') : o.t('cra.table.showDetails')}
               >
@@ -301,9 +318,9 @@ function CraDataRowsList({ rows: rowsIn, ...o }: CraDataRowsListProps) {
     ));
   }
   return <>{renderList(rows)}</>;
-}
+};
 
-export function HardSkillsAssessmentTable({
+export const HardSkillsAssessmentTable = ({
   submissionId,
   assignmentId,
   classroomId,
@@ -315,11 +332,13 @@ export function HardSkillsAssessmentTable({
   layout = 'grouped',
   defaultGroupByModule = true,
   defaultGroupByDomain = true,
-}: HardSkillsAssessmentTableProps) {
+}: HardSkillsAssessmentTableProps) => {
   const { t } = useTranslation();
   const displayTitle = title || t('cra.title');
   const displayDescription = description || t('cra.description');
-  const [assessments, setAssessments] = useState<HardSkillAssessmentWithStudent[]>(initialData || []);
+  const [assessments, setAssessments] = useState<HardSkillAssessmentWithStudent[]>(
+    initialData || []
+  );
   const [loading, setLoading] = useState(!initialData);
   const [groupByModule, setGroupByModule] = useState(defaultGroupByModule);
   const [groupByDomain, setGroupByDomain] = useState(defaultGroupByDomain);
@@ -341,7 +360,7 @@ export function HardSkillsAssessmentTable({
         student_profiles: { full_name: profileMap.get(assessment.student_id) || t('cra.unknown') },
       }));
     },
-    [submissionId, t],
+    [submissionId, t]
   );
 
   const fetchAssessments = useCallback(async () => {
@@ -457,7 +476,9 @@ export function HardSkillsAssessmentTable({
           }
           return;
         }
-        const map = new Map((asgRows || []).map((a) => [a.id, a as HardSkillAssessmentWithStudent['assignments']]));
+        const map = new Map(
+          (asgRows || []).map((a) => [a.id, a as HardSkillAssessmentWithStudent['assignments']])
+        );
         const merged = initialData.map((r) => ({
           ...r,
           assignments: map.get(r.assignment_id) ?? r.assignments ?? null,
@@ -474,7 +495,16 @@ export function HardSkillsAssessmentTable({
     }
     void fetchAssessments();
     return undefined;
-  }, [submissionId, assignmentId, classroomId, studentId, classroomAssignmentIdFilter, initialData, fetchAssessments, applyStudentNames]);
+  }, [
+    submissionId,
+    assignmentId,
+    classroomId,
+    studentId,
+    classroomAssignmentIdFilter,
+    initialData,
+    fetchAssessments,
+    applyStudentNames,
+  ]);
 
   const getPerformanceColor = (percent: number) => {
     if (percent >= 80) return 'text-green-600 dark:text-green-400';
@@ -492,19 +522,28 @@ export function HardSkillsAssessmentTable({
 
   const getPerformanceBadge = (percent: number) => {
     if (percent >= 80) return { label: t('cra.performance.advanced'), variant: 'default' as const };
-    if (percent >= 60) return { label: t('cra.performance.intermediate'), variant: 'secondary' as const };
-    if (percent >= 40) return { label: t('cra.performance.developing'), variant: 'outline' as const };
+    if (percent >= 60)
+      return { label: t('cra.performance.intermediate'), variant: 'secondary' as const };
+    if (percent >= 40)
+      return { label: t('cra.performance.developing'), variant: 'outline' as const };
     return { label: t('cra.performance.beginner'), variant: 'outline' as const };
   };
 
-  const enriched = useMemo(() => enrichAssessments(assessments as HardSkillAssessmentWithStudent[], t), [assessments, t]);
+  const enriched = useMemo(
+    () => enrichAssessments(assessments as HardSkillAssessmentWithStudent[], t),
+    [assessments, t]
+  );
   const summary = useMemo(() => scopeSummaryText(enriched, t), [enriched, t]);
 
   const groupedTree = useMemo(() => {
     if (layout !== 'grouped') return null;
     const byModule = new Map<
       string,
-      { order: number; title: string; byAssignment: Map<string, { title: string; rows: EnrichedAssessment[] }> }
+      {
+        order: number;
+        title: string;
+        byAssignment: Map<string, { title: string; rows: EnrichedAssessment[] }>;
+      }
     >();
     for (const r of enriched) {
       const modKey = r._sectionId ?? '__unplaced__';
@@ -546,12 +585,12 @@ export function HardSkillsAssessmentTable({
         return next;
       });
     },
-    [isMobile],
+    [isMobile]
   );
 
   const manyAssignmentsInView = useMemo(
     () => new Set(enriched.map((a) => a.assignment_id)).size > 1,
-    [enriched],
+    [enriched]
   );
 
   const mobileDetailAssessment =
@@ -600,9 +639,7 @@ export function HardSkillsAssessmentTable({
     isMobile,
   };
 
-  const tableCaption = displayDescription
-    ? `${displayTitle}. ${displayDescription}`
-    : displayTitle;
+  const tableCaption = displayDescription ? `${displayTitle}. ${displayDescription}` : displayTitle;
   const tableClassName = 'min-w-[48rem] w-full';
 
   return (
@@ -616,24 +653,20 @@ export function HardSkillsAssessmentTable({
         {layout === 'grouped' ? (
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:flex-wrap">
             <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-              <Checkbox
-                checked={groupByModule}
-                onCheckedChange={(v) => setGroupByModule(!!v)}
-              />
+              <Checkbox checked={groupByModule} onCheckedChange={(v) => setGroupByModule(!!v)} />
               {t('cra.groupByModule')}
             </label>
             <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-              <Checkbox
-                checked={groupByDomain}
-                onCheckedChange={(v) => setGroupByDomain(!!v)}
-              />
+              <Checkbox checked={groupByDomain} onCheckedChange={(v) => setGroupByDomain(!!v)} />
               {t('cra.groupByDomain')}
             </label>
           </div>
         ) : null}
         <p className="text-sm text-muted-foreground leading-relaxed pt-1">{summary}</p>
         {!isMobile ? (
-          <p className="text-xs text-muted-foreground/90 hidden md:block pt-1">{t('cra.table.scrollHint')}</p>
+          <p className="text-xs text-muted-foreground/90 hidden md:block pt-1">
+            {t('cra.table.scrollHint')}
+          </p>
         ) : null}
       </CardHeader>
       <CardContent className="space-y-6">
@@ -664,9 +697,13 @@ export function HardSkillsAssessmentTable({
         ) : groupedTree && groupByModule ? (
           groupedTree.modules.map(([modKey, mod]) => {
             const assignEntries = [...mod.byAssignment.entries()].sort((a, b) =>
-              a[1].title.localeCompare(b[1].title),
+              a[1].title.localeCompare(b[1].title)
             );
-            const headCols = { showStudentCol, showModuleCol: false, showAssignmentCol: false as const };
+            const headCols = {
+              showStudentCol,
+              showModuleCol: false,
+              showAssignmentCol: false as const,
+            };
             const cc = craColCount(headCols);
             return (
               <Collapsible
@@ -688,11 +725,19 @@ export function HardSkillsAssessmentTable({
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="p-2 pb-3">
-                  <div className="overflow-x-auto rounded-lg border border-border/80 bg-card" role="presentation">
+                  <div
+                    className="overflow-x-auto rounded-lg border border-border/80 bg-card"
+                    role="presentation"
+                  >
                     <Table className={tableClassName} aria-label={`${mod.title} — ${displayTitle}`}>
                       <TableCaption className="sr-only">{tableCaption}</TableCaption>
                       <TableHeader>
-                        <CraTableHeaderRow showStudentCol={showStudentCol} showModuleCol={false} showAssignmentCol={false} t={t} />
+                        <CraTableHeaderRow
+                          showStudentCol={showStudentCol}
+                          showModuleCol={false}
+                          showAssignmentCol={false}
+                          t={t}
+                        />
                       </TableHeader>
                       <TableBody>
                         {assignEntries.map(([aid, { title, rows: ar }]) => (
@@ -782,10 +827,10 @@ export function HardSkillsAssessmentTable({
       </Dialog>
     </Card>
   );
-}
+};
 
 function mergeAllAssignmentsFromModules(
-  modules: [string, { byAssignment: Map<string, { title: string; rows: EnrichedAssessment[] }> }][],
+  modules: [string, { byAssignment: Map<string, { title: string; rows: EnrichedAssessment[] }> }][]
 ) {
   const out = new Map<string, { title: string; rows: EnrichedAssessment[] }>();
   for (const [, mod] of modules) {

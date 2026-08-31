@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,10 @@ interface SubmissionExportJsonButtonProps {
   className?: string;
 }
 
-export function SubmissionExportJsonButton({
+export const SubmissionExportJsonButton = ({
   submissionId,
   className,
-}: SubmissionExportJsonButtonProps) {
+}: SubmissionExportJsonButtonProps) => {
   const { t } = useTranslation();
   const [exporting, setExporting] = useState(false);
 
@@ -46,4 +46,4 @@ export function SubmissionExportJsonButton({
       {exporting ? t('submissionDetail.exportJsonLoading') : t('submissionDetail.exportJson')}
     </Button>
   );
-}
+};

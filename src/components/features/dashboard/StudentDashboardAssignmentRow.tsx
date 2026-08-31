@@ -1,16 +1,16 @@
-import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
+import type { StudentDashboardAssignment } from '@/types/api.types';
+import type { TeacherProfileDisplay } from '@/types/models';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
-import type { StudentDashboardAssignment } from '@/types/api.types';
-import type { TeacherProfile } from '@/types/models';
 
 function resolveTeacherProfile(
-  profile: TeacherProfile | TeacherProfile[] | null | undefined,
-): TeacherProfile | null | undefined {
+  profile: TeacherProfileDisplay | TeacherProfileDisplay[] | null | undefined
+): TeacherProfileDisplay | null | undefined {
   if (Array.isArray(profile)) return profile[0];
   return profile;
 }
@@ -22,12 +22,12 @@ export type StudentDashboardAssignmentRowProps = {
   onClick: () => void;
 };
 
-export function StudentDashboardAssignmentRow({
+export const StudentDashboardAssignmentRow = ({
   assignment,
   variant,
   assignmentTypeLabel,
   onClick,
-}: StudentDashboardAssignmentRowProps) {
+}: StudentDashboardAssignmentRowProps) => {
   const { t } = useTranslation();
   const teacherProfile = resolveTeacherProfile(assignment.classrooms.teacher_profiles);
   const teacherName = teacherProfile?.full_name || t('common.teacher');
@@ -91,7 +91,9 @@ export function StudentDashboardAssignmentRow({
           {isActive && (
             <div className="text-end hidden sm:block">
               <p className="text-xs text-muted-foreground">{t('common.teacher')}</p>
-              <p className="text-sm font-medium truncate max-w-[100px] text-foreground">{teacherName}</p>
+              <p className="text-sm font-medium truncate max-w-[100px] text-foreground">
+                {teacherName}
+              </p>
             </div>
           )}
           <Avatar
@@ -114,4 +116,4 @@ export function StudentDashboardAssignmentRow({
       </div>
     </Card>
   );
-}
+};

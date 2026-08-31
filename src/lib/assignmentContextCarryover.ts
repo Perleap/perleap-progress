@@ -109,7 +109,7 @@ export function readAssignmentContextCarryover(): AssignmentContextCarryoverV2 |
  */
 export function appendAssignmentContextCarryover(
   entry: Omit<CarriedAssignmentEntry, 'at'> & { at?: number },
-  root: { studentId: string; classroomId: string },
+  root: { studentId: string; classroomId: string }
 ): void {
   try {
     const ts = entry.at ?? Date.now();
@@ -151,7 +151,7 @@ export function writeAssignmentContextCarryover(
     at?: number;
     classroomId: string;
     studentId: string;
-  },
+  }
 ): void {
   appendAssignmentContextCarryover(
     {
@@ -159,7 +159,7 @@ export function writeAssignmentContextCarryover(
       priorAssignmentId: payload.priorAssignmentId,
       at: payload.at,
     },
-    { studentId: payload.studentId, classroomId: payload.classroomId },
+    { studentId: payload.studentId, classroomId: payload.classroomId }
   );
 }
 
@@ -177,7 +177,7 @@ export function pickEligiblePriorSubmissionIds(
   stored: AssignmentContextCarryoverV2 | null,
   studentId: string,
   classroomId: string,
-  currentAssignmentId: string,
+  currentAssignmentId: string
 ): string[] {
   if (!stored || stored.studentId !== studentId || stored.classroomId !== classroomId) return [];
   const now = Date.now();

@@ -1,5 +1,7 @@
 import { MonitoringOverviewContent } from '@/components/features/admin';
 
-export default function MonitoringOverviewPage() {
+const MonitoringOverviewPage = () => {
   return <MonitoringOverviewContent />;
-}
+};
+
+export default MonitoringOverviewPage;

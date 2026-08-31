@@ -4,10 +4,41 @@
  */
 
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { analyticsKeys } from '@/hooks/queries/useAnalyticsQueries';
-import { nuanceKeys } from '@/hooks/queries/useNuanceQueries';
-import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { assignmentKeys } from './useAssignmentQueries';
+import type {
+  CreateSyllabusInput,
+  UpdateSyllabusInput,
+  CreateSyllabusSectionInput,
+  UpdateSyllabusSectionInput,
+  CreateGradingCategoryInput,
+  UpdateGradingCategoryInput,
+  StudentProgressStatus,
+  SyllabusWithSections,
+  ProvisionSyllabusBundleInput,
+  UpdateSectionResourceInput,
+  ActivityResourceStatus,
+  LessonContentV1,
+} from '@/types/syllabus';
 import { syncModuleFlowToResolvedDisplayForSection } from '@/hooks/queries/moduleFlowSync';
+import { analyticsKeys } from '@/hooks/queries/useAnalyticsQueries';
+import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { nuanceKeys } from '@/hooks/queries/useNuanceQueries';
+import {
+  getSectionResources,
+  getSectionResourceById,
+  uploadAndCreateResource,
+  createLinkResource,
+  createSectionResource,
+  updateSectionResource,
+  deleteSectionResource,
+  upsertStudentProgress,
+  getStudentProgress,
+  getChangelog,
+  createChangelogEntry,
+  getSectionComments,
+  createSectionComment,
+  deleteSectionComment,
+} from '@/services/syllabusResourceService';
 import {
   getSyllabusByClassroom,
   getSyllabusOutlineByClassroom,
@@ -28,42 +59,12 @@ import {
   getAssignmentsBySection,
   getSectionAssignmentProgress,
 } from '@/services/syllabusService';
-import {
-  getSectionResources,
-  getSectionResourceById,
-  uploadAndCreateResource,
-  createLinkResource,
-  createSectionResource,
-  updateSectionResource,
-  deleteSectionResource,
-  upsertStudentProgress,
-  getStudentProgress,
-  getChangelog,
-  createChangelogEntry,
-  getSectionComments,
-  createSectionComment,
-  deleteSectionComment,
-} from '@/services/syllabusResourceService';
-import type {
-  CreateSyllabusInput,
-  UpdateSyllabusInput,
-  CreateSyllabusSectionInput,
-  UpdateSyllabusSectionInput,
-  CreateGradingCategoryInput,
-  UpdateGradingCategoryInput,
-  StudentProgressStatus,
-  SyllabusWithSections,
-  ProvisionSyllabusBundleInput,
-  UpdateSectionResourceInput,
-  ActivityResourceStatus,
-  LessonContentV1,
-} from '@/types/syllabus';
-import { assignmentKeys } from './useAssignmentQueries';
 
 export const syllabusKeys = {
   all: ['syllabus'] as const,
   byClassroom: (classroomId: string) => [...syllabusKeys.all, 'classroom', classroomId] as const,
-  outlineByClassroom: (classroomId: string) => [...syllabusKeys.all, 'outline', classroomId] as const,
+  outlineByClassroom: (classroomId: string) =>
+    [...syllabusKeys.all, 'outline', classroomId] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ const SYLLABUS_STALE_MS = 2 * 60 * 1000;
 export function prefetchSyllabusByClassroom(
   queryClient: QueryClient,
   classroomId: string | undefined,
-  staleTimeMs: number = SYLLABUS_STALE_MS,
+  staleTimeMs: number = SYLLABUS_STALE_MS
 ) {
   if (!classroomId) return;
   return queryClient.prefetchQuery({
@@ -94,10 +95,7 @@ export function prefetchSyllabusByClassroom(
   });
 }
 
-export const useSyllabus = (
-  classroomId: string | undefined,
-  options?: { staleTime?: number },
-) => {
+export const useSyllabus = (classroomId: string | undefined, options?: { staleTime?: number }) => {
   const staleTime = options?.staleTime ?? SYLLABUS_STALE_MS;
   return useQuery({
     queryKey: syllabusKeys.byClassroom(classroomId || ''),
@@ -115,7 +113,7 @@ export const useSyllabus = (
 export function prefetchSyllabusOutlineByClassroom(
   queryClient: QueryClient,
   classroomId: string | undefined,
-  staleTimeMs: number = SYLLABUS_STALE_MS,
+  staleTimeMs: number = SYLLABUS_STALE_MS
 ) {
   if (!classroomId) return;
   return queryClient.prefetchQuery({
@@ -131,7 +129,7 @@ export function prefetchSyllabusOutlineByClassroom(
 
 export const useSyllabusOutlineForClassroom = (
   classroomId: string | undefined,
-  options?: { staleTime?: number },
+  options?: { staleTime?: number }
 ) => {
   return useQuery({
     queryKey: syllabusKeys.outlineByClassroom(classroomId || ''),
@@ -177,7 +175,11 @@ export const useProvisionSyllabusBundle = () => {
 export const useUpdateSyllabus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ syllabusId, updates, classroomId }: {
+    mutationFn: async ({
+      syllabusId,
+      updates,
+      classroomId: _classroomId,
+    }: {
       syllabusId: string;
       updates: UpdateSyllabusInput;
       classroomId: string;
@@ -195,7 +197,13 @@ export const useUpdateSyllabus = () => {
 export const usePublishSyllabus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ syllabusId, classroomId }: { syllabusId: string; classroomId: string }) => {
+    mutationFn: async ({
+      syllabusId,
+      classroomId: _classroomId,
+    }: {
+      syllabusId: string;
+      classroomId: string;
+    }) => {
       const { data, error } = await publishSyllabus(syllabusId);
       if (error) throw error;
       return data;
@@ -209,7 +217,13 @@ export const usePublishSyllabus = () => {
 export const useArchiveSyllabus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ syllabusId, classroomId }: { syllabusId: string; classroomId: string }) => {
+    mutationFn: async ({
+      syllabusId,
+      classroomId: _classroomId,
+    }: {
+      syllabusId: string;
+      classroomId: string;
+    }) => {
       const { data, error } = await archiveSyllabus(syllabusId);
       if (error) throw error;
       return data;
@@ -227,14 +241,22 @@ export const useArchiveSyllabus = () => {
 export const useCreateSyllabusSection = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ input, classroomId }: { input: CreateSyllabusSectionInput; classroomId: string }) => {
+    mutationFn: async ({
+      input,
+      classroomId: _classroomId,
+    }: {
+      input: CreateSyllabusSectionInput;
+      classroomId: string;
+    }) => {
       const { data, error } = await createSyllabusSection(input);
       if (error) throw error;
       return data;
     },
     onMutate: async ({ input, classroomId }) => {
       await queryClient.cancelQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
-      const prev = queryClient.getQueryData<SyllabusWithSections | null>(syllabusKeys.byClassroom(classroomId));
+      const prev = queryClient.getQueryData<SyllabusWithSections | null>(
+        syllabusKeys.byClassroom(classroomId)
+      );
       if (prev) {
         const optimistic = {
           ...prev,
@@ -273,12 +295,14 @@ export const useCreateSyllabusSection = () => {
       queryClient.setQueryData<SyllabusWithSections | null>(
         syllabusKeys.byClassroom(classroomId),
         (old) => {
-          if (!old) return old;
-          const newSections = old.sections.map(s => 
-            (s.id.startsWith('temp-') && s.order_index === data.order_index) ? data : s
+          if (!old || !data) return old;
+          const newSections = old.sections.map((s) =>
+            s.id.startsWith('temp-') && s.order_index === data.order_index ? data : s
           );
-          if (!newSections.some(s => s.id === data.id)) {
-            const replaced = old.sections.some(s => s.id.startsWith('temp-') && s.order_index === data.order_index);
+          if (!newSections.some((s) => s.id === data.id)) {
+            const replaced = old.sections.some(
+              (s) => s.id.startsWith('temp-') && s.order_index === data.order_index
+            );
             if (!replaced) newSections.push(data);
           }
           return { ...old, sections: newSections };
@@ -296,7 +320,11 @@ export const useCreateSyllabusSection = () => {
 export const useUpdateSyllabusSection = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, updates, classroomId }: {
+    mutationFn: async ({
+      sectionId,
+      updates,
+      classroomId: _classroomId,
+    }: {
       sectionId: string;
       updates: UpdateSyllabusSectionInput;
       classroomId: string;
@@ -307,7 +335,9 @@ export const useUpdateSyllabusSection = () => {
     },
     onMutate: async ({ sectionId, updates, classroomId }) => {
       await queryClient.cancelQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
-      const prev = queryClient.getQueryData<SyllabusWithSections | null>(syllabusKeys.byClassroom(classroomId));
+      const prev = queryClient.getQueryData<SyllabusWithSections | null>(
+        syllabusKeys.byClassroom(classroomId)
+      );
       if (prev) {
         queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), {
           ...prev,
@@ -319,7 +349,8 @@ export const useUpdateSyllabusSection = () => {
       return { prev };
     },
     onError: (_err, { classroomId }, context) => {
-      if (context?.prev) queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), context.prev);
+      if (context?.prev)
+        queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), context.prev);
     },
     onSettled: (_, _err, { classroomId }) => {
       setTimeout(() => {
@@ -332,13 +363,21 @@ export const useUpdateSyllabusSection = () => {
 export const useDeleteSyllabusSection = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, classroomId }: { sectionId: string; classroomId: string }) => {
+    mutationFn: async ({
+      sectionId,
+      classroomId: _classroomId,
+    }: {
+      sectionId: string;
+      classroomId: string;
+    }) => {
       const { error } = await deleteSyllabusSection(sectionId);
       if (error) throw error;
     },
     onMutate: async ({ sectionId, classroomId }) => {
       await queryClient.cancelQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
-      const prev = queryClient.getQueryData<SyllabusWithSections | null>(syllabusKeys.byClassroom(classroomId));
+      const prev = queryClient.getQueryData<SyllabusWithSections | null>(
+        syllabusKeys.byClassroom(classroomId)
+      );
       if (prev) {
         queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), {
           ...prev,
@@ -348,7 +387,8 @@ export const useDeleteSyllabusSection = () => {
       return { prev };
     },
     onError: (_err, { classroomId }, context) => {
-      if (context?.prev) queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), context.prev);
+      if (context?.prev)
+        queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), context.prev);
     },
     onSettled: (_, _err, { classroomId }) => {
       setTimeout(() => {
@@ -361,7 +401,12 @@ export const useDeleteSyllabusSection = () => {
 export const useReorderSyllabusSections = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ syllabusId, orderedIds, classroomId, swapPair }: {
+    mutationFn: async ({
+      syllabusId,
+      orderedIds,
+      classroomId: _classroomId,
+      swapPair,
+    }: {
       syllabusId: string;
       orderedIds: string[];
       classroomId: string;
@@ -372,7 +417,9 @@ export const useReorderSyllabusSections = () => {
     },
     onMutate: async ({ orderedIds, classroomId }) => {
       await queryClient.cancelQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
-      const prev = queryClient.getQueryData<SyllabusWithSections | null>(syllabusKeys.byClassroom(classroomId));
+      const prev = queryClient.getQueryData<SyllabusWithSections | null>(
+        syllabusKeys.byClassroom(classroomId)
+      );
       if (prev) {
         const sectionMap = new Map(prev.sections.map((s) => [s.id, s]));
         const reordered = orderedIds
@@ -389,7 +436,8 @@ export const useReorderSyllabusSections = () => {
       return { prev };
     },
     onError: (_err, { classroomId }, context) => {
-      if (context?.prev) queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), context.prev);
+      if (context?.prev)
+        queryClient.setQueryData(syllabusKeys.byClassroom(classroomId), context.prev);
     },
     onSettled: (_, _err, { classroomId }) => {
       setTimeout(() => {
@@ -406,7 +454,13 @@ export const useReorderSyllabusSections = () => {
 export const useCreateGradingCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ input, classroomId }: { input: CreateGradingCategoryInput; classroomId: string }) => {
+    mutationFn: async ({
+      input,
+      classroomId: _classroomId,
+    }: {
+      input: CreateGradingCategoryInput;
+      classroomId: string;
+    }) => {
       const { data, error } = await createGradingCategory(input);
       if (error) throw error;
       return data;
@@ -420,7 +474,11 @@ export const useCreateGradingCategory = () => {
 export const useUpdateGradingCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ categoryId, updates, classroomId }: {
+    mutationFn: async ({
+      categoryId,
+      updates,
+      classroomId: _classroomId,
+    }: {
       categoryId: string;
       updates: UpdateGradingCategoryInput;
       classroomId: string;
@@ -438,7 +496,13 @@ export const useUpdateGradingCategory = () => {
 export const useDeleteGradingCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ categoryId, classroomId }: { categoryId: string; classroomId: string }) => {
+    mutationFn: async ({
+      categoryId,
+      classroomId: _classroomId,
+    }: {
+      categoryId: string;
+      classroomId: string;
+    }) => {
       const { error } = await deleteGradingCategory(categoryId);
       if (error) throw error;
     },
@@ -455,7 +519,12 @@ export const useDeleteGradingCategory = () => {
 export const useLinkAssignment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ assignmentId, sectionId, gradingCategoryId, classroomId }: {
+    mutationFn: async ({
+      assignmentId,
+      sectionId,
+      gradingCategoryId,
+      classroomId: _classroomId,
+    }: {
       assignmentId: string;
       sectionId: string;
       gradingCategoryId?: string | null;
@@ -476,7 +545,13 @@ export const useLinkAssignment = () => {
 export const useUnlinkAssignment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ assignmentId, classroomId }: { assignmentId: string; classroomId: string }) => {
+    mutationFn: async ({
+      assignmentId,
+      classroomId: _classroomId,
+    }: {
+      assignmentId: string;
+      classroomId: string;
+    }) => {
       const { error } = await unlinkAssignmentFromSection(assignmentId);
       if (error) throw error;
     },
@@ -533,14 +608,22 @@ export const useSectionResourceById = (resourceId: string | undefined) => {
 export const useUploadResource = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, file, orderIndex, classroomId, onProgress }: {
+    mutationFn: async ({
+      sectionId,
+      file,
+      orderIndex,
+      classroomId: _classroomId,
+      onProgress,
+    }: {
       sectionId: string;
       file: File;
       orderIndex: number;
       classroomId: string;
       onProgress?: (loaded: number, total: number) => void;
     }) => {
-      const { data, error } = await uploadAndCreateResource(sectionId, file, orderIndex, { onProgress });
+      const { data, error } = await uploadAndCreateResource(sectionId, file, orderIndex, {
+        onProgress,
+      });
       if (error) throw error;
       return data;
     },
@@ -554,7 +637,13 @@ export const useUploadResource = () => {
 export const useCreateLinkResource = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, title, url, orderIndex, classroomId }: {
+    mutationFn: async ({
+      sectionId,
+      title,
+      url,
+      orderIndex,
+      classroomId: _classroomId,
+    }: {
       sectionId: string;
       title: string;
       url: string;
@@ -575,7 +664,12 @@ export const useCreateLinkResource = () => {
 export const useDeleteResource = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ resourceId, filePath, sectionId, classroomId }: {
+    mutationFn: async ({
+      resourceId,
+      filePath,
+      sectionId: _sectionId,
+      classroomId: _classroomId,
+    }: {
       resourceId: string;
       filePath?: string | null;
       sectionId: string;
@@ -597,7 +691,7 @@ export const useCreateTextActivity = () => {
   return useMutation({
     mutationFn: async ({
       sectionId,
-      classroomId,
+      classroomId: _classroomId,
       title,
       summary,
       body_text,
@@ -641,7 +735,7 @@ export const useCreateLessonActivity = () => {
   return useMutation({
     mutationFn: async ({
       sectionId,
-      classroomId,
+      classroomId: _classroomId,
       title,
       summary,
       body_text,
@@ -696,8 +790,8 @@ export const useUpdateSectionResource = () => {
   return useMutation({
     mutationFn: async ({
       resourceId,
-      sectionId,
-      classroomId,
+      sectionId: _sectionId,
+      classroomId: _classroomId,
       updates,
     }: {
       resourceId: string;
@@ -721,8 +815,8 @@ export const useReorderSectionResources = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
-      sectionId,
-      classroomId,
+      sectionId: _sectionId,
+      classroomId: _classroomId,
       updates,
     }: {
       sectionId: string;
@@ -733,7 +827,7 @@ export const useReorderSectionResources = () => {
         updates.map(async ({ resourceId, order_index }) => {
           const { error } = await updateSectionResource(resourceId, { order_index });
           if (error) throw error;
-        }),
+        })
       );
     },
     onSuccess: (_, { sectionId, classroomId }) => {
@@ -750,7 +844,7 @@ export const useCreateVideoUrlResource = () => {
   return useMutation({
     mutationFn: async ({
       sectionId,
-      classroomId,
+      classroomId: _classroomId,
       title,
       url,
       orderIndex,
@@ -791,7 +885,10 @@ export const progressKeys = {
     [...progressKeys.all, syllabusId, studentId] as const,
 };
 
-export const useStudentProgress = (syllabusId: string | undefined, studentId: string | undefined) => {
+export const useStudentProgress = (
+  syllabusId: string | undefined,
+  studentId: string | undefined
+) => {
   return useQuery({
     queryKey: progressKeys.bySyllabus(syllabusId || '', studentId || ''),
     queryFn: async () => {
@@ -808,7 +905,12 @@ export const useStudentProgress = (syllabusId: string | undefined, studentId: st
 export const useUpdateStudentProgress = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, studentId, status, syllabusId }: {
+    mutationFn: async ({
+      sectionId,
+      studentId,
+      status,
+      syllabusId: _syllabusId,
+    }: {
       sectionId: string;
       studentId: string;
       status: StudentProgressStatus;
@@ -850,7 +952,12 @@ export const useChangelog = (syllabusId: string | undefined) => {
 export const useCreateChangelog = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ syllabusId, changedBy, changeSummary, snapshot }: {
+    mutationFn: async ({
+      syllabusId,
+      changedBy,
+      changeSummary,
+      snapshot,
+    }: {
       syllabusId: string;
       changedBy: string;
       changeSummary: string;
@@ -894,7 +1001,10 @@ export const sectionProgressKeys = {
     [...sectionProgressKeys.all, sectionId, studentId] as const,
 };
 
-export const useSectionAssignmentProgress = (sectionId: string | undefined, studentId: string | undefined) => {
+export const useSectionAssignmentProgress = (
+  sectionId: string | undefined,
+  studentId: string | undefined
+) => {
   return useQuery({
     queryKey: sectionProgressKeys.bySection(sectionId || '', studentId || ''),
     queryFn: async () => {
@@ -934,7 +1044,12 @@ export const useSectionComments = (sectionId: string | undefined) => {
 export const useCreateComment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ sectionId, userId, content, parentId }: {
+    mutationFn: async ({
+      sectionId,
+      userId,
+      content,
+      parentId,
+    }: {
       sectionId: string;
       userId: string;
       content: string;
@@ -953,7 +1068,13 @@ export const useCreateComment = () => {
 export const useDeleteComment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ commentId, sectionId }: { commentId: string; sectionId: string }) => {
+    mutationFn: async ({
+      commentId,
+      sectionId: _sectionId,
+    }: {
+      commentId: string;
+      sectionId: string;
+    }) => {
       const { error } = await deleteSectionComment(commentId);
       if (error) throw error;
     },

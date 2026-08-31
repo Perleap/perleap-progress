@@ -5,8 +5,8 @@
 
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { CreateAssignmentInput, UpdateAssignmentInput } from '@/types';
-import { useAuth } from '@/contexts/useAuth';
 import { USER_ROLES, EVALUATION_STATUS, SUBMISSION_STATUS } from '@/config/constants';
+import { useAuth } from '@/contexts/useAuth';
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import {
@@ -51,7 +51,7 @@ export function prefetchClassroomAssignments(
   queryClient: QueryClient,
   classroomId: string | undefined,
   staleTimeMs = 5 * 60 * 1000,
-  submissionsForStudentId?: string | null,
+  submissionsForStudentId?: string | null
 ) {
   if (!classroomId) return;
   const submissionsKey = submissionsForStudentId ?? null;
@@ -60,7 +60,7 @@ export function prefetchClassroomAssignments(
     queryFn: async () => {
       const { data, error } = await getClassroomAssignments(
         classroomId,
-        submissionsForStudentId ?? undefined,
+        submissionsForStudentId ?? undefined
       );
       if (error) throw error;
       return data || [];
@@ -138,7 +138,7 @@ export const useStudentAssignments = (options?: { enabled?: boolean }) => {
  */
 export const useStudentAssignmentDetails = (
   assignmentId: string | undefined,
-  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string },
+  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string }
 ) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -167,8 +167,7 @@ export const useStudentAssignmentDetails = (
   const submissionId = detailQuery.data?.submission?.id as string | undefined;
   const cachedEvalStatus = detailQuery.data?.submission?.evaluation_status;
   const hasFeedback = !!detailQuery.data?.feedback;
-  const submissionCompleted =
-    detailQuery.data?.submission?.status === SUBMISSION_STATUS.COMPLETED;
+  const submissionCompleted = detailQuery.data?.submission?.status === SUBMISSION_STATUS.COMPLETED;
   const shouldPollEval =
     cachedEvalStatus === EVALUATION_STATUS.PENDING ||
     cachedEvalStatus === EVALUATION_STATUS.PROCESSING ||

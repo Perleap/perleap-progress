@@ -2,17 +2,25 @@ import { lazy } from 'react';
 
 export const AboutUs = lazy(() => import('@/pages/AboutUs'));
 export const AdminAiPromptsPage = lazy(() => import('@/pages/admin/AdminAiPromptsPage'));
-export const AdminMonitoringLayout = lazy(() => import('@/pages/admin/monitoring/AdminMonitoringLayout'));
+export const AdminMonitoringLayout = lazy(
+  () => import('@/pages/admin/monitoring/AdminMonitoringLayout')
+);
 export const AssignmentDetail = lazy(() => import('@/pages/student/AssignmentDetail'));
 export const ClassroomActivityPage = lazy(() => import('@/pages/ClassroomActivityPage'));
 export const ClassroomDetail = lazy(() => import('@/pages/teacher/ClassroomDetail'));
 export const ContactUs = lazy(() => import('@/pages/ContactUs'));
 export const LessonBriefPage = lazy(() => import('@/pages/teacher/LessonBriefPage'));
 export const LiveSessionPage = lazy(() => import('@/pages/teacher/LiveSessionPage'));
-export const MonitoringHealthPage = lazy(() => import('@/pages/admin/monitoring/MonitoringHealthPage'));
+export const MonitoringHealthPage = lazy(
+  () => import('@/pages/admin/monitoring/MonitoringHealthPage')
+);
 export const MonitoringLogsPage = lazy(() => import('@/pages/admin/monitoring/MonitoringLogsPage'));
-export const MonitoringOverviewPage = lazy(() => import('@/pages/admin/monitoring/MonitoringOverviewPage'));
-export const MonitoringTrafficPage = lazy(() => import('@/pages/admin/monitoring/MonitoringTrafficPage'));
+export const MonitoringOverviewPage = lazy(
+  () => import('@/pages/admin/monitoring/MonitoringOverviewPage')
+);
+export const MonitoringTrafficPage = lazy(
+  () => import('@/pages/admin/monitoring/MonitoringTrafficPage')
+);
 export const NotFound = lazy(() => import('@/pages/NotFound'));
 export const PilotReportPage = lazy(() => import('@/pages/teacher/PilotReportPage'));
 export const Planner = lazy(() => import('@/pages/teacher/Planner'));

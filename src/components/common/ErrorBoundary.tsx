@@ -3,10 +3,10 @@
  * React error boundary for graceful error handling
  */
 
-import { Component, ReactNode } from 'react';
+import { AlertCircle } from 'lucide-react';
+import { Component, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;

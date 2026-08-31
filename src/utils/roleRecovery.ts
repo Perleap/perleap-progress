@@ -1,13 +1,13 @@
 /**
  * Role Recovery Utilities
- * 
+ *
  * Handles recovery of user role metadata when it's missing or incomplete.
  * This can happen due to network failures, browser closures during signup,
  * or API errors.
  */
 
-import { supabase } from '@/integrations/supabase/client';
 import { USER_ROLES } from '@/config/constants';
+import { supabase } from '@/integrations/supabase/client';
 
 const PENDING_ROLE_KEY = 'pending_role';
 const ROLE_RECOVERY_ATTEMPT_KEY = 'role_recovery_attempt';
@@ -55,9 +55,15 @@ export const clearPendingRole = (): void => {
 export const updateUserRole = async (role: 'teacher' | 'student' | 'admin'): Promise<boolean> => {
   try {
     if (role === USER_ROLES.ADMIN) {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return false;
-      const { data: row } = await supabase.from('app_admins').select('user_id').eq('user_id', user.id).maybeSingle();
+      const { data: row } = await supabase
+        .from('app_admins')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
       if (!row) {
         console.error('❌ Refusing to set admin metadata without app_admins row');
         return false;
@@ -65,7 +71,7 @@ export const updateUserRole = async (role: 'teacher' | 'student' | 'admin'): Pro
     }
 
     console.log('🔄 Attempting to update user role to:', role);
-    
+
     const { data, error } = await supabase.auth.updateUser({
       data: { role },
     });
@@ -96,15 +102,16 @@ export const verifyUserRole = async (): Promise<{
   role: string | null;
 }> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return { hasRole: false, role: null };
     }
 
     const role = user.user_metadata?.role;
-    const hasRole =
-      role === 'teacher' || role === 'student' || role === USER_ROLES.ADMIN;
+    const hasRole = role === 'teacher' || role === 'student' || role === USER_ROLES.ADMIN;
 
     console.log('🔍 Role verification:', { hasRole, role, userId: user.id });
 
@@ -133,15 +140,21 @@ export const attemptRoleRecovery = async (): Promise<{
 }> => {
   // 1. First check if role is already in metadata
   const { hasRole, role: metadataRole } = await verifyUserRole();
-  
+
   if (hasRole && metadataRole) {
     return { recovered: true, role: metadataRole, source: 'metadata' };
   }
 
   // 2. Try to recover from database (most reliable source of truth)
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (user) {
-    const { data: adminRow } = await supabase.from('app_admins').select('user_id').eq('user_id', user.id).maybeSingle();
+    const { data: adminRow } = await supabase
+      .from('app_admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     if (adminRow) {
       const ok = await updateUserRole(USER_ROLES.ADMIN);
       if (ok) {
@@ -150,14 +163,22 @@ export const attemptRoleRecovery = async (): Promise<{
     }
 
     console.log('🔍 Checking database for existing profile to recover role...');
-    const { data: tp } = await supabase.from('teacher_profiles').select('id').eq('user_id', user.id).maybeSingle();
+    const { data: tp } = await supabase
+      .from('teacher_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     if (tp) {
       console.log('✅ Found teacher profile, updating role metadata');
       await updateUserRole('teacher');
       return { recovered: true, role: 'teacher', source: 'database' };
     }
 
-    const { data: sp } = await supabase.from('student_profiles').select('id').eq('user_id', user.id).maybeSingle();
+    const { data: sp } = await supabase
+      .from('student_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     if (sp) {
       console.log('✅ Found student profile, updating role metadata');
       await updateUserRole('student');
@@ -167,12 +188,12 @@ export const attemptRoleRecovery = async (): Promise<{
 
   // 3. Try to recover from localStorage
   const pendingRole = getPendingRole();
-  
+
   if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {
     console.log('🔄 Attempting to recover role from localStorage:', pendingRole);
-    
+
     const updated = await updateUserRole(pendingRole as 'teacher' | 'student');
-    
+
     if (updated) {
       clearPendingRole();
       return { recovered: true, role: pendingRole, source: 'localStorage' };
@@ -218,4 +239,3 @@ export const shouldAttemptRecovery = (): boolean => {
     return true;
   }
 };
-

@@ -1,4 +1,9 @@
-import type { SyllabusSection, SectionStatus, ReleaseMode, StudentProgressStatus } from '@/types/syllabus';
+import type {
+  SyllabusSection,
+  SectionStatus,
+  ReleaseMode,
+  StudentProgressStatus,
+} from '@/types/syllabus';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
 
 export function deriveSectionStatus(section: SyllabusSection): SectionStatus {
@@ -48,8 +53,7 @@ export function filterRoadmapSections(
   if (filter === 'all') return sections;
   return sections.filter((s) => {
     const locked =
-      mode === 'student' &&
-      !isSectionUnlocked(s, sections, releaseMode, studentProgressMap);
+      mode === 'student' && !isSectionUnlocked(s, sections, releaseMode, studentProgressMap);
     if (filter === 'assignments') return (assignmentCounts[s.id] || 0) > 0;
     if (filter === 'resources') return (sectionResources[s.id] || []).length > 0;
     if (filter === 'locked') return mode === 'student' && locked;

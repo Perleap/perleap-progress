@@ -1,3 +1,5 @@
+import type { Message } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import {
   extractStorageObjectPath,
   downloadStorageBlob,
@@ -5,8 +7,6 @@ import {
   SUBMISSION_FILES_BUCKET,
   type AuthenticatedBlobUrl,
 } from '@/utils/storageUrls';
-import { supabase } from '@/integrations/supabase/client';
-import type { Message } from '@/types';
 
 export function extractSubmissionStoragePath(stored: string): string | null {
   return extractStorageObjectPath(SUBMISSION_FILES_BUCKET, stored);
@@ -24,9 +24,7 @@ export function isSubmissionPdfAttachment(name: string, type?: string): boolean 
 }
 
 /** Resolve private storage to a blob URL and open it in a new browser tab. */
-export async function openSubmissionFileInNewTab(
-  pathOrLegacyUrl: string,
-): Promise<boolean> {
+export async function openSubmissionFileInNewTab(pathOrLegacyUrl: string): Promise<boolean> {
   const resolved = await resolveSubmissionFileBlobUrl(pathOrLegacyUrl);
   if (!resolved?.url) return false;
   window.open(resolved.url, '_blank', 'noopener,noreferrer');
@@ -36,7 +34,7 @@ export async function openSubmissionFileInNewTab(
 /** Match chat uploads stored as {submissionId}/{timestamp}_{filename}. */
 export async function resolveChatAttachmentStoragePath(
   submissionId: string,
-  fileName: string,
+  fileName: string
 ): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(SUBMISSION_FILES_BUCKET)
@@ -61,10 +59,10 @@ export async function resolveChatAttachmentStoragePath(
 
 export async function enrichConversationMessagesWithAttachmentPaths(
   submissionId: string,
-  messages: Message[],
+  messages: Message[]
 ): Promise<Message[]> {
   const needsLookup = messages.filter(
-    (m) => m.role === 'user' && m.fileContext?.name && !m.fileContext.url,
+    (m) => m.role === 'user' && m.fileContext?.name && !m.fileContext.url
   );
   if (needsLookup.length === 0) return messages;
 
@@ -98,7 +96,7 @@ export async function downloadSubmissionFile(path: string): Promise<Blob | null>
 }
 
 export async function resolveSubmissionFileBlobUrl(
-  pathOrLegacyUrl: string | null | undefined,
+  pathOrLegacyUrl: string | null | undefined
 ): Promise<AuthenticatedBlobUrl | null> {
   if (!pathOrLegacyUrl?.trim()) return null;
   return resolveStorageStoredValue(SUBMISSION_FILES_BUCKET, null, pathOrLegacyUrl.trim());
@@ -106,10 +104,9 @@ export async function resolveSubmissionFileBlobUrl(
 
 export async function resolveSubmissionFileDisplayUrls(
   fileUrl: string | null | undefined,
-  fileUrls: string[] | null | undefined,
+  fileUrls: string[] | null | undefined
 ): Promise<{ urls: string[]; revokeAll: () => void }> {
-  const raw =
-    fileUrls && fileUrls.length > 0 ? fileUrls : fileUrl ? [fileUrl] : [];
+  const raw = fileUrls && fileUrls.length > 0 ? fileUrls : fileUrl ? [fileUrl] : [];
   const revokes: (() => void)[] = [];
   const urls: string[] = [];
 

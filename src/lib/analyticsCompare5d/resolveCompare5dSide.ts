@@ -1,3 +1,9 @@
+import type {
+  Compare5dMode,
+  Compare5dSideResult,
+  Compare5dStudentRow,
+  ResolveCompare5dSideInput,
+} from './types';
 import { build5dNarrativeEvidence } from '@/lib/analytics5dEvidence';
 import {
   getAllowedAssignmentIds,
@@ -7,16 +13,10 @@ import {
   type AnalyticsModuleFilter,
   type AnalyticsModuleRef,
 } from '@/lib/analyticsScope';
-import type {
-  Compare5dMode,
-  Compare5dSideResult,
-  Compare5dStudentRow,
-  ResolveCompare5dSideInput,
-} from './types';
 
 export function assignmentsInCompareScope(
   assignments: AnalyticsAssignmentRef[],
-  scopeModule: AnalyticsModuleFilter,
+  scopeModule: AnalyticsModuleFilter
 ): AnalyticsAssignmentRef[] {
   const allowed = getAllowedAssignmentIds(assignments, scopeModule, 'all');
   const set = new Set(allowed);
@@ -27,7 +27,7 @@ export function compare5dModeAvailability(
   modules: AnalyticsModuleRef[],
   showUnplaced: boolean,
   students: Compare5dStudentRow[],
-  assignments: AnalyticsAssignmentRef[],
+  assignments: AnalyticsAssignmentRef[]
 ): Record<Compare5dMode, boolean> {
   const sectionCount = modules.length + (showUnplaced ? 1 : 0);
   return {
@@ -38,7 +38,7 @@ export function compare5dModeAvailability(
 }
 
 export function defaultCompare5dMode(
-  availability: Record<Compare5dMode, boolean>,
+  availability: Record<Compare5dMode, boolean>
 ): Compare5dMode | null {
   if (availability.sections) return 'sections';
   if (availability.students) return 'students';
@@ -52,7 +52,7 @@ export function sideOptionsForCompare5dMode(
   assignments: AnalyticsAssignmentRef[],
   modules: AnalyticsModuleRef[],
   showUnplaced: boolean,
-  scopeModule: AnalyticsModuleFilter,
+  scopeModule: AnalyticsModuleFilter
 ): { id: string; label: string }[] {
   if (mode === 'sections') {
     const items = modules.map((m) => ({ id: m.id, label: m.title }));
@@ -121,7 +121,7 @@ export function resolveCompare5dSide(input: ResolveCompare5dSideInput): Compare5
       moduleFilter,
       'all',
       'all',
-      rawSnapshots,
+      rawSnapshots
     );
     const qed = getClassroomAverageQedMeasures(
       snapshotRowsForAvg,
@@ -130,7 +130,7 @@ export function resolveCompare5dSide(input: ResolveCompare5dSideInput): Compare5
       moduleFilter,
       'all',
       'all',
-      rawSnapshots,
+      rawSnapshots
     );
     const allowed = getAllowedAssignmentIds(assignments, moduleFilter, 'all');
     const evidence = build5dNarrativeEvidence({
@@ -157,7 +157,7 @@ export function resolveCompare5dSide(input: ResolveCompare5dSideInput): Compare5
       scopeModule,
       scopeAssignment,
       sideId,
-      rawSnapshots,
+      rawSnapshots
     );
     const qed = getClassroomAverageQedMeasures(
       snapshotRowsForAvg,
@@ -166,7 +166,7 @@ export function resolveCompare5dSide(input: ResolveCompare5dSideInput): Compare5
       scopeModule,
       scopeAssignment,
       sideId,
-      rawSnapshots,
+      rawSnapshots
     );
     const evidence = build5dNarrativeEvidence({
       context: 'student_avg',
@@ -191,7 +191,7 @@ export function resolveCompare5dSide(input: ResolveCompare5dSideInput): Compare5
     scopeModule,
     sideId,
     'all',
-    rawSnapshots,
+    rawSnapshots
   );
   const qed = getClassroomAverageQedMeasures(
     snapshotRowsForAvg,
@@ -200,7 +200,7 @@ export function resolveCompare5dSide(input: ResolveCompare5dSideInput): Compare5
     scopeModule,
     sideId,
     'all',
-    rawSnapshots,
+    rawSnapshots
   );
   const evidence = build5dNarrativeEvidence({
     context: 'class_avg',
@@ -221,7 +221,7 @@ export function buildCompare5dScopeSummary(
   unplacedLabel: string,
   allAssignmentsLabel: string,
   allAssignmentsInScopeLabel: string,
-  modules: AnalyticsModuleRef[],
+  modules: AnalyticsModuleRef[]
 ): string {
   if (mode === 'sections') return '';
   const mod =

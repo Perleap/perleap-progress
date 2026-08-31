@@ -1,19 +1,26 @@
 import {
-  mapExtractProgressToPercent,
-  prepareAudioBlobsForUpload,
-  type ExtractProgress,
-} from '@/lib/liveSessionExtractAudio';
-import type { LiveSessionType, LiveSessionUploadMode } from '@/types/liveSession';
-import {
   createLiveSession,
   startLiveSessionTranscriptionWithProgress,
   uploadLiveSessionAudio,
   type TranscriptionProgressUpdate,
 } from './liveSessionService';
+import type { LiveSessionType, LiveSessionUploadMode } from '@/types/liveSession';
+import {
+  mapExtractProgressToPercent,
+  prepareAudioBlobsForUpload,
+  type ExtractProgress,
+} from '@/lib/liveSessionExtractAudio';
 
 export type LiveSessionPipelineProgress = {
   percent: number;
-  phase: 'creating' | 'converting' | 'preparing' | 'uploading' | 'transcribing' | 'summarizing' | 'finishing';
+  phase:
+    | 'creating'
+    | 'converting'
+    | 'preparing'
+    | 'uploading'
+    | 'transcribing'
+    | 'summarizing'
+    | 'finishing';
   transcriptionPhase?: TranscriptionProgressUpdate['phase'];
   chunkIndex?: number;
   chunkTotal?: number;

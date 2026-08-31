@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { AssignmentRow } from '@/lib/moduleFlow';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
-import { isSectionUnlocked } from '@/lib/sectionUnlock';
 import type { StudentProgressStatus, SyllabusSection } from '@/types/syllabus';
+import { isSectionUnlocked } from '@/lib/sectionUnlock';
 
 function section(id: string, order_index: number): SyllabusSection {
   return {

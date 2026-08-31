@@ -56,6 +56,6 @@ export const buildRoute = {
  * Check if current path matches a route pattern
  */
 export const matchesRoute = (currentPath: string, routePattern: string): boolean => {
-  const regex = new RegExp('^' + routePattern.replace(/:\w+/g, '[^/]+') + '$');
+  const regex = new RegExp(`^${routePattern.replace(/:\w+/g, '[^/]+')}$`);
   return regex.test(currentPath);
 };

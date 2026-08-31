@@ -1,13 +1,8 @@
-import {
-  BaseEdge,
-  EdgeLabelRenderer,
-  getBezierPath,
-  type EdgeProps,
-} from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
 import { X } from 'lucide-react';
 import { useLangchainEditorContext } from './LangchainEditorContext';
 
-export function DeletableEdge({
+export const DeletableEdge = ({
   id,
   sourceX,
   sourceY,
@@ -18,7 +13,7 @@ export function DeletableEdge({
   selected,
   markerEnd,
   style,
-}: EdgeProps) {
+}: EdgeProps) => {
   const { readOnly, onDeleteEdge } = useLangchainEditorContext();
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -63,4 +58,4 @@ export function DeletableEdge({
       ) : null}
     </>
   );
-}
+};

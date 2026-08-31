@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Edge, Node } from '@xyflow/react';
 import {
   LANGCHAIN_PIPELINE_SCHEMA_VERSION,
   hasPathFromStartToOutput,
@@ -8,7 +9,6 @@ import {
   truncateLangchainPreview,
   validateLangchainPipeline,
 } from '@/components/features/langchain/langchainNodeData';
-import type { Edge, Node } from '@xyflow/react';
 
 describe('parsePipelineJson', () => {
   it('returns empty for null, empty, invalid JSON', () => {

@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { supabase } from '@/integrations/supabase/client';
+import { payloadDbLatencyMs } from './observabilityPayload';
+import { PlatformHealthProbeSection } from './PlatformHealthProbeSection';
 import type { Database } from '@/integrations/supabase/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import {
   Select,
@@ -14,15 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlatformHealthProbeSection } from './PlatformHealthProbeSection';
-import { payloadDbLatencyMs } from './observabilityPayload';
+import { supabase } from '@/integrations/supabase/client';
 
 type SnapshotRow = Database['public']['Tables']['observability_metric_snapshots']['Row'];
 
 const SNAPSHOTS_KEY = ['observability_metric_snapshots', 'management_api'] as const;
 
-export function MonitoringHealthContent() {
+export const MonitoringHealthContent = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [range, setRange] = useState<'24h' | '7d' | '30d'>('24h');
@@ -58,7 +58,12 @@ export function MonitoringHealthContent() {
         if (ms == null) return null;
         return {
           t: new Date(r.recorded_at).getTime(),
-          label: new Date(r.recorded_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          label: new Date(r.recorded_at).toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
           latency: ms,
         };
       })
@@ -70,15 +75,21 @@ export function MonitoringHealthContent() {
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
       if (!token) throw new Error(t('monitoring.probeNoSession'));
-      const { data, error } = await supabase.functions.invoke<{ ok?: boolean; error?: string; inserted?: number }>(
-        'collect-metric-snapshot',
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const { data, error } = await supabase.functions.invoke<{
+        ok?: boolean;
+        error?: string;
+        inserted?: number;
+      }>('collect-metric-snapshot', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (error) throw new Error(error.message);
-      if (data && typeof data === 'object' && 'error' in data && typeof (data as { error: string }).error === 'string') {
+      if (
+        data &&
+        typeof data === 'object' &&
+        'error' in data &&
+        typeof (data as { error: string }).error === 'string'
+      ) {
         throw new Error((data as { error: string }).error);
       }
       return data;
@@ -96,7 +107,9 @@ export function MonitoringHealthContent() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-mono text-lg font-semibold tracking-tight">{t('monitoring.navHealth')}</h1>
+          <h1 className="font-mono text-lg font-semibold tracking-tight">
+            {t('monitoring.navHealth')}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('monitoring.healthDescription')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -127,7 +140,9 @@ export function MonitoringHealthContent() {
         <Alert variant="destructive">
           <AlertTitle>{t('monitoring.healthSnapshotErrorTitle')}</AlertTitle>
           <AlertDescription>
-            {recordMutation.error instanceof Error ? recordMutation.error.message : t('common.error')}
+            {recordMutation.error instanceof Error
+              ? recordMutation.error.message
+              : t('common.error')}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -169,4 +184,4 @@ export function MonitoringHealthContent() {
       </Card>
     </div>
   );
-}
+};

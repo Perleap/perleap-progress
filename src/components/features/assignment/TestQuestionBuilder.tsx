@@ -1,19 +1,15 @@
+import { Plus, Trash2, GripVertical, CircleDot, AlignLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, GripVertical, CircleDot, AlignLeft } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { deriveAllowMultipleSelections, parseOptionIds, toggleOptionId } from '@/lib/testMcq';
 import { cn } from '@/lib/utils';
-import {
-  deriveAllowMultipleSelections,
-  parseOptionIds,
-  toggleOptionId,
-} from '@/lib/testMcq';
 
 export interface TestQuestionDraft {
   id: string;
@@ -27,12 +23,11 @@ export interface TestQuestionDraft {
 
 /** Normalize legacy drafts that still use correct_option_id. */
 export function normalizeTestQuestionDraft(
-  draft: TestQuestionDraft & { correct_option_id?: string },
+  draft: TestQuestionDraft & { correct_option_id?: string }
 ): TestQuestionDraft {
-  const correct_option_ids =
-    draft.correct_option_ids?.length
-      ? draft.correct_option_ids
-      : parseOptionIds(null, draft.correct_option_id ?? null);
+  const correct_option_ids = draft.correct_option_ids?.length
+    ? draft.correct_option_ids
+    : parseOptionIds(null, draft.correct_option_id ?? null);
   return {
     ...draft,
     correct_option_ids,
@@ -47,7 +42,7 @@ export function isTestQuestionDraftValid(question: TestQuestionDraft): boolean {
   const filledOptions = question.options.filter((o) => o.text.trim());
   if (filledOptions.length < 2) return false;
   const correctIds = question.correct_option_ids.filter((id) =>
-    filledOptions.some((o) => o.id === id),
+    filledOptions.some((o) => o.id === id)
   );
   return correctIds.length >= 1;
 }
@@ -66,7 +61,7 @@ function generateTempId() {
   return `temp_${Date.now()}_${nextId++}`;
 }
 
-export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuestionBuilderProps) {
+export const TestQuestionBuilder = ({ questions, onQuestionsChange }: TestQuestionBuilderProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
 
@@ -89,7 +84,9 @@ export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuesti
   };
 
   const removeQuestion = (index: number) => {
-    const updated = questions.filter((_, i) => i !== index).map((q, i) => ({ ...q, order_index: i }));
+    const updated = questions
+      .filter((_, i) => i !== index)
+      .map((q, i) => ({ ...q, order_index: i }));
     onQuestionsChange(updated);
   };
 
@@ -158,9 +155,7 @@ export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuesti
         <CardTitle className="text-lg flex items-center gap-2">
           {t('createAssignment.testBuilder.title')}
         </CardTitle>
-        <CardDescription>
-          {t('createAssignment.testBuilder.description')}
-        </CardDescription>
+        <CardDescription>{t('createAssignment.testBuilder.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {questions.length === 0 && (
@@ -300,7 +295,8 @@ export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuesti
                     {question.question_type === 'open_ended' && (
                       <div className="ps-2">
                         <p className="text-xs text-muted-foreground italic">
-                          {t('createAssignment.testBuilder.openEnded')} — {t('assignmentDetail.testTaking.typeAnswer')}
+                          {t('createAssignment.testBuilder.openEnded')} —{' '}
+                          {t('assignmentDetail.testTaking.typeAnswer')}
                         </p>
                       </div>
                     )}
@@ -323,4 +319,4 @@ export function TestQuestionBuilder({ questions, onQuestionsChange }: TestQuesti
       </CardContent>
     </Card>
   );
-}
+};

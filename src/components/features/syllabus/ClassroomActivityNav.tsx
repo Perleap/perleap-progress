@@ -1,13 +1,16 @@
-import { useCallback, useMemo, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ClassroomLayout } from '@/components/layouts';
-import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
-import { navigateBackOrTo } from '@/hooks/useNavigateBack';
+import { useCallback, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import type { ClassroomNavSection } from '@/lib/classroomNavSections';
+import { ClassroomLayout } from '@/components/layouts';
+import { Button } from '@/components/ui/button';
+import { navigateBackOrTo } from '@/hooks/useNavigateBack';
+import {
+  getStudentClassroomNavSections,
+  getTeacherClassroomNavSections,
+} from '@/lib/classroomNavSections';
+import { cn } from '@/lib/utils';
 
 type Role = 'teacher' | 'student';
 
@@ -64,23 +67,24 @@ export function useClassroomActivityNav({
     (section: string) => {
       if (!classroomId) return;
       const path =
-        role === 'teacher' ? `/teacher/classroom/${classroomId}` : `/student/classroom/${classroomId}`;
+        role === 'teacher'
+          ? `/teacher/classroom/${classroomId}`
+          : `/student/classroom/${classroomId}`;
       navigate(path, { state: { activeSection: section } });
     },
-    [classroomId, navigate, role],
+    [classroomId, navigate, role]
   );
 
   const goBackFromActivity = useCallback(() => {
     if (classroomId) {
       const path =
-        role === 'teacher' ? `/teacher/classroom/${classroomId}` : `/student/classroom/${classroomId}`;
+        role === 'teacher'
+          ? `/teacher/classroom/${classroomId}`
+          : `/student/classroom/${classroomId}`;
       navigate(path, { state: { activeSection: resolveReturnSection() } });
       return;
     }
-    navigateBackOrTo(
-      navigate,
-      role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard',
-    );
+    navigateBackOrTo(navigate, role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard');
   }, [classroomId, navigate, resolveReturnSection, role]);
 
   return {
@@ -96,7 +100,10 @@ export type ClassroomActivityBackButtonProps = {
   isRTL: boolean;
 };
 
-export function ClassroomActivityBackButton({ onBack, isRTL }: ClassroomActivityBackButtonProps) {
+export const ClassroomActivityBackButton = ({
+  onBack,
+  isRTL,
+}: ClassroomActivityBackButtonProps) => {
   const { t } = useTranslation();
 
   return (
@@ -107,7 +114,7 @@ export function ClassroomActivityBackButton({ onBack, isRTL }: ClassroomActivity
       </Button>
     </div>
   );
-}
+};
 
 export type ClassroomActivityNavShellProps = {
   role: Role;
@@ -122,7 +129,7 @@ export type ClassroomActivityNavShellProps = {
   children: ReactNode;
 };
 
-export function ClassroomActivityNavShell({
+export const ClassroomActivityNavShell = ({
   role,
   classroomName,
   classroomSubject,
@@ -133,23 +140,20 @@ export function ClassroomActivityNavShell({
   onBack,
   showBackButton = true,
   children,
-}: ClassroomActivityNavShellProps) {
+}: ClassroomActivityNavShellProps) => {
   return (
     <ClassroomLayout
-      classroomName={classroomName}
-      classroomSubject={classroomSubject}
+      classroomName={classroomName ?? undefined}
+      classroomSubject={classroomSubject ?? undefined}
       activeSection={activeSection}
       onSectionChange={onSectionChange}
       customSections={navSections}
       hideGlobalNav={role === 'student'}
     >
-      <div
-        className="flex w-full min-h-0 flex-1 flex-col gap-6 pb-8"
-        dir={isRTL ? 'rtl' : 'ltr'}
-      >
+      <div className="flex w-full min-h-0 flex-1 flex-col gap-6 pb-8" dir={isRTL ? 'rtl' : 'ltr'}>
         {showBackButton ? <ClassroomActivityBackButton onBack={onBack} isRTL={isRTL} /> : null}
         {children}
       </div>
     </ClassroomLayout>
   );
-}
+};

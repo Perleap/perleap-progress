@@ -19,7 +19,7 @@ export function contentAreaMm(): { width: number; height: number } {
 /** Fit block width to page content area; preserve full height for slicing. */
 export function fitBlockWidthMm(
   canvasWidth: number,
-  maxWidthMm: number,
+  maxWidthMm: number
 ): { widthMm: number; xMm: number } {
   if (canvasWidth <= 0) {
     return { widthMm: maxWidthMm, xMm: PAGE_MARGIN_MM };
@@ -31,11 +31,7 @@ export function fitBlockWidthMm(
 }
 
 /** Map canvas pixel height to mm at a given output width. */
-export function blockHeightMm(
-  canvasHeight: number,
-  canvasWidth: number,
-  widthMm: number,
-): number {
+export function blockHeightMm(canvasHeight: number, canvasWidth: number, widthMm: number): number {
   if (canvasWidth <= 0 || canvasHeight <= 0) return 0;
   return (canvasHeight / canvasWidth) * widthMm;
 }
@@ -45,7 +41,7 @@ export function scaleToFitPageMm(
   canvasWidth: number,
   canvasHeight: number,
   maxWidthMm: number,
-  maxHeightMm: number,
+  maxHeightMm: number
 ): { widthMm: number; heightMm: number; xMm: number } {
   if (canvasWidth <= 0 || canvasHeight <= 0) {
     return { widthMm: maxWidthMm, heightMm: maxHeightMm, xMm: PAGE_MARGIN_MM };
@@ -75,7 +71,7 @@ export function computeVerticalSlices(
   canvasHeight: number,
   canvasWidth: number,
   widthMm: number,
-  maxSliceHeightMm: number,
+  maxSliceHeightMm: number
 ): VerticalSlicePlan[] {
   if (canvasWidth <= 0 || canvasHeight <= 0 || maxSliceHeightMm <= 0) {
     return [];
@@ -100,7 +96,7 @@ export function fitBlockDimensionsMm(
   canvasWidth: number,
   canvasHeight: number,
   maxWidthMm: number,
-  maxHeightMm: number,
+  maxHeightMm: number
 ): { widthMm: number; heightMm: number; xMm: number } {
   return scaleToFitPageMm(canvasWidth, canvasHeight, maxWidthMm, maxHeightMm);
 }
@@ -110,7 +106,7 @@ export function needsNewPage(
   currentYMm: number,
   blockHeightMm: number,
   marginMm: number,
-  contentHeightMm: number,
+  contentHeightMm: number
 ): boolean {
   const pageBottom = marginMm + contentHeightMm;
   return currentYMm + blockHeightMm > pageBottom && currentYMm > marginMm;
@@ -123,24 +119,14 @@ function remainingSpaceMm(currentY: number, contentHeight: number): number {
 function createSliceCanvas(
   source: HTMLCanvasElement,
   sourceY: number,
-  sliceHeightPx: number,
+  sliceHeightPx: number
 ): HTMLCanvasElement {
   const slice = document.createElement('canvas');
   slice.width = source.width;
   slice.height = sliceHeightPx;
   const ctx = slice.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable');
-  ctx.drawImage(
-    source,
-    0,
-    sourceY,
-    source.width,
-    sliceHeightPx,
-    0,
-    0,
-    source.width,
-    sliceHeightPx,
-  );
+  ctx.drawImage(source, 0, sourceY, source.width, sliceHeightPx, 0, 0, source.width, sliceHeightPx);
   return slice;
 }
 
@@ -159,7 +145,10 @@ function ensureSpace(state: PdfLayoutState, requiredHeightMm: number): void {
 }
 
 function ensureNewPageIfLowSpace(state: PdfLayoutState, minRemainingMm: number): void {
-  if (state.currentY > PAGE_MARGIN_MM && remainingSpaceMm(state.currentY, state.contentHeight) < minRemainingMm) {
+  if (
+    state.currentY > PAGE_MARGIN_MM &&
+    remainingSpaceMm(state.currentY, state.contentHeight) < minRemainingMm
+  ) {
     state.pdf.addPage();
     state.currentY = PAGE_MARGIN_MM;
   }
@@ -172,7 +161,7 @@ function addCanvasFitPageToPdf(state: PdfLayoutState, canvas: HTMLCanvasElement)
     canvas.width,
     canvas.height,
     state.contentWidth,
-    state.contentHeight,
+    state.contentHeight
   );
 
   ensureSpace(state, heightMm);
@@ -189,12 +178,7 @@ function addCanvasFitPageToPdf(state: PdfLayoutState, canvas: HTMLCanvasElement)
 
 function addCanvasSlicesToPdf(state: PdfLayoutState, canvas: HTMLCanvasElement): void {
   const { widthMm, xMm } = fitBlockWidthMm(canvas.width, state.contentWidth);
-  const slices = computeVerticalSlices(
-    canvas.height,
-    canvas.width,
-    widthMm,
-    state.contentHeight,
-  );
+  const slices = computeVerticalSlices(canvas.height, canvas.width, widthMm, state.contentHeight);
 
   for (const slice of slices) {
     ensureSpace(state, slice.heightMm);
@@ -223,10 +207,12 @@ function prepareClonedPdfStyles(clonedDoc: Document): void {
     el.style.boxShadow = 'none';
   });
 
-  clonedDoc.querySelectorAll<HTMLElement>('.lesson-brief-student-card .recharts-responsive-container').forEach((el) => {
-    el.style.height = '220px';
-    el.style.margin = '0 auto';
-  });
+  clonedDoc
+    .querySelectorAll<HTMLElement>('.lesson-brief-student-card .recharts-responsive-container')
+    .forEach((el) => {
+      el.style.height = '220px';
+      el.style.margin = '0 auto';
+    });
 
   clonedDoc.querySelectorAll<HTMLElement>('.lesson-brief-radar-chart .max-w-md').forEach((el) => {
     el.style.maxWidth = '28rem';
@@ -296,10 +282,7 @@ async function waitForLayout(): Promise<void> {
   });
 }
 
-async function captureBlock(
-  block: HTMLElement,
-  windowRef?: Window,
-): Promise<HTMLCanvasElement> {
+async function captureBlock(block: HTMLElement, windowRef?: Window): Promise<HTMLCanvasElement> {
   const captureWindow = windowRef ?? window;
   const scrollX = captureWindow.scrollX;
   const scrollY = captureWindow.scrollY;
@@ -343,8 +326,8 @@ async function waitForIframeLayout(iframe: HTMLIFrameElement): Promise<void> {
             }
             script.addEventListener('load', () => resolve(), { once: true });
             script.addEventListener('error', () => resolve(), { once: true });
-          }),
-      ),
+          })
+      )
     );
   }
 
@@ -385,7 +368,7 @@ function loadHtmlInIframe(html: string): Promise<HTMLIFrameElement> {
 async function exportBlocksToPdf(
   blocks: HTMLElement[],
   filename: string,
-  captureWindow?: Window,
+  captureWindow?: Window
 ): Promise<void> {
   if (blocks.length === 0) throw new Error('No PDF blocks found');
 

@@ -8,15 +8,17 @@ type LangchainEditorContextValue = {
 
 const LangchainEditorContext = createContext<LangchainEditorContextValue | null>(null);
 
-export function LangchainEditorProvider({
+export const LangchainEditorProvider = ({
   value,
   children,
 }: {
   value: LangchainEditorContextValue;
   children: ReactNode;
-}) {
-  return <LangchainEditorContext.Provider value={value}>{children}</LangchainEditorContext.Provider>;
-}
+}) => {
+  return (
+    <LangchainEditorContext.Provider value={value}>{children}</LangchainEditorContext.Provider>
+  );
+};
 
 export function useLangchainEditorContext(): LangchainEditorContextValue {
   const ctx = useContext(LangchainEditorContext);

@@ -34,21 +34,46 @@ function parseEnvFile(filePath) {
   return out;
 }
 
+/** @param {string | undefined} baseURL */
+export function isRemoteVerifyTarget(baseURL) {
+  if (!baseURL) return false;
+  try {
+    const host = new URL(baseURL).hostname.toLowerCase();
+    return host !== 'localhost' && host !== '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
 export function loadVerifyEnv() {
+  const profile = process.env.VERIFY_PROFILE ?? '';
+  const profileFile =
+    profile === 'staging'
+      ? path.join(REPO_ROOT, '.env.verify.staging')
+      : profile
+        ? path.join(REPO_ROOT, `.env.verify.${profile}`)
+        : null;
+
   const merged = {
     ...parseEnvFile(path.join(REPO_ROOT, '.env')),
     ...parseEnvFile(path.join(REPO_ROOT, '.env.local')),
     ...parseEnvFile(path.join(REPO_ROOT, '.env.verify')),
+    ...(profileFile ? parseEnvFile(profileFile) : {}),
     ...process.env,
   };
 
   const port = merged.VERIFY_PORT ?? '8081';
   const baseURL = merged.VERIFY_BASE_URL ?? `http://127.0.0.1:${port}`;
+  const normalizedBase = baseURL.replace(/\/$/, '');
+  const remote = isRemoteVerifyTarget(normalizedBase);
 
   return {
     ...merged,
+    VERIFY_PROFILE: profile || (remote ? 'remote' : 'local'),
+    VERIFY_TARGET: remote ? 'remote' : 'local',
+    VERIFY_REMOTE: remote ? '1' : '0',
     VERIFY_PORT: port,
-    VERIFY_BASE_URL: baseURL.replace(/\/$/, ''),
+    VERIFY_BASE_URL: normalizedBase,
     VITE_SUPABASE_URL: merged.VITE_SUPABASE_URL ?? '',
     VITE_SUPABASE_ANON_KEY:
       merged.VITE_SUPABASE_ANON_KEY ?? merged.VITE_SUPABASE_PUBLISHABLE_KEY ?? '',
@@ -107,13 +132,44 @@ export function writeSandboxFixture(fixture) {
   fs.writeFileSync(SANDBOX_FIXTURE_FILE, JSON.stringify(fixture, null, 2));
 }
 
+export function navigationWaitUntil(env = loadVerifyEnv()) {
+  return env.VERIFY_REMOTE === '1' ? 'domcontentloaded' : 'networkidle';
+}
+
+export function getVercelShareUrl(baseURL, token) {
+  if (!token?.trim()) return null;
+  const url = new URL(baseURL);
+  url.searchParams.set('_vercel_share', token.trim());
+  return url.toString();
+}
+
+export function getVercelProtectionHeaders(env = loadVerifyEnv()) {
+  /** @type {Record<string, string>} */
+  const headers = {};
+  const bypass = env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+  if (bypass) headers['x-vercel-protection-bypass'] = bypass;
+  const oidc = env.VERCEL_OIDC_TOKEN?.trim();
+  if (oidc) headers['x-vercel-trusted-oidc-idp-token'] = oidc;
+  return headers;
+}
+
+export function hasVercelProtectionCredentials(env = loadVerifyEnv()) {
+  const headers = getVercelProtectionHeaders(env);
+  return Object.keys(headers).length > 0 || Boolean(env.VERCEL_SHARE_TOKEN?.trim());
+}
+
+/** @deprecated alias */
+export function getVerifyFetchHeaders(env = loadVerifyEnv()) {
+  return getVercelProtectionHeaders(env);
+}
+
 /** @param {string} url */
-export async function waitForHttpOk(url, timeoutMs = 60_000) {
+export async function waitForHttpOk(url, timeoutMs = 60_000, extraHeaders = {}) {
   const start = Date.now();
   let lastError = '';
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(url, { redirect: 'follow' });
+      const res = await fetch(url, { redirect: 'follow', headers: extraHeaders });
       if (res.ok || res.status === 304) return res;
       lastError = `HTTP ${res.status}`;
     } catch (err) {

@@ -1,9 +1,9 @@
+import { FileDown } from 'lucide-react';
 import { useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { SyllabusWithSections } from '@/types/syllabus';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { FileDown } from 'lucide-react';
-import type { SyllabusWithSections } from '@/types/syllabus';
 
 interface SyllabusPDFExportProps {
   syllabus: SyllabusWithSections;
@@ -21,8 +21,13 @@ export const SyllabusPDFExport = ({ syllabus, isRTL = false }: SyllabusPDFExport
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const structureLabel = syllabus.section_label_override ||
-      (syllabus.structure_type === 'weeks' ? 'Week' : syllabus.structure_type === 'units' ? 'Unit' : 'Module');
+    const structureLabel =
+      syllabus.section_label_override ||
+      (syllabus.structure_type === 'weeks'
+        ? 'Week'
+        : syllabus.structure_type === 'units'
+          ? 'Unit'
+          : 'Module');
 
     const accentColor = syllabus.accent_color || '#6366f1';
 
@@ -83,42 +88,70 @@ export const SyllabusPDFExport = ({ syllabus, isRTL = false }: SyllabusPDFExport
           ${syllabus.published_at ? `<span>${t('syllabus.publishedAt')}: ${new Date(syllabus.published_at).toLocaleDateString()}</span>` : ''}
         </div>
 
-        ${(syllabus.policies ?? []).filter(p => p.content?.trim()).length > 0 ? `
+        ${
+          (syllabus.policies ?? []).filter((p) => p.content?.trim()).length > 0
+            ? `
           <h2>${t('syllabus.policies.title')}</h2>
           <div class="policy-grid">
-            ${(syllabus.policies ?? []).filter(p => p.content?.trim()).map(p => `<div class="policy-card"><h3>${p.label}</h3><p>${p.content}</p></div>`).join('')}
+            ${(syllabus.policies ?? [])
+              .filter((p) => p.content?.trim())
+              .map((p) => `<div class="policy-card"><h3>${p.label}</h3><p>${p.content}</p></div>`)
+              .join('')}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
 
-        ${syllabus.grading_categories.length > 0 ? `
+        ${
+          syllabus.grading_categories.length > 0
+            ? `
           <h2>${t('syllabus.grading.breakdown')}</h2>
           <div>
-            ${syllabus.grading_categories.map((cat, i) => {
-              const colors = ['#6366f1', '#22c55e', '#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308', '#ef4444'];
-              return `<div class="grading-item"><div class="grading-dot" style="background:${colors[i % colors.length]}"></div><span>${cat.name}</span><strong>${cat.weight}%</strong></div>`;
-            }).join('')}
+            ${syllabus.grading_categories
+              .map((cat, i) => {
+                const colors = [
+                  '#6366f1',
+                  '#22c55e',
+                  '#f97316',
+                  '#8b5cf6',
+                  '#ec4899',
+                  '#06b6d4',
+                  '#eab308',
+                  '#ef4444',
+                ];
+                return `<div class="grading-item"><div class="grading-dot" style="background:${colors[i % colors.length]}"></div><span>${cat.name}</span><strong>${cat.weight}%</strong></div>`;
+              })
+              .join('')}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
 
         <h2>${t('syllabus.tabs.sections')} (${syllabus.sections.length})</h2>
-        ${syllabus.sections.map((section, i) => {
-          const dateRange = [section.start_date, section.end_date].filter(Boolean).join(' → ');
-          return `
+        ${syllabus.sections
+          .map((section, i) => {
+            const dateRange = [section.start_date, section.end_date].filter(Boolean).join(' → ');
+            return `
             <div class="section-card">
               <div class="section-header">
                 <span class="section-title">${structureLabel} ${i + 1}: ${section.title}</span>
                 ${dateRange ? `<span class="section-dates">${dateRange}</span>` : ''}
               </div>
               ${section.description ? `<p class="section-desc">${section.description}</p>` : ''}
-              ${section.objectives?.length ? `
+              ${
+                section.objectives?.length
+                  ? `
                 <h3>${t('syllabus.detail.objectives')}</h3>
                 <ul class="objectives">
                   ${section.objectives.map((obj) => `<li>${obj}</li>`).join('')}
                 </ul>
-              ` : ''}
+              `
+                  : ''
+              }
             </div>
           `;
-        }).join('')}
+          })
+          .join('')}
 
         <div class="footer">
           ${t('syllabus.pdfExport.generatedOn')} ${new Date().toLocaleDateString()} | Perleap

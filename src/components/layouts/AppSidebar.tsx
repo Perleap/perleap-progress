@@ -1,6 +1,3 @@
-import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Settings,
@@ -17,6 +14,35 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
+import { PerleapLogo } from '@/components/PerleapLogo';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import {
   Sidebar,
   SidebarContent,
@@ -30,37 +56,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { useAuth } from '@/contexts/useAuth';
-import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { PerleapLogo } from '@/components/PerleapLogo';
+import { useAuth } from '@/contexts/useAuth';
 import { cn } from '@/lib/utils';
 import { isAppAdminRole } from '@/utils/role';
-import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
+import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 interface NavItem {
   title: string;
@@ -68,7 +68,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export const AppSidebar = ({ ...props }: React.ComponentProps<typeof Sidebar>) => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -200,7 +200,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isDashboardActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                 >
                   <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
-                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
+                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                    {t('nav.dashboard')}
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {isTeacher ? (
@@ -212,15 +214,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isPlannerActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                   >
                     <Calendar className="size-5 group-data-[collapsible=icon]:size-5" />
-                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.planner')}</span>
+                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                      {t('nav.planner')}
+                    </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ) : null}
               {isTeacher && isAppAdmin ? (
-                  <>
-                    <AdminAiPromptsSidebarLink />
-                    <MonitoringInlineNav />
-                  </>
+                <>
+                  <AdminAiPromptsSidebarLink />
+                  <MonitoringInlineNav />
+                </>
               ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -261,7 +265,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
                 isRTL && 'flex-row-reverse',
-                'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
+                'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0'
               )}
             >
               <Avatar className="h-8 w-8 shrink-0 rounded-lg">
@@ -324,7 +328,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div
           className={cn(
             'flex items-center justify-between gap-2 px-1',
-            'group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center',
+            'group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center'
           )}
         >
           <Button
@@ -335,11 +339,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
           >
-            {theme === 'dark' ? (
-              <Sun className="size-5" />
-            ) : (
-              <Moon className="size-5" />
-            )}
+            {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </Button>
           <Button
             type="button"
@@ -376,4 +376,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </AlertDialog>
     </Sidebar>
   );
-}
+};

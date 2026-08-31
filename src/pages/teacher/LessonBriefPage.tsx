@@ -1,5 +1,7 @@
 import { LessonBriefContent } from '@/components/features/analytics';
 
-export default function LessonBriefPage() {
+const LessonBriefPage = () => {
   return <LessonBriefContent />;
-}
+};
+
+export default LessonBriefPage;

@@ -1,11 +1,11 @@
 import type { Json } from '@/integrations/supabase/types';
 import { build5dNarrativeEvidence, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
-import { runPool } from '@/lib/asyncPool';
 import {
   scopedStudentLatestScores,
   type AnalyticsAssignmentRef,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
+import { runPool } from '@/lib/asyncPool';
 import {
   setLessonBriefPreloadStatus,
   setLessonBriefStudentNarrativesCache,
@@ -50,7 +50,7 @@ function throwIfAborted(signal?: AbortSignal): void {
 }
 
 export async function prepareLessonBriefNarratives(
-  input: PrepareLessonBriefNarrativesInput,
+  input: PrepareLessonBriefNarrativesInput
 ): Promise<void> {
   const {
     classroomId,
@@ -79,7 +79,11 @@ export async function prepareLessonBriefNarratives(
     const studentResults = await runPool(students, 4, async (st) => {
       throwIfAborted(signal);
 
-      const scores = scopedStudentLatestScores(st.snapshots, rawSubmissions, effectiveAssignmentIds);
+      const scores = scopedStudentLatestScores(
+        st.snapshots,
+        rawSubmissions,
+        effectiveAssignmentIds
+      );
       if (!scores) {
         return { studentId: st.id, narrative: null as Analytics5dNarrativeResult | null };
       }

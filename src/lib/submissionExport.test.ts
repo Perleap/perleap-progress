@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Message } from '@/types';
 import {
   assembleClassroomStudentWorkEntries,
   buildClassroomStudentWorkFilename,
@@ -9,7 +10,6 @@ import {
   slimMessagesForExport,
   type ClassroomSubmissionWorkRow,
 } from '@/lib/submissionExportHelpers';
-import type { Message } from '@/types';
 
 describe('slimMessagesForExport', () => {
   it('keeps role, content, and fileContext only', () => {
@@ -41,11 +41,15 @@ describe('slimMessagesForExport', () => {
 
 describe('buildClassroomStudentWorkFilename', () => {
   it('uses classroom name when provided', () => {
-    expect(buildClassroomStudentWorkFilename('My Class')).toMatch(/^My-Class-student-work-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(buildClassroomStudentWorkFilename('My Class')).toMatch(
+      /^My-Class-student-work-\d{4}-\d{2}-\d{2}\.json$/
+    );
   });
 
   it('falls back to generic name', () => {
-    expect(buildClassroomStudentWorkFilename()).toMatch(/^classroom-student-work-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(buildClassroomStudentWorkFilename()).toMatch(
+      /^classroom-student-work-\d{4}-\d{2}-\d{2}\.json$/
+    );
   });
 });
 
@@ -74,7 +78,7 @@ describe('assembleClassroomStudentWorkEntries', () => {
       [baseRow],
       conversations,
       new Map(),
-      new Map(),
+      new Map()
     );
 
     expect(entries).toHaveLength(1);
@@ -85,12 +89,7 @@ describe('assembleClassroomStudentWorkEntries', () => {
   });
 
   it('returns empty chat messages when no conversation exists', () => {
-    const entries = assembleClassroomStudentWorkEntries(
-      [baseRow],
-      new Map(),
-      new Map(),
-      new Map(),
-    );
+    const entries = assembleClassroomStudentWorkEntries([baseRow], new Map(), new Map(), new Map());
 
     expect(entries[0].student_work).toEqual({ type: 'chat', messages: [] });
   });
@@ -111,7 +110,7 @@ describe('assembleClassroomStudentWorkEntries', () => {
       [testRow],
       new Map(),
       questionsByAssignment,
-      responsesBySubmission,
+      responsesBySubmission
     );
 
     expect(entries[0].student_work).toEqual({
@@ -170,7 +169,10 @@ describe('buildStudentWorkExport', () => {
   it('includes questions and responses for test', () => {
     const questions = [{ id: 'q1', question_text: 'Q?' }];
     const responses = [{ question_id: 'q1', text_answer: 'A' }];
-    const work = buildStudentWorkExport('test', submission, { testQuestions: questions, testResponses: responses });
+    const work = buildStudentWorkExport('test', submission, {
+      testQuestions: questions,
+      testResponses: responses,
+    });
     expect(work).toEqual({ type: 'test', questions, responses });
   });
 

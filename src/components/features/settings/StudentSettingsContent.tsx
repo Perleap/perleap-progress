@@ -1,30 +1,30 @@
+import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DashboardLayout } from '@/components/layouts';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/useAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useStudentProfile, useUpdateStudentProfile } from '@/hooks/queries';
-import {
-  StudentSettingsProfileSection,
-  type StudentSettingsProfileState,
-} from '@/components/features/settings/StudentSettingsProfileSection';
 import {
   StudentSettingsLearningPreferencesSection,
   type StudentSettingsQuestionsState,
 } from '@/components/features/settings/StudentSettingsLearningPreferencesSection';
-import { StudentSettingsVoiceSection } from '@/components/features/settings/StudentSettingsVoiceSection';
 import {
   StudentSettingsNotificationsSection,
   type StudentNotificationSettings,
 } from '@/components/features/settings/StudentSettingsNotificationsSection';
+import {
+  StudentSettingsProfileSection,
+  type StudentSettingsProfileState,
+} from '@/components/features/settings/StudentSettingsProfileSection';
+import { StudentSettingsVoiceSection } from '@/components/features/settings/StudentSettingsVoiceSection';
+import { DashboardLayout } from '@/components/layouts';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useStudentProfile, useUpdateStudentProfile } from '@/hooks/queries';
+import { supabase } from '@/integrations/supabase/client';
 
-export function StudentSettingsContent() {
+export const StudentSettingsContent = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
@@ -87,7 +87,9 @@ export function StudentSettingsContent() {
       });
     } else if (!loading && user) {
       if (sessionStorage.getItem('is_deleting_account') === 'true') {
-        console.log('ℹ️ StudentSettings: Account deletion in progress, skipping onboarding redirect');
+        console.log(
+          'ℹ️ StudentSettings: Account deletion in progress, skipping onboarding redirect'
+        );
         return;
       }
 
@@ -208,7 +210,11 @@ export function StudentSettingsContent() {
   return (
     <DashboardLayout>
       <div className="container py-8 px-4 max-w-4xl" dir={isRTL ? 'rtl' : 'ltr'}>
-        <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => setSearchParams({ tab: val })}
+          className="space-y-6"
+        >
           <TabsContent value="profile" className="space-y-6">
             <StudentSettingsProfileSection
               isRTL={isRTL}
@@ -263,4 +269,4 @@ export function StudentSettingsContent() {
       />
     </DashboardLayout>
   );
-}
+};

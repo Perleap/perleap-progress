@@ -6,6 +6,39 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+type StudentProfileSnippet = {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+};
+
+type EnrollmentWithProfile = {
+  student_id: string;
+  classroom_id: string;
+  student_profiles: StudentProfileSnippet | StudentProfileSnippet[] | null;
+};
+
+type StudentClassroomRow = {
+  id: string;
+  name: string;
+  subject: string;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+type StudentEnrollmentRow = {
+  classroom_id: string;
+  classrooms: StudentClassroomRow | null;
+};
+
+type StudentCalendarAssignmentRow = {
+  id: string;
+  title: string;
+  due_at: string | null;
+  type: string;
+  classrooms: { name: string; subject: string } | null;
+};
+
 export const calendarKeys = {
   all: ['calendar'] as const,
   teacher: (teacherId: string) => [...calendarKeys.all, 'teacher', teacherId] as const,
@@ -39,7 +72,7 @@ export const useTeacherCalendarData = (
       if (classroomError) throw classroomError;
       if (!classrooms || classrooms.length === 0) return { classrooms: [], assignments: [] };
 
-      const classroomIds = classrooms.map(c => c.id);
+      const classroomIds = classrooms.map((c) => c.id);
 
       // 2. Fetch assignments
       const { data: assignmentsData, error: assignError } = await supabase
@@ -52,7 +85,7 @@ export const useTeacherCalendarData = (
       if (assignError) throw assignError;
       if (!assignmentsData || assignmentsData.length === 0) return { classrooms, assignments: [] };
 
-      const assignmentIds = assignmentsData.map(a => a.id);
+      const assignmentIds = assignmentsData.map((a) => a.id);
 
       // 3. Fetch enrollments and submissions in bulk
       const [{ data: allEnrollments }, { data: allSubmissions }] = await Promise.all([
@@ -63,38 +96,46 @@ export const useTeacherCalendarData = (
         supabase
           .from('submissions')
           .select('student_id, assignment_id')
-          .in('assignment_id', assignmentIds)
+          .in('assignment_id', assignmentIds),
       ]);
 
       // 4. Process student profiles into a map
-      const studentProfilesMap = new Map();
-      allEnrollments?.forEach(e => {
-        if ((e as any).student_profiles) {
-          studentProfilesMap.set(e.student_id, (e as any).student_profiles);
+      const studentProfilesMap = new Map<string, StudentProfileSnippet>();
+      allEnrollments?.forEach((e) => {
+        const row = e as EnrollmentWithProfile;
+        const profile = Array.isArray(row.student_profiles)
+          ? row.student_profiles[0]
+          : row.student_profiles;
+        if (profile) {
+          studentProfilesMap.set(e.student_id, profile);
         }
       });
 
       // 5. Process data
-      const enrollmentsByClassroom = new Map();
-      allEnrollments?.forEach(e => {
-        if (!enrollmentsByClassroom.has(e.classroom_id)) enrollmentsByClassroom.set(e.classroom_id, []);
-        enrollmentsByClassroom.get(e.classroom_id).push(e.student_id);
+      const enrollmentsByClassroom = new Map<string, string[]>();
+      allEnrollments?.forEach((e) => {
+        if (!enrollmentsByClassroom.has(e.classroom_id))
+          enrollmentsByClassroom.set(e.classroom_id, []);
+        enrollmentsByClassroom.get(e.classroom_id)!.push(e.student_id);
       });
 
-      const submissionsByAssignment = new Map();
-      allSubmissions?.forEach(s => {
-        if (!submissionsByAssignment.has(s.assignment_id)) submissionsByAssignment.set(s.assignment_id, []);
-        submissionsByAssignment.get(s.assignment_id).push(s.student_id);
+      const submissionsByAssignment = new Map<string, string[]>();
+      allSubmissions?.forEach((s) => {
+        if (!submissionsByAssignment.has(s.assignment_id))
+          submissionsByAssignment.set(s.assignment_id, []);
+        submissionsByAssignment.get(s.assignment_id)!.push(s.student_id);
       });
 
-      const assignmentsWithIncomplete = assignmentsData.map(assignment => {
+      const assignmentsWithIncomplete = assignmentsData.map((assignment) => {
         const enrolledStudentIds = enrollmentsByClassroom.get(assignment.classroom_id) || [];
         const completedStudentIds = submissionsByAssignment.get(assignment.id) || [];
-        const incompleteStudentIds = enrolledStudentIds.filter(id => !completedStudentIds.includes(id));
+        const incompleteStudentIds = enrolledStudentIds.filter(
+          (id) => !completedStudentIds.includes(id)
+        );
 
         const incompleteStudents = incompleteStudentIds
-          .map(id => studentProfilesMap.get(id))
-          .filter(Boolean);
+          .map((id) => studentProfilesMap.get(id))
+          .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
         return {
           ...assignment,
@@ -105,7 +146,7 @@ export const useTeacherCalendarData = (
 
       return {
         classrooms,
-        assignments: assignmentsWithIncomplete
+        assignments: assignmentsWithIncomplete,
       };
     },
     enabled: !!teacherId,
@@ -134,7 +175,9 @@ export const useStudentCalendarData = (studentId: string | undefined) => {
       }
 
       const classroomIds = enrollments.map((e) => e.classroom_id);
-      const classroomsData = enrollments.map((e) => e.classrooms).filter(Boolean) as any[];
+      const classroomsData = (enrollments as StudentEnrollmentRow[])
+        .map((e) => e.classrooms)
+        .filter((c): c is StudentClassroomRow => c != null);
 
       const { data: assignmentsData, error: assignError } = await supabase
         .from('assignments')
@@ -147,7 +190,7 @@ export const useStudentCalendarData = (studentId: string | undefined) => {
 
       return {
         classrooms: classroomsData,
-        assignments: (assignmentsData as any[]) || []
+        assignments: (assignmentsData ?? []) as StudentCalendarAssignmentRow[],
       };
     },
     enabled: !!studentId,

@@ -7,7 +7,11 @@ import {
   fail,
   parseArgs,
   getBrowserLaunchOptions,
+  getVercelProtectionHeaders,
+  getVercelShareUrl,
+  isRemoteVerifyTarget,
   shouldKeepBrowserOpen,
+  navigationWaitUntil,
   ENGLISH_INIT_SCRIPT,
 } from './shared.mjs';
 
@@ -137,7 +141,7 @@ async function resolveAuthMethod() {
 }
 
 async function loginWithPassword(page) {
-  await page.goto(`${baseURL}/auth`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseURL}/auth`, { waitUntil: navigationWaitUntil(env) });
   await page.getByRole('heading', { name: 'Sign in with email' }).waitFor({ timeout: 30_000 });
   await fillAuthInput(page, '#signin-email', email);
   await fillAuthInput(page, '#signin-password', password);
@@ -153,7 +157,7 @@ async function loginWithMagicLink(page) {
     },
     { key: AUTH_STORAGE_KEY, value: session },
   );
-  await page.goto(`${baseURL}${dashboardPath}`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseURL}${dashboardPath}`, { waitUntil: navigationWaitUntil(env) });
 }
 
 async function main() {
@@ -162,9 +166,17 @@ async function main() {
   console.log(`verify-perleap: logging in ${role} via ${method}`);
 
   const browser = await chromium.launch(getBrowserLaunchOptions(env));
-  const context = await browser.newContext({ locale: 'en-US' });
+  const protectionHeaders = getVercelProtectionHeaders(env);
+  const context = await browser.newContext({
+    locale: 'en-US',
+    ...(Object.keys(protectionHeaders).length ? { extraHTTPHeaders: protectionHeaders } : {}),
+  });
   await context.addInitScript(ENGLISH_INIT_SCRIPT);
   const page = await context.newPage();
+  if (env.VERCEL_SHARE_TOKEN?.trim() && isRemoteVerifyTarget(baseURL)) {
+    const shareUrl = getVercelShareUrl(baseURL, env.VERCEL_SHARE_TOKEN);
+    if (shareUrl) await page.goto(shareUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  }
 
   if (method === 'password') {
     await loginWithPassword(page);

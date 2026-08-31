@@ -1,5 +1,5 @@
-import { supabase, handleSupabaseError } from '@/api/client';
 import { getTeacherClassrooms } from './classroomService';
+import { supabase, handleSupabaseError } from '@/api/client';
 
 export type PlannerClassroom = {
   id: string;
@@ -18,7 +18,7 @@ export type PlannerAssignmentRow = {
 
 export async function fetchPlannerClassrooms(
   teacherId: string,
-  isAppAdmin: boolean,
+  isAppAdmin: boolean
 ): Promise<PlannerClassroom[]> {
   const { data, error } = await getTeacherClassrooms(teacherId, {
     allClassroomsForAdmin: isAppAdmin,
@@ -35,7 +35,7 @@ export async function fetchPlannerClassrooms(
 }
 
 export async function fetchPlannerAssignments(
-  classroomIds: string[],
+  classroomIds: string[]
 ): Promise<PlannerAssignmentRow[]> {
   if (classroomIds.length === 0) {
     return [];

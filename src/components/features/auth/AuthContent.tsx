@@ -13,15 +13,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthErrorMessage } from '@/utils/authErrors';
 import { savePendingRole } from '@/utils/roleRecovery';
 import { markSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
-import { useNavigateBack } from '@/hooks/useNavigateBack';
 
-export function AuthContent() {
+export const AuthContent = () => {
   const { t } = useTranslation();
   const { isRTL, setLanguage, language = 'en' } = useLanguage();
   const location = useLocation();
@@ -414,10 +414,7 @@ export function AuthContent() {
             <span className="truncate">{t('auth.backToHome')}</span>
           </Button>
         </div>
-        <PerleapLogo
-          className="h-24 w-24 md:h-28 md:w-28 lg:h-32 lg:w-32"
-          title="Perleap"
-        />
+        <PerleapLogo className="h-24 w-24 md:h-28 md:w-28 lg:h-32 lg:w-32" title="Perleap" />
         <div className="flex min-w-0 items-center justify-end gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
@@ -731,4 +728,4 @@ export function AuthContent() {
       </div>
     </BreathingBackground>
   );
-}
+};

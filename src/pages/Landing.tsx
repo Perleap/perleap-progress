@@ -1,15 +1,15 @@
-import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Navbar } from "@/components/layouts/Navbar";
-import { Hero } from "@/components/landing/Hero";
-import { Features } from "@/components/landing/Features";
-import { Footer } from "@/components/layouts/Footer";
-import { ScrollHighlightText } from "@/components/landing/ScrollHighlightText";
-import { FlowChart } from "@/components/landing/FlowChart";
-import { Customers } from "@/components/landing/Customers";
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/useAuth';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Customers } from '@/components/landing/Customers';
+import { Features } from '@/components/landing/Features';
+import { FlowChart } from '@/components/landing/FlowChart';
+import { Hero } from '@/components/landing/Hero';
+import { ScrollHighlightText } from '@/components/landing/ScrollHighlightText';
+import { Footer } from '@/components/layouts/Footer';
+import { Navbar } from '@/components/layouts/Navbar';
+import { useAuth } from '@/contexts/useAuth';
 import {
   isAccountJustDeletedSessionFlagSet,
   clearAccountJustDeletedSessionFlag,
@@ -22,10 +22,11 @@ const Landing = () => {
   const [searchParams] = useSearchParams();
 
   // Check if we're in the middle of an OAuth callback or email confirmation
-  const isOAuthCallback = searchParams.has('code') || 
-                           searchParams.has('access_token') || 
-                           searchParams.has('error') || 
-                           searchParams.has('type');
+  const isOAuthCallback =
+    searchParams.has('code') ||
+    searchParams.has('access_token') ||
+    searchParams.has('error') ||
+    searchParams.has('type');
 
   // If we detect OAuth or email callback parameters on the landing page,
   // redirect to the dedicated callback handler
@@ -66,7 +67,9 @@ const Landing = () => {
         if (userRole === 'teacher' || userRole === 'student') {
           // Use cached profile check from AuthContext
           if (hasProfile === false) {
-            console.log(`⚠️ Landing: User has ${userRole} role but no profile, redirecting to onboarding`);
+            console.log(
+              `⚠️ Landing: User has ${userRole} role but no profile, redirecting to onboarding`
+            );
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
           }
@@ -104,7 +107,12 @@ const Landing = () => {
   // CRITICAL: Added safety check for missing role to prevent infinite spinner
   const hasUserButNoRole = user && !user.user_metadata?.role;
 
-  if (isOAuthCallback || (!authLoading && user && !hasUserButNoRole) || isProfileLoading || (user && hasProfile === null && !hasUserButNoRole)) {
+  if (
+    isOAuthCallback ||
+    (!authLoading && user && !hasUserButNoRole) ||
+    isProfileLoading ||
+    (user && hasProfile === null && !hasUserButNoRole)
+  ) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -128,10 +136,7 @@ const Landing = () => {
       <Navbar />
       <main>
         <Hero />
-        <ScrollHighlightText
-          text={t('landing.mission')}
-          className="bg-background"
-        />
+        <ScrollHighlightText text={t('landing.mission')} className="bg-background" />
         <FlowChart />
         <Features />
         <Customers />

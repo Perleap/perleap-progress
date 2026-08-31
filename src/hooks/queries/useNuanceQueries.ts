@@ -69,13 +69,14 @@ export interface NuanceUnderstandingCueEventRow {
 export function useNuanceUnderstandingCueEvents(
   studentId: string | undefined,
   assignmentIdsInScope: string[],
-  enabled: boolean,
+  enabled: boolean
 ) {
   const scopeKey = [...assignmentIdsInScope].sort().join(',') || '_';
   return useQuery({
     queryKey: nuanceKeys.understandingCueEvents(studentId || '', scopeKey),
     queryFn: async () => {
-      if (!studentId || assignmentIdsInScope.length === 0) return [] as NuanceUnderstandingCueEventRow[];
+      if (!studentId || assignmentIdsInScope.length === 0)
+        return [] as NuanceUnderstandingCueEventRow[];
       const { data, error } = await supabase
         .from('student_nuance_events')
         .select('id, created_at, assignment_id, metadata')

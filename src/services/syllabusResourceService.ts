@@ -3,31 +3,8 @@
  * Handles file uploads, resource CRUD, student progress, changelog, and comments
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
-import {
-  TUS_UPLOAD_THRESHOLD_BYTES,
-  uploadFileResumable,
-  type UploadProgressCallback,
-} from '@/lib/resumableStorageUpload';
-import { isStoragePayloadTooLarge } from '@/lib/storageUploadErrors';
-import { parseLessonContent } from '@/lib/lessonContent';
-import { isYoutubeUrl } from '@/lib/youtube';
-import {
-  downloadStorageBlob,
-  extractStorageObjectPath,
-  resolveSyllabusResourceStoredValue,
-  SYLLABUS_RESOURCES_BUCKET,
-} from '@/utils/storageUrls';
-import { ACTIVITY_LIST_OPTIONAL_COLUMNS } from '@/lib/activityListOptionalColumns';
-import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
 import type { Database, Json } from '@/integrations/supabase/types';
 import type { ApiError } from '@/types';
-
-type ActivityListInsert = Database['public']['Tables']['activity_list']['Insert'];
-type ActivityListUpdate = Database['public']['Tables']['activity_list']['Update'];
-type StudentSectionProgressInsert = Database['public']['Tables']['student_section_progress']['Insert'];
-type SyllabusChangelogInsert = Database['public']['Tables']['syllabus_changelog']['Insert'];
-type SectionCommentInsert = Database['public']['Tables']['section_comments']['Insert'];
 import type {
   SectionResource,
   CreateSectionResourceInput,
@@ -37,6 +14,30 @@ import type {
   SyllabusChangelog,
   SectionComment,
 } from '@/types/syllabus';
+import { supabase, handleSupabaseError } from '@/api/client';
+import { ACTIVITY_LIST_OPTIONAL_COLUMNS } from '@/lib/activityListOptionalColumns';
+import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
+import { parseLessonContent } from '@/lib/lessonContent';
+import {
+  TUS_UPLOAD_THRESHOLD_BYTES,
+  uploadFileResumable,
+  type UploadProgressCallback,
+} from '@/lib/resumableStorageUpload';
+import { isStoragePayloadTooLarge } from '@/lib/storageUploadErrors';
+import { isYoutubeUrl } from '@/lib/youtube';
+import {
+  downloadStorageBlob,
+  extractStorageObjectPath,
+  resolveSyllabusResourceStoredValue,
+  SYLLABUS_RESOURCES_BUCKET,
+} from '@/utils/storageUrls';
+
+type ActivityListInsert = Database['public']['Tables']['activity_list']['Insert'];
+type ActivityListUpdate = Database['public']['Tables']['activity_list']['Update'];
+type StudentSectionProgressInsert =
+  Database['public']['Tables']['student_section_progress']['Insert'];
+type SyllabusChangelogInsert = Database['public']['Tables']['syllabus_changelog']['Insert'];
+type SectionCommentInsert = Database['public']['Tables']['section_comments']['Insert'];
 
 const STORAGE_BUCKET = 'syllabus-resources';
 
@@ -57,7 +58,8 @@ function outlineLinkLessonJson(url: string): Json {
 }
 
 function extractOutlineLinkUrl(lessonContent: unknown): string | null {
-  if (!lessonContent || typeof lessonContent !== 'object' || Array.isArray(lessonContent)) return null;
+  if (!lessonContent || typeof lessonContent !== 'object' || Array.isArray(lessonContent))
+    return null;
   const inner = (lessonContent as Record<string, unknown>)[OUTLINE_LINK_V1];
   if (!inner || typeof inner !== 'object' || Array.isArray(inner)) return null;
   const u = (inner as Record<string, unknown>).url;
@@ -86,7 +88,8 @@ function extractOutlineFileMeta(lessonContent: unknown): {
   mime_type: string | null;
   file_size: number | null;
 } | null {
-  if (!lessonContent || typeof lessonContent !== 'object' || Array.isArray(lessonContent)) return null;
+  if (!lessonContent || typeof lessonContent !== 'object' || Array.isArray(lessonContent))
+    return null;
   const inner = (lessonContent as Record<string, unknown>)[OUTLINE_FILE_V1];
   if (!inner || typeof inner !== 'object' || Array.isArray(inner)) return null;
   const o = inner as Record<string, unknown>;
@@ -98,10 +101,14 @@ function extractOutlineFileMeta(lessonContent: unknown): {
   const rawSize = o.file_size;
   let file_size: number | null = null;
   if (typeof rawSize === 'number' && Number.isFinite(rawSize)) file_size = rawSize;
-  else if (typeof rawSize === 'string' && rawSize.trim() !== '' && Number.isFinite(Number(rawSize))) {
+  else if (
+    typeof rawSize === 'string' &&
+    rawSize.trim() !== '' &&
+    Number.isFinite(Number(rawSize))
+  ) {
     file_size = Number(rawSize);
   }
-  return { file_path: file_path.trim(), url: urlVal, mime_type, file_size };
+  return { file_path: file_path.trim(), url: urlVal ?? '', mime_type, file_size };
 }
 
 export type BlobRevokeRegistry = {
@@ -128,7 +135,7 @@ export async function downloadSectionResourceFile(resource: SectionResource): Pr
 /** Resolve file-backed syllabus resource to an in-app blob URL (or external link as-is). */
 export async function resolveSectionResourceFileUrl(
   resource: SectionResource,
-  registry?: BlobRevokeRegistry,
+  registry?: BlobRevokeRegistry
 ): Promise<string | null> {
   if (resource.resource_type === 'link') {
     return resource.url?.trim() || null;
@@ -142,7 +149,7 @@ export async function resolveSectionResourceFileUrl(
 /** Resolve storage-backed URLs inside lesson blocks and top-level file fields for display. */
 export async function resolveSectionResourceForDisplay(
   resource: SectionResource,
-  registry?: BlobRevokeRegistry,
+  registry?: BlobRevokeRegistry
 ): Promise<SectionResource> {
   if (resource.resource_type === 'link') {
     return resource;
@@ -169,7 +176,7 @@ export async function resolveSectionResourceForDisplay(
           if (!resolved) return block;
           registry?.register(resolved.revoke);
           return { ...block, url: resolved.url };
-        }),
+        })
       );
       next = {
         ...next,
@@ -194,7 +201,9 @@ const FILE_BACKED_RESOURCE_TYPES = new Set<SectionResource['resource_type']>([
   'video',
 ]);
 
-export function mapActivityListRowToSectionResource(row: SectionResource | null | undefined): SectionResource | null {
+export function mapActivityListRowToSectionResource(
+  row: SectionResource | null | undefined
+): SectionResource | null {
   if (!row) return null;
 
   if (row.resource_type === 'link') {
@@ -253,11 +262,7 @@ const ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE = ACTIVITY_LIST_OPTIONAL_COLUMNS;
 
 function activityPatchIncludesField(key: string, v: unknown): boolean {
   if (v === undefined || v === null) return false;
-  if (
-    ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE.has(key) &&
-    typeof v === 'string' &&
-    !v.trim()
-  ) {
+  if (ACTIVITY_PATCH_OMIT_WHEN_ABSENTLIKE.has(key) && typeof v === 'string' && !v.trim()) {
     return false;
   }
   return true;
@@ -279,7 +284,7 @@ function pickActivityListWritePayload(row: Record<string, unknown>): Record<stri
 // ---------------------------------------------------------------------------
 
 export const getSectionResourceById = async (
-  resourceId: string,
+  resourceId: string
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -290,7 +295,10 @@ export const getSectionResourceById = async (
       .maybeSingle();
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: mapActivityListRowToSectionResource(data as unknown as SectionResource), error: null };
+    return {
+      data: mapActivityListRowToSectionResource(data as unknown as SectionResource),
+      error: null,
+    };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -309,7 +317,7 @@ export const getSectionResources = async (
 
     if (error) return { data: null, error: handleSupabaseError(error) };
     const mapped = (data ?? []).map((r) =>
-      mapActivityListRowToSectionResource(r as unknown as SectionResource),
+      mapActivityListRowToSectionResource(r as unknown as SectionResource)
     ) as SectionResource[];
     return { data: mapped, error: null };
   } catch (error) {
@@ -370,7 +378,7 @@ export const createSectionResource = async (
 
     /** Inserts only non-null fields; retries without unknown columns on slim `activity_list` schemas. */
     const insertRow = Object.fromEntries(
-      Object.entries(row).filter(([, v]) => v !== null && v !== undefined),
+      Object.entries(row).filter(([, v]) => v !== null && v !== undefined)
     );
     const { data, error } = await activityListWriteWithUnknownColumnFallback(
       insertRow,
@@ -383,7 +391,7 @@ export const createSectionResource = async (
         return { data: result.data, error: result.error };
       },
       'No insertable fields left for activity_list after dropping unknown columns.',
-      'activity_list INSERT stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+      'activity_list INSERT stopped after exhausting schema column fallbacks; check migrations vs remote DB.'
     );
 
     if (error) {
@@ -400,14 +408,14 @@ export const createSectionResource = async (
 
 export const updateSectionResource = async (
   resourceId: string,
-  updates: UpdateSectionResourceInput,
+  updates: UpdateSectionResourceInput
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   try {
     const payload = pickActivityListWritePayload(updates as Record<string, unknown>);
     // Omit null/undefined PATCH fields — PostgREST errors on unknown column names present in JSON (even null).
     // Slim `activity_list` stacks often lack body_text/url/file_path; merges still send nullable columns.
     const patchMutable: Record<string, unknown> = Object.fromEntries(
-      Object.entries(payload).filter(([k, v]) => activityPatchIncludesField(k, v)),
+      Object.entries(payload).filter(([k, v]) => activityPatchIncludesField(k, v))
     );
 
     const { data, error } = await activityListWriteWithUnknownColumnFallback(
@@ -422,7 +430,7 @@ export const updateSectionResource = async (
         return { data: result.data, error: result.error };
       },
       'No updatable fields left for activity_list after dropping unknown columns.',
-      'activity_list PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+      'activity_list PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.'
     );
 
     if (error) {
@@ -476,7 +484,7 @@ export const UPLOAD_CANCELLED_ERROR = 'UPLOAD_CANCELLED';
 export const uploadResourceFile = async (
   sectionId: string,
   file: File,
-  options?: UploadResourceFileOptions,
+  options?: UploadResourceFileOptions
 ): Promise<{ filePath: string } | { error: string }> => {
   try {
     if (options?.signal?.aborted) {
@@ -539,7 +547,7 @@ export const uploadAndCreateResource = async (
   sectionId: string,
   file: File,
   orderIndex: number,
-  options?: UploadResourceFileOptions,
+  options?: UploadResourceFileOptions
 ): Promise<{ data: SectionResource | null; error: ApiError | null }> => {
   const uploadResult = await uploadResourceFile(sectionId, file, options);
   if ('error' in uploadResult) {
@@ -662,8 +670,7 @@ export const createChangelogEntry = async (
       syllabus_id: syllabusId,
       changed_by: changedBy,
       change_summary: changeSummary,
-      snapshot:
-        snapshot != null ? (JSON.parse(JSON.stringify(snapshot)) as Json) : null,
+      snapshot: snapshot != null ? (JSON.parse(JSON.stringify(snapshot)) as Json) : null,
     };
     const { error } = await supabase.from('syllabus_changelog').insert([insertRow]);
 
@@ -706,7 +713,7 @@ export const getSectionComments = async (
 
     if (error) return { data: null, error: handleSupabaseError(error) };
     const mapped = (data ?? []).map((r) =>
-      mapSectionCommentRow(r as unknown as Record<string, unknown>),
+      mapSectionCommentRow(r as unknown as Record<string, unknown>)
     );
     return { data: mapped, error: null };
   } catch (error) {
@@ -745,10 +752,7 @@ export const deleteSectionComment = async (
   commentId: string
 ): Promise<{ error: ApiError | null }> => {
   try {
-    const { error } = await supabase
-      .from('section_comments')
-      .delete()
-      .eq('id', commentId);
+    const { error } = await supabase.from('section_comments').delete().eq('id', commentId);
 
     if (error) return { error: handleSupabaseError(error) };
     return { error: null };

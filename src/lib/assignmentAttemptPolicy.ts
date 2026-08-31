@@ -10,7 +10,7 @@ export function isPastDueForNewAttempts(dueAt: string | null, now: Date): boolea
 /** Whether the student may open a first in-progress attempt (no rows yet). */
 export function canStartFirstAttempt(
   assignment: { attempt_mode: AssignmentAttemptMode | null; due_at: string | null },
-  now: Date,
+  now: Date
 ): boolean {
   const mode = assignment.attempt_mode ?? 'single';
   if (mode === 'multiple_until_due') {
@@ -24,7 +24,7 @@ export function canStartFirstAttempt(
 /** Whether after a completed attempt the student may start another (retry). */
 export function canRetryAfterCompleting(
   assignment: { attempt_mode: AssignmentAttemptMode | null; due_at: string | null },
-  now: Date,
+  now: Date
 ): boolean {
   const mode = assignment.attempt_mode ?? 'single';
   if (mode === 'single') return false;

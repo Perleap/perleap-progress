@@ -1,6 +1,6 @@
-import type { TFunction } from 'i18next';
 import type { Analytics5dNarrativeResult } from '@/services/analytics5dExplainService';
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
+import type { TFunction } from 'i18next';
 
 type SubmissionLike = {
   student_id: string;
@@ -43,7 +43,13 @@ export type ClassPriorityInsight = {
   body: string;
 };
 
-export const DIMENSION_ORDER: DimensionKey[] = ['vision', 'values', 'thinking', 'connection', 'action'];
+export const DIMENSION_ORDER: DimensionKey[] = [
+  'vision',
+  'values',
+  'thinking',
+  'connection',
+  'action',
+];
 
 export const STATUS_PRIORITY_ORDER: Record<StudentStatusKey, number> = {
   highPriority: 0,
@@ -65,7 +71,7 @@ export const LESSON_BRIEF_POLL_TIMEOUT_MS = 60_000;
 export function countStudentCompletedAssignmentsInScope(
   studentId: string,
   submissions: SubmissionLike[],
-  assignmentIdsInScope: string[],
+  assignmentIdsInScope: string[]
 ): number {
   if (assignmentIdsInScope.length === 0) return 0;
   const scopeSet = new Set(assignmentIdsInScope);
@@ -92,8 +98,9 @@ export function lessonBriefDownloadFilename(courseName: string | undefined | nul
   return `lesson_brief_${shortName}_${date}.html`;
 }
 
-export function safeScore(value: number): number {
-  return Number.isFinite(value) ? value : 0;
+export function safeScore(value: number | null | undefined): number {
+  if (value == null || !Number.isFinite(value)) return 0;
+  return value;
 }
 
 export function averageFiveD(scores: FiveDScores): number {
@@ -116,7 +123,10 @@ export function getWeakestDimension(scores: FiveDScores): { key: DimensionKey; v
   return { key: weakest, value: weakestValue };
 }
 
-export function classifyStudentStatus(completionRatio: number, weakestScore: number): StudentStatusKey {
+export function classifyStudentStatus(
+  completionRatio: number,
+  weakestScore: number
+): StudentStatusKey {
   if (completionRatio < 0.35 || weakestScore < 3.5) return 'highPriority';
   if (completionRatio < 0.55 || weakestScore < 5) return 'needsSupport';
   if (completionRatio < 0.75 || weakestScore < 6.5) return 'monitor';
@@ -132,7 +142,7 @@ export function normalizeNarrative(
   narrative: Analytics5dNarrativeResult | null,
   studentName: string,
   weakestDimension: DimensionKey | null,
-  t: TFunction,
+  t: TFunction
 ): StudentNarrativeFields {
   const summary =
     narrative?.scopeSummary?.trim() ||
@@ -148,8 +158,7 @@ export function normalizeNarrative(
 
   return {
     summary,
-    strengths:
-      strengths.length > 0 ? strengths : [t('analytics.lessonBrief.defaultStrength')],
+    strengths: strengths.length > 0 ? strengths : [t('analytics.lessonBrief.defaultStrength')],
     weaknesses:
       weaknesses.length > 0
         ? weaknesses

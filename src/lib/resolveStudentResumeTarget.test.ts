@@ -3,8 +3,8 @@ import {
   resolveStudentResumeTarget,
   findFirstIncompleteDisplayedFlowAcrossCourse,
 } from './resolveStudentResumeTarget';
-import type { SyllabusSection } from '@/types/syllabus';
 import type { StudentFlowProgressContext } from './moduleFlowStudent';
+import type { SyllabusSection } from '@/types/syllabus';
 
 describe('resolveStudentResumeTarget', () => {
   it('returns first incomplete assignment from computed default flow when no persisted steps', () => {
@@ -156,7 +156,7 @@ describe('resolveStudentResumeTarget', () => {
         resourceMap,
         assignments,
         flowCtx,
-      }),
+      })
     ).toEqual({ kind: 'assignment', id: 'a2' });
 
     expect(
@@ -166,7 +166,7 @@ describe('resolveStudentResumeTarget', () => {
         resourceMap,
         assignments,
         flowCtx,
-      }),
+      })
     ).toEqual({ kind: 'assignment', id: 'a2' });
   });
 });

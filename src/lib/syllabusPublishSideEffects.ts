@@ -1,8 +1,8 @@
+import type { NotificationType } from '@/types/notifications';
 import type { TFunction } from 'i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { createNotification } from '@/lib/notificationService';
 import { createChangelogEntry } from '@/services/syllabusResourceService';
-import type { NotificationType } from '@/types/notifications';
 
 export type SyllabusPublishSideEffectsParams = {
   classroomId: string;
@@ -21,7 +21,8 @@ export async function runSyllabusPublishedSideEffects(
   t: TFunction,
   params: SyllabusPublishSideEffectsParams
 ): Promise<void> {
-  const { classroomId, syllabusId, syllabusTitle, sectionsCount, userId, wasAlreadyPublished } = params;
+  const { classroomId, syllabusId, syllabusTitle, sectionsCount, userId, wasAlreadyPublished } =
+    params;
 
   if (userId) {
     const changelogMsg = wasAlreadyPublished
@@ -41,7 +42,9 @@ export async function runSyllabusPublishedSideEffects(
 
     if (!enrollments?.length) return;
 
-    const notifType = (wasAlreadyPublished ? 'syllabus_updated' : 'syllabus_published') as NotificationType;
+    const notifType = (
+      wasAlreadyPublished ? 'syllabus_updated' : 'syllabus_published'
+    ) as NotificationType;
     const notifTitle = wasAlreadyPublished
       ? t('syllabus.notifications.updatedTitle')
       : t('syllabus.notifications.publishedTitle');

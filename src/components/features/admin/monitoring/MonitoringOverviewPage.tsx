@@ -1,15 +1,18 @@
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { Line, LineChart } from 'recharts';
-import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { PlatformHealthProbeSection, useAdminMonitoringProbeQuery } from './PlatformHealthProbeSection';
-import { useAdminVercelInsightsQuery } from './useAdminVercelInsightsQuery';
 import { payloadDbLatencyMs } from './observabilityPayload';
+import {
+  PlatformHealthProbeSection,
+  useAdminMonitoringProbeQuery,
+} from './PlatformHealthProbeSection';
+import { useAdminVercelInsightsQuery } from './useAdminVercelInsightsQuery';
+import type { Database } from '@/integrations/supabase/types';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { supabase } from '@/integrations/supabase/client';
 
 type SnapshotRow = Database['public']['Tables']['observability_metric_snapshots']['Row'];
 
@@ -20,7 +23,7 @@ function payloadDbOk(payload: SnapshotRow['payload']): boolean | null {
   return null;
 }
 
-export function MonitoringOverviewContent() {
+export const MonitoringOverviewContent = () => {
   const { t } = useTranslation();
   const probeQuery = useAdminMonitoringProbeQuery();
   const vercelQuery = useAdminVercelInsightsQuery({ staleTime: 120_000 });
@@ -85,12 +88,18 @@ export function MonitoringOverviewContent() {
       </p>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">{t('monitoring.overviewAtAGlance')}</h2>
+        <h2 className="mb-3 text-sm font-semibold tracking-tight text-foreground">
+          {t('monitoring.overviewAtAGlance')}
+        </h2>
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{t('monitoring.overviewStatLiveDbTitle')}</CardTitle>
-              <CardDescription className="text-xs">{t('monitoring.overviewStatLiveDbHint')}</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                {t('monitoring.overviewStatLiveDbTitle')}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {t('monitoring.overviewStatLiveDbHint')}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {probeQuery.isLoading ? (
@@ -98,7 +107,9 @@ export function MonitoringOverviewContent() {
               ) : probe ? (
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-1">
-                    <span className="font-mono text-2xl font-semibold tabular-nums">{probe.db.latencyMs}</span>
+                    <span className="font-mono text-2xl font-semibold tabular-nums">
+                      {probe.db.latencyMs}
+                    </span>
                     <span className="text-xs text-muted-foreground">ms</span>
                   </div>
                   <Badge variant={probe.db.ok ? 'secondary' : 'destructive'}>
@@ -113,8 +124,12 @@ export function MonitoringOverviewContent() {
 
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{t('monitoring.overviewStatSnapshotTitle')}</CardTitle>
-              <CardDescription className="text-xs">{t('monitoring.overviewStatSnapshotHint')}</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                {t('monitoring.overviewStatSnapshotTitle')}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {t('monitoring.overviewStatSnapshotHint')}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {snapshotsQuery.isLoading ? (
@@ -122,7 +137,9 @@ export function MonitoringOverviewContent() {
               ) : latestMs != null ? (
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-1">
-                    <span className="font-mono text-2xl font-semibold tabular-nums">{latestMs}</span>
+                    <span className="font-mono text-2xl font-semibold tabular-nums">
+                      {latestMs}
+                    </span>
                     <span className="text-xs text-muted-foreground">ms</span>
                   </div>
                   {latestOk != null ? (
@@ -139,8 +156,12 @@ export function MonitoringOverviewContent() {
 
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{t('monitoring.overviewStatDeploymentsTitle')}</CardTitle>
-              <CardDescription className="text-xs">{t('monitoring.overviewStatDeploymentsHint')}</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                {t('monitoring.overviewStatDeploymentsTitle')}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {t('monitoring.overviewStatDeploymentsHint')}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {vercelQuery.isLoading ? (
@@ -148,7 +169,9 @@ export function MonitoringOverviewContent() {
               ) : vercelQuery.isError ? (
                 <p className="text-xs text-muted-foreground">—</p>
               ) : (
-                <span className="font-mono text-2xl font-semibold tabular-nums">{deployments7d}</span>
+                <span className="font-mono text-2xl font-semibold tabular-nums">
+                  {deployments7d}
+                </span>
               )}
             </CardContent>
           </Card>
@@ -157,8 +180,12 @@ export function MonitoringOverviewContent() {
         {sparkData.length > 1 ? (
           <Card className="mt-4 border-border/60 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{t('monitoring.healthHistoryTitle')}</CardTitle>
-              <CardDescription className="text-xs">{t('monitoring.healthHistoryDescription')}</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                {t('monitoring.healthHistoryTitle')}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {t('monitoring.healthHistoryDescription')}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={sparkConfig} className="h-[100px] w-full font-mono">
@@ -181,4 +208,4 @@ export function MonitoringOverviewContent() {
       <PlatformHealthProbeSection />
     </div>
   );
-}
+};

@@ -1,7 +1,14 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import {
+  PilotReportDocument,
+  PilotReportGenerationErrorPanel,
+  PilotReportGenerationLoadingPanel,
+  PilotReportToolbar,
+} from './PilotReportSections';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   useClassroomAnalytics,
   useClassroom,
@@ -9,19 +16,12 @@ import {
   useEnsurePilotReportSnapshot,
   useDeletePilotReportSnapshot,
 } from '@/hooks/queries';
-import { shouldWaitForPendingSnapshot } from '@/services/pilotReportCacheService';
-import { useLanguage } from '@/contexts/LanguageContext';
 import {
   filterReportableAssignments,
   getAllowedAssignmentIds,
   structureTypeToLabelKey,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { computePilotReportDataHash } from '@/lib/pilotReport/computePilotReportDataHash';
-import {
-  type PilotCohortSummary,
-  type PilotReportData,
-} from '@/lib/pilotReport/types';
 import {
   buildCohortOutcome,
   buildRoleFitDistributionLine,
@@ -31,18 +31,18 @@ import {
 } from '@/lib/pilotReport/buildPilotReportData';
 import { buildPilotReportHtml } from '@/lib/pilotReport/buildPilotReportHtml';
 import { buildPilotReportStaticCopy } from '@/lib/pilotReport/buildPilotReportStaticCopy';
+import { computePilotReportDataHash } from '@/lib/pilotReport/computePilotReportDataHash';
 import { exportPilotReportPdf } from '@/lib/pilotReport/exportPilotReportPdf';
 import { fetchLogoDataUri } from '@/lib/pilotReport/fetchLogoDataUri';
-import { buildPilotReportId } from '@/lib/pilotReport/pilotReportId';
-import { pilotReportDownloadFilename, pilotReportPdfFilename } from '@/lib/pilotReport/pilotReportFilename';
 import {
-  PilotReportDocument,
-  PilotReportGenerationErrorPanel,
-  PilotReportGenerationLoadingPanel,
-  PilotReportToolbar,
-} from './PilotReportSections';
+  pilotReportDownloadFilename,
+  pilotReportPdfFilename,
+} from '@/lib/pilotReport/pilotReportFilename';
+import { buildPilotReportId } from '@/lib/pilotReport/pilotReportId';
+import { type PilotCohortSummary, type PilotReportData } from '@/lib/pilotReport/types';
+import { shouldWaitForPendingSnapshot } from '@/services/pilotReportCacheService';
 
-export function PilotReportContent() {
+export const PilotReportContent = () => {
   const { id: classroomId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ export function PilotReportContent() {
     classroomId,
     selectedModule,
     selectedAssignment,
-    analyticsLanguage,
+    analyticsLanguage
   );
   const ensureSnapshot = useEnsurePilotReportSnapshot();
   const deleteSnapshot = useDeletePilotReportSnapshot();
@@ -75,13 +75,13 @@ export function PilotReportContent() {
   const assignments = data?.assignments || [];
   const reportableAssignments = useMemo(
     () => filterReportableAssignments(assignments),
-    [assignments],
+    [assignments]
   );
   const modules = data?.modules || [];
 
   const effectiveAssignmentIds = useMemo(
     () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
-    [reportableAssignments, selectedModule, selectedAssignment],
+    [reportableAssignments, selectedModule, selectedAssignment]
   );
 
   const filterSummary = useMemo(() => {
@@ -109,7 +109,7 @@ export function PilotReportContent() {
       if (syllabusSectionId == null) return t('analytics.unplacedAssignments');
       return modules.find((m) => m.id === syllabusSectionId)?.title ?? '—';
     },
-    [modules, t],
+    [modules, t]
   );
 
   const staticCopy = useMemo(() => buildPilotReportStaticCopy(t), [t]);
@@ -127,9 +127,7 @@ export function PilotReportContent() {
 
   const participants = snapshot?.participantRows ?? [];
   const cohortSummary: PilotCohortSummary | null =
-    snapshot?.status === 'ready' && snapshot.dataHash === dataHash
-      ? snapshot.cohortSummary
-      : null;
+    snapshot?.status === 'ready' && snapshot.dataHash === dataHash ? snapshot.cohortSummary : null;
 
   const isSnapshotFresh =
     snapshot?.status === 'ready' && dataHash != null && snapshot.dataHash === dataHash;
@@ -194,21 +192,17 @@ export function PilotReportContent() {
     regenerateKey,
     pendingTick,
     t,
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutateAsync is stable enough; avoid re-trigger loops
   ]);
 
   const cohort = useMemo(() => buildCohortOutcome(participants), [participants]);
 
-  const rankedAppendix = useMemo(
-    () => rankParticipantsForAppendix(participants),
-    [participants],
-  );
+  const rankedAppendix = useMemo(() => rankParticipantsForAppendix(participants), [participants]);
 
   const notAssessedCount = useMemo(() => countNotAssessed(participants), [participants]);
 
   const roleFitLine = useMemo(
     () => buildRoleFitDistributionLine(cohort.roleFitCounts, staticCopy.roleFitLabels),
-    [cohort.roleFitCounts, staticCopy.roleFitLabels],
+    [cohort.roleFitCounts, staticCopy.roleFitLabels]
   );
 
   const pilotDateRange = useMemo(
@@ -216,9 +210,9 @@ export function PilotReportContent() {
       formatPilotDateRange(
         classroom?.start_date,
         classroom?.end_date,
-        uiLanguage === 'he' ? 'he-IL' : 'en-US',
+        uiLanguage === 'he' ? 'he-IL' : 'en-US'
       ),
-    [classroom?.start_date, classroom?.end_date, uiLanguage],
+    [classroom?.start_date, classroom?.end_date, uiLanguage]
   );
 
   const pilotDateRangeDisplay = pilotDateRange ?? '';
@@ -230,7 +224,7 @@ export function PilotReportContent() {
       }),
     // Re-derive after generation completes so the displayed date matches export time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uiLanguage, isReady],
+    [uiLanguage, isReady]
   );
 
   const reportData = useMemo<PilotReportData | null>(() => {
@@ -307,13 +301,7 @@ export function PilotReportContent() {
       language: analyticsLanguage,
     });
     setRegenerateKey((k) => k + 1);
-  }, [
-    classroomId,
-    deleteSnapshot,
-    selectedModule,
-    selectedAssignment,
-    analyticsLanguage,
-  ]);
+  }, [classroomId, deleteSnapshot, selectedModule, selectedAssignment, analyticsLanguage]);
 
   const studentTotal = data?.students.length ?? 0;
   const progressMessage =
@@ -366,7 +354,11 @@ export function PilotReportContent() {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: '#eef2f7' }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div
+      className="min-h-screen pb-20"
+      style={{ backgroundColor: '#eef2f7' }}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       {toolbar}
 
       <PilotReportDocument
@@ -385,4 +377,4 @@ export function PilotReportContent() {
       />
     </div>
   );
-}
+};

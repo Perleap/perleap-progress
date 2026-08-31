@@ -1,9 +1,9 @@
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2 } from 'lucide-react';
 
 export type StudentSettingsVoiceSectionProps = {
   isRTL: boolean;
@@ -13,13 +13,13 @@ export type StudentSettingsVoiceSectionProps = {
   onSave: () => void | Promise<void>;
 };
 
-export function StudentSettingsVoiceSection({
+export const StudentSettingsVoiceSection = ({
   isRTL,
   voicePreference,
   onVoicePreferenceChange,
   saving,
   onSave,
-}: StudentSettingsVoiceSectionProps) {
+}: StudentSettingsVoiceSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -43,7 +43,10 @@ export function StudentSettingsVoiceSection({
               >
                 <div className="flex items-center gap-3">
                   <RadioGroupItem value="onyx" id="voice-male" className="size-5" />
-                  <Label htmlFor="voice-male" className="cursor-pointer font-medium text-sm leading-none m-0">
+                  <Label
+                    htmlFor="voice-male"
+                    className="cursor-pointer font-medium text-sm leading-none m-0"
+                  >
                     {t('settings.male')}
                   </Label>
                 </div>
@@ -78,4 +81,4 @@ export function StudentSettingsVoiceSection({
       </CardContent>
     </Card>
   );
-}
+};

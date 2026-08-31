@@ -34,11 +34,16 @@ export function useAdminVercelInsightsQuery(options?: { staleTime?: number }) {
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (error) throw new Error(error.message);
-      if (data && typeof data === 'object' && 'error' in data && typeof (data as { error: string }).error === 'string') {
+      if (
+        data &&
+        typeof data === 'object' &&
+        'error' in data &&
+        typeof (data as { error: string }).error === 'string'
+      ) {
         throw new Error((data as { error: string }).error);
       }
       if (!isVercelPayload(data)) {

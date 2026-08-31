@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
+import type { VideoWatchTrackingContext } from '@/types/videoWatch';
 import {
   buildVideoWatchPayload,
   flushVideoWatchProgressBeacon,
   upsertVideoWatchProgress,
 } from '@/services/videoWatchService';
-import type { VideoWatchTrackingContext } from '@/types/videoWatch';
 
 const FLUSH_INTERVAL_MS = 15_000;
 const MAX_TICK_DELTA_SECONDS = 2;
@@ -135,7 +135,7 @@ export function useVideoWatchTracking(tracking: VideoWatchTrackingContext | unde
       accumulateWatchTime(currentTime);
       tryRecordCompletion(currentTime, duration);
     },
-    [accumulateWatchTime, canTrack, tryRecordCompletion],
+    [accumulateWatchTime, canTrack, tryRecordCompletion]
   );
 
   const handleSeeked = useCallback(
@@ -144,7 +144,7 @@ export function useVideoWatchTracking(tracking: VideoWatchTrackingContext | unde
       sessionCompletionEligibleRef.current = false;
       lastPositionRef.current = currentTime;
     },
-    [canTrack],
+    [canTrack]
   );
 
   const handleEnded = useCallback(() => {
@@ -163,7 +163,7 @@ export function useVideoWatchTracking(tracking: VideoWatchTrackingContext | unde
       if (!canTrack || !Number.isFinite(duration) || duration <= 0) return;
       durationRef.current = duration;
     },
-    [canTrack],
+    [canTrack]
   );
 
   useEffect(() => {

@@ -3,8 +3,11 @@ import {
   RUN_STATE_FILE,
   authStatePath,
   loadVerifyEnv,
+  isRemoteVerifyTarget,
   loadSandboxFixture,
   ensureSkillDirs,
+  getVerifyFetchHeaders,
+  getVercelShareUrl,
   waitForHttpOk,
   fail,
   parseArgs,
@@ -40,31 +43,53 @@ async function main() {
     fail(`Missing env: ${missing.join(', ')} (check .env / .env.local)`);
   }
 
-  const portOpen = await isPortInUse(port);
-  if (!portOpen) {
-    fail(`Nothing listening on ${baseURL}. Run: node .cursor/skills/verify-perleap/helpers/launch.mjs`);
+  const remote = isRemoteVerifyTarget(baseURL);
+
+  if (!remote) {
+    const portOpen = await isPortInUse(port);
+    if (!portOpen) {
+      fail(`Nothing listening on ${baseURL}. Run: node .cursor/skills/verify-perleap/helpers/launch.mjs`);
+    }
+
+    const runState = fs.existsSync(RUN_STATE_FILE)
+      ? JSON.parse(fs.readFileSync(RUN_STATE_FILE, 'utf8'))
+      : null;
+
+    if (port === 8080 && !runState?.pid) {
+      fail(
+        'Port 8080 is in use but not owned by verify-perleap (.run/server.json missing). Use VERIFY_PORT=8081 in .env.verify and launch the verify server.',
+      );
+    }
+
+    if (runState?.pid) {
+      try {
+        process.kill(runState.pid, 0);
+        console.log(`verify-perleap doctor: verify server pid ${runState.pid} on port ${port}`);
+      } catch {
+        fail(`Stale run state for pid ${runState.pid}. Run cleanup then launch again.`);
+      }
+    }
+  } else {
+    console.log(`verify-perleap doctor: remote target ${baseURL}`);
   }
 
-  const runState = fs.existsSync(RUN_STATE_FILE)
-    ? JSON.parse(fs.readFileSync(RUN_STATE_FILE, 'utf8'))
-    : null;
-
-  if (port === 8080 && !runState?.pid) {
+  const fetchHeaders = getVerifyFetchHeaders(env);
+  const shareToken = env.VERCEL_SHARE_TOKEN?.trim();
+  const authCheckUrl = shareToken
+    ? getVercelShareUrl(`${baseURL}/auth`, shareToken)
+    : `${baseURL}/auth`;
+  const authRes = await waitForHttpOk(authCheckUrl, remote ? 30_000 : 5_000, fetchHeaders);
+  const authBody = await authRes.text().catch(() => '');
+  const blockedByVercel =
+    !env.VERCEL_SHARE_TOKEN?.trim() &&
+    (authRes.url.includes('vercel.com/login') ||
+      authBody.includes('Authentication Required') ||
+      authBody.includes('Vercel Authentication'));
+  if (blockedByVercel) {
     fail(
-      'Port 8080 is in use but not owned by verify-perleap (.run/server.json missing). Use VERIFY_PORT=8081 in .env.verify and launch the verify server.',
+      'Staging is behind Vercel Deployment Protection. Set VERCEL_AUTOMATION_BYPASS_SECRET, VERCEL_OIDC_TOKEN, or VERCEL_SHARE_TOKEN in .env.verify.staging.',
     );
   }
-
-  if (runState?.pid) {
-    try {
-      process.kill(runState.pid, 0);
-      console.log(`verify-perleap doctor: verify server pid ${runState.pid} on port ${port}`);
-    } catch {
-      fail(`Stale run state for pid ${runState.pid}. Run cleanup then launch again.`);
-    }
-  }
-
-  await waitForHttpOk(`${baseURL}/auth`, 5_000);
   console.log(`verify-perleap doctor: ${baseURL}/auth OK`);
   console.log(`verify-perleap doctor: Supabase URL ${env.VITE_SUPABASE_URL}`);
 

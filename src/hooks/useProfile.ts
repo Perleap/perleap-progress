@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/contexts/useAuth';
-import { getTeacherProfile, getStudentProfile, getInitials } from '@/services';
 import type { TeacherProfile, StudentProfile, ApiError } from '@/types';
 import { USER_ROLES } from '@/config/constants';
+import { useAuth } from '@/contexts/useAuth';
+import { getTeacherProfile, getStudentProfile, getInitials } from '@/services';
 
 interface UseProfileResult {
   profile: TeacherProfile | StudentProfile | null;

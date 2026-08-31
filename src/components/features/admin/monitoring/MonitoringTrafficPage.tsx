@@ -1,11 +1,22 @@
-import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
-import { supabase } from '@/integrations/supabase/client';
+import { vercelSnapshotDeploymentCount } from './observabilityPayload';
+import { useAdminVercelInsightsQuery } from './useAdminVercelInsightsQuery';
 import type { Database } from '@/integrations/supabase/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -14,22 +25,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { useAdminVercelInsightsQuery } from './useAdminVercelInsightsQuery';
-import { vercelSnapshotDeploymentCount } from './observabilityPayload';
+import { supabase } from '@/integrations/supabase/client';
 
 type SnapshotRow = Database['public']['Tables']['observability_metric_snapshots']['Row'];
 
-function bucketDeployments(deployments: Array<{ createdAt: number }>): Array<{ label: string; count: number }> {
+function bucketDeployments(
+  deployments: Array<{ createdAt: number }>
+): Array<{ label: string; count: number }> {
   if (deployments.length === 0) return [];
   const sorted = [...deployments].sort((a, b) => a.createdAt - b.createdAt);
   const min = sorted[0].createdAt;
@@ -63,7 +65,7 @@ function bucketDeployments(deployments: Array<{ createdAt: number }>): Array<{ l
     .map(([, v]) => ({ label: v.label, count: v.count }));
 }
 
-export function MonitoringTrafficContent() {
+export const MonitoringTrafficContent = () => {
   const { t } = useTranslation();
   const [snapRange, setSnapRange] = useState<'24h' | '7d' | '30d'>('7d');
 
@@ -94,7 +96,10 @@ export function MonitoringTrafficContent() {
 
   const v = vercelQuery.data;
 
-  const deploymentBuckets = useMemo(() => bucketDeployments(v?.deployments ?? []), [v?.deployments]);
+  const deploymentBuckets = useMemo(
+    () => bucketDeployments(v?.deployments ?? []),
+    [v?.deployments]
+  );
 
   const snapChartData = useMemo(() => {
     return (vercelSnapshotsQuery.data ?? []).map((r) => ({
@@ -118,7 +123,9 @@ export function MonitoringTrafficContent() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="font-mono text-lg font-semibold tracking-tight">{t('monitoring.navTraffic')}</h1>
+        <h1 className="font-mono text-lg font-semibold tracking-tight">
+          {t('monitoring.navTraffic')}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">{t('monitoring.trafficDescription')}</p>
       </div>
 
@@ -134,7 +141,9 @@ export function MonitoringTrafficContent() {
       {!vercelQuery.isLoading && deploymentBuckets.length > 0 ? (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle className="font-mono text-sm">{t('monitoring.trafficChartDeploymentsTitle')}</CardTitle>
+            <CardTitle className="font-mono text-sm">
+              {t('monitoring.trafficChartDeploymentsTitle')}
+            </CardTitle>
             <CardDescription>{t('monitoring.trafficChartDeploymentsDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -149,14 +158,18 @@ export function MonitoringTrafficContent() {
             </ChartContainer>
           </CardContent>
         </Card>
-      ) : !vercelQuery.isLoading && (v?.deployments?.length ?? 0) > 0 && deploymentBuckets.length === 0 ? (
+      ) : !vercelQuery.isLoading &&
+        (v?.deployments?.length ?? 0) > 0 &&
+        deploymentBuckets.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('monitoring.trafficChartNoData')}</p>
       ) : null}
 
       <Card className="border-border/60">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="font-mono text-sm">{t('monitoring.trafficChartSnapshotsTitle')}</CardTitle>
+            <CardTitle className="font-mono text-sm">
+              {t('monitoring.trafficChartSnapshotsTitle')}
+            </CardTitle>
             <CardDescription>{t('monitoring.trafficChartSnapshotsDescription')}</CardDescription>
           </div>
           <Select value={snapRange} onValueChange={(val) => setSnapRange(val as typeof snapRange)}>
@@ -184,7 +197,13 @@ export function MonitoringTrafficContent() {
                 <XAxis dataKey="label" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 10 }} width={28} allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Line type="monotone" dataKey="count" stroke="var(--color-count)" strokeWidth={2} dot />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="var(--color-count)"
+                  strokeWidth={2}
+                  dot
+                />
               </LineChart>
             </ChartContainer>
           )}
@@ -193,7 +212,9 @@ export function MonitoringTrafficContent() {
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle className="font-mono text-sm">{t('monitoring.trafficProjectsTitle')}</CardTitle>
+          <CardTitle className="font-mono text-sm">
+            {t('monitoring.trafficProjectsTitle')}
+          </CardTitle>
           <CardDescription>
             {v?.checkedAt
               ? t('monitoring.trafficLastChecked', { time: new Date(v.checkedAt).toLocaleString() })
@@ -212,9 +233,15 @@ export function MonitoringTrafficContent() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="font-mono text-xs">{t('monitoring.trafficColName')}</TableHead>
-                    <TableHead className="font-mono text-xs">{t('monitoring.trafficColId')}</TableHead>
-                    <TableHead className="font-mono text-xs">{t('monitoring.trafficColFramework')}</TableHead>
+                    <TableHead className="font-mono text-xs">
+                      {t('monitoring.trafficColName')}
+                    </TableHead>
+                    <TableHead className="font-mono text-xs">
+                      {t('monitoring.trafficColId')}
+                    </TableHead>
+                    <TableHead className="font-mono text-xs">
+                      {t('monitoring.trafficColFramework')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -222,7 +249,9 @@ export function MonitoringTrafficContent() {
                     <TableRow key={p.id} className={i % 2 === 1 ? 'bg-muted/20' : ''}>
                       <TableCell className="text-sm">{p.name}</TableCell>
                       <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{p.framework ?? '—'}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {p.framework ?? '—'}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -234,7 +263,9 @@ export function MonitoringTrafficContent() {
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle className="font-mono text-sm">{t('monitoring.trafficDeploymentsTitle')}</CardTitle>
+          <CardTitle className="font-mono text-sm">
+            {t('monitoring.trafficDeploymentsTitle')}
+          </CardTitle>
           <CardDescription>{t('monitoring.trafficDeploymentsDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -247,9 +278,15 @@ export function MonitoringTrafficContent() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="font-mono text-xs">{t('monitoring.trafficColState')}</TableHead>
-                    <TableHead className="font-mono text-xs">{t('monitoring.trafficColCreated')}</TableHead>
-                    <TableHead className="font-mono text-xs">{t('monitoring.trafficColUid')}</TableHead>
+                    <TableHead className="font-mono text-xs">
+                      {t('monitoring.trafficColState')}
+                    </TableHead>
+                    <TableHead className="font-mono text-xs">
+                      {t('monitoring.trafficColCreated')}
+                    </TableHead>
+                    <TableHead className="font-mono text-xs">
+                      {t('monitoring.trafficColUid')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -259,7 +296,9 @@ export function MonitoringTrafficContent() {
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {new Date(d.createdAt).toLocaleString()}
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate font-mono text-[10px]">{d.uid}</TableCell>
+                      <TableCell className="max-w-[200px] truncate font-mono text-[10px]">
+                        {d.uid}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -284,4 +323,4 @@ export function MonitoringTrafficContent() {
       ) : null}
     </div>
   );
-}
+};

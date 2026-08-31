@@ -1,27 +1,25 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Calendar } from '@/components/ui/calendar';
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useStudentCalendarData } from '@/hooks/queries';
 import {
   getActiveClassroomsForDate,
   getAssignmentsForDate,
   isDateInClassRange,
   CALENDAR_MODIFIERS_CLASSNAMES,
 } from '@/lib/calendarUtils';
-import { useStudentCalendarData } from '@/hooks/queries';
 
 interface StudentCalendarProps {
   studentId: string;
 }
 
-export function StudentCalendar({
-  studentId,
-}: StudentCalendarProps) {
+export const StudentCalendar = ({ studentId }: StudentCalendarProps) => {
   const { t } = useTranslation();
   const { language = 'en' } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -110,23 +108,25 @@ export function StudentCalendar({
             modifiers={modifiers}
             modifiersClassNames={{
               ...CALENDAR_MODIFIERS_CLASSNAMES,
-              selected: "[&_button]:!bg-primary [&_button]:!text-primary-foreground [&_button]:shadow-sm [&_button]:scale-[1.3]",
-              today: "[&_button]:text-primary [&_button]:font-bold",
+              selected:
+                '[&_button]:!bg-primary [&_button]:!text-primary-foreground [&_button]:shadow-sm [&_button]:scale-[1.3]',
+              today: '[&_button]:text-primary [&_button]:font-bold',
             }}
             className="w-full"
             classNames={{
-              month: "flex flex-col items-center w-full",
-              month_caption: "hidden",
-              caption_label: "hidden",
-              nav: "hidden",
-              button_previous: "hidden",
-              button_next: "hidden",
-              month_grid: "border-collapse mx-auto",
-              weekdays: "flex justify-center gap-1 mb-1",
-              weekday: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
-              week: "flex mt-1 justify-center gap-1",
-              day: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex items-center justify-center w-8 h-8",
-              day_button: "h-6 w-6 p-0 rounded-full flex items-center justify-center mx-auto",
+              month: 'flex flex-col items-center w-full',
+              month_caption: 'hidden',
+              caption_label: 'hidden',
+              nav: 'hidden',
+              button_previous: 'hidden',
+              button_next: 'hidden',
+              month_grid: 'border-collapse mx-auto',
+              weekdays: 'flex justify-center gap-1 mb-1',
+              weekday:
+                'text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center',
+              week: 'flex mt-1 justify-center gap-1',
+              day: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex items-center justify-center w-8 h-8',
+              day_button: 'h-6 w-6 p-0 rounded-full flex items-center justify-center mx-auto',
             }}
           />
         </div>
@@ -167,7 +167,9 @@ export function StudentCalendar({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground ps-1">{t('calendar.noActiveClasses')}</p>
+                <p className="text-xs text-muted-foreground ps-1">
+                  {t('calendar.noActiveClasses')}
+                </p>
               )}
             </div>
 
@@ -177,9 +179,7 @@ export function StudentCalendar({
               </h4>
 
               {assignmentsForSelectedDate.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t('calendar.noAssignmentsDue')}
-                </p>
+                <p className="text-sm text-muted-foreground">{t('calendar.noAssignmentsDue')}</p>
               ) : (
                 <div className="space-y-2">
                   {assignmentsForSelectedDate.map((assignment) => (
@@ -189,10 +189,13 @@ export function StudentCalendar({
                     >
                       <p className="font-bold text-sm text-foreground">{assignment.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {assignment.classrooms.name}
+                        {assignment.classrooms?.name}
                       </p>
                       <div className="flex gap-2 mt-2">
-                        <Badge variant="outline" className="text-[10px] bg-card border-destructive/30 text-destructive">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-card border-destructive/30 text-destructive"
+                        >
                           {assignment.type.replace('_', ' ')}
                         </Badge>
                       </div>
@@ -206,4 +209,4 @@ export function StudentCalendar({
       </CardContent>
     </Card>
   );
-}
+};

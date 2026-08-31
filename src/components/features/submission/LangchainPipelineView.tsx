@@ -1,10 +1,10 @@
+import { Workflow } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Workflow } from 'lucide-react';
+import { TeacherEvaluationForm } from './TeacherEvaluationForm';
 import { LangchainEditor } from '@/components/features/langchain/LangchainEditor';
 import { parsePipelineJson } from '@/components/features/langchain/langchainNodeData';
-import { TeacherEvaluationForm } from './TeacherEvaluationForm';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface LangchainPipelineViewProps {
   textBody: string | null | undefined;
@@ -16,7 +16,7 @@ interface LangchainPipelineViewProps {
   headerAction?: ReactNode;
 }
 
-export function LangchainPipelineView({
+export const LangchainPipelineView = ({
   textBody,
   submissionId,
   studentId,
@@ -24,7 +24,7 @@ export function LangchainPipelineView({
   hasFeedback,
   onEvaluationComplete,
   headerAction,
-}: LangchainPipelineViewProps) {
+}: LangchainPipelineViewProps) => {
   const { t } = useTranslation();
 
   const { nodes, edges } = useMemo(() => parsePipelineJson(textBody), [textBody]);
@@ -39,11 +39,7 @@ export function LangchainPipelineView({
         <CardContent className="p-0">
           {nodes.length > 0 ? (
             <div className="h-[560px] min-h-[440px] border-t">
-              <LangchainEditor
-                initialNodes={nodes}
-                initialEdges={edges}
-                readOnly
-              />
+              <LangchainEditor initialNodes={nodes} initialEdges={edges} readOnly />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -63,4 +59,4 @@ export function LangchainPipelineView({
       />
     </div>
   );
-}
+};

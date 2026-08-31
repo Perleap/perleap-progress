@@ -43,6 +43,7 @@ import {
   errorToStack,
 } from '../shared/persistEdgeFunctionLog.ts';
 import { authorizePerleapChat } from './authorize.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 import {
   parseAssignmentTasks,
   resolveAssignmentTutorText,
@@ -206,6 +207,11 @@ serve(async (req) => {
 
   const { learnerUserId, assignmentId } = authResult;
   const viewerUserId = authResult.user.id;
+
+  const rateLimit = await checkRateLimit(viewerUserId, 'perleap-chat');
+  if (rateLimit) {
+    return rateLimitFailureToResponse(rateLimit, corsHeaders);
+  }
 
   try {
     const {

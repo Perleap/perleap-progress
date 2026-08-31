@@ -1,17 +1,20 @@
-import { useTranslation } from 'react-i18next';
 import { HelpCircle } from 'lucide-react';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { useTranslation } from 'react-i18next';
+import type { DbAssignmentType } from '@/types/models';
 import { AssignmentTypeIntroContent } from '@/components/features/assignment/AssignmentTypeIntroContent';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import type { DbAssignmentType } from '@/types/models';
 
 type AssignmentTypeHelpHintProps = {
   assignmentType: DbAssignmentType;
   className?: string;
 };
 
-export function AssignmentTypeHelpHint({ assignmentType, className }: AssignmentTypeHelpHintProps) {
+export const AssignmentTypeHelpHint = ({
+  assignmentType,
+  className,
+}: AssignmentTypeHelpHintProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
 
@@ -23,7 +26,7 @@ export function AssignmentTypeHelpHint({ assignmentType, className }: Assignment
         aria-label={t('assignmentTypeIntro.howToUseHeading')}
         className={cn(
           'inline-flex shrink-0 items-center justify-center rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-          className,
+          className
         )}
         render={
           <span
@@ -41,12 +44,10 @@ export function AssignmentTypeHelpHint({ assignmentType, className }: Assignment
         align={isRTL ? 'end' : 'start'}
         side="bottom"
         sideOffset={8}
-        className={cn(
-          'pointer-events-none max-h-[60vh] w-72 max-w-sm overflow-y-auto p-3 text-sm',
-        )}
+        className={cn('pointer-events-none max-h-[60vh] w-72 max-w-sm overflow-y-auto p-3 text-sm')}
       >
         <AssignmentTypeIntroContent assignmentType={assignmentType} variant="hint" />
       </HoverCardContent>
     </HoverCard>
   );
-}
+};

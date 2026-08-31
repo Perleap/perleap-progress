@@ -8,6 +8,7 @@ import {
   type DragEndEvent,
   type DraggableAttributes,
 } from '@dnd-kit/core';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -16,15 +17,20 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { FileText, GripVertical, Plus, Trash2, Video } from 'lucide-react';
-import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { LessonBlockV1, LessonVideoSource } from '@/types/syllabus';
+import { SortableLessonTextSlides } from '@/components/features/syllabus/SortableLessonTextSlides';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -32,16 +38,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { FileUploadProgress } from '@/components/ui/file-upload-progress';
+import { Input } from '@/components/ui/input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
-import { cn } from '@/lib/utils';
 import { inferLessonVideoSource } from '@/lib/lessonContent';
+import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
+import {
+  getMaxResourceFileSizeLabel,
+  isResourceFileWithinSizeLimit,
+} from '@/lib/resourceUploadValidation';
+import { cn } from '@/lib/utils';
 import { parseYoutubeUrl } from '@/lib/youtube';
 import { uploadResourceFile, UPLOAD_CANCELLED_ERROR } from '@/services/syllabusResourceService';
-import { getMaxResourceFileSizeLabel, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
-import { FileUploadProgress } from '@/components/ui/file-upload-progress';
-import { SortableLessonTextSlides } from '@/components/features/syllabus/SortableLessonTextSlides';
 
 const SortableLessonBlock = ({
   id,
@@ -53,7 +63,14 @@ const SortableLessonBlock = ({
     dragListeners: Record<string, unknown> | undefined;
   }) => React.ReactNode;
 }) => {
-  const { attributes, listeners, setNodeRef, transform: rawTransform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform: rawTransform,
+    transition,
+    isDragging,
+  } = useSortable({
     id,
   });
   /** Without DragOverlay, core applies `adjustScale` from the hovered row’s rect vs the active row — small blocks stretch to match large neighbors. Keep unit scale while this row is the drag source. */
@@ -306,10 +323,12 @@ export const LessonBlocksEditor = ({
     if (!file || !sectionId) return;
 
     if (!isResourceFileWithinSizeLimit(file)) {
-      toast.error(t('classroomDetail.activities.videoFileTooLarge', {
-        name: file.name,
-        maxSize: getMaxResourceFileSizeLabel(),
-      }));
+      toast.error(
+        t('classroomDetail.activities.videoFileTooLarge', {
+          name: file.name,
+          maxSize: getMaxResourceFileSizeLabel(),
+        })
+      );
       return;
     }
 
@@ -449,14 +468,14 @@ export const LessonBlocksEditor = ({
                                 <div
                                   className={cn(
                                     'flex flex-wrap items-center gap-2',
-                                    isRTL && 'flex-row-reverse',
+                                    isRTL && 'flex-row-reverse'
                                   )}
                                 >
                                   <div
                                     className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5"
                                     role="group"
                                     aria-label={t(
-                                      'classroomDetail.activities.textSlides.modeGroupAria',
+                                      'classroomDetail.activities.textSlides.modeGroupAria'
                                     )}
                                   >
                                     <Button
@@ -491,7 +510,9 @@ export const LessonBlocksEditor = ({
                                       size="icon"
                                       className="h-8 w-8 shrink-0 text-foreground"
                                       disabled={disabled}
-                                      aria-label={t('classroomDetail.activities.textSlides.addSlide')}
+                                      aria-label={t(
+                                        'classroomDetail.activities.textSlides.addSlide'
+                                      )}
                                       onClick={() => addTextSlide(block.id)}
                                     >
                                       <Plus className="h-4 w-4" />
@@ -499,11 +520,15 @@ export const LessonBlocksEditor = ({
                                   ) : null}
                                 </div>
                                 {!slideMode ? (
-                                  <div className={cn(rephrasingBlockId === block.id && 'opacity-90')}>
+                                  <div
+                                    className={cn(rephrasingBlockId === block.id && 'opacity-90')}
+                                  >
                                     <RichTextEditor
                                       content={lessonTextBodyToHtml(block.body)}
                                       onChange={(html) => updateText(block.id, html)}
-                                      placeholder={t('classroomDetail.activities.richTextPlaceholder')}
+                                      placeholder={t(
+                                        'classroomDetail.activities.richTextPlaceholder'
+                                      )}
                                       className="min-h-[220px]"
                                       disabled={disabled || rephrasingBlockId === block.id}
                                       dir={isRTL ? 'rtl' : 'ltr'}
@@ -526,7 +551,9 @@ export const LessonBlocksEditor = ({
                                     onUpdateSlide={(slideIdx, html) =>
                                       updateSlide(block.id, slideIdx, html)
                                     }
-                                    onRemoveSlide={(slideIdx) => removeTextSlide(block.id, slideIdx)}
+                                    onRemoveSlide={(slideIdx) =>
+                                      removeTextSlide(block.id, slideIdx)
+                                    }
                                   />
                                 )}
                                 <div className={cn('flex', isRTL && 'justify-start')}>
@@ -582,42 +609,50 @@ export const LessonBlocksEditor = ({
                                           className="text-xs"
                                           disabled={disabled || uploadingHere}
                                         >
-                                          {t('classroomDetail.activities.activityVideoSourceUpload')}
+                                          {t(
+                                            'classroomDetail.activities.activityVideoSourceUpload'
+                                          )}
                                         </TabsTrigger>
                                         <TabsTrigger
                                           value="youtube"
                                           className="text-xs"
                                           disabled={disabled || uploadingHere}
                                         >
-                                          {t('classroomDetail.activities.activityVideoSourceYoutube')}
+                                          {t(
+                                            'classroomDetail.activities.activityVideoSourceYoutube'
+                                          )}
                                         </TabsTrigger>
                                       </TabsList>
                                     </Tabs>
                                     {videoSource === 'upload' ? (
                                       <>
-                              <FileUploadProgress
-                                inputId={`lesson-video-${block.id}`}
-                                accept="video/*"
-                                disabled={disabled}
-                                isRTL={isRTL}
-                                uploading={uploadingHere && !!uploadTarget}
-                                fileName={uploadTarget?.fileName}
-                                progress={uploadProgress}
-                                selectedFileName={
-                                  block.display_name ||
-                                  block.file_path?.split('/').pop() ||
-                                  block.url ||
-                                  null
-                                }
-                                chooseLabel={t('classroomDetail.activities.chooseVideoFile')}
-                                uploadingAriaLabel={t('classroomDetail.activities.videoUploading')}
-                                cancelAriaLabel={t('common.cancel')}
-                                onCancel={cancelVideoUpload}
-                                onFileChange={(e) => void handleVideoFile(block.id, e)}
-                              />
-                              <p className="text-xs text-muted-foreground">
-                                {t('classroomDetail.activities.activityVideoFileHint')}
-                              </p>
+                                        <FileUploadProgress
+                                          inputId={`lesson-video-${block.id}`}
+                                          accept="video/*"
+                                          disabled={disabled}
+                                          isRTL={isRTL}
+                                          uploading={uploadingHere && !!uploadTarget}
+                                          fileName={uploadTarget?.fileName}
+                                          progress={uploadProgress}
+                                          selectedFileName={
+                                            block.display_name ||
+                                            block.file_path?.split('/').pop() ||
+                                            block.url ||
+                                            null
+                                          }
+                                          chooseLabel={t(
+                                            'classroomDetail.activities.chooseVideoFile'
+                                          )}
+                                          uploadingAriaLabel={t(
+                                            'classroomDetail.activities.videoUploading'
+                                          )}
+                                          cancelAriaLabel={t('common.cancel')}
+                                          onCancel={cancelVideoUpload}
+                                          onFileChange={(e) => void handleVideoFile(block.id, e)}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                          {t('classroomDetail.activities.activityVideoFileHint')}
+                                        </p>
                                       </>
                                     ) : (
                                       <div className="space-y-2">

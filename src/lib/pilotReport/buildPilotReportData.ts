@@ -1,4 +1,3 @@
-import type { PilotParticipantAssessmentResult } from '@/services/pilotReadinessService';
 import {
   PILOT_DIMENSION_KEYS,
   PILOT_DIMENSION_WEIGHTS,
@@ -10,6 +9,7 @@ import {
   type PilotReadiness,
   type PilotRoleFit,
 } from './types';
+import type { PilotParticipantAssessmentResult } from '@/services/pilotReadinessService';
 
 type SubmissionLike = {
   student_id: string;
@@ -21,7 +21,7 @@ type SubmissionLike = {
 export function countCompletedAssignmentsInScope(
   studentId: string,
   submissions: SubmissionLike[],
-  assignmentIdsInScope: string[],
+  assignmentIdsInScope: string[]
 ): number {
   if (assignmentIdsInScope.length === 0) return 0;
   const scopeSet = new Set(assignmentIdsInScope);
@@ -93,12 +93,14 @@ export function buildParticipantRow(input: {
 
 /** Aggregates assessed rows only; failed rows count toward participantsTotal. */
 export function buildCohortOutcome(participants: PilotParticipantRow[]): PilotCohortOutcome {
-  const readinessCounts = Object.fromEntries(
-    PILOT_READINESS_VALUES.map((v) => [v, 0]),
-  ) as Record<PilotReadiness, number>;
-  const roleFitCounts = Object.fromEntries(
-    PILOT_ROLE_FIT_VALUES.map((v) => [v, 0]),
-  ) as Record<PilotRoleFit, number>;
+  const readinessCounts = Object.fromEntries(PILOT_READINESS_VALUES.map((v) => [v, 0])) as Record<
+    PilotReadiness,
+    number
+  >;
+  const roleFitCounts = Object.fromEntries(PILOT_ROLE_FIT_VALUES.map((v) => [v, 0])) as Record<
+    PilotRoleFit,
+    number
+  >;
 
   const assessed = participants.filter((p) => p.assessed);
 
@@ -129,7 +131,7 @@ export function buildCohortOutcome(participants: PilotParticipantRow[]): PilotCo
 /** Template fallback when the cohort AI summary fails. `{{ready}}`, `{{coachOrTraining}}`, `{{redirect}}` placeholders. */
 export function fillRecommendationFallback(
   template: string,
-  counts: Record<PilotReadiness, number>,
+  counts: Record<PilotReadiness, number>
 ): string {
   return template
     .replace(/\{\{ready\}\}/g, String(counts.ready))
@@ -178,7 +180,7 @@ function compareParticipantsForRank(a: PilotParticipantRow, b: PilotParticipantR
 
 /** Appendix order: #1 (best) at top; sorted by effective rank score, then AI priority. */
 export function rankParticipantsForAppendix(
-  rows: PilotParticipantRow[],
+  rows: PilotParticipantRow[]
 ): Array<PilotParticipantRow & { rank: number }> {
   const assessed = rows.filter((p) => p.assessed);
   const sorted = [...assessed].sort(compareParticipantsForRank);
@@ -198,7 +200,7 @@ export function sortParticipantsForDecision(rows: PilotParticipantRow[]): PilotP
 /** One-line role-fit distribution for the executive summary (non-zero counts only). */
 export function buildRoleFitDistributionLine(
   counts: Record<PilotRoleFit, number>,
-  labels: Record<PilotRoleFit, string>,
+  labels: Record<PilotRoleFit, string>
 ): string {
   return PILOT_ROLE_FIT_VALUES.filter((k) => counts[k] > 0)
     .map((k) => `${labels[k]}: ${counts[k]}`)
@@ -219,7 +221,7 @@ export function formatCompletionPercent(completed: number, total: number): strin
 export function formatPilotDateRange(
   startDate: string | null | undefined,
   endDate: string | null | undefined,
-  locale: string,
+  locale: string
 ): string | undefined {
   if (!startDate && !endDate) return undefined;
   const fmt = (d: string) =>

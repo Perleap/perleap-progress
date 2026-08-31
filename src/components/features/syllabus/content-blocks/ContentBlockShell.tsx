@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 const shellVariants = cva('rounded-xl border transition-colors', {
@@ -15,7 +15,7 @@ const shellVariants = cva('rounded-xl border transition-colors', {
 
 export type ContentBlockShellVariant = NonNullable<VariantProps<typeof shellVariants>['variant']>;
 
-export function ContentBlockShell({
+export const ContentBlockShell = ({
   className,
   variant = 'embedded',
   children,
@@ -23,6 +23,6 @@ export function ContentBlockShell({
   className?: string;
   variant?: ContentBlockShellVariant;
   children: ReactNode;
-}) {
+}) => {
   return <div className={cn(shellVariants({ variant }), className)}>{children}</div>;
-}
+};

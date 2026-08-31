@@ -3,8 +3,8 @@
  * Centralized Supabase client with error handling
  */
 
-import { supabase } from '@/integrations/supabase/client';
 import type { ApiError } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Handle Supabase errors and convert to ApiError format

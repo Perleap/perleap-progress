@@ -27,7 +27,7 @@ export function isReportableAssignment(a: AnalyticsAssignmentRef): boolean {
 }
 
 export function filterReportableAssignments(
-  assignments: AnalyticsAssignmentRef[],
+  assignments: AnalyticsAssignmentRef[]
 ): AnalyticsAssignmentRef[] {
   return assignments.filter(isReportableAssignment);
 }
@@ -75,9 +75,7 @@ export function computeAnalyticsKpiDisplay(params: {
     ? uniqueStudentAssignmentPairCount(feedbackInScope)
     : uniqueStudentAssignmentPairCount(feedbackReportable);
 
-  const activeStudents = params.isNarrowingView
-    ? scopedStudents.size
-    : reportableStudents.size;
+  const activeStudents = params.isNarrowingView ? scopedStudents.size : reportableStudents.size;
 
   const completionPercent =
     params.enrolledStudentCount > 0
@@ -103,7 +101,7 @@ export type AnalyticsModuleRef = {
 export function getAllowedAssignmentIds(
   allAssignments: AnalyticsAssignmentRef[],
   selectedModule: AnalyticsModuleFilter,
-  selectedAssignment: 'all' | string,
+  selectedAssignment: 'all' | string
 ): string[] {
   const allIds = allAssignments.map((a) => a.id);
 
@@ -136,7 +134,7 @@ export function hasUnplacedAssignments(allAssignments: AnalyticsAssignmentRef[])
  * i18n key segment for filter label: weeks | units | modules
  */
 export function structureTypeToLabelKey(
-  t: SyllabusStructureType | null | undefined,
+  t: SyllabusStructureType | null | undefined
 ): 'weeks' | 'units' | 'modules' {
   if (t === 'weeks' || t === 'units' || t === 'modules') return t;
   return 'modules';
@@ -145,7 +143,7 @@ export function structureTypeToLabelKey(
 export function meanScoreRecords(rows: { scores: Json }[]): FiveDScores | null {
   if (rows.length === 0) return null;
   return averageFiveDScoresAcrossSnapshots(
-    rows.map((r) => ({ scores: r.scores as Record<string, number | null> })),
+    rows.map((r) => ({ scores: r.scores as Record<string, number | null> }))
   );
 }
 
@@ -157,7 +155,7 @@ export function meanQedRecords(rows: SnapshotRow[]): FiveDQedMeasures | null {
 function meanOfStudentQedMeans(arr: FiveDQedMeasures[]): FiveDQedMeasures | null {
   if (arr.length === 0) return null;
   return averageQedMeasuresAcrossSnapshots(
-    arr.map((qed) => ({ qed_measures: qed as unknown as Json })),
+    arr.map((qed) => ({ qed_measures: qed as unknown as Json }))
   );
 }
 
@@ -187,7 +185,7 @@ export function getClassroomAverage5D(
   selectedModule: AnalyticsModuleFilter,
   selectedAssignment: 'all' | string,
   selectedStudent: 'all' | string,
-  rawSnapshotsFlat: SnapshotRow[],
+  rawSnapshotsFlat: SnapshotRow[]
 ): FiveDScores | null {
   const allowed = getAllowedAssignmentIds(allAssignments, selectedModule, selectedAssignment);
   if (allowed.length === 0) return null;
@@ -229,7 +227,7 @@ export function getClassroomAverageQedMeasures(
   selectedModule: AnalyticsModuleFilter,
   selectedAssignment: 'all' | string,
   selectedStudent: 'all' | string,
-  rawSnapshotsFlat: SnapshotRow[],
+  rawSnapshotsFlat: SnapshotRow[]
 ): FiveDQedMeasures | null {
   const allowed = getAllowedAssignmentIds(allAssignments, selectedModule, selectedAssignment);
   if (allowed.length === 0) return null;
@@ -267,7 +265,7 @@ export function getClassroomAverageQedMeasures(
 export function scopedStudentLatestQedMeasures(
   studentSnapshots: SnapshotRow[],
   rawSubmissions: { id: string; assignment_id: string }[],
-  allowedAssignmentIds: string[],
+  allowedAssignmentIds: string[]
 ): FiveDQedMeasures | null {
   if (allowedAssignmentIds.length === 0) return null;
   const set = new Set(allowedAssignmentIds);
@@ -285,7 +283,7 @@ export function scopedStudentLatestQedMeasures(
 export function scopedStudentLatestScores(
   studentSnapshots: SnapshotRow[],
   rawSubmissions: { id: string; assignment_id: string }[],
-  allowedAssignmentIds: string[],
+  allowedAssignmentIds: string[]
 ): FiveDScores | null {
   if (allowedAssignmentIds.length === 0) return null;
   const set = new Set(allowedAssignmentIds);

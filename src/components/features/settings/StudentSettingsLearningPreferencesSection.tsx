@@ -1,10 +1,10 @@
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 export type StudentSettingsQuestionsState = {
   learning_methods: string;
@@ -27,18 +27,18 @@ export type StudentSettingsLearningPreferencesSectionProps = {
   onSave: () => void | Promise<void>;
 };
 
-export function StudentSettingsLearningPreferencesSection({
+export const StudentSettingsLearningPreferencesSection = ({
   isRTL,
   questions,
   onQuestionsChange,
   saving,
   onSave,
-}: StudentSettingsLearningPreferencesSectionProps) {
+}: StudentSettingsLearningPreferencesSectionProps) => {
   const { t } = useTranslation();
 
   const setQuestion = <K extends keyof StudentSettingsQuestionsState>(
     key: K,
-    value: StudentSettingsQuestionsState[K],
+    value: StudentSettingsQuestionsState[K]
   ) => {
     onQuestionsChange({ ...questions, [key]: value });
   };
@@ -472,4 +472,4 @@ export function StudentSettingsLearningPreferencesSection({
       </CardContent>
     </Card>
   );
-}
+};

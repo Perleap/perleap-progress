@@ -1,17 +1,17 @@
 import { useEffect, useId, useMemo, useRef, type IframeHTMLAttributes } from 'react';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { cn } from '@/lib/utils';
-import { loadYoutubeIframeApi } from '@/lib/youtubeIframeApi';
-import { parseYoutubeUrl, youtubeEmbedUrl } from '@/lib/youtube';
-import { useVideoWatchTracking } from '@/hooks/useVideoWatchTracking';
-import type { VideoWatchTrackingContext } from '@/types/videoWatch';
-import type { LessonVideoSource } from '@/types/syllabus';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
+import type { LessonVideoSource } from '@/types/syllabus';
+import type { VideoWatchTrackingContext } from '@/types/videoWatch';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { useVideoWatchTracking } from '@/hooks/useVideoWatchTracking';
+import { cn } from '@/lib/utils';
+import { parseYoutubeUrl, youtubeEmbedUrl } from '@/lib/youtube';
+import { loadYoutubeIframeApi } from '@/lib/youtubeIframeApi';
 
 export type ContentVideoPresentation = 'reading' | 'embedded' | 'compact';
 
-export function ContentVideoBlock({
+export const ContentVideoBlock = ({
   videoUrl,
   source,
   presentation,
@@ -23,13 +23,14 @@ export function ContentVideoBlock({
   presentation: ContentVideoPresentation;
   className?: string;
   tracking?: VideoWatchTrackingContext;
-}) {
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const youtubeContainerRef = useRef<HTMLDivElement>(null);
   const reactId = useId();
   const youtubeContainerId = useMemo(
-    () => `yt-${tracking?.resourceId ?? 'video'}-${tracking?.lessonBlockId ?? 'main'}-${reactId.replace(/:/g, '')}`,
-    [reactId, tracking?.lessonBlockId, tracking?.resourceId],
+    () =>
+      `yt-${tracking?.resourceId ?? 'video'}-${tracking?.lessonBlockId ?? 'main'}-${reactId.replace(/:/g, '')}`,
+    [reactId, tracking?.lessonBlockId, tracking?.resourceId]
   );
 
   const parsedYoutube =
@@ -170,7 +171,9 @@ export function ContentVideoBlock({
 
   if (presentation === 'compact') {
     return (
-      <div className={cn('overflow-hidden rounded-lg ring-1 ring-border/45 bg-muted/15', className)}>
+      <div
+        className={cn('overflow-hidden rounded-lg ring-1 ring-border/45 bg-muted/15', className)}
+      >
         {frame}
       </div>
     );
@@ -193,4 +196,4 @@ export function ContentVideoBlock({
       </ContentBlockShell>
     </div>
   );
-}
+};

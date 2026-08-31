@@ -3,20 +3,42 @@
  * Handles all assignment-related operations
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
-import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
-import type { Database, Json } from '@/integrations/supabase/types';
-import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { removeAssignmentFromModuleFlows } from './moduleFlowService';
 import { getStudentSubmissionContext } from './submissionService';
+import type { Database, Json } from '@/integrations/supabase/types';
 import type {
   Assignment,
   AssignmentWithClassroom,
   CreateAssignmentInput,
   UpdateAssignmentInput,
   ApiError,
+  Submission,
 } from '@/types';
+import { supabase, handleSupabaseError } from '@/api/client';
+import { activityListWriteWithUnknownColumnFallback } from '@/lib/activityListSchemaFallback';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
+
+type StudentProfileJoin = { full_name: string | null } | { full_name: string | null }[] | null;
+
+function normalizeStudentProfile<T extends { student_profiles?: StudentProfileJoin }>(
+  row: T
+): Omit<T, 'student_profiles'> & { student_profiles: { full_name: string | null } | null } {
+  const profile = row.student_profiles;
+  return {
+    ...row,
+    student_profiles: Array.isArray(profile) ? (profile[0] ?? null) : (profile ?? null),
+  };
+}
+
+export type StudentAssignmentDetails = AssignmentWithClassroom & {
+  submission: Submission | null;
+  feedback: Database['public']['Tables']['assignment_feedback']['Row'] | null;
+  submissionContext: {
+    allAttempts: Submission[];
+    canRetry: boolean;
+  };
+};
 
 /**
  * Fetch all assignments for a classroom
@@ -42,19 +64,13 @@ export const getClassroomAssignments = async (
     }
 
     // Transform to ensure student_profiles is an object, even if returned as array
-    const transformedAssignments = assignments.map(a => {
-      const profile = (a as any).student_profiles;
-      return {
-        ...a,
-        student_profiles: Array.isArray(profile) ? profile[0] : profile
-      };
-    });
+    const transformedAssignments = assignments.map((a) => normalizeStudentProfile(a));
 
     let finalAssignments = transformedAssignments;
 
     if (studentId) {
       // If studentId is provided, we only want THIS student's submissions
-      const assignmentIds = assignments.map(a => a.id);
+      const assignmentIds = assignments.map((a) => a.id);
       const { data: studentSubmissions, error: subError } = await supabase
         .from('submissions')
         .select('*, assignment_feedback(id)')
@@ -62,9 +78,9 @@ export const getClassroomAssignments = async (
         .eq('student_id', studentId);
 
       if (!subError && studentSubmissions) {
-        finalAssignments = assignments.map(a => ({
+        finalAssignments = assignments.map((a) => ({
           ...a,
-          submissions: studentSubmissions.filter(s => s.assignment_id === a.id)
+          submissions: studentSubmissions.filter((s) => s.assignment_id === a.id),
         }));
       }
     }
@@ -99,14 +115,9 @@ export const getAssignmentById = async (
     }
 
     // Transform to ensure student_profiles is an object
-    const profile = (assignment as any).student_profiles;
-    const transformedAssignment = {
-      ...assignment,
-      student_profiles: Array.isArray(profile) ? profile[0] : profile
-    };
+    const transformedAssignment = normalizeStudentProfile(assignment);
 
-    // Fetch submission for this assignment for this student
-    const { data: submissions, error: subError } = await supabase
+    const { data: submissions } = await supabase
       .from('submissions')
       .select('*, assignment_feedback(id)')
       .eq('assignment_id', assignmentId)
@@ -129,20 +140,22 @@ export const getAssignmentById = async (
 export const getStudentAssignmentDetails = async (
   assignmentId: string,
   studentId: string,
-  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string },
-): Promise<{ data: any | null; error: ApiError | null }> => {
+  opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string }
+): Promise<{ data: StudentAssignmentDetails | null; error: ApiError | null }> => {
   try {
     // 1. Fetch assignment with classroom and teacher info in one join
     const { data: assignment, error: assignError } = await supabase
       .from('assignments')
-      .select(`
+      .select(
+        `
         *, 
         classrooms(
           name, 
           teacher_id, 
           teacher_profiles(full_name, avatar_url)
         )
-      `)
+      `
+      )
       .eq('id', assignmentId)
       .eq('active', true)
       .maybeSingle();
@@ -165,11 +178,11 @@ export const getStudentAssignmentDetails = async (
         attempt_mode: assignment.attempt_mode,
         due_at: assignment.due_at,
         status: assignment.status,
-      },
+      }
     );
     if (subError) throw subError;
 
-    let submission = ctx.submission;
+    const submission = ctx.submission;
 
     // 3. Fetch feedback for the resolved submission only (never cross-attempt fallback)
     let feedback = null;
@@ -186,14 +199,15 @@ export const getStudentAssignmentDetails = async (
     return {
       data: {
         ...assignment,
+        opik_trace_ids: assignment.opik_trace_ids as Record<string, string> | null,
         submission,
         feedback,
         submissionContext: {
           allAttempts: ctx.allAttempts,
           canRetry: ctx.canRetry,
         },
-      },
-      error: null
+      } as unknown as StudentAssignmentDetails,
+      error: null,
     };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
@@ -236,10 +250,7 @@ export type GenerateStudentFacingDraftResult = {
 /**
  * For students: generate (or return cached) the short cognitive task card via Edge Function, persisting to DB when generated.
  */
-export const ensureStudentFacingTask = async (
-  assignmentId: string,
-  language: 'en' | 'he',
-) => {
+export const ensureStudentFacingTask = async (assignmentId: string, language: 'en' | 'he') => {
   return supabase.functions.invoke<GenerateStudentFacingResponse>('generate-student-facing-task', {
     body: { assignmentId, language },
   });
@@ -248,14 +259,12 @@ export const ensureStudentFacingTask = async (
 /**
  * Draft generation before an assignment row exists (wizard create flow).
  */
-export async function generateStudentFacingTaskDraft(
-  options: {
-    classroomId: string;
-    title: string;
-    instructions: string;
-    uiLanguage: 'he' | 'en';
-  },
-): Promise<GenerateStudentFacingDraftResult | null> {
+export async function generateStudentFacingTaskDraft(options: {
+  classroomId: string;
+  title: string;
+  instructions: string;
+  uiLanguage: 'he' | 'en';
+}): Promise<GenerateStudentFacingDraftResult | null> {
   if (!options.classroomId || !options.instructions.trim()) return null;
   const lang = getAssignmentLanguage(options.instructions, options.uiLanguage);
   const { data, error } = await supabase.functions.invoke<GenerateStudentFacingResponse>(
@@ -267,7 +276,7 @@ export async function generateStudentFacingTaskDraft(
         instructions: options.instructions,
         language: lang,
       },
-    },
+    }
   );
   if (error) {
     const serverMsg = await parseEdgeFunctionErrorMessage(error);
@@ -288,7 +297,7 @@ export async function generateStudentFacingTaskDraft(
  */
 export async function prefillStudentFacingTaskForAssignment(
   assignmentId: string,
-  options: { instructions: string; uiLanguage: 'he' | 'en' },
+  options: { instructions: string; uiLanguage: 'he' | 'en' }
 ): Promise<string | null> {
   if (!assignmentId || !options.instructions.trim()) return null;
   const lang = getAssignmentLanguage(options.instructions, options.uiLanguage);
@@ -336,7 +345,7 @@ export const getStudentAssignments = async (
     }
 
     // Fetch submissions for these assignments for this student
-    const assignmentIds = assignments.map(a => a.id);
+    const assignmentIds = assignments.map((a) => a.id);
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
       .select('*, assignment_feedback(id)')
@@ -350,9 +359,9 @@ export const getStudentAssignments = async (
     }
 
     // Merge submissions into assignments
-    const assignmentsWithSubmissions = assignments.map(a => ({
+    const assignmentsWithSubmissions = assignments.map((a) => ({
       ...a,
-      submissions: submissions?.filter(s => s.assignment_id === a.id) || []
+      submissions: submissions?.filter((s) => s.assignment_id === a.id) || [],
     })) as unknown as AssignmentWithClassroom[];
 
     return { data: assignmentsWithSubmissions, error: null };
@@ -382,7 +391,7 @@ export const createAssignment = async (
       attempt_mode: assignment.attempt_mode,
     };
     const insertPayload = Object.fromEntries(
-      Object.entries(insertRow).filter(([, v]) => v !== null && v !== undefined),
+      Object.entries(insertRow).filter(([, v]) => v !== null && v !== undefined)
     );
     const { data, error } = await activityListWriteWithUnknownColumnFallback(
       insertPayload,
@@ -395,7 +404,7 @@ export const createAssignment = async (
         return { data: result.data, error: result.error };
       },
       'No insertable fields left for assignments after dropping unknown columns.',
-      'assignments INSERT stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+      'assignments INSERT stopped after exhausting schema column fallbacks; check migrations vs remote DB.'
     );
 
     if (error) {
@@ -435,7 +444,7 @@ export const updateAssignment = async (
       payload.target_dimensions = target_dimensions as unknown as Json;
     if (materials !== undefined) payload.materials = materials as unknown as Json | null;
     const patchPayload = Object.fromEntries(
-      Object.entries(payload).filter(([, v]) => v !== null && v !== undefined),
+      Object.entries(payload).filter(([, v]) => v !== null && v !== undefined)
     );
     const { data, error } = await activityListWriteWithUnknownColumnFallback(
       patchPayload,
@@ -449,7 +458,7 @@ export const updateAssignment = async (
         return { data: result.data, error: result.error };
       },
       'No updatable fields left for assignments after dropping unknown columns.',
-      'assignments PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.',
+      'assignments PATCH stopped after exhausting schema column fallbacks; check migrations vs remote DB.'
     );
 
     if (error) {

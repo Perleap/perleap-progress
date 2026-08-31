@@ -1,4 +1,3 @@
-import { useMemo, useCallback, useState, useEffect, useRef, useLayoutEffect, type MouseEvent } from 'react';
 import {
   ReactFlow,
   type Node,
@@ -11,18 +10,29 @@ import {
   Controls,
   MiniMap,
 } from '@xyflow/react';
+import {
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+  type MouseEvent,
+} from 'react';
 import '@xyflow/react/dist/style.css';
 
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'next-themes';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { RoadmapNode } from './RoadmapNode';
 import { SectionDetailModal } from './SectionDetailModal';
-import { BookOpen, Plus, List } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  deriveSectionStatus,
+  isTodayInDateRange,
+  filterRoadmapSections,
+  deriveCurrentSectionDisplayIndex,
+  roadmapProgressPercent,
+  type RoadmapSectionFilter,
+} from './syllabusRoadmapUtils';
 import type {
   SyllabusSection,
   RoadmapNodeData,
@@ -32,15 +42,13 @@ import type {
   ReleaseMode,
   SyllabusStructureType,
 } from '@/types/syllabus';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { BookOpen, Plus, List } from 'lucide-react';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
-import {
-  deriveSectionStatus,
-  isTodayInDateRange,
-  filterRoadmapSections,
-  deriveCurrentSectionDisplayIndex,
-  roadmapProgressPercent,
-  type RoadmapSectionFilter,
-} from './syllabusRoadmapUtils';
+import { cn } from '@/lib/utils';
 
 interface SyllabusRoadmapProps {
   sections: SyllabusSection[];
@@ -54,7 +62,10 @@ interface SyllabusRoadmapProps {
   /** Shown in roadmap caption (e.g. Weeks · All at once) */
   structureType?: SyllabusStructureType;
   studentProgressMap?: Record<string, StudentProgressStatus>;
-  linkedAssignmentsMap?: Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>>;
+  linkedAssignmentsMap?: Record<
+    string,
+    Array<{ id: string; title: string; type: string; due_at: string | null }>
+  >;
   onSectionSelect?: (section: SyllabusSection) => void;
   onSwitchToSections?: () => void;
 }
@@ -104,7 +115,7 @@ export const SyllabusRoadmap = ({
   const [filter, setFilter] = useState<RoadmapSectionFilter>('all');
   const [activeJumpId, setActiveJumpId] = useState<string | null>(null);
   const [nodeWidth, setNodeWidth] = useState(400);
-  const rfInstance = useRef<ReactFlowInstance | null>(null);
+  const rfInstance = useRef<ReactFlowInstance<Node<RoadmapNodeData>, Edge> | null>(null);
   const flowContainerRef = useRef<HTMLDivElement | null>(null);
   const isMdUp = useMatchMedia('(min-width: 768px)');
 
@@ -150,16 +161,7 @@ export const SyllabusRoadmap = ({
       const locked =
         mode === 'student' &&
         !isSectionUnlocked(section, sections, releaseMode, studentProgressMap);
-      const x =
-        !zigzag
-          ? 0
-          : isRTL
-            ? index % 2 === 0
-              ? gap
-              : 0
-            : index % 2 === 0
-              ? 0
-              : gap;
+      const x = !zigzag ? 0 : isRTL ? (index % 2 === 0 ? gap : 0) : index % 2 === 0 ? 0 : gap;
       return {
         id: section.id,
         type: 'syllabusSection',
@@ -282,7 +284,9 @@ export const SyllabusRoadmap = ({
           <div className="w-14 h-14 bg-card rounded-full flex items-center justify-center shadow-sm mb-4">
             <BookOpen className="h-7 w-7 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-bold text-foreground mb-2">{t('syllabus.roadmap.noSections')}</h3>
+          <h3 className="text-lg font-bold text-foreground mb-2">
+            {t('syllabus.roadmap.noSections')}
+          </h3>
           <p className="text-muted-foreground text-sm max-w-md mb-5">
             {t('syllabus.roadmap.noSectionsDesc')}
           </p>
@@ -331,14 +335,21 @@ export const SyllabusRoadmap = ({
       {showTeacherTips && (
         <Card className="rounded-xl border-primary/20 bg-primary/[0.04]">
           <CardContent className={`p-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
-            <p className="font-semibold text-foreground mb-2">{t('syllabus.roadmap.teacherTipsTitle')}</p>
+            <p className="font-semibold text-foreground mb-2">
+              {t('syllabus.roadmap.teacherTipsTitle')}
+            </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-3">
               <li>{t('syllabus.roadmap.teacherTipDates')}</li>
               <li>{t('syllabus.roadmap.teacherTipAssignments')}</li>
               <li>{t('syllabus.roadmap.teacherTipPublish')}</li>
             </ul>
             {onSwitchToSections && (
-              <Button variant="outline" size="sm" className="rounded-full" onClick={onSwitchToSections}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={onSwitchToSections}
+              >
                 {t('syllabus.roadmap.goToSections')}
               </Button>
             )}
@@ -350,7 +361,10 @@ export const SyllabusRoadmap = ({
         <p className="text-sm text-muted-foreground">{caption}</p>
         <div className={`flex flex-wrap items-center gap-2 ${isRTL ? 'justify-end' : ''}`}>
           {legendItems.map((item) => (
-            <span key={item.key} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              key={item.key}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
               <span className={cn('size-2 rounded-full shrink-0', item.dotClass)} />
               {t(item.labelKey)}
             </span>
@@ -389,7 +403,13 @@ export const SyllabusRoadmap = ({
         <Card className="rounded-xl border-dashed border-border bg-muted/10">
           <CardContent className={`p-6 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
             <p className="text-muted-foreground mb-3">{t('syllabus.roadmap.filterEmpty')}</p>
-            <Button type="button" size="sm" variant="outline" className="rounded-full" onClick={() => setFilter('all')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setFilter('all')}
+            >
               {t('syllabus.roadmap.filterReset')}
             </Button>
           </CardContent>
@@ -397,7 +417,9 @@ export const SyllabusRoadmap = ({
       ) : (
         <div className="grid gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
           <div className="hidden md:block rounded-xl border border-border bg-card/50 p-3 max-h-[min(70vh,820px)] overflow-y-auto">
-            <div className={`flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div
+              className={`flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
               <List className="h-3.5 w-3.5" />
               {t('syllabus.roadmap.jumpListTitle')}
             </div>
@@ -413,7 +435,9 @@ export const SyllabusRoadmap = ({
                       activeJumpId === s.id && 'bg-primary/10 text-primary font-medium'
                     )}
                   >
-                    <span className="line-clamp-2">{s.title || t('syllabus.sections.sectionTitle')}</span>
+                    <span className="line-clamp-2">
+                      {s.title || t('syllabus.sections.sectionTitle')}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -445,7 +469,12 @@ export const SyllabusRoadmap = ({
               maxZoom={1.35}
               proOptions={{ hideAttribution: true }}
             >
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--border))" />
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={20}
+                size={1}
+                color="hsl(var(--border))"
+              />
               <Controls showInteractive={false} className="!bg-card !border-border !shadow-sm" />
               <MiniMap
                 nodeStrokeWidth={2}
@@ -470,14 +499,14 @@ export const SyllabusRoadmap = ({
         section={selectedSection}
         open={modalOpen}
         onOpenChange={setModalOpen}
-        assignmentCount={selectedSection ? (assignmentCounts[selectedSection.id] || 0) : 0}
-        resources={selectedSection ? (sectionResources[selectedSection.id] || []) : []}
+        assignmentCount={selectedSection ? assignmentCounts[selectedSection.id] || 0 : 0}
+        resources={selectedSection ? sectionResources[selectedSection.id] || [] : []}
         sectionStatus={selectedStatus}
         mode={mode}
         isRTL={isRTL}
         syllabusId={syllabusId}
         studentProgress={selectedSection ? studentProgressMap[selectedSection.id] : undefined}
-        linkedAssignments={selectedSection ? (linkedAssignmentsMap[selectedSection.id] || []) : []}
+        linkedAssignments={selectedSection ? linkedAssignmentsMap[selectedSection.id] || [] : []}
       />
     </div>
   );

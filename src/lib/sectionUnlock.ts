@@ -1,5 +1,4 @@
 import type { AssignmentRow } from '@/lib/moduleFlow';
-import { isSectionActivityFlowFullyComplete } from '@/lib/moduleFlowStudent';
 import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import type {
   ModuleFlowStep,
@@ -8,6 +7,7 @@ import type {
   ReleaseMode,
   StudentProgressStatus,
 } from '@/types/syllabus';
+import { isSectionActivityFlowFullyComplete } from '@/lib/moduleFlowStudent';
 
 /** Course order: `order_index` then stable `id` so ties are not non-deterministic across renders. */
 export function sectionsInCourseOrder(sections: SyllabusSection[]): SyllabusSection[] {
@@ -29,7 +29,7 @@ export type SectionSequentialUnlockFlow = {
 function priorSectionSatisfiedForSequential(
   prior: SyllabusSection,
   studentProgressMap: Record<string, StudentProgressStatus>,
-  flow: SectionSequentialUnlockFlow | null | undefined,
+  flow: SectionSequentialUnlockFlow | null | undefined
 ): boolean {
   if (studentProgressMap[prior.id] === 'completed') return true;
   if (!flow) return false;
@@ -39,7 +39,7 @@ function priorSectionSatisfiedForSequential(
     flow.resourceMap[prior.id] ?? [],
     flow.assignments,
     flow.flowCtx,
-    flow.now,
+    flow.now
   );
 }
 
@@ -48,7 +48,7 @@ export function isSectionUnlocked(
   allSections: SyllabusSection[],
   releaseMode: ReleaseMode,
   studentProgressMap: Record<string, StudentProgressStatus>,
-  sequentialFlow?: SectionSequentialUnlockFlow | null,
+  sequentialFlow?: SectionSequentialUnlockFlow | null
 ): boolean {
   switch (releaseMode) {
     case 'all_at_once':

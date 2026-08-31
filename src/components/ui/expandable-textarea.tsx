@@ -1,10 +1,10 @@
+import { Loader2, Sparkles, Undo2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { Loader2, Sparkles, Undo2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
-export function ExpandableTextarea({
+export const ExpandableTextarea = ({
   value,
   onChange,
   placeholder,
@@ -30,7 +30,7 @@ export function ExpandableTextarea({
   id?: string;
   required?: boolean;
   dir?: 'ltr' | 'rtl' | 'auto';
-}) {
+}) => {
   const { t } = useTranslation();
   const [originalValue, setOriginalValue] = useState<string | null>(null);
 
@@ -61,10 +61,7 @@ export function ExpandableTextarea({
         }}
         placeholder={placeholder}
         rows={rows}
-        className={cn(
-          'rounded-xl text-sm transition-all pe-20 resize-y',
-          className,
-        )}
+        className={cn('rounded-xl text-sm transition-all pe-20 resize-y', className)}
         autoDirection={autoDirection}
         dir={dir}
         disabled={disabled}
@@ -101,4 +98,4 @@ export function ExpandableTextarea({
       </div>
     </div>
   );
-}
+};

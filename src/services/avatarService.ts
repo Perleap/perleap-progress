@@ -59,7 +59,10 @@ export const uploadAvatar = async ({
   }
 };
 
-export const deleteAvatar = async (avatarStored: string, bucket = 'student-avatars'): Promise<boolean> => {
+export const deleteAvatar = async (
+  avatarStored: string,
+  bucket = 'student-avatars'
+): Promise<boolean> => {
   try {
     const fileName =
       extractStorageObjectPath(bucket, avatarStored) ??
@@ -77,7 +80,7 @@ export const deleteAvatar = async (avatarStored: string, bucket = 'student-avata
 export const updateProfileAvatar = async (
   userId: string,
   avatarUrl: string,
-  profileType: 'teacher' | 'student',
+  profileType: 'teacher' | 'student'
 ): Promise<boolean> => {
   try {
     const tableName = profileType === 'teacher' ? 'teacher_profiles' : 'student_profiles';

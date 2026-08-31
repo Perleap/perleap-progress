@@ -1,7 +1,4 @@
-import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
   FileText,
@@ -14,8 +11,11 @@ import {
   Lock,
   ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { RoadmapNodeData, SectionStatus, StudentProgressStatus } from '@/types/syllabus';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const statusConfig: Record<
   SectionStatus,
@@ -93,7 +93,11 @@ export const RoadmapNode = memo(({ data, selected }: RoadmapNodeProps) => {
 
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background"
+      />
       <div
         style={{
           width: w,
@@ -128,7 +132,10 @@ export const RoadmapNode = memo(({ data, selected }: RoadmapNodeProps) => {
 
         <div className="ps-2">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0 h-5 shrink-0 font-mono tabular-nums">
+            <Badge
+              variant="secondary"
+              className="rounded-full text-[10px] px-2 py-0 h-5 shrink-0 font-mono tabular-nums"
+            >
               {t('syllabus.roadmap.sectionN', { n: idx })}
             </Badge>
             {isTodayInRange && (
@@ -158,19 +165,27 @@ export const RoadmapNode = memo(({ data, selected }: RoadmapNodeProps) => {
 
           {/* Description */}
           {description && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{description}</p>
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">
+              {description}
+            </p>
           )}
 
           {/* Chips */}
           <div className="flex flex-wrap items-center gap-1.5 mb-2">
             {assignmentCount > 0 && (
-              <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 px-2 py-0 h-5 font-normal">
+              <Badge
+                variant="outline"
+                className="rounded-full text-[10px] gap-0.5 px-2 py-0 h-5 font-normal"
+              >
                 <BookOpen className="h-3 w-3" />
                 {t('syllabus.roadmap.assignmentsCount', { count: assignmentCount })}
               </Badge>
             )}
             {resourceCount > 0 && (
-              <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 px-2 py-0 h-5 font-normal">
+              <Badge
+                variant="outline"
+                className="rounded-full text-[10px] gap-0.5 px-2 py-0 h-5 font-normal"
+              >
                 <FileText className="h-3 w-3" />
                 {t('syllabus.roadmap.resourcesCount', { count: resourceCount })}
               </Badge>
@@ -210,7 +225,11 @@ export const RoadmapNode = memo(({ data, selected }: RoadmapNodeProps) => {
           )}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-primary !w-2.5 !h-2.5 !border-2 !border-background"
+      />
     </>
   );
 });

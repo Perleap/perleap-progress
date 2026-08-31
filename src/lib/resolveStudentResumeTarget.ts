@@ -2,6 +2,15 @@
  * First activity/assignment the student should open when resuming a course (About CTA).
  */
 
+import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
+import type {
+  ReleaseMode,
+  StudentProgressStatus,
+  SyllabusSection,
+  ModuleFlowStep,
+  SectionResource,
+} from '@/types/syllabus';
 import {
   getOrderedActivityCenterFlowSteps,
   resolveDisplayedModuleFlow,
@@ -9,14 +18,11 @@ import {
   type AssignmentRow,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
-import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import {
   isAssignmentMissedDeadline,
   localResourceInferredDoneFromLaterAssignments,
 } from '@/lib/moduleFlowStudent';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
-import type { ReleaseMode, StudentProgressStatus, SyllabusSection, ModuleFlowStep, SectionResource } from '@/types/syllabus';
 
 export type StudentResumeTargetHit = { target: FlowStepTarget; sectionId: string };
 
@@ -25,12 +31,12 @@ function localResourceStepDone(
   local: ModuleFlowLocalStep[],
   index: number,
   ctx: StudentFlowProgressContext,
-  orderedPersisted: ModuleFlowStep[],
+  orderedPersisted: ModuleFlowStep[]
 ): boolean {
   const step = local[index];
   if (step.kind !== 'resource') return false;
   const persistedRow = orderedPersisted.find(
-    (p) => p.step_kind === 'resource' && p.activity_list_id === step.resourceId,
+    (p) => p.step_kind === 'resource' && p.activity_list_id === step.resourceId
   );
   if (persistedRow && ctx.progressByStep[persistedRow.id]) return true;
   return localResourceInferredDoneFromLaterAssignments(local, index, ctx);
@@ -42,7 +48,7 @@ function localStepDone(
   ctx: StudentFlowProgressContext,
   persisted: ModuleFlowStep[],
   sectionResources: SectionResource[],
-  assignments: AssignmentRow[],
+  assignments: AssignmentRow[]
 ): boolean {
   const step = local[index];
   if (step.kind === 'assignment') {
@@ -52,7 +58,7 @@ function localStepDone(
   const orderedPersisted = getOrderedActivityCenterFlowSteps(
     persisted,
     sectionResources,
-    studentFlowOpts,
+    studentFlowOpts
   );
   return localResourceStepDone(local, index, ctx, orderedPersisted);
 }
@@ -64,13 +70,16 @@ function localPreviousStepsComplete(
   persisted: ModuleFlowStep[],
   sectionResources: SectionResource[],
   assignments: AssignmentRow[],
-  now: Date,
+  now: Date
 ): boolean {
   if (index === 0) return true;
   for (let i = 0; i < index; i++) {
     if (localStepDone(local, i, ctx, persisted, sectionResources, assignments)) continue;
     const step = local[i];
-    if (step.kind === 'assignment' && isAssignmentMissedDeadline(step.assignmentId, assignments, ctx, now)) {
+    if (
+      step.kind === 'assignment' &&
+      isAssignmentMissedDeadline(step.assignmentId, assignments, ctx, now)
+    ) {
       continue;
     }
     return false;
@@ -88,7 +97,7 @@ function firstIncompleteInDisplayedFlow(
   assignments: AssignmentRow[],
   persisted: ModuleFlowStep[],
   ctx: StudentFlowProgressContext,
-  now: Date,
+  now: Date
 ): FlowStepTarget | null {
   const studentFlowOpts = studentModuleFlowStepOptions(assignments);
   const local = resolveDisplayedModuleFlow(
@@ -96,13 +105,17 @@ function firstIncompleteInDisplayedFlow(
     sectionResources,
     assignments,
     persisted,
-    studentFlowOpts,
+    studentFlowOpts
   );
   for (let i = 0; i < local.length; i++) {
-    if (!localPreviousStepsComplete(local, i, ctx, persisted, sectionResources, assignments, now)) continue;
+    if (!localPreviousStepsComplete(local, i, ctx, persisted, sectionResources, assignments, now))
+      continue;
     if (!localStepDone(local, i, ctx, persisted, sectionResources, assignments)) {
       const s = local[i];
-      if (s.kind === 'assignment' && isAssignmentMissedDeadline(s.assignmentId, assignments, ctx, now)) {
+      if (
+        s.kind === 'assignment' &&
+        isAssignmentMissedDeadline(s.assignmentId, assignments, ctx, now)
+      ) {
         continue;
       }
       if (s.kind === 'resource') return { kind: 'resource', id: s.resourceId };
@@ -138,7 +151,7 @@ export function findFirstIncompleteDisplayedFlowAcrossCourse(params: {
       assignments,
       persisted,
       flowCtx,
-      now,
+      now
     );
     if (fromDisplayed) return fromDisplayed;
   }
@@ -180,7 +193,7 @@ export function resolveStudentResumeTargetWithSection(params: {
       assignments,
       persisted,
       flowCtx,
-      now,
+      now
     );
     if (fromDisplayed) {
       return { target: fromDisplayed, sectionId: section.id };

@@ -1,7 +1,7 @@
 import { AssignmentCourseContextStep } from './AssignmentCourseContextStep';
 import { AssignmentReleaseStep } from './AssignmentReleaseStep';
-import type { SyllabusWithSections } from '@/types/syllabus';
 import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import type { SyllabusWithSections } from '@/types/syllabus';
 
 interface AssignmentCourseReleaseStepProps {
   syllabus: SyllabusWithSections | null | undefined;
@@ -20,7 +20,7 @@ interface AssignmentCourseReleaseStepProps {
 }
 
 /** Combined "In your course" + "Release & AI" wizard step. */
-export function AssignmentCourseReleaseStep({
+export const AssignmentCourseReleaseStep = ({
   syllabus,
   syllabusLoading,
   syllabusSectionId,
@@ -34,7 +34,7 @@ export function AssignmentCourseReleaseStep({
   loading,
   formData,
   onFormChange,
-}: AssignmentCourseReleaseStepProps) {
+}: AssignmentCourseReleaseStepProps) => {
   return (
     <div className="space-y-8">
       <AssignmentCourseContextStep
@@ -53,4 +53,4 @@ export function AssignmentCourseReleaseStep({
       <AssignmentReleaseStep formData={formData} onFormChange={onFormChange} isRTL={isRTL} />
     </div>
   );
-}
+};

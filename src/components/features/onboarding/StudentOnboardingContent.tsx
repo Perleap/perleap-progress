@@ -1,14 +1,8 @@
+import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/useAuth';
-import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { markSignupComplete } from '@/utils/sessionState';
 import {
   StudentOnboardingStep1Section,
   StudentOnboardingStep2Section,
@@ -18,13 +12,19 @@ import {
   StudentOnboardingStep6Section,
 } from './StudentOnboardingStepSections';
 import type { StudentOnboardingFormData } from './studentOnboardingTypes';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   cleanupOrphanedProfilesByEmail,
   insertStudentOnboardingProfile,
   uploadOnboardingAvatar,
 } from '@/services/onboardingService';
+import { markSignupComplete } from '@/utils/sessionState';
 
-export function StudentOnboardingContent() {
+export const StudentOnboardingContent = () => {
   const { t } = useTranslation();
   const { isRTL, language = 'en' } = useLanguage();
   const { user, refreshProfile } = useAuth();
@@ -94,7 +94,7 @@ export function StudentOnboardingContent() {
         user.email,
         formData,
         language,
-        avatarPath,
+        avatarPath
       );
 
       if (error) {
@@ -111,15 +111,18 @@ export function StudentOnboardingContent() {
       await refreshProfile(true);
 
       toast.success(t('studentOnboarding.success.profileCreated'));
-      
+
       // Navigate directly to dashboard with replace to prevent back navigation
       navigate('/student/dashboard', { replace: true });
     } catch (error: any) {
       console.error('Student onboarding error:', error);
-      
+
       // Check for dual profile trigger error from database
       if (error.message?.includes('already has a teacher profile')) {
-        toast.error(t('studentOnboarding.errors.alreadyHasTeacherProfile') || 'You already have a teacher account. You cannot create a student account.');
+        toast.error(
+          t('studentOnboarding.errors.alreadyHasTeacherProfile') ||
+            'You already have a teacher account. You cannot create a student account.'
+        );
         setTimeout(() => navigate('/teacher/dashboard'), 2000);
       } else if (error.code === '23505') {
         // Duplicate key - profile already exists
@@ -128,7 +131,9 @@ export function StudentOnboardingContent() {
       } else if (error.code === '42703') {
         // Undefined column
         console.error('Database schema mismatch - column does not exist:', error);
-        toast.error('Database error: Some fields are not configured properly. Please contact support.');
+        toast.error(
+          'Database error: Some fields are not configured properly. Please contact support.'
+        );
       } else if (error.message?.includes('violates not-null constraint')) {
         // Missing required field
         console.error('Missing required field:', error);
@@ -186,14 +191,22 @@ export function StudentOnboardingContent() {
           <div className="flex gap-4 mt-6">
             {step > 1 && (
               <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
-                {isRTL ? <ArrowRight className="mr-2 h-4 w-4" /> : <ArrowLeft className="mr-2 h-4 w-4" />}
+                {isRTL ? (
+                  <ArrowRight className="mr-2 h-4 w-4" />
+                ) : (
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                )}
                 {t('studentOnboarding.back')}
               </Button>
             )}
             {step < totalSteps ? (
               <Button onClick={() => setStep(step + 1)} className="flex-1">
                 {t('studentOnboarding.next')}
-                {isRTL ? <ArrowLeft className="ml-2 h-4 w-4" /> : <ArrowRight className="ml-2 h-4 w-4" />}
+                {isRTL ? (
+                  <ArrowLeft className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                )}
               </Button>
             ) : (
               <Button
@@ -210,4 +223,4 @@ export function StudentOnboardingContent() {
       </Card>
     </div>
   );
-}
+};

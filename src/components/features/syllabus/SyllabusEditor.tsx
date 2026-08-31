@@ -1,5 +1,3 @@
-import { useState, useRef, useMemo, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   DragOverlay,
@@ -12,6 +10,7 @@ import {
   type DragStartEvent,
   type DraggableAttributes,
 } from '@dnd-kit/core';
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -20,26 +19,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import {
   Plus,
   Trash2,
@@ -55,6 +34,32 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react';
+import { useState, useRef, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { ModuleFlowEditor, type ModuleFlowEditorHandle } from './ModuleFlowEditor';
+import { ModuleLessonActivityDialog } from './ModuleLessonActivityDialog';
+import { ResourceUploader } from './ResourceUploader';
+import type { SyllabusSection, SectionResource, ReleaseMode } from '@/types/syllabus';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import {
   useCreateSyllabusSection,
   useUpdateSyllabusSection,
@@ -62,19 +67,14 @@ import {
   useReorderSyllabusSections,
   useClassroomAssignments,
 } from '@/hooks/queries';
-import type { SyllabusSection, SectionResource, ReleaseMode } from '@/types/syllabus';
-import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
-import { DatePicker } from '@/components/ui/date-picker';
-import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { supabase } from '@/integrations/supabase/client';
-import { ModuleFlowEditor, type ModuleFlowEditorHandle } from './ModuleFlowEditor';
-import { ModuleLessonActivityDialog } from './ModuleLessonActivityDialog';
-import { ResourceUploader } from './ResourceUploader';
+import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
+import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
+import { cn } from '@/lib/utils';
 
 const EMPTY_SECTION_RESOURCES: SectionResource[] = [];
 
-function SortableSectionRow({
+const SortableSectionRow = ({
   id,
   children,
 }: {
@@ -83,7 +83,7 @@ function SortableSectionRow({
     dragAttributes: DraggableAttributes;
     dragListeners: Record<string, unknown> | undefined;
   }) => ReactNode;
-}) {
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
@@ -97,7 +97,7 @@ function SortableSectionRow({
       {children({ dragAttributes: attributes, dragListeners: listeners })}
     </li>
   );
-}
+};
 
 interface SyllabusEditorProps {
   syllabusId: string;
@@ -139,12 +139,12 @@ export const SyllabusEditor = ({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const sortableSectionIds = useMemo(() => sections.map((s) => s.id), [sections]);
   const activeDragSection = useMemo(
     () => (activeDragId ? sections.find((s) => s.id === activeDragId) : null),
-    [activeDragId, sections],
+    [activeDragId, sections]
   );
 
   const createMutation = useCreateSyllabusSection();
@@ -157,19 +157,24 @@ export const SyllabusEditor = ({
   const selected = sections[clampedIndex] ?? null;
   const moduleFlowResources = useMemo(
     () => (selected ? sectionResources[selected.id] : undefined) ?? EMPTY_SECTION_RESOURCES,
-    [sectionResources, selected?.id],
+    [sectionResources, selected?.id]
   );
   const outlineResources = useMemo(
     () => filterOutlineMaterialResources(moduleFlowResources),
-    [moduleFlowResources],
+    [moduleFlowResources]
   );
   const nextResourceOrderIndex = useMemo(() => {
     if (moduleFlowResources.length === 0) return 0;
     return Math.max(...moduleFlowResources.map((r) => r.order_index ?? 0)) + 1;
   }, [moduleFlowResources]);
-  const structureLabel = structureType === 'weeks' ? 'Week' : structureType === 'units' ? 'Unit' : 'Module';
+  const structureLabel =
+    structureType === 'weeks' ? 'Week' : structureType === 'units' ? 'Unit' : 'Module';
 
-  const sectionDisplayName = (section: SyllabusSection, pending: Partial<SyllabusSection>, listIndex: number) => {
+  const sectionDisplayName = (
+    section: SyllabusSection,
+    pending: Partial<SyllabusSection>,
+    listIndex: number
+  ) => {
     const raw = typeof pending.title === 'string' ? pending.title : section.title;
     const trimmed = (raw ?? '').trim();
     if (trimmed) return trimmed;
@@ -177,7 +182,7 @@ export const SyllabusEditor = ({
   };
 
   const getValue = <K extends keyof SyllabusSection>(key: K): SyllabusSection[K] => {
-    if (key in editValues) return editValues[key as string] as SyllabusSection[K];
+    if (key in editValues) return editValues[key] as SyllabusSection[K];
     return selected ? selected[key] : ('' as any);
   };
 
@@ -246,7 +251,9 @@ export const SyllabusEditor = ({
         onSuccess: () => {
           setEditValues({});
           toast.success(
-            t('syllabus.sections.saved', { name: sectionDisplayName(selected, editValues, clampedIndex) }),
+            t('syllabus.sections.saved', {
+              name: sectionDisplayName(selected, editValues, clampedIndex),
+            })
           );
         },
         onError: () => toast.error(t('syllabus.sections.saveFailed')),
@@ -267,7 +274,9 @@ export const SyllabusEditor = ({
         {
           onSuccess: () =>
             toast.success(
-              t('syllabus.sections.saved', { name: sectionDisplayName(selected, editValues, selectedIndex) }),
+              t('syllabus.sections.saved', {
+                name: sectionDisplayName(selected, editValues, selectedIndex),
+              })
             ),
           onError: () => toast.error(t('syllabus.sections.saveFailed')),
         }
@@ -284,7 +293,7 @@ export const SyllabusEditor = ({
     setSectionToDelete(null);
     setSelectedIndex(Math.max(0, selectedIndex - 1));
     setEditValues({});
-    
+
     deleteMutation.mutate(
       { sectionId: id, classroomId },
       {
@@ -314,7 +323,7 @@ export const SyllabusEditor = ({
     }
     reorderMutation.mutate(
       { syllabusId, orderedIds, classroomId },
-      { onError: () => toast.error(t('syllabus.sections.reorderFailed')) },
+      { onError: () => toast.error(t('syllabus.sections.reorderFailed')) }
     );
   };
 
@@ -358,32 +367,77 @@ export const SyllabusEditor = ({
     <div className="flex gap-6 min-h-[400px]">
       {/* Sidebar */}
       <div className={cn('w-64 min-h-0 flex-shrink-0 flex flex-col', isRTL && 'order-2')}>
-        <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
           <h4 className="font-bold text-sm text-foreground">{t('syllabus.sections.title')}</h4>
           <div className="flex items-center gap-1">
             {sections.length > 0 && (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowBulkSchedule(!showBulkSchedule)} className="rounded-full gap-1 h-7 text-xs text-muted-foreground">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowBulkSchedule(!showBulkSchedule)}
+                className="rounded-full gap-1 h-7 text-xs text-muted-foreground"
+              >
                 <CalendarRange className="h-3 w-3" />
               </Button>
             )}
-            <Button type="button" variant="outline" size="sm" onClick={addSection} disabled={createMutation.isPending} className="rounded-full gap-1 h-7 text-xs">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addSection}
+              disabled={createMutation.isPending}
+              className="rounded-full gap-1 h-7 text-xs"
+            >
               <Plus className="h-3 w-3" /> {t('syllabus.sections.add')}
             </Button>
           </div>
         </div>
         {showBulkSchedule && (
           <div className="mb-3 p-3 rounded-xl border border-border bg-card space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('syllabus.sections.autoSchedule')}</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              {t('syllabus.sections.autoSchedule')}
+            </p>
             <div className="space-y-1.5">
-              <DatePicker value={bulkStartDate} onChange={setBulkStartDate} placeholder={t('syllabus.sections.startDate')} className="rounded-lg h-7 text-xs" />
+              <DatePicker
+                value={bulkStartDate}
+                onChange={setBulkStartDate}
+                placeholder={t('syllabus.sections.startDate')}
+                className="rounded-lg h-7 text-xs"
+              />
               <div className="flex items-center gap-2">
-                <Input type="number" min={1} max={30} value={bulkDuration} onChange={(e) => setBulkDuration(parseInt(e.target.value) || 7)} className="rounded-lg h-7 text-xs w-16" />
-                <span className="text-[10px] text-muted-foreground">{t('syllabus.sections.daysPerSection')}</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={bulkDuration}
+                  onChange={(e) => setBulkDuration(parseInt(e.target.value) || 7)}
+                  className="rounded-lg h-7 text-xs w-16"
+                />
+                <span className="text-[10px] text-muted-foreground">
+                  {t('syllabus.sections.daysPerSection')}
+                </span>
               </div>
             </div>
             <div className="flex justify-end gap-1">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowBulkSchedule(false)} className="h-6 text-xs">{t('common.cancel')}</Button>
-              <Button type="button" size="sm" onClick={handleBulkSchedule} disabled={saving || !bulkStartDate} className="h-6 text-xs gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowBulkSchedule(false)}
+                className="h-6 text-xs"
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleBulkSchedule}
+                disabled={saving || !bulkStartDate}
+                className="h-6 text-xs gap-1"
+              >
                 {saving && <Loader2 className="h-3 w-3 animate-spin" />}
                 {t('syllabus.sections.apply')}
               </Button>
@@ -422,7 +476,7 @@ export const SyllabusEditor = ({
                             selectedIndex === index
                               ? 'bg-primary/10 border border-primary/30 text-primary'
                               : 'hover:bg-muted/50 border border-transparent text-foreground',
-                            isRTL && 'text-right flex-row-reverse',
+                            isRTL && 'text-right flex-row-reverse'
                           )}
                         >
                           <button
@@ -439,7 +493,9 @@ export const SyllabusEditor = ({
                           {releaseMode === 'manual' && section.is_locked && (
                             <Lock className="h-3 w-3 text-destructive flex-shrink-0" />
                           )}
-                          <span className="flex-1 min-w-0 truncate font-medium">{section.title}</span>
+                          <span className="flex-1 min-w-0 truncate font-medium">
+                            {section.title}
+                          </span>
                         </div>
                       )}
                     </SortableSectionRow>
@@ -455,14 +511,16 @@ export const SyllabusEditor = ({
                   <div
                     className={cn(
                       'flex w-64 min-w-0 max-w-64 items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-sm text-foreground shadow-lg',
-                      isRTL && 'flex-row-reverse',
+                      isRTL && 'flex-row-reverse'
                     )}
                   >
                     <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
                     {releaseMode === 'manual' && activeDragSection.is_locked && (
                       <Lock className="h-3 w-3 shrink-0 text-destructive" />
                     )}
-                    <span className="min-w-0 flex-1 truncate font-medium">{activeDragSection.title}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {activeDragSection.title}
+                    </span>
                   </div>
                 ) : null}
               </DragOverlay>
@@ -475,11 +533,28 @@ export const SyllabusEditor = ({
       <div className={cn('flex-1 min-w-0', isRTL && 'order-1')}>
         {selected ? (
           <div className="space-y-5">
-            <div className={`flex items-center justify-between gap-3 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <h4 className="font-bold text-foreground min-w-0 flex-1 truncate">{selected.title}</h4>
-              <div className={`flex flex-wrap items-center gap-1.5 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <Button type="button" variant="outline" size="sm" onClick={handleSave} disabled={saving || Object.keys(editValues).length === 0} className="rounded-full gap-1.5 h-8">
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            <div
+              className={`flex items-center justify-between gap-3 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
+              <h4 className="font-bold text-foreground min-w-0 flex-1 truncate">
+                {selected.title}
+              </h4>
+              <div
+                className={`flex flex-wrap items-center gap-1.5 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving || Object.keys(editValues).length === 0}
+                  className="rounded-full gap-1.5 h-8"
+                >
+                  {saving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
                   {t('syllabus.sections.save')}
                 </Button>
                 {releaseMode === 'manual' && (
@@ -489,7 +564,8 @@ export const SyllabusEditor = ({
                     size="sm"
                     className={cn(
                       'rounded-full gap-1.5 h-8',
-                      getValue('is_locked') && 'border-destructive/40 text-destructive hover:bg-destructive/10',
+                      getValue('is_locked') &&
+                        'border-destructive/40 text-destructive hover:bg-destructive/10'
                     )}
                     onClick={() => setField('is_locked', !getValue('is_locked'))}
                   >
@@ -506,7 +582,17 @@ export const SyllabusEditor = ({
                     )}
                   </Button>
                 )}
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setSectionToDelete(selected); setDeleteConfirmOpen(true); }} disabled={deleteMutation.isPending} className="rounded-full text-muted-foreground hover:text-destructive h-8 gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSectionToDelete(selected);
+                    setDeleteConfirmOpen(true);
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="rounded-full text-muted-foreground hover:text-destructive h-8 gap-1"
+                >
                   <Trash2 className="h-3.5 w-3.5" /> {t('syllabus.sections.delete')}
                 </Button>
               </div>
@@ -514,59 +600,122 @@ export const SyllabusEditor = ({
 
             <div className="space-y-4 p-4 rounded-xl border border-border bg-card">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium flex items-center gap-1"><BookOpen className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.sectionTitle')}</Label>
-                <Input value={getValue('title') as string} onChange={(e) => setField('title', e.target.value)} className="rounded-lg h-9" autoDirection />
+                <Label className="text-xs font-medium flex items-center gap-1">
+                  <BookOpen className="h-3 w-3 text-muted-foreground" />{' '}
+                  {t('syllabus.sections.sectionTitle')}
+                </Label>
+                <Input
+                  value={getValue('title') as string}
+                  onChange={(e) => setField('title', e.target.value)}
+                  className="rounded-lg h-9"
+                  autoDirection
+                />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium flex items-center gap-1"><FileText className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.description')}</Label>
+                <Label className="text-xs font-medium flex items-center gap-1">
+                  <FileText className="h-3 w-3 text-muted-foreground" />{' '}
+                  {t('syllabus.sections.description')}
+                </Label>
                 <ExpandableTextarea
                   value={(getValue('description') as string) || ''}
                   onChange={(v) => setField('description', v)}
                   rows={3}
                   className="bg-card"
                   autoDirection
-                  onRewrite={() => handleRewrite('description', (getValue('description') as string) || '')}
+                  onRewrite={() =>
+                    handleRewrite('description', (getValue('description') as string) || '')
+                  }
                   isRewriting={rewritingField === `${selected.id}-description`}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium flex items-center gap-1"><Pencil className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.content', 'Content')}</Label>
+                <Label className="text-xs font-medium flex items-center gap-1">
+                  <Pencil className="h-3 w-3 text-muted-foreground" />{' '}
+                  {t('syllabus.sections.content', 'Content')}
+                </Label>
                 <RichTextEditor
                   content={(getValue('content') as string) || ''}
                   onChange={(html) => setField('content', html)}
-                  placeholder={t('syllabus.sections.contentPlaceholder', 'Add lesson content, instructions, materials...')}
+                  placeholder={t(
+                    'syllabus.sections.contentPlaceholder',
+                    'Add lesson content, instructions, materials...'
+                  )}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium flex items-center gap-1"><Calendar className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.startDate')}</Label>
-                  <DatePicker value={(getValue('start_date') as string) || ''} onChange={(v) => setField('start_date', v || null)} placeholder={t('syllabus.sections.startDate')} className="rounded-lg h-8" />
+                  <Label className="text-xs font-medium flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />{' '}
+                    {t('syllabus.sections.startDate')}
+                  </Label>
+                  <DatePicker
+                    value={(getValue('start_date') as string) || ''}
+                    onChange={(v) => setField('start_date', v || null)}
+                    placeholder={t('syllabus.sections.startDate')}
+                    className="rounded-lg h-8"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium flex items-center gap-1"><Calendar className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.endDate')}</Label>
-                  <DatePicker value={(getValue('end_date') as string) || ''} onChange={(v) => setField('end_date', v || null)} placeholder={t('syllabus.sections.endDate')} className="rounded-lg h-8" />
+                  <Label className="text-xs font-medium flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />{' '}
+                    {t('syllabus.sections.endDate')}
+                  </Label>
+                  <DatePicker
+                    value={(getValue('end_date') as string) || ''}
+                    onChange={(v) => setField('end_date', v || null)}
+                    placeholder={t('syllabus.sections.endDate')}
+                    className="rounded-lg h-8"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium flex items-center gap-1"><Target className="h-3 w-3 text-muted-foreground" /> {t('syllabus.sections.objectives')}</Label>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setField('objectives', [...objectives, ''])} className="h-6 text-xs text-primary">
+                  <Label className="text-xs font-medium flex items-center gap-1">
+                    <Target className="h-3 w-3 text-muted-foreground" />{' '}
+                    {t('syllabus.sections.objectives')}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setField('objectives', [...objectives, ''])}
+                    className="h-6 text-xs text-primary"
+                  >
                     <Plus className="h-3 w-3 me-0.5" /> {t('syllabus.sections.add')}
                   </Button>
                 </div>
                 {objectives.map((obj, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <div className="h-1 w-1 rounded-full bg-primary/30" />
-                    <Input value={obj} onChange={(e) => { const o = [...objectives]; o[i] = e.target.value; setField('objectives', o); }} className="flex-1 rounded-lg h-7 text-xs" autoDirection />
-                    <button type="button" onClick={() => setField('objectives', objectives.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive p-0.5"><Trash2 className="h-3 w-3" /></button>
+                    <Input
+                      value={obj}
+                      onChange={(e) => {
+                        const o = [...objectives];
+                        o[i] = e.target.value;
+                        setField('objectives', o);
+                      }}
+                      className="flex-1 rounded-lg h-7 text-xs"
+                      autoDirection
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setField(
+                          'objectives',
+                          objectives.filter((_, idx) => idx !== i)
+                        )
+                      }
+                      className="text-muted-foreground hover:text-destructive p-0.5"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
                 ))}
               </div>
-
             </div>
 
             <Separator className="my-2" />
@@ -649,7 +798,13 @@ export const SyllabusEditor = ({
         }}
       />
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => { setDeleteConfirmOpen(open); if (!open) setSectionToDelete(null); }}>
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) setSectionToDelete(null);
+        }}
+      >
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>{t('syllabus.sections.deleteConfirmTitle')}</AlertDialogTitle>
@@ -659,7 +814,10 @@ export const SyllabusEditor = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('syllabus.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {t('syllabus.sections.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>

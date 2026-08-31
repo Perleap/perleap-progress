@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { computePilotReportDataHash, type PilotReportAnalyticsData } from './computePilotReportDataHash';
+import {
+  computePilotReportDataHash,
+  type PilotReportAnalyticsData,
+} from './computePilotReportDataHash';
 
 const sectionTitleResolver = () => 'Section';
 
@@ -91,7 +94,7 @@ describe('computePilotReportDataHash', () => {
                   },
                 ],
               }
-            : s,
+            : s
         ),
       },
       scopeModule: 'all',
@@ -166,7 +169,7 @@ describe('computePilotReportDataHash', () => {
         scopeAssignment: 'all',
         language: 'en',
         sectionTitleResolver,
-      }),
+      })
     ).not.toThrow();
   });
 });

@@ -18,17 +18,17 @@ export type StudentSettingsNotificationsSectionProps = {
   onSave: () => void;
 };
 
-export function StudentSettingsNotificationsSection({
+export const StudentSettingsNotificationsSection = ({
   isRTL,
   notifications,
   onNotificationsChange,
   onSave,
-}: StudentSettingsNotificationsSectionProps) {
+}: StudentSettingsNotificationsSectionProps) => {
   const { t } = useTranslation();
 
   const setNotification = <K extends keyof StudentNotificationSettings>(
     key: K,
-    value: StudentNotificationSettings[K],
+    value: StudentNotificationSettings[K]
   ) => {
     onNotificationsChange({ ...notifications, [key]: value });
   };
@@ -124,4 +124,4 @@ export function StudentSettingsNotificationsSection({
       </CardContent>
     </Card>
   );
-}
+};

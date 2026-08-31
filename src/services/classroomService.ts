@@ -3,16 +3,32 @@
  * Handles all classroom-related operations
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
 import type { Database, Json } from '@/integrations/supabase/types';
+import type { Classroom, Enrollment, EnrolledStudent, ApiError } from '@/types';
 import type {
-  Classroom,
-  Enrollment,
-  EnrolledStudent,
-  ApiError,
-  CreateAssignmentInput,
-} from '@/types';
-import type { ClassroomResetResult, ClassroomResetScopeCounts } from '@/types/api.types';
+  ClassroomResetResult,
+  ClassroomResetScopeCounts,
+  ClassroomWithEnrollmentCount,
+} from '@/types/api.types';
+import { supabase, handleSupabaseError } from '@/api/client';
+
+function enrollmentCountFromRow(enrollments: { count: number }[] | null | undefined): number {
+  return enrollments?.[0]?.count ?? 0;
+}
+
+function mapClassroomWithEnrollmentCount(
+  classroom: Database['public']['Tables']['classrooms']['Row'] & {
+    enrollments?: { count: number }[];
+  }
+): ClassroomWithEnrollmentCount {
+  const { enrollments, ...rest } = classroom;
+  return {
+    ...(rest as unknown as Classroom),
+    _count: {
+      enrollments: enrollmentCountFromRow(enrollments),
+    },
+  };
+}
 
 /**
  * Fetch all classrooms for a teacher with enrollment counts.
@@ -21,12 +37,9 @@ import type { ClassroomResetResult, ClassroomResetScopeCounts } from '@/types/ap
 export const getTeacherClassrooms = async (
   teacherId: string,
   options?: { allClassroomsForAdmin?: boolean }
-): Promise<{ data: any[] | null; error: ApiError | null }> => {
+): Promise<{ data: ClassroomWithEnrollmentCount[] | null; error: ApiError | null }> => {
   try {
-    let q = supabase
-      .from('classrooms')
-      .select('*, enrollments(count)')
-      .eq('active', true);
+    let q = supabase.from('classrooms').select('*, enrollments(count)').eq('active', true);
     if (!options?.allClassroomsForAdmin) {
       q = q.eq('teacher_id', teacherId);
     }
@@ -36,15 +49,9 @@ export const getTeacherClassrooms = async (
       return { data: null, error: handleSupabaseError(error) };
     }
 
-    // Transform Supabase response to include _count.enrollments
-    const transformed = data?.map(classroom => ({
-      ...classroom,
-      _count: {
-        enrollments: (classroom.enrollments?.[0] as any)?.count || 0
-      }
-    }));
+    const transformed = data?.map(mapClassroomWithEnrollmentCount);
 
-    return { data: transformed, error: null };
+    return { data: transformed ?? null, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -56,12 +63,9 @@ export const getTeacherClassrooms = async (
 export const getClassroomById = async (
   classroomId: string,
   teacherId?: string
-): Promise<{ data: any | null; error: ApiError | null }> => {
+): Promise<{ data: ClassroomWithEnrollmentCount | null; error: ApiError | null }> => {
   try {
-    let query = supabase
-      .from('classrooms')
-      .select('*, enrollments(count)')
-      .eq('id', classroomId);
+    let query = supabase.from('classrooms').select('*, enrollments(count)').eq('id', classroomId);
 
     if (teacherId) {
       query = query.eq('teacher_id', teacherId);
@@ -75,15 +79,7 @@ export const getClassroomById = async (
 
     if (!data) return { data: null, error: null };
 
-    // Transform Supabase response to include _count.enrollments
-    const transformed = {
-      ...data,
-      _count: {
-        enrollments: (data.enrollments?.[0] as any)?.count || 0
-      }
-    };
-
-    return { data: transformed, error: null };
+    return { data: mapClassroomWithEnrollmentCount(data), error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -155,7 +151,7 @@ export const updateClassroom = async (
  */
 export const softDeleteClassroom = async (
   classroomId: string,
-  options?: { restrictToTeacherId?: string },
+  options?: { restrictToTeacherId?: string }
 ): Promise<{ deleted: boolean; error: ApiError | null }> => {
   try {
     const deletedAt = new Date().toISOString();
@@ -209,12 +205,14 @@ export const getEnrolledStudents = async (
   try {
     const { data: enrollments, error: enrollError } = await supabase
       .from('enrollments')
-      .select(`
+      .select(
+        `
         id, 
         created_at, 
         student_id,
         student_profiles(user_id, full_name, avatar_url, created_at)
-      `)
+      `
+      )
       .eq('classroom_id', classroomId)
       .order('created_at', { ascending: false });
 
@@ -276,8 +274,7 @@ function isEnrollmentUniqueViolation(error: unknown): boolean {
   const e = error as { code?: string; message?: string };
   return (
     e.code === '23505' ||
-    (typeof e.message === 'string' &&
-      e.message.includes('enrollments_classroom_id_student_id_key'))
+    (typeof e.message === 'string' && e.message.includes('enrollments_classroom_id_student_id_key'))
   );
 }
 
@@ -392,7 +389,7 @@ function parseClassroomResetScopeCounts(raw: unknown): ClassroomResetScopeCounts
  * Preview what a classroom reset would remove (read-only).
  */
 export const previewClassroomReset = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: ClassroomResetScopeCounts | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.rpc('teacher_preview_classroom_reset', {
@@ -409,7 +406,7 @@ export const previewClassroomReset = async (
  * Reset a classroom: remove all students and their work; preserve course structure.
  */
 export const resetClassroom = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: ClassroomResetResult | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.rpc('teacher_reset_classroom', {

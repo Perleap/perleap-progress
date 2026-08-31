@@ -1,21 +1,21 @@
+import { Send, Loader2, Trash2, MessageSquare, Reply } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import type { SectionComment } from '@/types/syllabus';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { cn } from '@/lib/utils';
-import { Send, Loader2, Trash2, MessageSquare, Reply } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/useAuth';
 import { useSectionComments, useCreateComment, useDeleteComment } from '@/hooks/queries';
-import type { SectionComment } from '@/types/syllabus';
+import { cn } from '@/lib/utils';
 
 interface SectionCommentThreadProps {
   sectionId: string;
   isRTL?: boolean;
 }
 
-function CommentItem({
+const CommentItem = ({
   comment,
   sectionId,
   userId,
@@ -27,7 +27,7 @@ function CommentItem({
   userId: string | undefined;
   isRTL: boolean;
   onReply: (parentId: string) => void;
-}) {
+}) => {
   const { t } = useTranslation();
   const deleteMutation = useDeleteComment();
   const isOwn = userId === comment.user_id;
@@ -50,7 +50,12 @@ function CommentItem({
         <p className={cn('text-sm text-foreground/80 whitespace-pre-wrap', isRTL && 'text-right')}>
           {comment.content}
         </p>
-        <div className={cn('flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity', isRTL && 'flex-row-reverse')}>
+        <div
+          className={cn(
+            'flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity',
+            isRTL && 'flex-row-reverse'
+          )}
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -74,12 +79,13 @@ function CommentItem({
       </div>
     </div>
   );
-}
+};
 
 export const SectionCommentThread = ({ sectionId, isRTL = false }: SectionCommentThreadProps) => {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
-  const { data: comments = [], isLoading } = useSectionComments(sectionId);
+  const { data: commentsData, isLoading } = useSectionComments(sectionId);
+  const comments = commentsData ?? [];
 
   /** When DB author snapshot columns are missing, show the signed-in user's name/avatar from Auth. */
   const displayComments = useMemo((): SectionComment[] => {
@@ -91,8 +97,8 @@ export const SectionCommentThread = ({ sectionId, isRTL = false }: SectionCommen
       if (!missingName && !missingAvatar) return c;
       return {
         ...c,
-        user_name: missingName ? profile.full_name : c.user_name,
-        user_avatar: missingAvatar ? profile.avatar_url ?? c.user_avatar : c.user_avatar,
+        user_name: missingName ? (profile.full_name ?? undefined) : c.user_name,
+        user_avatar: missingAvatar ? (profile.avatar_url ?? c.user_avatar) : c.user_avatar,
       };
     });
   }, [comments, user?.id, profile?.full_name, profile?.avatar_url]);
@@ -170,8 +176,15 @@ export const SectionCommentThread = ({ sectionId, isRTL = false }: SectionCommen
       <div className="pt-2">
         {replyTo && (
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] text-muted-foreground">{t('syllabus.comments.replyingTo')}</span>
-            <Button variant="ghost" size="sm" onClick={() => setReplyTo(null)} className="h-4 text-[10px] px-1">
+            <span className="text-[10px] text-muted-foreground">
+              {t('syllabus.comments.replyingTo')}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReplyTo(null)}
+              className="h-4 text-[10px] px-1"
+            >
               {t('common.cancel')}
             </Button>
           </div>

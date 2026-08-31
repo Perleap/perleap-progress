@@ -3,8 +3,8 @@
  * Overall statistics and 5D dimension breakdown
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { FiveDScores } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatFiveDScoreDisplay } from '@/lib/fiveDScores';
 
 interface ClassPerformanceSummaryProps {
@@ -28,7 +28,9 @@ export const ClassPerformanceSummary = ({
   return (
     <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-base md:text-lg text-foreground">Class Performance Summary</CardTitle>
+        <CardTitle className="text-base md:text-lg text-foreground">
+          Class Performance Summary
+        </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           Overall statistics and completion rates
         </CardDescription>
@@ -46,7 +48,9 @@ export const ClassPerformanceSummary = ({
               <p className="text-xs md:text-sm text-muted-foreground">
                 Average Submissions per Student
               </p>
-              <p className="text-xl md:text-2xl font-bold text-foreground">{averageSubmissionsPerStudent}</p>
+              <p className="text-xl md:text-2xl font-bold text-foreground">
+                {averageSubmissionsPerStudent}
+              </p>
             </div>
             <div className="space-y-2">
               <p className="text-xs md:text-sm text-muted-foreground">Class Engagement Rate</p>
@@ -56,14 +60,21 @@ export const ClassPerformanceSummary = ({
 
           {classAverage && (
             <div className="pt-4 border-t border-border">
-              <h4 className="text-sm md:text-base font-semibold mb-3 text-foreground">Average 5D Scores</h4>
+              <h4 className="text-sm md:text-base font-semibold mb-3 text-foreground">
+                Average 5D Scores
+              </h4>
               <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                 {Object.entries(classAverage).map(([dimension, score]) => (
-                  <div key={dimension} className="text-center p-2 md:p-3 bg-muted/30 rounded-lg border border-border">
+                  <div
+                    key={dimension}
+                    className="text-center p-2 md:p-3 bg-muted/30 rounded-lg border border-border"
+                  >
                     <p className="text-[10px] md:text-xs text-muted-foreground capitalize mb-1">
                       {dimension}
                     </p>
-                    <p className="text-base md:text-xl font-bold text-foreground">{formatFiveDScoreDisplay(score, 1)}/10</p>
+                    <p className="text-base md:text-xl font-bold text-foreground">
+                      {formatFiveDScoreDisplay(score, 1)}/10
+                    </p>
                   </div>
                 ))}
               </div>

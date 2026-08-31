@@ -1,13 +1,13 @@
+import { Loader2, Camera, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { Loader2, Camera, Trash2 } from 'lucide-react';
 
 export type StudentSettingsProfileState = {
   full_name: string;
@@ -27,7 +27,7 @@ export type StudentSettingsProfileSectionProps = {
   onDeleteAccount: () => void;
 };
 
-export function StudentSettingsProfileSection({
+export const StudentSettingsProfileSection = ({
   isRTL,
   userEmail,
   profile,
@@ -37,7 +37,7 @@ export function StudentSettingsProfileSection({
   onPhotoUpload,
   onSaveProfile,
   onDeleteAccount,
-}: StudentSettingsProfileSectionProps) {
+}: StudentSettingsProfileSectionProps) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +95,9 @@ export function StudentSettingsProfileSection({
             <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm font-medium">{profile.full_name || t('settings.noNameSet')}</p>
               <p className="text-sm text-muted-foreground">{userEmail}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t('settings.clickCameraUpload')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('settings.clickCameraUpload')}
+              </p>
             </div>
           </div>
 
@@ -171,4 +173,4 @@ export function StudentSettingsProfileSection({
       </Card>
     </>
   );
-}
+};

@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import type { ClipboardSourceKind } from '@/services/clipboardEventService';
 import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { ClipboardSourceKind } from '@/services/clipboardEventService';
+import { Textarea } from '@/components/ui/textarea';
 import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
 
 type TrackedTextareaProps = React.ComponentProps<typeof Textarea> & {
@@ -12,17 +12,10 @@ type TrackedTextareaProps = React.ComponentProps<typeof Textarea> & {
 };
 
 export const TrackedTextarea = React.forwardRef<HTMLTextAreaElement, TrackedTextareaProps>(
-  function TrackedTextarea(
-    {
-      clipboardTracking,
-      pasteSourceKind,
-      pasteContextKey,
-      copySourceKind,
-      onPaste,
-      ...props
-    },
-    ref,
-  ) {
+  (
+    { clipboardTracking, pasteSourceKind, pasteContextKey, copySourceKind, onPaste, ...props },
+    ref
+  ) => {
     const zoneKind = copySourceKind ?? pasteSourceKind;
 
     return (
@@ -46,5 +39,5 @@ export const TrackedTextarea = React.forwardRef<HTMLTextAreaElement, TrackedText
         }}
       />
     );
-  },
+  }
 );

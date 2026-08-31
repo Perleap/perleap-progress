@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
 import { legacySingleOptionId } from '@/lib/testMcq';
 
 export const testKeys = {
@@ -39,9 +39,7 @@ export function useStudentTestQuestions(assignmentId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('test_questions')
-        .select(
-          'id, question_text, question_type, options, order_index, allow_multiple_selections',
-        )
+        .select('id, question_text, question_type, options, order_index, allow_multiple_selections')
         .eq('assignment_id', assignmentId!)
         .order('order_index', { ascending: true });
 

@@ -1,4 +1,6 @@
+import { Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { SyllabusWithSections } from '@/types/syllabus';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -7,9 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { SyllabusWithSections } from '@/types/syllabus';
 
 export interface AssignmentCourseOutlineLinkCardProps {
   isRTL: boolean;
@@ -27,7 +27,7 @@ export interface AssignmentCourseOutlineLinkCardProps {
   className?: string;
 }
 
-export function AssignmentCourseOutlineLinkCard({
+export const AssignmentCourseOutlineLinkCard = ({
   isRTL,
   syllabus,
   syllabusLoading,
@@ -38,25 +38,23 @@ export function AssignmentCourseOutlineLinkCard({
   onGradingCategoryIdChange,
   variant = 'card',
   className,
-}: AssignmentCourseOutlineLinkCardProps) {
+}: AssignmentCourseOutlineLinkCardProps) => {
   const { t } = useTranslation();
   const hasSyllabus = !!syllabus;
   const hasSections = (syllabus?.sections?.length ?? 0) > 0;
   const hasCategories = (syllabus?.grading_categories?.length ?? 0) > 0;
   const hasLinkTargets = hasSections || hasCategories;
 
-  const sectionDisplayLabel =
-    !syllabusSectionId
-      ? t('common.none', 'None')
-      : syllabus?.sections.find((s) => s.id === syllabusSectionId)?.title ?? syllabusSectionId;
+  const sectionDisplayLabel = !syllabusSectionId
+    ? t('common.none', 'None')
+    : (syllabus?.sections.find((s) => s.id === syllabusSectionId)?.title ?? syllabusSectionId);
 
-  const categoryDisplayLabel =
-    !gradingCategoryId
-      ? t('common.none', 'None')
-      : (() => {
-          const c = syllabus?.grading_categories.find((x) => x.id === gradingCategoryId);
-          return c ? `${c.name} (${c.weight}%)` : gradingCategoryId;
-        })();
+  const categoryDisplayLabel = !gradingCategoryId
+    ? t('common.none', 'None')
+    : (() => {
+        const c = syllabus?.grading_categories.find((x) => x.id === gradingCategoryId);
+        return c ? `${c.name} (${c.weight}%)` : gradingCategoryId;
+      })();
 
   const sectionLabel =
     variant === 'inline'
@@ -65,10 +63,8 @@ export function AssignmentCourseOutlineLinkCard({
 
   const triggerClass = cn(
     'w-full min-w-0',
-    variant === 'inline'
-      ? 'h-9 rounded-lg text-sm'
-      : 'h-11 rounded-xl',
-    isRTL ? 'text-right' : 'text-left',
+    variant === 'inline' ? 'h-9 rounded-lg text-sm' : 'h-11 rounded-xl',
+    isRTL ? 'text-right' : 'text-left'
   );
 
   const body = (
@@ -91,7 +87,7 @@ export function AssignmentCourseOutlineLinkCard({
             'grid grid-cols-1',
             variant === 'inline'
               ? 'w-fit max-w-full gap-x-2 gap-y-2 md:grid-cols-2 md:gap-x-2 md:[grid-template-columns:minmax(0,12rem)_minmax(0,12rem)]'
-              : 'w-full gap-x-6 gap-y-4 md:grid-cols-2',
+              : 'w-full gap-x-6 gap-y-4 md:grid-cols-2'
           )}
         >
           {hasSections && (
@@ -99,17 +95,19 @@ export function AssignmentCourseOutlineLinkCard({
               className={cn(
                 'space-y-1.5',
                 hasCategories ? '' : 'md:col-span-2',
-                variant === 'inline' && !hasCategories && 'max-w-[12rem]',
+                variant === 'inline' && !hasCategories && 'max-w-[12rem]'
               )}
             >
-              <Label className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}>
+              <Label
+                className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+              >
                 {sectionLabel}
               </Label>
               {lockSyllabusSection && syllabusSectionId ? (
                 <p
                   className={cn(
                     'rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground',
-                    triggerClass,
+                    triggerClass
                   )}
                 >
                   {sectionDisplayLabel}
@@ -117,7 +115,10 @@ export function AssignmentCourseOutlineLinkCard({
               ) : (
                 <Select
                   value={syllabusSectionId || '_none'}
-                  onValueChange={(v) => onSyllabusSectionIdChange(v === '_none' ? '' : v)}
+                  onValueChange={(v: string | null) => {
+                    if (v == null) return;
+                    onSyllabusSectionIdChange(v === '_none' ? '' : v);
+                  }}
                 >
                   <SelectTrigger className={triggerClass} dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectValue placeholder={t('createAssignment.linkToSyllabusModel')}>
@@ -127,7 +128,11 @@ export function AssignmentCourseOutlineLinkCard({
                   <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
                     {syllabus!.sections.map((s) => (
-                      <SelectItem key={s.id} value={s.id} className={isRTL ? 'text-right' : 'text-left'}>
+                      <SelectItem
+                        key={s.id}
+                        value={s.id}
+                        className={isRTL ? 'text-right' : 'text-left'}
+                      >
                         {s.title}
                       </SelectItem>
                     ))}
@@ -141,23 +146,34 @@ export function AssignmentCourseOutlineLinkCard({
               className={cn(
                 'space-y-1.5',
                 hasSections ? '' : 'md:col-span-2',
-                variant === 'inline' && !hasSections && 'max-w-[12rem]',
+                variant === 'inline' && !hasSections && 'max-w-[12rem]'
               )}
             >
-              <Label className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}>
+              <Label
+                className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
+              >
                 {t('syllabus.gradingCategory')}
               </Label>
               <Select
                 value={gradingCategoryId || '_none'}
-                onValueChange={(v) => onGradingCategoryIdChange(v === '_none' ? '' : v)}
+                onValueChange={(v: string | null) => {
+                  if (v == null) return;
+                  onGradingCategoryIdChange(v === '_none' ? '' : v);
+                }}
               >
                 <SelectTrigger className={triggerClass} dir={isRTL ? 'rtl' : 'ltr'}>
-                  <SelectValue placeholder={t('syllabus.selectCategory')}>{categoryDisplayLabel}</SelectValue>
+                  <SelectValue placeholder={t('syllabus.selectCategory')}>
+                    {categoryDisplayLabel}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
                   {syllabus!.grading_categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className={isRTL ? 'text-right' : 'text-left'}>
+                    <SelectItem
+                      key={c.id}
+                      value={c.id}
+                      className={isRTL ? 'text-right' : 'text-left'}
+                    >
                       {c.name} ({c.weight}%)
                     </SelectItem>
                   ))}
@@ -185,4 +201,4 @@ export function AssignmentCourseOutlineLinkCard({
       {body}
     </div>
   );
-}
+};

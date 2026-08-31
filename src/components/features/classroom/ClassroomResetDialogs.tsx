@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,11 +11,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { logAdminEvent } from '@/services/adminAuditService';
+import { matchesTypedConfirm, TypedConfirmInput } from '@/components/shared/TypedConfirmInput';
 import { useClassroomResetPreview, useResetClassroom } from '@/hooks/queries';
+import { logAdminEvent } from '@/services/adminAuditService';
+import { ResetPreviewSummary } from './ResetPreviewSummary';
 
 export type ClassroomResetDialogsProps = {
   classroomId: string;
+  classroomName: string;
   isRTL: boolean;
   confirmOpen: boolean;
   onConfirmOpenChange: (open: boolean) => void;
@@ -26,28 +27,32 @@ export type ClassroomResetDialogsProps = {
   isAppAdmin?: boolean;
 };
 
-export function ClassroomResetDialogs({
+export const ClassroomResetDialogs = ({
   classroomId,
+  classroomName,
   isRTL,
   confirmOpen,
   onConfirmOpenChange,
   assignmentCount,
   studentCount,
   isAppAdmin,
-}: ClassroomResetDialogsProps) {
+}: ClassroomResetDialogsProps) => {
   const { t } = useTranslation();
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
 
   const previewEnabled = confirmOpen || resetDialogOpen;
-  const { data: resetPreview, isLoading: resetPreviewLoading, isError: resetPreviewError } =
-    useClassroomResetPreview(classroomId, previewEnabled);
+  const {
+    data: resetPreview,
+    isLoading: resetPreviewLoading,
+    isError: resetPreviewError,
+  } = useClassroomResetPreview(classroomId, previewEnabled);
   const resetClassroomMutation = useResetClassroom();
 
   const hasResettableData =
     (resetPreview?.active_enrollments ?? studentCount) > 0 || (resetPreview?.submissions ?? 0) > 0;
 
-  const resetTextMatches = resetConfirmText.trim().toLowerCase() === 'confirm';
+  const resetTextMatches = matchesTypedConfirm(resetConfirmText, classroomName);
 
   const handleResetDialogOpenChange = (open: boolean) => {
     setResetDialogOpen(open);
@@ -74,7 +79,7 @@ export function ClassroomResetDialogs({
         t('classroomDetail.resetDialog.success', {
           students: result.deleted.enrollments_unenrolled,
           submissions: result.deleted.submissions,
-        }),
+        })
       );
       handleResetDialogOpenChange(false);
     } catch (error) {
@@ -88,13 +93,17 @@ export function ClassroomResetDialogs({
       <AlertDialog open={confirmOpen} onOpenChange={onConfirmOpenChange}>
         <AlertDialogContent className="rounded-xl max-w-md" dir={isRTL ? 'rtl' : 'ltr'}>
           <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
-            <AlertDialogTitle>{t('classroomDetail.resetDialog.confirmPrompt.title')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t('classroomDetail.resetDialog.confirmPrompt.title')}
+            </AlertDialogTitle>
             <AlertDialogDescription className={isRTL ? 'text-right' : 'text-left'}>
               {t('classroomDetail.resetDialog.confirmPrompt.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter
-            className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}
+            className={
+              isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'
+            }
           >
             <AlertDialogCancel className="mt-0">
               {t('classroomDetail.resetDialog.confirmPrompt.cancel')}
@@ -117,74 +126,40 @@ export function ClassroomResetDialogs({
         <AlertDialogContent className="rounded-xl max-w-lg" dir={isRTL ? 'rtl' : 'ltr'}>
           <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
             <AlertDialogTitle>{t('classroomDetail.resetDialog.title')}</AlertDialogTitle>
-            <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'} text-sm text-muted-foreground`}>
+            <div
+              className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'} text-sm text-muted-foreground`}
+            >
               <p>{t('classroomDetail.resetDialog.description')}</p>
 
-              {resetPreviewLoading ? (
-                <p>{t('classroomDetail.resetDialog.previewLoading')}</p>
-              ) : resetPreviewError ? (
-                <p className="text-destructive">{t('classroomDetail.resetDialog.previewError')}</p>
-              ) : (
-                <>
-                  <div>
-                    <p className="font-medium text-foreground mb-1">
-                      {t('classroomDetail.resetDialog.willRemoveTitle')}
-                    </p>
-                    <ul
-                      className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}
-                    >
-                      <li>
-                        {t('classroomDetail.resetDialog.willRemoveStudents', {
-                          count: resetPreview?.active_enrollments ?? studentCount,
-                        })}
-                      </li>
-                      <li>
-                        {t('classroomDetail.resetDialog.willRemoveSubmissions', {
-                          count: resetPreview?.submissions ?? 0,
-                        })}
-                      </li>
-                      <li>{t('classroomDetail.resetDialog.willRemoveProgress')}</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground mb-1">
-                      {t('classroomDetail.resetDialog.willKeepTitle')}
-                    </p>
-                    <ul
-                      className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}
-                    >
-                      <li>{t('classroomDetail.resetDialog.willKeepCourse')}</li>
-                      <li>
-                        {t('classroomDetail.resetDialog.willKeepAssignments', {
-                          count: resetPreview?.assignments_preserved ?? assignmentCount,
-                        })}
-                      </li>
-                      <li>{t('classroomDetail.resetDialog.willKeepOutline')}</li>
-                    </ul>
-                  </div>
-                </>
-              )}
+              <ResetPreviewSummary
+                resetPreview={resetPreview ?? undefined}
+                resetPreviewLoading={resetPreviewLoading}
+                resetPreviewError={resetPreviewError}
+                studentCount={studentCount}
+                assignmentCount={assignmentCount}
+                isRTL={isRTL}
+                t={t}
+              />
 
-              <div className="space-y-2 pt-2">
-                <Label htmlFor="reset-confirm-text">{t('classroomDetail.resetDialog.typeToConfirm')}</Label>
-                <Input
+              <div className="pt-2">
+                <TypedConfirmInput
                   id="reset-confirm-text"
                   value={resetConfirmText}
-                  onChange={(e) => setResetConfirmText(e.target.value)}
+                  onChange={setResetConfirmText}
+                  expectedText={classroomName}
+                  label={t('classroomDetail.resetDialog.typeToConfirm')}
                   placeholder={t('classroomDetail.resetDialog.confirmPlaceholder')}
-                  autoComplete="off"
+                  mismatchMessage={t('classroomDetail.resetDialog.confirmMismatch')}
                   disabled={resetClassroomMutation.isPending}
+                  isRTL={isRTL}
                 />
-                {resetConfirmText.trim().length > 0 && !resetTextMatches && (
-                  <p className="text-xs text-destructive">
-                    {t('classroomDetail.resetDialog.confirmMismatch')}
-                  </p>
-                )}
               </div>
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter
-            className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}
+            className={
+              isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'
+            }
           >
             <AlertDialogCancel disabled={resetClassroomMutation.isPending} className="mt-0">
               {t('classroomDetail.resetDialog.cancel')}
@@ -209,4 +184,4 @@ export function ClassroomResetDialogs({
       </AlertDialog>
     </>
   );
-}
+};

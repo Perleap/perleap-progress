@@ -1,4 +1,7 @@
-import { AssignmentWizardDialog, type AssignmentForWizardEdit } from '@/components/features/assignment/wizard';
+import {
+  AssignmentWizardDialog,
+  type AssignmentForWizardEdit,
+} from '@/components/features/assignment/wizard';
 
 interface EditAssignmentDialogProps {
   open: boolean;
@@ -7,8 +10,19 @@ interface EditAssignmentDialogProps {
   onSuccess: () => void;
 }
 
-export function EditAssignmentDialog({ open, onOpenChange, assignment, onSuccess }: EditAssignmentDialogProps) {
+export const EditAssignmentDialog = ({
+  open,
+  onOpenChange,
+  assignment,
+  onSuccess,
+}: EditAssignmentDialogProps) => {
   return (
-    <AssignmentWizardDialog mode="edit" open={open} onOpenChange={onOpenChange} assignment={assignment} onSuccess={onSuccess} />
+    <AssignmentWizardDialog
+      mode="edit"
+      open={open}
+      onOpenChange={onOpenChange}
+      assignment={assignment}
+      onSuccess={onSuccess}
+    />
   );
-}
+};

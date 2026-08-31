@@ -1,5 +1,8 @@
+import type {
+  StudentOnboardingFormData,
+  TeacherOnboardingFormData,
+} from '@/components/features/onboarding';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudentOnboardingFormData, TeacherOnboardingFormData } from '@/components/features/onboarding';
 
 export async function cleanupOrphanedProfilesByEmail(email: string): Promise<void> {
   await supabase.rpc('cleanup_orphaned_profiles_by_email', { p_email: email });
@@ -8,7 +11,7 @@ export async function cleanupOrphanedProfilesByEmail(email: string): Promise<voi
 export async function uploadOnboardingAvatar(
   userId: string,
   file: File,
-  bucket: 'student-avatars' | 'teacher-avatars',
+  bucket: 'student-avatars' | 'teacher-avatars'
 ): Promise<string | null> {
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}/${Date.now()}.${fileExt}`;
@@ -22,7 +25,7 @@ export function buildStudentOnboardingProfile(
   email: string | undefined,
   formData: StudentOnboardingFormData,
   language: string,
-  avatarPath: string | null,
+  avatarPath: string | null
 ) {
   return {
     user_id: userId,
@@ -55,10 +58,13 @@ export async function insertStudentOnboardingProfile(
   email: string | undefined,
   formData: StudentOnboardingFormData,
   language: string,
-  avatarPath: string | null,
+  avatarPath: string | null
 ) {
   const profileData = buildStudentOnboardingProfile(userId, email, formData, language, avatarPath);
-  return supabase.from('student_profiles').insert(profileData).select();
+  return supabase
+    .from('student_profiles')
+    .insert({ ...profileData, email: email ?? '' })
+    .select();
 }
 
 export function buildTeacherOnboardingProfile(
@@ -66,7 +72,7 @@ export function buildTeacherOnboardingProfile(
   email: string | undefined,
   formData: TeacherOnboardingFormData,
   language: string,
-  avatarPath: string | null,
+  avatarPath: string | null
 ) {
   return {
     user_id: userId,
@@ -90,8 +96,11 @@ export async function insertTeacherOnboardingProfile(
   email: string | undefined,
   formData: TeacherOnboardingFormData,
   language: string,
-  avatarPath: string | null,
+  avatarPath: string | null
 ) {
   const profileData = buildTeacherOnboardingProfile(userId, email, formData, language, avatarPath);
-  return supabase.from('teacher_profiles').insert(profileData).select();
+  return supabase
+    .from('teacher_profiles')
+    .insert({ ...profileData, email: email ?? '' })
+    .select();
 }

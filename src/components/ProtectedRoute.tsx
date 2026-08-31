@@ -2,8 +2,8 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { useAuth } from '@/contexts/useAuth';
 import { USER_ROLES } from '@/config/constants';
+import { useAuth } from '@/contexts/useAuth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -195,7 +195,9 @@ const ProtectedRoute = ({
   if (requireAppAdmin) {
     const r = user.user_metadata?.role;
     if (r !== USER_ROLES.ADMIN) {
-      return <Navigate to={r === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />;
+      return (
+        <Navigate to={r === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />
+      );
     }
   }
 

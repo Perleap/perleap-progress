@@ -1,26 +1,26 @@
 import type { Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
+import type { PilotReportAnalyticsData } from '@/lib/pilotReport/computePilotReportDataHash';
+import type { PilotCohortSummary, PilotParticipantRow } from '@/lib/pilotReport/types';
+import type { HardSkillAssessment } from '@/types/hard-skills';
 import { build5dNarrativeEvidence } from '@/lib/analytics5dEvidence';
-import { runPool } from '@/lib/asyncPool';
 import {
   filterReportableAssignments,
   getAllowedAssignmentIds,
   scopedStudentLatestScores,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
+import { runPool } from '@/lib/asyncPool';
 import {
   buildCohortOutcome,
   buildParticipantRow,
   countCompletedAssignmentsInScope,
   fillRecommendationFallback,
 } from '@/lib/pilotReport/buildPilotReportData';
-import type { PilotReportAnalyticsData } from '@/lib/pilotReport/computePilotReportDataHash';
-import type { PilotCohortSummary, PilotParticipantRow } from '@/lib/pilotReport/types';
 import {
   invokePilotCohortSummary,
   invokePilotReadiness,
   type PilotParticipantAssessmentResult,
 } from '@/services/pilotReadinessService';
-import type { HardSkillAssessment } from '@/types/hard-skills';
 
 function buildHardSkillsSummary(hardSkills: HardSkillAssessment[]): string {
   if (hardSkills.length === 0) return '';
@@ -60,7 +60,7 @@ export type GeneratePilotReportResult =
     };
 
 export async function generatePilotReport(
-  input: GeneratePilotReportInput,
+  input: GeneratePilotReportInput
 ): Promise<GeneratePilotReportResult> {
   const {
     classroomId,
@@ -77,7 +77,7 @@ export async function generatePilotReport(
   const effectiveAssignmentIds = getAllowedAssignmentIds(
     reportableAssignments,
     scopeModule,
-    scopeAssignment,
+    scopeAssignment
   );
 
   if (effectiveAssignmentIds.length === 0) {
@@ -110,12 +110,12 @@ export async function generatePilotReport(
       const completedInScope = countCompletedAssignmentsInScope(
         st.id,
         st.submissions ?? [],
-        effectiveAssignmentIds,
+        effectiveAssignmentIds
       );
       const scores = scopedStudentLatestScores(
         st.snapshots,
         analyticsData.rawSubmissions,
-        effectiveAssignmentIds,
+        effectiveAssignmentIds
       );
       const evidence = build5dNarrativeEvidence({
         context: 'student_avg',
@@ -133,7 +133,7 @@ export async function generatePilotReport(
         fiveDScores: scores,
         completionSummary: `${completedInScope} of ${denom} scoped assignments completed`,
         hardSkillsSummary: buildHardSkillsSummary(
-          ((st as { hardSkills?: HardSkillAssessment[] }).hardSkills ?? []) as HardSkillAssessment[],
+          ((st as { hardSkills?: HardSkillAssessment[] }).hardSkills ?? []) as HardSkillAssessment[]
         ),
         evidenceText: evidence.evidenceText || undefined,
       });
@@ -152,11 +152,11 @@ export async function generatePilotReport(
       completedInScope: countCompletedAssignmentsInScope(
         st.id,
         st.submissions ?? [],
-        effectiveAssignmentIds,
+        effectiveAssignmentIds
       ),
       assignmentsInScope: denom,
       assessment: assessments[i],
-    }),
+    })
   );
 
   const cohortOutcome = buildCohortOutcome(rows);
@@ -179,7 +179,10 @@ export async function generatePilotReport(
     } catch (e) {
       console.error('Pilot cohort summary failed', e);
       summary = {
-        recommendation: fillRecommendationFallback(recommendationFallback, cohortOutcome.readinessCounts),
+        recommendation: fillRecommendationFallback(
+          recommendationFallback,
+          cohortOutcome.readinessCounts
+        ),
         strongestCapability: '',
         mainGap: '',
         topNextAction: '',

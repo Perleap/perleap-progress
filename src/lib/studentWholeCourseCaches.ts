@@ -1,23 +1,23 @@
+import type { AssignmentRow } from '@/lib/moduleFlow';
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
+import type { Assignment } from '@/types';
+import type { ModuleFlowStep, SyllabusWithSections } from '@/types/syllabus';
 import type { QueryClient } from '@tanstack/react-query';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import {
   assignmentFlowCompleteKeys,
   moduleFlowKeys,
   prefetchModuleFlowStepsBulk,
   studentFlowProgressKeys,
 } from '@/hooks/queries/useModuleFlowQueries';
-import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
-import type { AssignmentRow } from '@/lib/moduleFlow';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
-import { deriveStudentTimelineFlowPrefetchIndices } from '@/lib/studentTimelineFlowDerive';
-import { prefetchStudentTimelineFlowProgressCaches } from '@/lib/studentTimelinePrefetch';
 import {
   STUDENT_TIMELINE_CACHE_GC_MS,
   STUDENT_TIMELINE_CACHE_STALE_MS,
 } from '@/lib/studentTimelineCache';
+import { deriveStudentTimelineFlowPrefetchIndices } from '@/lib/studentTimelineFlowDerive';
+import { prefetchStudentTimelineFlowProgressCaches } from '@/lib/studentTimelinePrefetch';
 import { computeWholeCourseCurriculumAggregate } from '@/lib/wholeCourseCurriculumCompute';
-import type { Assignment } from '@/types';
-import type { ModuleFlowStep, SyllabusWithSections } from '@/types/syllabus';
 import { getClassroomAssignments } from '@/services/assignmentService';
 import { getSyllabusByClassroom } from '@/services/syllabusService';
 
@@ -36,7 +36,7 @@ export type StudentWholeCourseClassroomResult = {
 export async function ensureStudentWholeCourseCachesForClassroom(
   queryClient: QueryClient,
   classroomId: string,
-  studentId: string,
+  studentId: string
 ): Promise<StudentWholeCourseClassroomResult> {
   await queryClient.fetchQuery({
     queryKey: syllabusKeys.byClassroom(classroomId),
@@ -61,11 +61,11 @@ export async function ensureStudentWholeCourseCachesForClassroom(
   });
 
   const syllabus = queryClient.getQueryData<SyllabusWithSections | null>(
-    syllabusKeys.byClassroom(classroomId),
+    syllabusKeys.byClassroom(classroomId)
   );
 
   const rawAssignments = (queryClient.getQueryData<Assignment[]>(
-    assignmentKeys.listByClassroom(classroomId, studentId),
+    assignmentKeys.listByClassroom(classroomId, studentId)
   ) ?? []) as unknown as AssignmentRow[];
 
   const hasPublished = Boolean(syllabus?.status === 'published');
@@ -78,7 +78,7 @@ export async function ensureStudentWholeCourseCachesForClassroom(
       queryClient,
       syllabusSectionIds,
       STUDENT_TIMELINE_CACHE_STALE_MS,
-      STUDENT_TIMELINE_CACHE_GC_MS,
+      STUDENT_TIMELINE_CACHE_GC_MS
     );
     await prefetchStudentTimelineFlowProgressCaches(queryClient, classroomId, studentId);
 
@@ -112,7 +112,7 @@ export async function ensureStudentWholeCourseCachesForClassroom(
     const progressByStep =
       (allStepIds.length > 0
         ? queryClient.getQueryData<Record<string, boolean>>(
-            studentFlowProgressKeys.byStudentSteps(studentId, allStepIds),
+            studentFlowProgressKeys.byStudentSteps(studentId, allStepIds)
           )
         : undefined) ?? {};
 
@@ -122,10 +122,7 @@ export async function ensureStudentWholeCourseCachesForClassroom(
             completedMap: Record<string, boolean>;
             hasAnyRowMap: Record<string, boolean>;
           }>(
-            assignmentFlowCompleteKeys.bulkByStudentAssignments(
-              studentId,
-              assignmentIdsSortedJoin,
-            ),
+            assignmentFlowCompleteKeys.bulkByStudentAssignments(studentId, assignmentIdsSortedJoin)
           )
         : undefined;
 

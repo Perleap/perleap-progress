@@ -16,7 +16,7 @@ const baseA = (id: string) => ({
 });
 
 function minInput(
-  overrides: Partial<Build5dNarrativeEvidenceInput> = {},
+  overrides: Partial<Build5dNarrativeEvidenceInput> = {}
 ): Build5dNarrativeEvidenceInput {
   return {
     context: 'class_avg',
@@ -78,7 +78,7 @@ describe('hashEvidenceKey', () => {
 describe('build5dNarrativeEvidence', () => {
   it('returns empty for no allowed ids', () => {
     const r = _build5dNarrativeEvidenceImpl(
-      minInput({ allowedAssignmentIds: [], assignmentRefs: [] }),
+      minInput({ allowedAssignmentIds: [], assignmentRefs: [] })
     );
     expect(r.evidenceText).toBe('');
     expect(r.sourceCount).toBe(0);
@@ -107,7 +107,7 @@ describe('build5dNarrativeEvidence', () => {
             ],
           },
         ],
-      }),
+      })
     );
     expect(r.evidenceText.length).toBeLessThanOrEqual(EVIDENCE_MAX_TOTAL_CHARS);
   });
@@ -148,7 +148,7 @@ describe('build5dNarrativeEvidence', () => {
             ],
           },
         ],
-      }),
+      })
     );
     expect(r.evidenceText).toContain('fa');
     expect(r.evidenceText).toContain('fb');
@@ -176,7 +176,7 @@ describe('build5dNarrativeEvidence', () => {
             ],
           },
         ],
-      }),
+      })
     );
     expect(r.sourceCount).toBe(0);
     expect(r.evidenceText).toContain('## Assignment context');
@@ -228,7 +228,7 @@ describe('build5dNarrativeEvidence', () => {
         allowedAssignmentIds: ['a1', 'a2'],
         assignmentRefs: [baseA('a1'), { ...baseA('a2'), id: 'a2' }],
         allStudents: students,
-      }),
+      })
     );
     expect(r.evidenceText).toContain('only-in-second-assignment');
     expect(r.sourceCount).toBeGreaterThan(0);
@@ -240,7 +240,10 @@ describe('build5dNarrativeEvidence', () => {
         context: 'module_compare',
         compareModuleId: 'sec1',
         allowedAssignmentIds: ['a1', 'a2'],
-        assignmentRefs: [baseA('a1'), { ...baseA('a2'), id: 'a2', syllabusSectionId: 'sec2' as const }],
+        assignmentRefs: [
+          baseA('a1'),
+          { ...baseA('a2'), id: 'a2', syllabusSectionId: 'sec2' as const },
+        ],
         allStudents: [
           {
             id: 's1',
@@ -271,7 +274,7 @@ describe('build5dNarrativeEvidence', () => {
             ],
           },
         ],
-      }),
+      })
     );
     expect(r.evidenceText).toContain('keep-sec1');
     expect(r.evidenceText).not.toContain('drop-sec2');
@@ -301,7 +304,7 @@ describe('build5dNarrativeEvidence', () => {
             ],
           },
         ],
-      }),
+      })
     );
     expect(r.sourceCount).toBe(1);
     expect(r.evidenceText).toContain('Teacher note:');

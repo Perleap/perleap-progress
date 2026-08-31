@@ -1,7 +1,3 @@
-import * as React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useNavigateBack } from '@/hooks/useNavigateBack';
-import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Settings,
@@ -16,6 +12,35 @@ import {
   ChevronRight,
   Home,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { ClassroomSection } from '@/config/classroomSections';
+import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import {
   Sidebar,
   SidebarContent,
@@ -29,38 +54,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { useAuth } from '@/contexts/useAuth';
-import { useTheme } from 'next-themes';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { USER_ROLES } from '@/config/constants';
-
-import { ClassroomSection } from '@/config/classroomSections';
-import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 import { cn } from '@/lib/utils';
+import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 interface ClassroomSidebarProps {
   classroomName?: string;
@@ -73,7 +72,7 @@ interface ClassroomSidebarProps {
   onBack?: () => void;
 }
 
-export function ClassroomSidebar({
+export const ClassroomSidebar = ({
   classroomName,
   classroomSubject,
   activeSection,
@@ -81,7 +80,7 @@ export function ClassroomSidebar({
   sections,
   hideGlobalNav = false,
   onBack,
-}: ClassroomSidebarProps) {
+}: ClassroomSidebarProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile, signOut, user } = useAuth();
@@ -152,7 +151,7 @@ export function ClassroomSidebar({
               className={cn(
                 'flex w-full min-w-0 items-center gap-1 rounded-lg p-1',
                 state === 'expanded' && isRTL && 'flex-row-reverse',
-                state === 'collapsed' && 'flex-col items-center justify-center gap-0.5 py-1.5',
+                state === 'collapsed' && 'flex-col items-center justify-center gap-0.5 py-1.5'
               )}
             >
               <SidebarMenuButton
@@ -188,12 +187,16 @@ export function ClassroomSidebar({
                   className={cn(
                     'grid min-w-0 flex-1 text-sm leading-tight',
                     isRTL ? 'text-right' : 'text-left',
-                    sidebarHeaderSecondLine === null ? 'grid-rows-1' : '',
+                    sidebarHeaderSecondLine === null ? 'grid-rows-1' : ''
                   )}
                 >
-                  <span className="truncate font-semibold">{classroomName || t('nav.classroom')}</span>
+                  <span className="truncate font-semibold">
+                    {classroomName || t('nav.classroom')}
+                  </span>
                   {sidebarHeaderSecondLine !== null && (
-                    <span className="truncate text-xs text-muted-foreground">{sidebarHeaderSecondLine}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {sidebarHeaderSecondLine}
+                    </span>
                   )}
                 </div>
               ) : null}
@@ -219,7 +222,9 @@ export function ClassroomSidebar({
                       className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isDashboardActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                     >
                       <LayoutDashboard className="size-5 group-data-[collapsible=icon]:size-5" />
-                      <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.dashboard')}</span>
+                      <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                        {t('nav.dashboard')}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {isTeacher && (
@@ -231,7 +236,9 @@ export function ClassroomSidebar({
                         className={`min-h-[48px] transition-all duration-200 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg ${isPlannerActive ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
                       >
                         <Calendar className="size-5 group-data-[collapsible=icon]:size-5" />
-                        <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.planner')}</span>
+                        <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                          {t('nav.planner')}
+                        </span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -271,7 +278,9 @@ export function ClassroomSidebar({
                     }`}
                   >
                     <section.icon className="size-5 group-data-[collapsible=icon]:size-5" />
-                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{section.title}</span>
+                    <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                      {section.title}
+                    </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -288,7 +297,7 @@ export function ClassroomSidebar({
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50',
                 isRTL && 'flex-row-reverse',
-                'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
+                'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0'
               )}
             >
               <Avatar className="h-8 w-8 shrink-0 rounded-lg">
@@ -351,7 +360,7 @@ export function ClassroomSidebar({
         <div
           className={cn(
             'flex items-center justify-between gap-2 px-1',
-            'group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center',
+            'group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center'
           )}
         >
           <Button
@@ -362,11 +371,7 @@ export function ClassroomSidebar({
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
           >
-            {theme === 'dark' ? (
-              <Sun className="size-5" />
-            ) : (
-              <Moon className="size-5" />
-            )}
+            {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </Button>
           <Button
             type="button"
@@ -403,4 +408,4 @@ export function ClassroomSidebar({
       </AlertDialog>
     </Sidebar>
   );
-}
+};

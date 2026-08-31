@@ -146,19 +146,18 @@
   }
 
   /* Auto-detect text direction based on content for all inputs */
-  input[type="text"],
-  input[type="email"],
-  input[type="search"],
-  input[type="password"],
-  input[type="url"],
-  input[type="tel"],
+  input[type='text'],
+  input[type='email'],
+  input[type='search'],
+  input[type='password'],
+  input[type='url'],
+  input[type='tel'],
   textarea {
     direction: auto;
   }
 }
 
 @layer utilities {
-
   /* Typography utilities */
   .text-heading {
     @apply font-semibold tracking-tight;
@@ -212,7 +211,6 @@
   }
 
   @keyframes gradient-shift {
-
     0%,
     100% {
       background-position: 0% 50%;
@@ -336,7 +334,8 @@
 /* KaTeX Font Overrides - Use fonts from public directory for production compatibility */
 @font-face {
   font-family: 'KaTeX_Main';
-  src: url('/fonts/katex/KaTeX_Main-Regular.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Main-Regular.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Main-Regular.woff') format('woff'),
     url('/fonts/katex/KaTeX_Main-Regular.ttf') format('truetype');
   font-weight: normal;
@@ -345,7 +344,8 @@
 
 @font-face {
   font-family: 'KaTeX_Main';
-  src: url('/fonts/katex/KaTeX_Main-Bold.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Main-Bold.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Main-Bold.woff') format('woff'),
     url('/fonts/katex/KaTeX_Main-Bold.ttf') format('truetype');
   font-weight: bold;
@@ -354,7 +354,8 @@
 
 @font-face {
   font-family: 'KaTeX_Main';
-  src: url('/fonts/katex/KaTeX_Main-Italic.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Main-Italic.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Main-Italic.woff') format('woff'),
     url('/fonts/katex/KaTeX_Main-Italic.ttf') format('truetype');
   font-weight: normal;
@@ -363,7 +364,8 @@
 
 @font-face {
   font-family: 'KaTeX_Math';
-  src: url('/fonts/katex/KaTeX_Math-Italic.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Math-Italic.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Math-Italic.woff') format('woff'),
     url('/fonts/katex/KaTeX_Math-Italic.ttf') format('truetype');
   font-weight: normal;
@@ -372,7 +374,8 @@
 
 @font-face {
   font-family: 'KaTeX_AMS';
-  src: url('/fonts/katex/KaTeX_AMS-Regular.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_AMS-Regular.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_AMS-Regular.woff') format('woff'),
     url('/fonts/katex/KaTeX_AMS-Regular.ttf') format('truetype');
   font-weight: normal;
@@ -381,7 +384,8 @@
 
 @font-face {
   font-family: 'KaTeX_Size1';
-  src: url('/fonts/katex/KaTeX_Size1-Regular.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Size1-Regular.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Size1-Regular.woff') format('woff'),
     url('/fonts/katex/KaTeX_Size1-Regular.ttf') format('truetype');
   font-weight: normal;
@@ -390,7 +394,8 @@
 
 @font-face {
   font-family: 'KaTeX_Size2';
-  src: url('/fonts/katex/KaTeX_Size2-Regular.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Size2-Regular.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Size2-Regular.woff') format('woff'),
     url('/fonts/katex/KaTeX_Size2-Regular.ttf') format('truetype');
   font-weight: normal;
@@ -399,7 +404,8 @@
 
 @font-face {
   font-family: 'KaTeX_Size3';
-  src: url('/fonts/katex/KaTeX_Size3-Regular.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Size3-Regular.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Size3-Regular.woff') format('woff'),
     url('/fonts/katex/KaTeX_Size3-Regular.ttf') format('truetype');
   font-weight: normal;
@@ -408,17 +414,16 @@
 
 @font-face {
   font-family: 'KaTeX_Size4';
-  src: url('/fonts/katex/KaTeX_Size4-Regular.woff2') format('woff2'),
+  src:
+    url('/fonts/katex/KaTeX_Size4-Regular.woff2') format('woff2'),
     url('/fonts/katex/KaTeX_Size4-Regular.woff') format('woff'),
     url('/fonts/katex/KaTeX_Size4-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
-
-
 /* RTL Sidebar Support */
-.rtl-sidebar [data-sidebar="sidebar"] {
+.rtl-sidebar [data-sidebar='sidebar'] {
   left: auto;
   right: 0;
 }
@@ -431,24 +436,24 @@
   transition: none !important;
 }
 
-.rtl-sidebar [data-sidebar="sidebar"][data-state="collapsed"] {
+.rtl-sidebar [data-sidebar='sidebar'][data-state='collapsed'] {
   left: auto;
   right: calc(var(--sidebar-width-icon) * -1);
 }
 
-.rtl-sidebar [data-sidebar="inset"] {
+.rtl-sidebar [data-sidebar='inset'] {
   margin-left: 0;
   margin-right: var(--sidebar-width);
 }
 
-.rtl-sidebar [data-sidebar="inset"][data-sidebar-state="collapsed"] {
+.rtl-sidebar [data-sidebar='inset'][data-sidebar-state='collapsed'] {
   margin-left: 0;
   margin-right: var(--sidebar-width-icon);
 }
 
 /* Mobile RTL sidebar */
 @media (max-width: 768px) {
-  .rtl-sidebar [data-sidebar="inset"] {
+  .rtl-sidebar [data-sidebar='inset'] {
     margin-right: 0;
   }
 }

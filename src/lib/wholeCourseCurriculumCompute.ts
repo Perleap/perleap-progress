@@ -1,12 +1,12 @@
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import type { Assignment } from '@/types';
+import type { ModuleFlowStep, SyllabusWithSections } from '@/types/syllabus';
 import { aggregateCurriculumStepProgress } from '@/lib/curriculumStepProgress';
 import {
   isLiveSessionAssignmentType,
   linkedAssignmentsVisibleInModuleFlow,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
-import type { ModuleFlowStep, SyllabusWithSections } from '@/types/syllabus';
 
 export type WholeCourseComputationResult = {
   done: number;
@@ -19,11 +19,8 @@ export type WholeCourseComputationResult = {
 export function buildLinkedAssignmentsMapWholeCourse(
   syllabusComputationEnabled: boolean,
   rawAssignments: Assignment[],
-  moduleFlowBulk: Record<string, ModuleFlowStep[]>,
-): Record<
-  string,
-  Array<{ id: string; title: string; type: string; due_at: string | null }>
-> {
+  moduleFlowBulk: Record<string, ModuleFlowStep[]>
+): Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>> {
   const map: Record<
     string,
     Array<{ id: string; title: string; type: string; due_at: string | null }>
@@ -71,7 +68,7 @@ export function computeWholeCourseCurriculumAggregate(opts: {
   const linkedAssignmentsMap = buildLinkedAssignmentsMapWholeCourse(
     true,
     rawAssignments as Assignment[],
-    moduleFlowBulk,
+    moduleFlowBulk
   );
 
   const aggregate = aggregateCurriculumStepProgress({

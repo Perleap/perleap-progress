@@ -3,8 +3,8 @@
  * Replaces animate-pulse with GSAP animation for smoother loading states
  */
 
-import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface GsapSkeletonProps {
@@ -15,7 +15,7 @@ interface GsapSkeletonProps {
 /**
  * GSAP-animated skeleton loader
  */
-export function GsapSkeleton({ className, variant = 'default' }: GsapSkeletonProps) {
+export const GsapSkeleton = ({ className, variant = 'default' }: GsapSkeletonProps) => {
   const skeletonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,29 +45,26 @@ export function GsapSkeleton({ className, variant = 'default' }: GsapSkeletonPro
     button: 'h-10 w-24 rounded-lg',
   };
 
-  return (
-    <div
-      ref={skeletonRef}
-      className={cn(
-        'bg-muted',
-        variantClasses[variant],
-        className
-      )}
-    />
-  );
-}
+  return <div ref={skeletonRef} className={cn('bg-muted', variantClasses[variant], className)} />;
+};
 
 /**
  * Skeleton card for dashboard loading states
  */
-export function SkeletonCard({ className }: { className?: string }) {
+export const SkeletonCard = ({ className }: { className?: string }) => {
   return <GsapSkeleton variant="card" className={className} />;
-}
+};
 
 /**
  * Multiple skeleton cards for grid layouts
  */
-export function SkeletonCardGrid({ count = 4, className }: { count?: number; className?: string }) {
+export const SkeletonCardGrid = ({
+  count = 4,
+  className,
+}: {
+  count?: number;
+  className?: string;
+}) => {
   return (
     <div className={cn('grid sm:grid-cols-2 gap-6', className)}>
       {Array.from({ length: count }).map((_, i) => (
@@ -75,19 +72,25 @@ export function SkeletonCardGrid({ count = 4, className }: { count?: number; cla
       ))}
     </div>
   );
-}
+};
 
 /**
  * Skeleton row for list loading states
  */
-export function SkeletonRow({ className }: { className?: string }) {
+export const SkeletonRow = ({ className }: { className?: string }) => {
   return <GsapSkeleton className={cn('h-24 rounded-xl', className)} />;
-}
+};
 
 /**
  * Multiple skeleton rows for list layouts
  */
-export function SkeletonRowList({ count = 3, className }: { count?: number; className?: string }) {
+export const SkeletonRowList = ({
+  count = 3,
+  className,
+}: {
+  count?: number;
+  className?: string;
+}) => {
   return (
     <div className={cn('space-y-3', className)}>
       {Array.from({ length: count }).map((_, i) => (
@@ -95,8 +98,4 @@ export function SkeletonRowList({ count = 3, className }: { count?: number; clas
       ))}
     </div>
   );
-}
-
-
-
-
+};

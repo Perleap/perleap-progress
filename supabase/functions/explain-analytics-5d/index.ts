@@ -20,6 +20,7 @@ import {
   authFailureToResponse,
   requireAuth,
 } from '../_shared/authorizeResource.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 
 
 type FiveD = {
@@ -56,6 +57,11 @@ serve(async (req) => {
     const auth = await requireAuth(req);
     if ('status' in auth) {
       return authFailureToResponse(auth, corsHeaders);
+    }
+
+    const rateLimit = await checkRateLimit(auth.user.id, 'explain-analytics-5d');
+    if (rateLimit) {
+      return rateLimitFailureToResponse(rateLimit, corsHeaders);
     }
 
     const supabase = createSupabaseClient();

@@ -2,10 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNuanceUnderstandingCueEvents } from '@/hooks/queries';
 
-function summarizeSignal(
-  codes: string[] | undefined,
-  t: (key: string) => string,
-): string {
+function summarizeSignal(codes: string[] | undefined, t: (key: string) => string): string {
   if (!codes || codes.length === 0) return t('nuance.cueDetail.kind.unknown');
   if (codes.some((c) => c.includes('strong'))) return t('nuance.cueDetail.kind.strong');
   if (codes.some((c) => c.includes('weak'))) return t('nuance.cueDetail.kind.weak');
@@ -20,18 +17,18 @@ interface NuanceUnderstandingCuePanelProps {
   assignmentTitleMap: Map<string, string>;
 }
 
-export function NuanceUnderstandingCuePanel({
+export const NuanceUnderstandingCuePanel = ({
   studentId,
   assignmentScopeIds,
   isExpanded,
   assignmentTitleMap,
-}: NuanceUnderstandingCuePanelProps) {
+}: NuanceUnderstandingCuePanelProps) => {
   const { t, i18n } = useTranslation();
-  const { data: events, isLoading, isError } = useNuanceUnderstandingCueEvents(
-    studentId,
-    assignmentScopeIds,
-    isExpanded,
-  );
+  const {
+    data: events,
+    isLoading,
+    isError,
+  } = useNuanceUnderstandingCueEvents(studentId, assignmentScopeIds, isExpanded);
 
   if (!isExpanded) return null;
 
@@ -68,7 +65,7 @@ export function NuanceUnderstandingCuePanel({
       <p className="text-[10px] text-muted-foreground mb-2">
         {t(
           'nuance.cueDetail.privacy',
-          'We never store the message text. Times and turn index help you place the cue in the activity.',
+          'We never store the message text. Times and turn index help you place the cue in the activity.'
         )}
       </p>
       <div className="overflow-x-auto rounded-md border border-border/80 bg-background/50 text-xs">
@@ -92,7 +89,9 @@ export function NuanceUnderstandingCuePanel({
           <tbody>
             {events.map((ev) => {
               const meta = ev.metadata || {};
-              const reasonCodes = Array.isArray(meta.reason_codes) ? (meta.reason_codes as string[]) : [];
+              const reasonCodes = Array.isArray(meta.reason_codes)
+                ? (meta.reason_codes as string[])
+                : [];
               const idx = meta.message_index;
               const dt = new Date(ev.created_at);
               return (
@@ -105,7 +104,10 @@ export function NuanceUnderstandingCuePanel({
                       minute: '2-digit',
                     })}
                   </td>
-                  <td className="px-2 py-1.5 max-w-[10rem] truncate" title={assignmentTitleMap.get(ev.assignment_id)}>
+                  <td
+                    className="px-2 py-1.5 max-w-[10rem] truncate"
+                    title={assignmentTitleMap.get(ev.assignment_id)}
+                  >
                     {assignmentTitleMap.get(ev.assignment_id) || '—'}
                   </td>
                   <td className="px-2 py-1.5 tabular-nums text-center">
@@ -120,4 +122,4 @@ export function NuanceUnderstandingCuePanel({
       </div>
     </div>
   );
-}
+};

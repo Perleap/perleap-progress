@@ -11,6 +11,7 @@ const ESSAY_ASSIGNMENT_TITLE = 'Verify Essay Smoke';
 const MCQ_ASSIGNMENT_TITLE = 'Verify MCQ Smoke';
 const TEST_ASSIGNMENT_TITLE = 'Verify Test Smoke';
 const ACTIVITY_TITLE = 'Verify Activity Smoke';
+const LIVE_SESSION_TITLE = 'Verify Live Session Smoke';
 const VERIFY_MODULE_TITLE = 'Verify Module';
 const VERIFY_SYLLABUS_TITLE = 'Verify Syllabus';
 
@@ -221,6 +222,56 @@ async function ensureActivityResource(sectionId) {
   return created?.[0];
 }
 
+async function ensureLiveSession(classroomId, sectionId) {
+  const assignment = await ensureAssignment(classroomId, {
+    title: LIVE_SESSION_TITLE,
+    type: 'live_session',
+    instructions: 'Smoke test live session for verify-perleap.',
+    student_facing_task: 'Participate in the live session evaluation.',
+  });
+
+  const existing = await adminRest(
+    `/live_sessions?assignment_id=eq.${assignment.id}&select=id,status&limit=1`,
+    { method: 'GET' },
+  );
+
+  const readyPayload = {
+    status: 'ready',
+    session_type: 'workshop',
+    transcript: 'Verify smoke test transcript for automated QA.',
+    summary: 'Verify smoke test summary for automated QA.',
+    duration_seconds: 120,
+    audio_chunk_paths: [],
+    timestamps: [{ time: 0, label: 'Introduction' }],
+    error: null,
+  };
+
+  if (!existing?.length) {
+    await adminRest('/live_sessions', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify([
+        {
+          assignment_id: assignment.id,
+          classroom_id: classroomId,
+          syllabus_section_id: sectionId ?? null,
+          ...readyPayload,
+        },
+      ]),
+    });
+    console.log(`verify-perleap seed: created live session for assignment ${assignment.id}`);
+  } else {
+    await adminRest(`/live_sessions?assignment_id=eq.${assignment.id}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: JSON.stringify(readyPayload),
+    });
+    console.log(`verify-perleap seed: live session ready for assignment ${assignment.id}`);
+  }
+
+  return assignment;
+}
+
 async function ensureModuleFlowStep(sectionId, activityId) {
   const existing = await adminRest(
     `/module_flow_steps?section_id=eq.${sectionId}&activity_list_id=eq.${activityId}&select=id&limit=1`,
@@ -334,6 +385,7 @@ async function main() {
   const section = await ensureSyllabusSection(syllabus.id);
   const activity = await ensureActivityResource(section.id);
   await ensureModuleFlowStep(section.id, activity.id);
+  const liveSessionAssignment = await ensureLiveSession(classroom.id, section.id);
 
   const fixture = {
     classroomId: classroom.id,
@@ -343,6 +395,7 @@ async function main() {
     mcqAssignmentId: mcqAssignment.id,
     testAssignmentId: testAssignment.id,
     activityResourceId: activity.id,
+    liveSessionAssignmentId: liveSessionAssignment.id,
     teacherUserId: teacher.id,
     studentUserId: student.id,
     seededAt: new Date().toISOString(),
@@ -357,6 +410,7 @@ async function main() {
   console.log(`  mcqAssignmentId=${fixture.mcqAssignmentId}`);
   console.log(`  testAssignmentId=${fixture.testAssignmentId}`);
   console.log(`  activityResourceId=${fixture.activityResourceId}`);
+  console.log(`  liveSessionAssignmentId=${fixture.liveSessionAssignmentId}`);
 }
 
 main().catch((err) => fail(err instanceof Error ? err.message : String(err)));

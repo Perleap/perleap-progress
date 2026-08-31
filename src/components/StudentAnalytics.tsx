@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { LoadingSpinner } from './common/LoadingSpinner';
+import { FiveDChart } from './FiveDChart';
+import type { FiveDScores, FiveDSnapshot, FiveDQedMeasures } from '@/types/models';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { FiveDChart } from './FiveDChart';
-import { LoadingSpinner } from './common/LoadingSpinner';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-import type { FiveDScores, FiveDSnapshot, FiveDQedMeasures } from '@/types/models';
 import { selectBestSubmissionIdForAggregate } from '@/lib/bestSubmission';
 import { averageFiveDScoresAcrossSnapshots } from '@/lib/fiveDScores';
 import { averageQedMeasuresAcrossSnapshots, parseQedMeasures } from '@/lib/qedMeasures';
@@ -23,11 +23,11 @@ interface SubmissionInfo {
   submitted_at: string;
 }
 
-export function StudentAnalytics({
+export const StudentAnalytics = ({
   studentId,
   classroomId,
   currentSubmissionId,
-}: StudentAnalyticsProps) {
+}: StudentAnalyticsProps) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'average' | 'perSubmission'>('perSubmission');
@@ -98,9 +98,7 @@ export function StudentAnalytics({
           .eq('user_id', studentId)
           .in('submission_id', submissionIds);
 
-        const snapBySub = new Map(
-          (snapshotsData ?? []).map((s) => [s.submission_id, s]),
-        );
+        const snapBySub = new Map((snapshotsData ?? []).map((s) => [s.submission_id, s]));
 
         const byAssignment = new Map<string, typeof rows>();
         for (const s of rows) {
@@ -123,7 +121,7 @@ export function StudentAnalytics({
               status: a.status as 'in_progress' | 'completed',
               submitted_at: a.submitted_at || null,
             })),
-            map,
+            map
           );
           if (bestId && snapBySub.has(bestId)) {
             bestForAverage.push(snapBySub.get(bestId)!);
@@ -134,7 +132,7 @@ export function StudentAnalytics({
           const avgScores = averageFiveDScoresAcrossSnapshots(
             bestForAverage.map((snapshot) => ({
               scores: snapshot.scores as unknown as FiveDScores,
-            })),
+            }))
           );
 
           if (avgScores) {
@@ -171,10 +169,16 @@ export function StudentAnalytics({
         data
           ? {
               scores: data.scores as unknown as FiveDScores,
-              score_explanations: data.score_explanations as unknown,
+              score_explanations: data.score_explanations as {
+                vision?: string;
+                values?: string;
+                thinking?: string;
+                connection?: string;
+                action?: string;
+              } | null,
               qed_measures: parseQedMeasures(data.qed_measures),
             }
-          : null,
+          : null
       );
     } catch {
       toast.error(t('analytics.scoresError'));
@@ -196,7 +200,9 @@ export function StudentAnalytics({
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-foreground">{t('studentAnalytics.title')}</CardTitle>
-          <CardDescription className="text-muted-foreground">{t('studentAnalytics.noSubmissions')}</CardDescription>
+          <CardDescription className="text-muted-foreground">
+            {t('studentAnalytics.noSubmissions')}
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -215,14 +221,23 @@ export function StudentAnalytics({
       <CardContent>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'average' | 'perSubmission')}>
           <TabsList className="grid w-full grid-cols-2 bg-muted/30">
-            <TabsTrigger value="perSubmission" className="text-foreground data-[state=active]:bg-card">{t('studentAnalytics.perSubmission')}</TabsTrigger>
-            <TabsTrigger value="average" className="text-foreground data-[state=active]:bg-card">{t('studentAnalytics.allSubmissionsAverage')}</TabsTrigger>
+            <TabsTrigger
+              value="perSubmission"
+              className="text-foreground data-[state=active]:bg-card"
+            >
+              {t('studentAnalytics.perSubmission')}
+            </TabsTrigger>
+            <TabsTrigger value="average" className="text-foreground data-[state=active]:bg-card">
+              {t('studentAnalytics.allSubmissionsAverage')}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="perSubmission" className="mt-6">
             {perSubmissionScores ? (
               <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">{t('studentAnalytics.scoresFromSubmission')}</div>
+                <div className="text-sm text-muted-foreground">
+                  {t('studentAnalytics.scoresFromSubmission')}
+                </div>
                 <FiveDChart
                   scores={perSubmissionScores.scores}
                   qedMeasures={perSubmissionScores.qed_measures}
@@ -257,4 +272,4 @@ export function StudentAnalytics({
       </CardContent>
     </Card>
   );
-}
+};

@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
 import type { PilotParticipantRow } from '@/lib/pilotReport/types';
+import type { CSSProperties } from 'react';
 
 export const BLUE = {
   primary: '#3369B7',

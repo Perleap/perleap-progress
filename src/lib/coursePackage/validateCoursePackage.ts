@@ -2,7 +2,11 @@
  * Parse and validate perleap.course v1 / v2 JSON from unknown input.
  */
 
-import type { PerleapCoursePackageAny, PerleapCoursePackageV1, PerleapCoursePackageV2 } from '@/types/coursePackage';
+import type {
+  PerleapCoursePackageAny,
+  PerleapCoursePackageV1,
+  PerleapCoursePackageV2,
+} from '@/types/coursePackage';
 import {
   COURSE_PACKAGE_FORMAT,
   COURSE_PACKAGE_VERSION,
@@ -36,7 +40,11 @@ function validateCourseCommon(course: Record<string, unknown>): string | null {
   if (course.assignment_activity_links.length !== course.assignments.length) {
     return 'course.assignment_activity_links length must match course.assignments';
   }
-  if (course.syllabus !== null && course.syllabus !== undefined && typeof course.syllabus !== 'object') {
+  if (
+    course.syllabus !== null &&
+    course.syllabus !== undefined &&
+    typeof course.syllabus !== 'object'
+  ) {
     return 'course.syllabus must be object or null';
   }
   if (course.module_flow_by_section !== null && course.module_flow_by_section !== undefined) {
@@ -97,10 +105,12 @@ function validateCourseV2Shape(course: Record<string, unknown>): string | null {
       }
 
       const mkArr = sec.prerequisites_merge_keys;
-      if (mkArr != null && !Array.isArray(mkArr)) return 'prerequisites_merge_keys must be array when present';
+      if (mkArr != null && !Array.isArray(mkArr))
+        return 'prerequisites_merge_keys must be array when present';
       if (Array.isArray(mkArr)) {
         for (const k of mkArr) {
-          if (typeof k !== 'string' || !k.trim()) return 'prerequisites_merge_keys must be non-empty strings';
+          if (typeof k !== 'string' || !k.trim())
+            return 'prerequisites_merge_keys must be non-empty strings';
         }
       }
 
@@ -132,7 +142,8 @@ function validateCourseV2Shape(course: Record<string, unknown>): string | null {
       const mkArr = (sec.prerequisites_merge_keys ?? []) as unknown[];
       for (const k of mkArr) {
         const ks = String(k).trim();
-        if (!localIdsNeedingInsert.has(ks)) return 'prerequisite_merge_key references unknown new section local_id';
+        if (!localIdsNeedingInsert.has(ks))
+          return 'prerequisite_merge_key references unknown new section local_id';
       }
     }
   }

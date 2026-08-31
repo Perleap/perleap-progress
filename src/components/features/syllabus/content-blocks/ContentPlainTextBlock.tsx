@@ -1,10 +1,10 @@
-import { cn } from '@/lib/utils';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
+import { cn } from '@/lib/utils';
 
 export type ContentPlainTextPresentation = 'reading' | 'embedded' | 'compact';
 
-export function ContentPlainTextBlock({
+export const ContentPlainTextBlock = ({
   text,
   presentation,
   className,
@@ -12,9 +12,11 @@ export function ContentPlainTextBlock({
   text: string;
   presentation: ContentPlainTextPresentation;
   className?: string;
-}) {
+}) => {
   const prose = (
-    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground sm:text-[0.9375rem]">{text}</p>
+    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground sm:text-[0.9375rem]">
+      {text}
+    </p>
   );
 
   if (presentation === 'compact') {
@@ -22,7 +24,7 @@ export function ContentPlainTextBlock({
       <div
         className={cn(
           'max-h-64 overflow-y-auto rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5 ring-1 ring-border/30',
-          className,
+          className
         )}
       >
         {prose}
@@ -46,4 +48,4 @@ export function ContentPlainTextBlock({
       <div className="max-h-[min(22rem,50vh)] overflow-y-auto">{prose}</div>
     </ContentBlockShell>
   );
-}
+};

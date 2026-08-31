@@ -1,11 +1,11 @@
-import { RichTextViewer } from '@/components/ui/rich-text-editor';
-import { cn } from '@/lib/utils';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
+import { RichTextViewer } from '@/components/ui/rich-text-editor';
+import { cn } from '@/lib/utils';
 
 export type ContentRichTextPresentation = 'reading' | 'embedded';
 
-export function ContentRichTextBlock({
+export const ContentRichTextBlock = ({
   html,
   presentation,
   className,
@@ -13,7 +13,7 @@ export function ContentRichTextBlock({
   html: string;
   presentation: ContentRichTextPresentation;
   className?: string;
-}) {
+}) => {
   if (presentation === 'reading') {
     return (
       <ContentBlockShell
@@ -35,4 +35,4 @@ export function ContentRichTextBlock({
       </div>
     </ContentBlockShell>
   );
-}
+};

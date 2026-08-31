@@ -1,17 +1,15 @@
+import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Footer } from '@/components/layouts/Footer';
+import { Navbar } from '@/components/layouts/Navbar';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
-import { Navbar } from '@/components/layouts/Navbar';
-import { Footer } from '@/components/layouts/Footer';
-import { useTranslation } from 'react-i18next';
 
 const ContactUs = () => {
   const { t } = useTranslation();
@@ -163,7 +161,11 @@ const ContactUs = () => {
                   />
                 </div>
 
-                <Button type="submit" className="w-full bg-black text-white hover:bg-black/90 rounded-full h-12 text-base shadow-lg" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-black text-white hover:bg-black/90 rounded-full h-12 text-base shadow-lg"
+                  disabled={loading}
+                >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

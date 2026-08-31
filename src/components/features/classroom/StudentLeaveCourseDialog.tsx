@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -21,13 +21,13 @@ export type StudentLeaveCourseDialogProps = {
   onLeft: () => void;
 };
 
-export function StudentLeaveCourseDialog({
+export const StudentLeaveCourseDialog = ({
   classroomId,
   open,
   onOpenChange,
   isRTL,
   onLeft,
-}: StudentLeaveCourseDialogProps) {
+}: StudentLeaveCourseDialogProps) => {
   const { t } = useTranslation();
   const unenrollMutation = useUnenrollFromClassroom();
 
@@ -72,4 +72,4 @@ export function StudentLeaveCourseDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
+};

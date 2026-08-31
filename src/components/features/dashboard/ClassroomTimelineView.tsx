@@ -1,14 +1,14 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Users, Copy, Calendar, LogIn } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { copyToClipboard, cn } from '@/lib/utils';
-import { formatClassroomDate } from '@/lib/classroomViewMode';
-import { useWholeCourseCurriculumProgress } from '@/hooks/useWholeCourseCurriculumProgress';
 import type { StudentTimelineCurriculumProgressMap } from '@/hooks/useStudentTimelineCurriculaProgress';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useWholeCourseCurriculumProgress } from '@/hooks/useWholeCourseCurriculumProgress';
+import { formatClassroomDate } from '@/lib/classroomViewMode';
+import { copyToClipboard, cn } from '@/lib/utils';
 
 interface Classroom {
   id: string;
@@ -38,7 +38,7 @@ type ClassroomWithStatus = Classroom & {
   progress?: number;
 };
 
-function TimelineClassroomCard({
+const TimelineClassroomCard = ({
   classroom,
   variant,
   studentUserId,
@@ -58,7 +58,7 @@ function TimelineClassroomCard({
   classroomPath: (id: string) => string;
   onNavigate: (path: string) => void;
   onCopyCode: (e: React.MouseEvent, code: string) => void | Promise<void>;
-}) {
+}) => {
   const { t } = useTranslation();
   const isStudent = variant === 'student';
 
@@ -67,7 +67,7 @@ function TimelineClassroomCard({
   const curriculum = useWholeCourseCurriculumProgress(
     classroom.id,
     studentUserId,
-    useHookForCurriculum,
+    useHookForCurriculum
   );
 
   const teacherProgressPct = classroom.progress;
@@ -80,40 +80,44 @@ function TimelineClassroomCard({
       : undefined;
 
   const studentProgressPctFromHook =
-    useHookForCurriculum && !curriculum.isLoading && curriculum.meaningful ? curriculum.percent : undefined;
+    useHookForCurriculum && !curriculum.isLoading && curriculum.meaningful
+      ? curriculum.percent
+      : undefined;
 
   const studentProgressPct =
-    typeof studentProgressPctBatched === 'number' ? studentProgressPctBatched : studentProgressPctFromHook;
+    typeof studentProgressPctBatched === 'number'
+      ? studentProgressPctBatched
+      : studentProgressPctFromHook;
 
   const studentCurriculumLoadingInner = Boolean(
     isStudent &&
-      studentUserId &&
-      (studentCurriculumBatched ? !!studentCurriculumLoading : curriculum.isLoading),
+    studentUserId &&
+    (studentCurriculumBatched ? !!studentCurriculumLoading : curriculum.isLoading)
   );
 
   /** Batched timeline: not loading (`!studentCurriculumLoading`, same rule as pct). Hook: idle. */
   const studentCurriculumResolved = Boolean(
     isStudent &&
-      studentUserId &&
-      (studentCurriculumBatched
-        ? Boolean(!studentCurriculumLoading)
-        : Boolean(useHookForCurriculum && !curriculum.isLoading)),
+    studentUserId &&
+    (studentCurriculumBatched
+      ? Boolean(!studentCurriculumLoading)
+      : Boolean(useHookForCurriculum && !curriculum.isLoading))
   );
 
   /** After load but no countable curriculum progression (still reserve space vs blank). */
   const showStudentCurriculumUnavailable = Boolean(
     isStudent &&
-      studentUserId &&
-      studentCurriculumResolved &&
-      studentProgressPct === undefined &&
-      (studentCurriculumBatched
-        ? /* missing map entry counts as unresolved until batch finishes; resolved handles that */
-          !studentCurriculumEntry?.meaningful
-        : useHookForCurriculum && !curriculum.meaningful),
+    studentUserId &&
+    studentCurriculumResolved &&
+    studentProgressPct === undefined &&
+    (studentCurriculumBatched
+      ? /* missing map entry counts as unresolved until batch finishes; resolved handles that */
+        !studentCurriculumEntry?.meaningful
+      : useHookForCurriculum && !curriculum.meaningful)
   );
 
   const showStudentProgressBar = Boolean(
-    isStudent && studentUserId && !studentCurriculumLoadingInner && studentProgressPct !== undefined,
+    isStudent && studentUserId && !studentCurriculumLoadingInner && studentProgressPct !== undefined
   );
 
   const showStudentCurriculumSlot = Boolean(isStudent && studentUserId);
@@ -145,7 +149,10 @@ function TimelineClassroomCard({
 
             <div className="mb-3 min-w-0">
               {isStudent ? (
-                <p className="text-sm text-muted-foreground truncate" title={classroom.teacher_profiles?.full_name}>
+                <p
+                  className="text-sm text-muted-foreground truncate"
+                  title={classroom.teacher_profiles?.full_name}
+                >
                   {classroom.teacher_profiles?.full_name?.trim()
                     ? classroom.teacher_profiles.full_name
                     : t('studentDashboard.timeline.teacherNameFallback')}
@@ -167,7 +174,7 @@ function TimelineClassroomCard({
                   <div
                     className={cn(
                       'h-full transition-all duration-300',
-                      teacherFilledMuted ? 'bg-muted-foreground/50' : 'bg-primary',
+                      teacherFilledMuted ? 'bg-muted-foreground/50' : 'bg-primary'
                     )}
                     style={{ width: `${teacherProgressPct}%` }}
                   />
@@ -203,7 +210,7 @@ function TimelineClassroomCard({
                       <div
                         className={cn(
                           'h-full transition-all duration-300',
-                          studentFilledMuted ? 'bg-muted-foreground/50' : 'bg-primary',
+                          studentFilledMuted ? 'bg-muted-foreground/50' : 'bg-primary'
                         )}
                         style={{ width: `${studentProgressPct}%` }}
                       />
@@ -221,7 +228,15 @@ function TimelineClassroomCard({
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
                 <Calendar className="h-3.5 w-3.5 shrink-0" />
                 <span>
-                  {formatClassroomDate(classroom.start_date, { format: 'long', unavailable: unavailableDate })} – {formatClassroomDate(classroom.end_date, { format: 'long', unavailable: unavailableDate })}
+                  {formatClassroomDate(classroom.start_date, {
+                    format: 'long',
+                    unavailable: unavailableDate,
+                  })}{' '}
+                  –{' '}
+                  {formatClassroomDate(classroom.end_date, {
+                    format: 'long',
+                    unavailable: unavailableDate,
+                  })}
                 </span>
               </div>
             ) : null}
@@ -238,7 +253,15 @@ function TimelineClassroomCard({
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 flex-1 pr-2">
                   <Calendar className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">
-                    {formatClassroomDate(classroom.start_date, { format: 'long', unavailable: unavailableDate })} – {formatClassroomDate(classroom.end_date, { format: 'long', unavailable: unavailableDate })}
+                    {formatClassroomDate(classroom.start_date, {
+                      format: 'long',
+                      unavailable: unavailableDate,
+                    })}{' '}
+                    –{' '}
+                    {formatClassroomDate(classroom.end_date, {
+                      format: 'long',
+                      unavailable: unavailableDate,
+                    })}
                   </span>
                 </div>
               )}
@@ -274,9 +297,9 @@ function TimelineClassroomCard({
       </CardContent>
     </Card>
   );
-}
+};
 
-export function ClassroomTimelineView({
+export const ClassroomTimelineView = ({
   classrooms,
   onCopyInviteCode,
   variant = 'teacher',
@@ -284,7 +307,7 @@ export function ClassroomTimelineView({
   studentCurriculumBatched,
   studentCurriculumProgress,
   studentCurriculumLoading,
-}: ClassroomTimelineViewProps) {
+}: ClassroomTimelineViewProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -409,4 +432,4 @@ export function ClassroomTimelineView({
       )}
     </div>
   );
-}
+};

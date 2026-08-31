@@ -1,24 +1,24 @@
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { StudentOnboardingStepProps } from './studentOnboardingTypes';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
 
 type StudentOnboardingStep1Props = StudentOnboardingStepProps & {
   avatarPreview: string;
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-export function StudentOnboardingStep1Section({
+export const StudentOnboardingStep1Section = ({
   isRTL,
   formData,
   onFormDataChange,
   avatarPreview,
   onAvatarChange,
-}: StudentOnboardingStep1Props) {
+}: StudentOnboardingStep1Props) => {
   const { t } = useTranslation();
 
   return (
@@ -86,7 +86,10 @@ export function StudentOnboardingStep1Section({
             onClick={() => onFormDataChange({ learningMethods: 'visual' })}
           >
             <RadioGroupItem value="visual" id="visual" className="mt-1" />
-            <Label htmlFor="visual" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="visual"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <span className="font-medium">{t('studentOnboarding.step1.visual')}</span> -{' '}
               {t('studentOnboarding.step1.visualDesc')}
             </Label>
@@ -96,7 +99,10 @@ export function StudentOnboardingStep1Section({
             onClick={() => onFormDataChange({ learningMethods: 'auditory' })}
           >
             <RadioGroupItem value="auditory" id="auditory" className="mt-1" />
-            <Label htmlFor="auditory" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="auditory"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <span className="font-medium">{t('studentOnboarding.step1.auditory')}</span> -{' '}
               {t('studentOnboarding.step1.auditoryDesc')}
             </Label>
@@ -110,8 +116,8 @@ export function StudentOnboardingStep1Section({
               htmlFor="kinesthetic"
               className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
             >
-              <span className="font-medium">{t('studentOnboarding.step1.kinesthetic')}</span>{' '}
-              - {t('studentOnboarding.step1.kinestheticDesc')}
+              <span className="font-medium">{t('studentOnboarding.step1.kinesthetic')}</span> -{' '}
+              {t('studentOnboarding.step1.kinestheticDesc')}
             </Label>
           </div>
           <div
@@ -119,7 +125,10 @@ export function StudentOnboardingStep1Section({
             onClick={() => onFormDataChange({ learningMethods: 'video' })}
           >
             <RadioGroupItem value="video" id="video" className="mt-1" />
-            <Label htmlFor="video" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="video"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <span className="font-medium">{t('studentOnboarding.step1.video')}</span> -{' '}
               {t('studentOnboarding.step1.videoDesc')}
             </Label>
@@ -128,9 +137,13 @@ export function StudentOnboardingStep1Section({
       </div>
     </div>
   );
-}
+};
 
-export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChange }: StudentOnboardingStepProps) {
+export const StudentOnboardingStep2Section = ({
+  isRTL,
+  formData,
+  onFormDataChange,
+}: StudentOnboardingStepProps) => {
   const { t } = useTranslation();
 
   return (
@@ -145,7 +158,10 @@ export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ soloVsGroup: 'solo' })}
         >
           <RadioGroupItem value="solo" id="solo" className="mt-1" />
-          <Label htmlFor="solo" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="solo"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             <span className="font-medium">{t('studentOnboarding.step2.solo')}</span> -{' '}
             {t('studentOnboarding.step2.soloDesc')}
           </Label>
@@ -155,7 +171,10 @@ export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ soloVsGroup: 'group' })}
         >
           <RadioGroupItem value="group" id="group" className="mt-1" />
-          <Label htmlFor="group" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="group"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             <span className="font-medium">{t('studentOnboarding.step2.group')}</span> -{' '}
             {t('studentOnboarding.step2.groupDesc')}
           </Label>
@@ -165,7 +184,10 @@ export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ soloVsGroup: 'both' })}
         >
           <RadioGroupItem value="both" id="both" className="mt-1" />
-          <Label htmlFor="both" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="both"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             <span className="font-medium">{t('studentOnboarding.step2.both')}</span> -{' '}
             {t('studentOnboarding.step2.bothDesc')}
           </Label>
@@ -184,7 +206,10 @@ export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChang
             onClick={() => onFormDataChange({ scheduledVsFlexible: 'scheduled' })}
           >
             <RadioGroupItem value="scheduled" id="scheduled" className="mt-1" />
-            <Label htmlFor="scheduled" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="scheduled"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <span className="font-medium">{t('studentOnboarding.step2.scheduled')}</span> -{' '}
               {t('studentOnboarding.step2.scheduledDesc')}
             </Label>
@@ -194,7 +219,10 @@ export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChang
             onClick={() => onFormDataChange({ scheduledVsFlexible: 'flexible' })}
           >
             <RadioGroupItem value="flexible" id="flexible" className="mt-1" />
-            <Label htmlFor="flexible" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="flexible"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               <span className="font-medium">{t('studentOnboarding.step2.flexible')}</span> -{' '}
               {t('studentOnboarding.step2.flexibleDesc')}
             </Label>
@@ -203,9 +231,13 @@ export function StudentOnboardingStep2Section({ isRTL, formData, onFormDataChang
       </div>
     </div>
   );
-}
+};
 
-export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChange }: StudentOnboardingStepProps) {
+export const StudentOnboardingStep3Section = ({
+  isRTL,
+  formData,
+  onFormDataChange,
+}: StudentOnboardingStepProps) => {
   const { t } = useTranslation();
 
   return (
@@ -220,7 +252,10 @@ export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ motivationFactors: 'curiosity' })}
         >
           <RadioGroupItem value="curiosity" id="curiosity" className="mt-1" />
-          <Label htmlFor="curiosity" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="curiosity"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             <span className="font-medium">{t('studentOnboarding.step3.curiosity')}</span> -{' '}
             {t('studentOnboarding.step3.curiosityDesc')}
           </Label>
@@ -230,7 +265,10 @@ export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ motivationFactors: 'grades' })}
         >
           <RadioGroupItem value="grades" id="grades" className="mt-1" />
-          <Label htmlFor="grades" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="grades"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             <span className="font-medium">{t('studentOnboarding.step3.grades')}</span> -{' '}
             {t('studentOnboarding.step3.gradesDesc')}
           </Label>
@@ -244,8 +282,8 @@ export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChang
             htmlFor="encouragement"
             className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
           >
-            <span className="font-medium">{t('studentOnboarding.step3.encouragement')}</span>{' '}
-            - {t('studentOnboarding.step3.encouragementDesc')}
+            <span className="font-medium">{t('studentOnboarding.step3.encouragement')}</span> -{' '}
+            {t('studentOnboarding.step3.encouragementDesc')}
           </Label>
         </div>
         <div
@@ -257,8 +295,8 @@ export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChang
             htmlFor="personal_goals"
             className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
           >
-            <span className="font-medium">{t('studentOnboarding.step3.personalGoals')}</span>{' '}
-            - {t('studentOnboarding.step3.personalGoalsDesc')}
+            <span className="font-medium">{t('studentOnboarding.step3.personalGoals')}</span> -{' '}
+            {t('studentOnboarding.step3.personalGoalsDesc')}
           </Label>
         </div>
         <div
@@ -266,7 +304,10 @@ export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ motivationFactors: 'competition' })}
         >
           <RadioGroupItem value="competition" id="competition" className="mt-1" />
-          <Label htmlFor="competition" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="competition"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             <span className="font-medium">{t('studentOnboarding.step3.competition')}</span> -{' '}
             {t('studentOnboarding.step3.competitionDesc')}
           </Label>
@@ -274,9 +315,13 @@ export function StudentOnboardingStep3Section({ isRTL, formData, onFormDataChang
       </RadioGroup>
     </div>
   );
-}
+};
 
-export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChange }: StudentOnboardingStepProps) {
+export const StudentOnboardingStep4Section = ({
+  isRTL,
+  formData,
+  onFormDataChange,
+}: StudentOnboardingStepProps) => {
   const { t } = useTranslation();
 
   return (
@@ -291,7 +336,10 @@ export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ helpPreferences: 'hints' })}
         >
           <RadioGroupItem value="hints" id="hints" className="mt-1" />
-          <Label htmlFor="hints" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="hints"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('studentOnboarding.step4.hints')}
           </Label>
         </div>
@@ -324,7 +372,10 @@ export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ helpPreferences: 'more_time' })}
         >
           <RadioGroupItem value="more_time" id="more_time" className="mt-1" />
-          <Label htmlFor="more_time" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="more_time"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('studentOnboarding.step4.moreTime')}
           </Label>
         </div>
@@ -342,7 +393,10 @@ export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChang
             onClick={() => onFormDataChange({ teacherPreferences: 'patient' })}
           >
             <RadioGroupItem value="patient" id="patient" className="mt-1" />
-            <Label htmlFor="patient" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="patient"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('studentOnboarding.step4.patient')}
             </Label>
           </div>
@@ -363,7 +417,10 @@ export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChang
             onClick={() => onFormDataChange({ teacherPreferences: 'clear' })}
           >
             <RadioGroupItem value="clear" id="clear" className="mt-1" />
-            <Label htmlFor="clear" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="clear"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('studentOnboarding.step4.clear')}
             </Label>
           </div>
@@ -372,7 +429,10 @@ export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChang
             onClick={() => onFormDataChange({ teacherPreferences: 'fun' })}
           >
             <RadioGroupItem value="fun" id="fun" className="mt-1" />
-            <Label htmlFor="fun" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="fun"
+              className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('studentOnboarding.step4.fun')}
             </Label>
           </div>
@@ -380,9 +440,13 @@ export function StudentOnboardingStep4Section({ isRTL, formData, onFormDataChang
       </div>
     </div>
   );
-}
+};
 
-export function StudentOnboardingStep5Section({ isRTL, formData, onFormDataChange }: StudentOnboardingStepProps) {
+export const StudentOnboardingStep5Section = ({
+  isRTL,
+  formData,
+  onFormDataChange,
+}: StudentOnboardingStepProps) => {
   const { t } = useTranslation();
 
   return (
@@ -397,7 +461,10 @@ export function StudentOnboardingStep5Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ feedbackPreferences: 'immediate' })}
         >
           <RadioGroupItem value="immediate" id="immediate" className="mt-1" />
-          <Label htmlFor="immediate" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="immediate"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('studentOnboarding.step5.immediate')}
           </Label>
         </div>
@@ -406,7 +473,10 @@ export function StudentOnboardingStep5Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ feedbackPreferences: 'written' })}
         >
           <RadioGroupItem value="written" id="written" className="mt-1" />
-          <Label htmlFor="written" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="written"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('studentOnboarding.step5.written')}
           </Label>
         </div>
@@ -415,7 +485,10 @@ export function StudentOnboardingStep5Section({ isRTL, formData, onFormDataChang
           onClick={() => onFormDataChange({ feedbackPreferences: 'discussion' })}
         >
           <RadioGroupItem value="discussion" id="discussion" className="mt-1" />
-          <Label htmlFor="discussion" className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <Label
+            htmlFor="discussion"
+            className={`cursor-pointer font-normal leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('studentOnboarding.step5.discussion')}
           </Label>
         </div>
@@ -435,17 +508,19 @@ export function StudentOnboardingStep5Section({ isRTL, formData, onFormDataChang
       </div>
     </div>
   );
-}
+};
 
-export function StudentOnboardingStep6Section({ isRTL, formData, onFormDataChange }: StudentOnboardingStepProps) {
+export const StudentOnboardingStep6Section = ({
+  isRTL,
+  formData,
+  onFormDataChange,
+}: StudentOnboardingStepProps) => {
   const { t } = useTranslation();
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="specialNeeds">
-          {t('studentOnboarding.step6.specialNeedsQuestion')}
-        </Label>
+        <Label htmlFor="specialNeeds">{t('studentOnboarding.step6.specialNeedsQuestion')}</Label>
         <Textarea
           id="specialNeeds"
           placeholder={t('studentOnboarding.step6.specialNeedsPlaceholder')}
@@ -472,4 +547,4 @@ export function StudentOnboardingStep6Section({ isRTL, formData, onFormDataChang
       </div>
     </div>
   );
-}
+};

@@ -1,12 +1,12 @@
+import { Loader2, Send, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import { Loader2, Send, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeacherEvaluationFormProps {
   submissionId: string;
@@ -19,14 +19,14 @@ interface TeacherEvaluationFormProps {
   isOverride?: boolean;
 }
 
-export function TeacherEvaluationForm({
+export const TeacherEvaluationForm = ({
   submissionId,
   studentId,
   assignmentId,
   onEvaluationComplete,
   sessionContext,
   isOverride = false,
-}: TeacherEvaluationFormProps) {
+}: TeacherEvaluationFormProps) => {
   const { t } = useTranslation();
   const { language, isRTL } = useLanguage();
   const [feedback, setFeedback] = useState('');
@@ -135,4 +135,4 @@ export function TeacherEvaluationForm({
       </CardContent>
     </Card>
   );
-}
+};

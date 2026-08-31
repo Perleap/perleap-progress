@@ -1,5 +1,7 @@
-import { useTranslation } from 'react-i18next';
 import { Loader2, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { StudentEvaluationState } from '@/services/liveSessionService';
+import { TeacherEvaluationForm } from '@/components/features/submission/TeacherEvaluationForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -9,8 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { TeacherEvaluationForm } from '@/components/features/submission/TeacherEvaluationForm';
-import type { StudentEvaluationState } from '@/services/liveSessionService';
 
 type LiveSessionEnrollment = {
   student_id: string;
@@ -31,7 +31,7 @@ export type LiveSessionEvaluationSectionProps = {
   onEvaluationComplete: () => void | Promise<void>;
 };
 
-export function LiveSessionEvaluationSection({
+export const LiveSessionEvaluationSection = ({
   assignmentId,
   isRTL,
   students,
@@ -43,7 +43,7 @@ export function LiveSessionEvaluationSection({
   sessionContext,
   onSelectStudent,
   onEvaluationComplete,
-}: LiveSessionEvaluationSectionProps) {
+}: LiveSessionEvaluationSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -56,20 +56,23 @@ export function LiveSessionEvaluationSection({
         <div className="grid gap-2 sm:grid-cols-2">
           <Select
             value={selectedStudentId ?? undefined}
-            onValueChange={(studentId) => void onSelectStudent(studentId)}
+            onValueChange={(studentId: string | null) => {
+              if (studentId == null) return;
+              void onSelectStudent(studentId);
+            }}
           >
             <SelectTrigger
               className={cn(
                 'h-auto w-full rounded-lg border p-3 shadow-none',
                 'focus-visible:ring-2 focus-visible:ring-primary/25',
-                isRTL && 'flex-row-reverse text-end',
+                isRTL && 'flex-row-reverse text-end'
               )}
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               <span
                 className={cn(
                   'flex min-w-0 flex-1 items-center justify-between gap-2',
-                  isRTL && 'flex-row-reverse',
+                  isRTL && 'flex-row-reverse'
                 )}
               >
                 <SelectValue placeholder={t('liveSession.evaluation.selectStudent')}>
@@ -126,4 +129,4 @@ export function LiveSessionEvaluationSection({
       </CardContent>
     </Card>
   );
-}
+};

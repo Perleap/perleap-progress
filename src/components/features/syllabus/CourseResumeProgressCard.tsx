@@ -91,7 +91,7 @@ export const CourseResumeProgressCard = ({
       className={cn(
         // Card defaults include py-6; omit vertical padding here so content isn't double-inset.
         'w-full max-w-2xl border border-border shadow-sm rounded-2xl bg-card overflow-hidden py-0',
-        className,
+        className
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -110,7 +110,9 @@ export const CourseResumeProgressCard = ({
                   <span className="font-normal">{headlinePrefix}</span>
                 </p>
                 {headlineUnitTitle?.trim() ? (
-                  <p className="text-sm leading-snug text-muted-foreground">{headlineUnitTitle.trim()}</p>
+                  <p className="text-sm leading-snug text-muted-foreground">
+                    {headlineUnitTitle.trim()}
+                  </p>
                 ) : null}
                 {headlineStepTitle?.trim() ? (
                   <p className="text-base font-bold leading-snug text-foreground sm:text-lg sm:leading-snug">
@@ -122,7 +124,7 @@ export const CourseResumeProgressCard = ({
               <p
                 className={cn(
                   'text-base leading-snug text-foreground sm:text-lg sm:leading-snug',
-                  textAlign,
+                  textAlign
                 )}
               >
                 <span className="font-normal">{headlinePrefix}</span>
@@ -140,7 +142,7 @@ export const CourseResumeProgressCard = ({
               className={cn(
                 'h-12 w-full gap-2.5 rounded-xl px-8 text-lg font-semibold sm:w-auto sm:min-w-[12rem] sm:self-start',
                 buttonClassName,
-                isRTL && 'flex-row-reverse',
+                isRTL && 'flex-row-reverse'
               )}
               onClick={onContinue}
             >

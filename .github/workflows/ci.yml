@@ -37,13 +37,14 @@ jobs:
       - name: i18n key check
         run: npm run check:i18n
 
-      - name: TypeScript (advisory)
-        continue-on-error: true
-        run: npx tsc --noEmit -p tsconfig.app.json
-
-      - name: ESLint (advisory)
-        continue-on-error: true
+      - name: ESLint
         run: npm run lint
+
+      - name: Prettier check
+        run: npm run format:check
+
+      - name: TypeScript
+        run: npx tsc --noEmit -p tsconfig.app.json
 
       - name: Production build
         run: npm run build

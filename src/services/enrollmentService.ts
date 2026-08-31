@@ -31,7 +31,7 @@ export const enrollInClassroom = async (
 
     const { data: rpcData, error: classroomError } = await supabase.rpc(
       'find_classroom_by_invite_code',
-      { p_invite_code: trimmedCode },
+      { p_invite_code: trimmedCode }
     );
 
     if (classroomError) {
@@ -91,20 +91,22 @@ export const enrollInClassroom = async (
       };
     }
 
-    // Notify teacher
-    await createNotification(
-      classroom.teacher_id,
-      'student_enrolled',
-      'New Student Enrolled',
-      `${studentName} joined ${classroom.name}`,
-      `/teacher/classroom/${classroom.id}`,
-      {
-        classroom_id: classroom.id,
-        student_id: studentId,
-        student_name: studentName,
-        classroom_name: classroom.name,
-      }
-    );
+    if (classroom.teacher_id) {
+      // Notify teacher
+      await createNotification(
+        classroom.teacher_id,
+        'student_enrolled',
+        'New Student Enrolled',
+        `${studentName} joined ${classroom.name}`,
+        `/teacher/classroom/${classroom.id}`,
+        {
+          classroom_id: classroom.id,
+          student_id: studentId,
+          student_name: studentName,
+          classroom_name: classroom.name,
+        }
+      );
+    }
 
     // Notify student (actor must be the enrolling user — RLS requires actor_id = auth.uid())
     await createNotification(

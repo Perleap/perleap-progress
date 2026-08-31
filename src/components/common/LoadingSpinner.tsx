@@ -3,9 +3,9 @@
  * GSAP-powered loading state component
  */
 
-import { useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
 import gsap from 'gsap';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface LoadingSpinnerProps {
   text?: string;
@@ -16,10 +16,10 @@ interface LoadingSpinnerProps {
 /**
  * Display a GSAP-animated loading spinner with optional text
  */
-export const LoadingSpinner = ({ 
-  text = 'Loading...', 
+export const LoadingSpinner = ({
+  text = 'Loading...',
   className = '',
-  size = 'md'
+  size = 'md',
 }: LoadingSpinnerProps) => {
   const spinnerRef = useRef<SVGSVGElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -66,7 +66,11 @@ export const LoadingSpinner = ({
   return (
     <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
       <Loader2 ref={spinnerRef} className={`${sizeClasses[size]} text-primary mb-2`} />
-      {text && <p ref={textRef} className="text-muted-foreground">{text}</p>}
+      {text && (
+        <p ref={textRef} className="text-muted-foreground">
+          {text}
+        </p>
+      )}
     </div>
   );
 };

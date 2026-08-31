@@ -4,13 +4,15 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { StudentClassroomDetailView } from '@/lib/classroomDetail';
+import type { SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
 import type { Assignment } from '@/types';
 import type { ClassroomLocationState } from '@/types/navigation';
 import type { StudentProgressStatus } from '@/types/syllabus';
-import { ClassroomLayout } from '@/components/layouts';
-import { StudentClassroomOverviewSection } from '@/components/features/classroom/StudentClassroomOverviewSection';
 import { StudentClassroomCurriculumSection } from '@/components/features/classroom/StudentClassroomCurriculumSection';
+import { StudentClassroomOverviewSection } from '@/components/features/classroom/StudentClassroomOverviewSection';
 import { StudentLeaveCourseDialog } from '@/components/features/classroom/StudentLeaveCourseDialog';
+import { ClassroomLayout } from '@/components/layouts';
 import { ROUTES } from '@/config/routes';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
@@ -28,14 +30,12 @@ import {
 } from '@/hooks/queries/useModuleFlowQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { aggregateCurriculumStepProgress } from '@/lib/curriculumStepProgress';
-import type { StudentClassroomDetailView } from '@/lib/classroomDetail';
 import { linkedAssignmentsVisibleInModuleFlow, type AssignmentRow } from '@/lib/moduleFlow';
 import {
   findFirstIncompleteDisplayedFlowAcrossCourse,
   resolveStudentResumeTarget,
   resolveStudentResumeTargetWithSection,
 } from '@/lib/resolveStudentResumeTarget';
-import type { SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
 import { getStudyCtaTarget } from '@/lib/studyCtaTarget';
 
 const STUDENT_SECTION_IDS = new Set(['overview', 'curriculum']);
@@ -45,10 +45,10 @@ type StudentClassroomDetailContentProps = {
   classroom: StudentClassroomDetailView;
 };
 
-export function StudentClassroomDetailContent({
+export const StudentClassroomDetailContent = ({
   classroomId,
   classroom,
-}: StudentClassroomDetailContentProps) {
+}: StudentClassroomDetailContentProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -68,12 +68,12 @@ export function StudentClassroomDetailContent({
   const hasPublishedSyllabus = Boolean(syllabus && syllabus.status === 'published');
   const { data: studentProgressData, isPending: studentProgressPending } = useStudentProgress(
     syllabus?.id,
-    user?.id,
+    user?.id
   );
 
   const syllabusSectionIds = useMemo(
     () => (syllabus?.sections ? [...syllabus.sections].map((s) => s.id) : []),
-    [syllabus?.sections],
+    [syllabus?.sections]
   );
   const { data: moduleFlowBulk = {}, isPending: moduleFlowBulkPending } =
     useModuleFlowStepsBulk(syllabusSectionIds);
@@ -294,7 +294,7 @@ export function StudentClassroomDetailContent({
         };
       }
       const r = syllabus.section_resources?.[resumeHit.sectionId]?.find(
-        (x) => x.id === resumeHit.target.id,
+        (x) => x.id === resumeHit.target.id
       );
       const stepTitle = r?.title?.trim() || t('studentClassroom.activities.activity');
       const secondary =
@@ -328,7 +328,7 @@ export function StudentClassroomDetailContent({
     const { variant: syllabusVariant } = getStudyCtaTarget(
       syllabus.sections,
       syllabus.release_mode || 'all_at_once',
-      studentProgressMap,
+      studentProgressMap
     );
     const flowEngaged =
       Object.values(flowCtx.assignmentDoneMap).some(Boolean) ||
@@ -500,14 +500,15 @@ export function StudentClassroomDetailContent({
           />
         )}
 
-        {activeSection === 'curriculum' && (syllabusLoading || !syllabus || !hasPublishedSyllabus) && (
-          <div className="flex min-h-[40vh] items-center justify-center py-20">
-            <Loader2
-              className="h-8 w-8 animate-spin text-muted-foreground"
-              aria-label={t('common.loading')}
-            />
-          </div>
-        )}
+        {activeSection === 'curriculum' &&
+          (syllabusLoading || !syllabus || !hasPublishedSyllabus) && (
+            <div className="flex min-h-[40vh] items-center justify-center py-20">
+              <Loader2
+                className="h-8 w-8 animate-spin text-muted-foreground"
+                aria-label={t('common.loading')}
+              />
+            </div>
+          )}
 
         {activeSection === 'curriculum' && hasPublishedSyllabus && syllabus && (
           <StudentClassroomCurriculumSection
@@ -541,4 +542,4 @@ export function StudentClassroomDetailContent({
       />
     </ClassroomLayout>
   );
-}
+};

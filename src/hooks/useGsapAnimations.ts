@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useEffect, useRef, useCallback } from 'react';
 import {
   fadeInUp,
   staggerFadeInUp,
@@ -69,7 +69,7 @@ export function useStaggerAnimation(
   useGSAP(
     () => {
       const currentDeps = JSON.stringify(dependencies);
-      
+
       // Only animate if dependencies actually changed
       if (containerRef.current && currentDeps !== lastDepsRef.current) {
         // Cancel any pending animation
@@ -126,10 +126,7 @@ export function useScrollAnimation(options: ScrollTrigger.Vars = {}) {
 /**
  * Hook for scroll-triggered stagger animation on children
  */
-export function useScrollStagger(
-  childSelector = ':scope > *',
-  options: ScrollTrigger.Vars = {}
-) {
+export function useScrollStagger(childSelector = ':scope > *', options: ScrollTrigger.Vars = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -172,11 +169,7 @@ export function useCardHover() {
 /**
  * Hook for animating a list of items when they change
  */
-export function useAnimatedList<T>(
-  items: T[],
-  childSelector = ':scope > *',
-  stagger = 0.05
-) {
+export function useAnimatedList<T>(items: T[], childSelector = ':scope > *', stagger = 0.05) {
   const containerRef = useRef<HTMLDivElement>(null);
   const prevLengthRef = useRef(items.length);
 
@@ -302,8 +295,3 @@ export function useSlideIn(
 }
 
 export { gsap, ScrollTrigger };
-
-
-
-
-

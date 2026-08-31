@@ -56,7 +56,11 @@ export function aggregateCurriculumStepProgress(params: {
     const persisted = flowBulk[sectionId] ?? [];
     const linkedAssigns = linkedAssignmentsMap[sectionId] ?? [];
 
-    const orderedPersisted = getOrderedActivityCenterFlowSteps(persisted, resources, studentFlowOpts);
+    const orderedPersisted = getOrderedActivityCenterFlowSteps(
+      persisted,
+      resources,
+      studentFlowOpts
+    );
     const computed = computeDefaultModuleFlow(sectionId, resources, assignments, studentFlowOpts);
     const usePersisted = orderedPersisted.length > 0;
 

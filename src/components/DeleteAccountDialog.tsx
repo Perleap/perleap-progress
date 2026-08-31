@@ -1,4 +1,8 @@
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { TFunction } from 'i18next';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -8,15 +12,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/useAuth';
-import { toast } from 'sonner';
-import { Loader2, AlertTriangle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
+import { matchesTypedConfirm, TypedConfirmInput } from '@/components/shared/TypedConfirmInput';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { setAccountJustDeletedSessionFlag } from '@/utils/accountDeletionRedirect';
 
 function mapDeleteAccountErrorMessage(raw: string, t: TFunction): string {
@@ -51,7 +50,7 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteAccount = async () => {
-    if (confirmText.toLowerCase() !== 'confirm') {
+    if (!matchesTypedConfirm(confirmText, 'confirm')) {
       toast.error(t('settings.deleteAccount.errors.incorrectConfirmation'));
       return;
     }
@@ -62,7 +61,7 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
     }
 
     setIsDeleting(true);
-    
+
     // Set a flag in sessionStorage to prevent premature redirects in settings pages
     sessionStorage.setItem('is_deleting_account', 'true');
 
@@ -73,16 +72,18 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
       });
 
       const backendMessage =
-        data &&
-        typeof data === 'object' &&
-        typeof (data as { error?: unknown }).error === 'string'
+        data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string'
           ? (data as { error: string }).error
           : '';
 
       if (invokeError || backendMessage) {
         const raw =
           backendMessage ||
-          (invokeError instanceof Error ? invokeError.message : invokeError ? String(invokeError) : '');
+          (invokeError instanceof Error
+            ? invokeError.message
+            : invokeError
+              ? String(invokeError)
+              : '');
         console.error('Delete account invoke error:', invokeError, 'response body:', data);
         throw new Error(raw || t('settings.deleteAccount.errors.deleteFailed'));
       }
@@ -137,7 +138,9 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
           <p className="font-semibold text-foreground text-sm">
             {t('settings.deleteAccount.warning')}
           </p>
-          <ul className={`list-disc space-y-1 text-sm text-muted-foreground ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
+          <ul
+            className={`list-disc space-y-1 text-sm text-muted-foreground ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}
+          >
             <li>{t('settings.deleteAccount.consequences.profile')}</li>
             <li>{t('settings.deleteAccount.consequences.data')}</li>
             {userRole === 'teacher' && (
@@ -159,19 +162,17 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
           </p>
         </div>
 
-        <div className="space-y-2 py-4">
-          <Label htmlFor="confirm-delete" className={isRTL ? 'text-right block' : 'text-left block'}>
-            {t('settings.deleteAccount.typeConfirm')}
-          </Label>
-          <Input
+        <div className="py-4">
+          <TypedConfirmInput
             id="confirm-delete"
             value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
+            onChange={setConfirmText}
+            expectedText="confirm"
+            label={t('settings.deleteAccount.typeConfirm')}
             placeholder="confirm"
+            mismatchMessage={t('settings.deleteAccount.errors.incorrectConfirmation')}
             disabled={isDeleting}
-            autoComplete="off"
-            className={`font-mono ${isRTL ? 'text-right' : ''}`}
-            dir={isRTL ? 'rtl' : 'ltr'}
+            isRTL={isRTL}
           />
         </div>
 
@@ -189,9 +190,13 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
           <Button
             variant="destructive"
             onClick={handleDeleteAccount}
-            disabled={confirmText.toLowerCase() !== 'confirm' || isDeleting}
+            disabled={!matchesTypedConfirm(confirmText, 'confirm') || isDeleting}
           >
-            {isDeleting && <Loader2 className={isRTL ? 'ml-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4 animate-spin'} />}
+            {isDeleting && (
+              <Loader2
+                className={isRTL ? 'ml-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4 animate-spin'}
+              />
+            )}
             {t('settings.deleteAccount.deleteButton')}
           </Button>
         </AlertDialogFooter>
@@ -199,4 +204,3 @@ export const DeleteAccountDialog = ({ open, onOpenChange, userRole }: DeleteAcco
     </AlertDialog>
   );
 };
-

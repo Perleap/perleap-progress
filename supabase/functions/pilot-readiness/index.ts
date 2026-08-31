@@ -16,6 +16,7 @@ import { isAppAdmin, getServiceRoleKey } from '../shared/supabase.ts';
 import { logError, logInfo } from '../shared/logger.ts';
 import { persistEdgeFunctionLog, errorToStack } from '../shared/persistEdgeFunctionLog.ts';
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 import { queueOpikTrace, uuidv7 } from '../shared/opikTrace.ts';
 
 
@@ -110,6 +111,11 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    const rateLimit = await checkRateLimit(user.id, 'pilot-readiness');
+    if (rateLimit) {
+      return rateLimitFailureToResponse(rateLimit, corsHeaders);
     }
 
     const body = await req.json();

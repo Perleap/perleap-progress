@@ -1,8 +1,4 @@
-import type {
-  PilotParticipantRow,
-  PilotReportData,
-  PilotReportStaticCopy,
-} from './types';
+import type { PilotParticipantRow, PilotReportData, PilotReportStaticCopy } from './types';
 
 export const testStaticCopy: PilotReportStaticCopy = {
   documentTitle: 'Pilot Report',
@@ -81,7 +77,8 @@ export const testStaticCopy: PilotReportStaticCopy = {
   sectionMethodology: 'How to read this report',
   legendReadinessTitle: 'Readiness labels',
   legendReadinessReady: 'Ready — can move into supervised real implementation work now.',
-  legendReadinessCoach: 'Almost ready — has potential but needs targeted practice before real work.',
+  legendReadinessCoach:
+    'Almost ready — has potential but needs targeted practice before real work.',
   legendReadinessRedirect: 'Redirect — not ideal as a hands-on builder; may fit another role.',
   legendReadinessNotReady: 'Not ready — should not continue into platform implementation yet.',
   legendWeighting:

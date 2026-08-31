@@ -23,7 +23,7 @@ describe('detectUnderstandingCue', () => {
 
   it('avoids flagging neutral long academic text without cues', () => {
     const r = detectUnderstandingCue(
-      'The treaty of 1815 established trade routes and fiscal policy across the region for several decades.',
+      'The treaty of 1815 established trade routes and fiscal policy across the region for several decades.'
     );
     expect(r.hit).toBe(false);
   });

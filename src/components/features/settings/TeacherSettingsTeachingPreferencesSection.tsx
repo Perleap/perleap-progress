@@ -1,9 +1,9 @@
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
 
 export type TeacherSettingsQuestionsState = {
   teaching_goals: string;
@@ -20,18 +20,18 @@ export type TeacherSettingsTeachingPreferencesSectionProps = {
   onSave: () => void | Promise<void>;
 };
 
-export function TeacherSettingsTeachingPreferencesSection({
+export const TeacherSettingsTeachingPreferencesSection = ({
   isRTL,
   questions,
   onQuestionsChange,
   saving,
   onSave,
-}: TeacherSettingsTeachingPreferencesSectionProps) {
+}: TeacherSettingsTeachingPreferencesSectionProps) => {
   const { t } = useTranslation();
 
   const setQuestion = <K extends keyof TeacherSettingsQuestionsState>(
     key: K,
-    value: TeacherSettingsQuestionsState[K],
+    value: TeacherSettingsQuestionsState[K]
   ) => {
     onQuestionsChange({ ...questions, [key]: value });
   };
@@ -96,8 +96,7 @@ export function TeacherSettingsTeachingPreferencesSection({
             value={questions.sample_explanation}
             onChange={(e) => setQuestion('sample_explanation', e.target.value)}
             placeholder={
-              questions.sample_explanation ||
-              'Any specific preferences or additional context...'
+              questions.sample_explanation || 'Any specific preferences or additional context...'
             }
             rows={3}
             className={!questions.sample_explanation ? 'text-muted-foreground' : ''}
@@ -118,4 +117,4 @@ export function TeacherSettingsTeachingPreferencesSection({
       </CardContent>
     </Card>
   );
-}
+};

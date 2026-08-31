@@ -1,6 +1,6 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Card, CardContent } from '@/components/ui/card';
 
 /**
  * Empty state component for when student has no assignments

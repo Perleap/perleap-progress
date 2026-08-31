@@ -9,7 +9,7 @@ const TRAILING_PUNCT_RE = /[.;:,]+\s*$/;
 
 export function resolveAssignmentTutorText(
   instructions: string,
-  studentFacingTask?: string | null,
+  studentFacingTask?: string | null
 ): string {
   const sft = typeof studentFacingTask === 'string' ? studentFacingTask.trim() : '';
   if (sft) return sft;
@@ -30,7 +30,9 @@ export function parseAssignmentTasks(text: string): string[] {
     if (!match) continue;
     const body = match[1].replace(TRAILING_PUNCT_RE, '').trim();
     if (body.length === 0) continue;
-    collected.push(body.length > MAX_TASK_TEXT_CHARS ? body.slice(0, MAX_TASK_TEXT_CHARS).trim() : body);
+    collected.push(
+      body.length > MAX_TASK_TEXT_CHARS ? body.slice(0, MAX_TASK_TEXT_CHARS).trim() : body
+    );
   }
 
   if (collected.length === 0) {
@@ -39,7 +41,9 @@ export function parseAssignmentTasks(text: string): string[] {
       if (p.length < 12) continue;
       if (/^[A-Z\s\d-]{3,40}:?$/.test(p)) continue;
       const body = p.replace(TRAILING_PUNCT_RE, '').trim();
-      collected.push(body.length > MAX_TASK_TEXT_CHARS ? body.slice(0, MAX_TASK_TEXT_CHARS).trim() : body);
+      collected.push(
+        body.length > MAX_TASK_TEXT_CHARS ? body.slice(0, MAX_TASK_TEXT_CHARS).trim() : body
+      );
       if (collected.length >= MAX_PARSED_TASKS) break;
     }
   }
@@ -59,12 +63,12 @@ export function parseAssignmentTasks(text: string): string[] {
 /** True when every parsed sub-task index is marked complete in persisted progress. */
 export function areAllParsedTasksComplete(
   tutorText: string,
-  completedTaskIndexes: number[] | null | undefined,
+  completedTaskIndexes: number[] | null | undefined
 ): boolean {
   const tasks = parseAssignmentTasks(tutorText);
   if (tasks.length === 0) return false;
   const set = new Set(
-    (completedTaskIndexes ?? []).filter((n) => Number.isFinite(n) && n >= 1 && n <= tasks.length),
+    (completedTaskIndexes ?? []).filter((n) => Number.isFinite(n) && n >= 1 && n <= tasks.length)
   );
   if (set.size !== tasks.length) return false;
   for (let i = 1; i <= tasks.length; i++) {

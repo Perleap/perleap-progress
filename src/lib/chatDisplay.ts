@@ -4,9 +4,7 @@
  */
 const COMPLETION_MARKER_VARIANTS_UP = ['[CONVERSATION_COMPLETE]', '[CONATION_COMPLETE]'] as const;
 
-const MAX_COMPLETION_MARKER_LEN = Math.max(
-  ...COMPLETION_MARKER_VARIANTS_UP.map((m) => m.length),
-);
+const MAX_COMPLETION_MARKER_LEN = Math.max(...COMPLETION_MARKER_VARIANTS_UP.map((m) => m.length));
 const MARKER_PREFIX_HOLD = MAX_COMPLETION_MARKER_LEN - 1;
 
 function findEarliestCompletionMarker(upper: string): { index: number; len: number } | null {
@@ -25,9 +23,7 @@ function findEarliestCompletionMarker(upper: string): { index: number; len: numb
  */
 export function stripConversationCompleteMarker(text: string): string {
   if (!text) return text;
-  return text
-    .replace(/\[(?:CONVERSATION_COMPLETE|CONATION_COMPLETE)\]/gi, '')
-    .trim();
+  return text.replace(/\[(?:CONVERSATION_COMPLETE|CONATION_COMPLETE)\]/gi, '').trim();
 }
 
 /** Remove hidden per-turn progress trailer (must stay in sync with progressSink.ts). */
@@ -62,7 +58,7 @@ export function normalizePerleapIntroParagraphBreaks(text: string): string {
   if (!isPerleapAssistantIntro(text)) return text;
   return text.replace(
     /^((?:Hello! I am Perleap,[\s\S]+?assistant\.)|(?:שלום! אני Perleap,[\s\S]+?\.))\n(?!\n)/u,
-    '$1\n\n',
+    '$1\n\n'
   );
 }
 
@@ -71,7 +67,7 @@ export function normalizePerleapIntroParagraphBreaks(text: string): string {
  */
 export function splitExplainTaskDisplayText(
   text: string,
-  _options?: SplitChatDisplayOptions,
+  _options?: SplitChatDisplayOptions
 ): string[] {
   const raw = (text || '').trim();
   if (!raw) return [];
@@ -83,7 +79,7 @@ export function splitExplainTaskDisplayText(
  */
 export function splitPerleapIntroDisplayText(
   text: string,
-  options?: SplitChatDisplayOptions,
+  options?: SplitChatDisplayOptions
 ): string[] {
   const maxB = options?.maxBubbles ?? DEFAULT_MAX_BUBBLES;
   const raw = normalizePerleapIntroParagraphBreaks((text || '').trim());
@@ -127,7 +123,7 @@ const DEFAULT_MAX_BUBBLES = 5;
 function runInOneAfterPunctuation(s: string): string {
   return s.replace(
     /([:;?!.])(\s+)(1)([.)]\s+)/g,
-    (_, punct: string, _spaces: string, one: string, rest: string) => `${punct}\n${one}${rest}`,
+    (_, punct: string, _spaces: string, one: string, rest: string) => `${punct}\n${one}${rest}`
   );
 }
 
@@ -137,8 +133,7 @@ function runInOneAfterPunctuation(s: string): string {
  * when the paragraph does not look like a `1)…2)…` list.
  */
 function splitConsecutiveNumberedMarkersInListContext(s: string): string {
-  const listContext =
-    /(?:^|\n)\s*1[.)]\s/.test(s) || /[:;?!.]\s*\n\s*1[.)]\s/.test(s);
+  const listContext = /(?:^|\n)\s*1[.)]\s/.test(s) || /[:;?!.]\s*\n\s*1[.)]\s/.test(s);
   if (!listContext) return s;
 
   const re = /(\d+)([.)]\s+)/g;
@@ -164,7 +159,7 @@ function splitConsecutiveNumberedMarkersInListContext(s: string): string {
   ranges.sort((a, b) => b.start - a.start);
   let out = s;
   for (const { start, end } of ranges) {
-    out = out.slice(0, start) + '\n' + out.slice(end);
+    out = `${out.slice(0, start)}\n${out.slice(end)}`;
   }
   return out;
 }
@@ -210,10 +205,7 @@ export function formatInlineListsForChatMarkdown(input: string): string {
  * split, then sentence boundaries when the message is still a **single** segment with no internal newlines
  * (preserves intro + list pairs from the first-newline rule and multi-paragraph layouts).
  */
-export function splitChatDisplayText(
-  text: string,
-  options?: SplitChatDisplayOptions,
-): string[] {
+export function splitChatDisplayText(text: string, options?: SplitChatDisplayOptions): string[] {
   const maxB = options?.maxBubbles ?? DEFAULT_MAX_BUBBLES;
   const raw = (text || '').trim();
   if (!raw) return [];

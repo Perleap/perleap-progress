@@ -1,17 +1,17 @@
+import { Loader2, Upload, FileIcon, X, Send, Plus } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, FileIcon, X, Send, Plus } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/submissionService';
-import { getAssignmentLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import type { AssignmentCompletionTone } from '@/types/submission';
+import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/submissionService';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
 interface ProjectSubmissionPageProps {
   assignmentId: string;
   submissionId: string;
@@ -32,7 +32,7 @@ function makeFileId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ProjectSubmissionPage({
+export const ProjectSubmissionPage = ({
   assignmentId,
   submissionId,
   assignmentInstructions,
@@ -40,7 +40,7 @@ export function ProjectSubmissionPage({
   showAiFeedbackToStudents = true,
   isTeacherTry = false,
   onComplete,
-}: ProjectSubmissionPageProps) {
+}: ProjectSubmissionPageProps) => {
   const { t } = useTranslation();
   const { language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
@@ -202,7 +202,9 @@ export function ProjectSubmissionPage({
   return (
     <Card className="rounded-xl border-border shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold">{t('assignmentDetail.project.uploadFile')}</CardTitle>
+        <CardTitle className="text-lg font-semibold">
+          {t('assignmentDetail.project.uploadFile')}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div
@@ -210,7 +212,7 @@ export function ProjectSubmissionPage({
             'cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-all sm:p-12',
             dragOver
               ? 'scale-[1.01] border-primary bg-primary/5'
-              : 'border-border bg-muted/10 hover:border-primary/40',
+              : 'border-border bg-muted/10 hover:border-primary/40'
           )}
           onClick={() => fileInputRef.current?.click()}
           onDrop={handleDrop}
@@ -219,8 +221,12 @@ export function ProjectSubmissionPage({
           role="presentation"
         >
           <Upload className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{t('assignmentDetail.project.dragDrop')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('assignmentDetail.project.fileTypes')}</p>
+          <p className="text-sm font-medium text-foreground">
+            {t('assignmentDetail.project.dragDrop')}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('assignmentDetail.project.fileTypes')}
+          </p>
           <input
             ref={fileInputRef}
             type="file"
@@ -321,4 +327,4 @@ export function ProjectSubmissionPage({
       </CardContent>
     </Card>
   );
-}
+};

@@ -1,3 +1,4 @@
+import type { Message } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
@@ -18,7 +19,6 @@ import {
   getClassroomSubmissionsForWorkExport,
   getFullSubmissionDetails,
 } from '@/services/submissionService';
-import type { Message } from '@/types';
 
 export type ClassroomStudentWorkExport = {
   exported_at: string;
@@ -28,7 +28,7 @@ export type ClassroomStudentWorkExport = {
 };
 
 export async function buildClassroomStudentWorkExport(
-  classroomId: string,
+  classroomId: string
 ): Promise<ClassroomStudentWorkExport> {
   const { data: rows, error: rowsError } = await getClassroomSubmissionsForWorkExport(classroomId);
   if (rowsError) {
@@ -40,9 +40,7 @@ export async function buildClassroomStudentWorkExport(
     .filter((s) => isChatLikeAssignmentType(s.assignment_type))
     .map((s) => s.id);
   const testAssignmentIds = [
-    ...new Set(
-      submissions.filter((s) => s.assignment_type === 'test').map((s) => s.assignment_id),
-    ),
+    ...new Set(submissions.filter((s) => s.assignment_type === 'test').map((s) => s.assignment_id)),
   ];
   const testSubmissionIds = submissions
     .filter((s) => s.assignment_type === 'test')
@@ -64,7 +62,7 @@ export async function buildClassroomStudentWorkExport(
     submissions,
     conversationsResult.data ?? new Map(),
     testDataResult.data?.questionsByAssignmentId ?? new Map(),
-    testDataResult.data?.responsesBySubmissionId ?? new Map(),
+    testDataResult.data?.responsesBySubmissionId ?? new Map()
   );
 
   return {
@@ -138,7 +136,7 @@ function mapDetailToPayload(
   studentWork: SubmissionStudentWorkExport,
   evaluation: SubmissionExportPayload['evaluation'],
   chatSentenceFlags?: Record<string, unknown>[],
-  clipboardEvents?: Record<string, unknown>[],
+  clipboardEvents?: Record<string, unknown>[]
 ): SubmissionExportPayload {
   const assignment = detail.assignments as {
     id: string;
@@ -153,7 +151,7 @@ function mapDetailToPayload(
     opik_trace_ids: Record<string, string> | null;
   };
 
-  const feedback = detail.feedback as {
+  const feedback = detail.feedback as unknown as {
     teacher_feedback: string | null;
     student_feedback: string | null;
     visible_to_student: boolean | null;
@@ -186,7 +184,9 @@ function mapDetailToPayload(
       evaluation_status: detail.evaluation_status ?? null,
       is_teacher_attempt: detail.is_teacher_attempt ?? false,
       awaiting_teacher_feedback_release: detail.awaiting_teacher_feedback_release ?? null,
-      conversation_complete_at_submit: detail.conversation_complete_at_submit ?? null,
+      conversation_complete_at_submit:
+        (detail as { conversation_complete_at_submit?: boolean | null }).conversation_complete_at_submit ??
+        null,
     },
     student_work: studentWork,
     feedback: feedback
@@ -212,7 +212,9 @@ function mapDetailToPayload(
   return payload;
 }
 
-export async function buildSubmissionExportPayload(submissionId: string): Promise<SubmissionExportPayload> {
+export async function buildSubmissionExportPayload(
+  submissionId: string
+): Promise<SubmissionExportPayload> {
   const { data: detail, error } = await getFullSubmissionDetails(submissionId);
   if (error) {
     throw new Error(error.message);
@@ -230,26 +232,35 @@ export async function buildSubmissionExportPayload(submissionId: string): Promis
     ? ((detail.feedback as { conversation_context?: Message[] }).conversation_context ?? [])
     : [];
 
-  const [fiveDResult, hardSkillsResult, conversationResult, flagsResult, clipboardResult, testQuestionsResult, testResponsesResult] =
-    await Promise.all([
-      supabase.from('five_d_snapshots').select('*').eq('submission_id', submissionId).maybeSingle(),
-      supabase.from('hard_skill_assessments').select('*').eq('submission_id', submissionId),
-      isChatLike ? getAssignmentConversationMessages(submissionId) : Promise.resolve({ data: null, error: null }),
-      isChatLike
-        ? getAssignmentChatSentenceFlags(submissionId)
-        : Promise.resolve({ data: [], error: null }),
-      getAssignmentClipboardEvents(submissionId),
-      assignmentType === 'test'
-        ? supabase
-            .from('test_questions')
-            .select('*')
-            .eq('assignment_id', assignmentId)
-            .order('order_index', { ascending: true })
-        : Promise.resolve({ data: [], error: null }),
-      assignmentType === 'test'
-        ? supabase.from('test_responses').select('*').eq('submission_id', submissionId)
-        : Promise.resolve({ data: [], error: null }),
-    ]);
+  const [
+    fiveDResult,
+    hardSkillsResult,
+    conversationResult,
+    flagsResult,
+    clipboardResult,
+    testQuestionsResult,
+    testResponsesResult,
+  ] = await Promise.all([
+    supabase.from('five_d_snapshots').select('*').eq('submission_id', submissionId).maybeSingle(),
+    supabase.from('hard_skill_assessments').select('*').eq('submission_id', submissionId),
+    isChatLike
+      ? getAssignmentConversationMessages(submissionId)
+      : Promise.resolve({ data: null, error: null }),
+    isChatLike
+      ? getAssignmentChatSentenceFlags(submissionId)
+      : Promise.resolve({ data: [], error: null }),
+    getAssignmentClipboardEvents(submissionId),
+    assignmentType === 'test'
+      ? supabase
+          .from('test_questions')
+          .select('*')
+          .eq('assignment_id', assignmentId)
+          .order('order_index', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    assignmentType === 'test'
+      ? supabase.from('test_responses').select('*').eq('submission_id', submissionId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (conversationResult.error) {
     throw new Error(conversationResult.error.message);
@@ -275,7 +286,7 @@ export async function buildSubmissionExportPayload(submissionId: string): Promis
       testQuestions: (testQuestionsResult.data as Record<string, unknown>[]) ?? [],
       testResponses: (testResponsesResult.data as Record<string, unknown>[]) ?? [],
     },
-    feedbackContext,
+    feedbackContext
   );
 
   const evaluation: SubmissionExportPayload['evaluation'] = {
@@ -291,7 +302,7 @@ export async function buildSubmissionExportPayload(submissionId: string): Promis
     studentWork,
     evaluation,
     chatFlags.length > 0 ? chatFlags : undefined,
-    clipboardEvents.length > 0 ? clipboardEvents : undefined,
+    clipboardEvents.length > 0 ? clipboardEvents : undefined
   );
 }
 

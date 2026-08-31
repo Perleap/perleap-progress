@@ -1,8 +1,8 @@
-import { Badge } from '@/components/ui/badge';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Lightbulb, AlertTriangle, TrendingDown, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { NuanceRecommendation } from '@/hooks/queries/useNuanceQueries';
+import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface StudentInsightCardProps {
   recommendation: NuanceRecommendation;
@@ -14,7 +14,10 @@ const typeConfig: Record<string, { icon: typeof Lightbulb }> = {
   persistence_support: { icon: TrendingDown },
 };
 
-function getConfidenceLabel(score: number): { label: string; variant: 'default' | 'secondary' | 'outline' } {
+function getConfidenceLabel(score: number): {
+  label: string;
+  variant: 'default' | 'secondary' | 'outline';
+} {
   if (score >= 0.75) return { label: 'High', variant: 'default' };
   if (score >= 0.5) return { label: 'Medium', variant: 'secondary' };
   return { label: 'Low', variant: 'outline' };
@@ -44,12 +47,13 @@ function labelForMetricKey(t: (key: string, fallback: string) => string, key: st
   return t(`nuance.metricLabels.${key}`, human);
 }
 
-export function StudentInsightCard({ recommendation }: StudentInsightCardProps) {
+export const StudentInsightCard = ({ recommendation }: StudentInsightCardProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const dir = isRTL ? 'rtl' : 'ltr';
 
-  const { icon: Icon } = typeConfig[recommendation.recommendation_type] || typeConfig.engagement_support;
+  const { icon: Icon } =
+    typeConfig[recommendation.recommendation_type] || typeConfig.engagement_support;
   const confidence = getConfidenceLabel(recommendation.confidence_score);
   const metrics = recommendation.supporting_metrics || {};
 
@@ -68,13 +72,18 @@ export function StudentInsightCard({ recommendation }: StudentInsightCardProps) 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t(`nuance.types.${recommendation.recommendation_type}`, recommendation.recommendation_type.replace(/_/g, ' '))}
+              {t(
+                `nuance.types.${recommendation.recommendation_type}`,
+                recommendation.recommendation_type.replace(/_/g, ' ')
+              )}
             </span>
             <Badge variant={confidence.variant} className="text-[10px] px-2 py-0 h-5 rounded-full">
               {t(`nuance.confidence.${confidence.label.toLowerCase()}`, confidence.label)}
             </Badge>
           </div>
-          <p className={`text-sm font-medium text-foreground leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+          <p
+            className={`text-sm font-medium text-foreground leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {recommendation.recommendation_text}
           </p>
         </div>
@@ -86,7 +95,9 @@ export function StudentInsightCard({ recommendation }: StudentInsightCardProps) 
           <Lightbulb className="h-3 w-3" />
           {t('nuance.whyTriggered', 'Why this was triggered')}
         </p>
-        <p className={`text-xs text-muted-foreground leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+        <p
+          className={`text-xs text-muted-foreground leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}
+        >
           {recommendation.trigger_reason}
         </p>
       </div>
@@ -106,9 +117,7 @@ export function StudentInsightCard({ recommendation }: StudentInsightCardProps) 
                 >
                   {labelForMetricKey(t, key)}
                 </p>
-                <p className="text-sm font-bold text-foreground">
-                  {formatMetricValue(key, value)}
-                </p>
+                <p className="text-sm font-bold text-foreground">{formatMetricValue(key, value)}</p>
               </div>
             ))}
           </div>
@@ -116,4 +125,4 @@ export function StudentInsightCard({ recommendation }: StudentInsightCardProps) 
       )}
     </div>
   );
-}
+};

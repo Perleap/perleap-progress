@@ -1,6 +1,6 @@
+import { MessageSquare, FileOutput, Brain, Zap, Mail, Database } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, FileOutput, Brain, Zap, Mail, Database } from 'lucide-react';
 
 const NODE_TYPES_CONFIG = [
   { type: 'inputNode', icon: MessageSquare, color: 'text-blue-600 bg-blue-50 border-blue-200' },
@@ -20,7 +20,7 @@ const NODE_KEY_MAP: Record<string, string> = {
   databaseNode: 'database',
 };
 
-export function NodePalette() {
+export const NodePalette = () => {
   const { t } = useTranslation();
   const dragImageRef = useRef<HTMLDivElement | null>(null);
 
@@ -83,4 +83,4 @@ export function NodePalette() {
       })}
     </div>
   );
-}
+};

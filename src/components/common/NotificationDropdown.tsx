@@ -1,19 +1,19 @@
+import i18n from 'i18next';
+import { Bell } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import type { NotificationWithProfile } from '@/types/notifications';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-import i18n from 'i18next';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import type { NotificationWithProfile } from '@/types/notifications';
 import { useNotificationList, useMarkAsRead, useMarkAllAsRead } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 
@@ -30,7 +30,7 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
 
   // Use React Query for notifications
   const { data: notifications = [], isLoading } = useNotificationList(userId);
-  
+
   const markAsReadMutation = useMarkAsRead();
   const markAllAsReadMutation = useMarkAllAsRead();
 
@@ -51,9 +51,13 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
     try {
       await markAsReadMutation.mutateAsync(notification.id);
       setDropdownOpen(false);
-      
+
       // Navigate if link exists and is a valid string
-      if (notification.link && typeof notification.link === 'string' && notification.link.trim() !== '') {
+      if (
+        notification.link &&
+        typeof notification.link === 'string' &&
+        notification.link.trim() !== ''
+      ) {
         let targetLink = notification.link.trim();
         const submissionId = notification.metadata?.submission_id;
         if (
@@ -93,7 +97,7 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
         .toUpperCase()
         .slice(0, 2);
     }
-    
+
     // Fallback based on notification type
     switch (type) {
       case 'feedback_received':
@@ -176,7 +180,10 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <Avatar className="h-10 w-10 border border-border/50 shrink-0">
-                    <SecureAvatarImage src={notification.actor_profile?.avatar_url || undefined} alt="" />
+                    <SecureAvatarImage
+                      src={notification.actor_profile?.avatar_url || undefined}
+                      alt=""
+                    />
                     <AvatarFallback className="text-[10px] bg-muted uppercase">
                       {getInitials(notification.actor_profile?.full_name || '', notification.type)}
                     </AvatarFallback>
@@ -199,4 +206,3 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
     </DropdownMenu>
   );
 };
-

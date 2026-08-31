@@ -1,5 +1,5 @@
-import { supabase } from '@/api/client';
 import type { Json } from '@/integrations/supabase/types';
+import { supabase } from '@/api/client';
 
 export type ClipboardEventType = 'copy' | 'paste';
 
@@ -31,7 +31,7 @@ export interface ClipboardEventPayload {
 const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH_SIZE = 30;
 
-let eventQueue: ClipboardEventPayload[] = [];
+const eventQueue: ClipboardEventPayload[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let isFlushing = false;
 
@@ -114,7 +114,7 @@ export function flushClipboardEventsBeacon(): void {
 
 export async function linkChatPasteToMessage(
   submissionId: string,
-  messageIndex: number,
+  messageIndex: number
 ): Promise<void> {
   const { error } = await supabase.rpc('link_assignment_clipboard_paste_messages', {
     p_submission_id: submissionId,

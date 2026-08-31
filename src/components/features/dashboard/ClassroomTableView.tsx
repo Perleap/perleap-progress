@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Users, Copy, ArrowUpDown, ArrowUp, ArrowDown, Calendar, LogIn } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { copyToClipboard } from '@/lib/utils';
 import { formatClassroomDate } from '@/lib/classroomViewMode';
-import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/utils';
 
 interface Classroom {
   id: string;
@@ -35,11 +35,11 @@ interface ClassroomTableViewProps {
 type SortField = 'name' | 'subject' | 'students';
 type SortDirection = 'asc' | 'desc' | null;
 
-export function ClassroomTableView({
+export const ClassroomTableView = ({
   classrooms,
   onCopyInviteCode,
   variant = 'teacher',
-}: ClassroomTableViewProps) {
+}: ClassroomTableViewProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const isStudent = variant === 'student';
@@ -203,7 +203,15 @@ export function ClassroomTableView({
                 ) : null}
                 <TableCell>
                   <div className="text-sm text-muted-foreground">
-                    {formatClassroomDate(classroom.start_date, { format: 'long', unavailable: unavailableDate })} - {formatClassroomDate(classroom.end_date, { format: 'long', unavailable: unavailableDate })}
+                    {formatClassroomDate(classroom.start_date, {
+                      format: 'long',
+                      unavailable: unavailableDate,
+                    })}{' '}
+                    -{' '}
+                    {formatClassroomDate(classroom.end_date, {
+                      format: 'long',
+                      unavailable: unavailableDate,
+                    })}
                   </div>
                 </TableCell>
                 {!isStudent ? (
@@ -235,7 +243,7 @@ export function ClassroomTableView({
                         {t('studentDashboard.enterCourse')}
                       </>
                     ) : (
-                      (t('common.view') || 'View')
+                      t('common.view') || 'View'
                     )}
                   </Button>
                 </TableCell>
@@ -246,4 +254,4 @@ export function ClassroomTableView({
       </Table>
     </div>
   );
-}
+};

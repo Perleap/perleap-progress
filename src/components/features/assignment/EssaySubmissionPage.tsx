@@ -1,19 +1,19 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, Send } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrackedTextarea } from '@/components/ui/tracked-textarea';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
-import { Loader2, Send } from 'lucide-react';
-import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { assignmentKeys } from '@/hooks/queries';
 import { supabase } from '@/integrations/supabase/client';
 import { submitWithBackgroundAiFeedback, completeSubmission } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/useAuth';
-import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries';
-import type { AssignmentCompletionTone } from '@/types/submission';
 
 const AUTOSAVE_MS = 1200;
 
@@ -32,7 +32,7 @@ interface EssaySubmissionPageProps {
   onComplete: (tone?: AssignmentCompletionTone) => void | Promise<void>;
 }
 
-export function EssaySubmissionPage({
+export const EssaySubmissionPage = ({
   assignmentId,
   submissionId,
   assignmentInstructions,
@@ -42,7 +42,7 @@ export function EssaySubmissionPage({
   initialText,
   clipboardTracking,
   onComplete,
-}: EssaySubmissionPageProps) {
+}: EssaySubmissionPageProps) => {
   const { t } = useTranslation();
   const { language: uiLanguage = 'en' } = useLanguage();
   const { user } = useAuth();
@@ -73,7 +73,7 @@ export function EssaySubmissionPage({
         setSaving(false);
       }
     },
-    [submissionId, assignmentId, queryClient],
+    [submissionId, assignmentId, queryClient]
   );
 
   const onTextChange = (value: string) => {
@@ -187,4 +187,4 @@ export function EssaySubmissionPage({
       </CardContent>
     </Card>
   );
-}
+};

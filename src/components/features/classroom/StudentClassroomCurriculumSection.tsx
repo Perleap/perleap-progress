@@ -1,22 +1,18 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
+import type { ModuleFlowStep, StudentProgressStatus, SyllabusWithSections } from '@/types/syllabus';
 import { GradingBreakdownView } from '@/components/features/syllabus/GradingBreakdownView';
 import { SectionContentPage } from '@/components/features/syllabus/SectionContentPage';
 import { StudentActivitiesSection } from '@/components/features/syllabus/StudentActivitiesSection';
 import { StudentPoliciesView } from '@/components/features/syllabus/StudentPoliciesView';
-import type { SectionSequentialUnlockFlow } from '@/lib/sectionUnlock';
-import type {
-  ModuleFlowStep,
-  StudentProgressStatus,
-  Syllabus,
-} from '@/types/syllabus';
 
 type ResumeTarget = { kind: 'assignment' | 'resource'; id: string };
 
 export type StudentClassroomCurriculumSectionProps = {
   classroomId: string;
   isRTL: boolean;
-  syllabus: Syllabus;
+  syllabus: SyllabusWithSections;
   openSectionId: string | null;
   moduleFlowBulk: Record<string, ModuleFlowStep[]>;
   linkedAssignmentsMap: Record<
@@ -33,7 +29,7 @@ export type StudentClassroomCurriculumSectionProps = {
   onOpenModuleFullPage: (sectionId: string) => void;
 };
 
-export function StudentClassroomCurriculumSection({
+export const StudentClassroomCurriculumSection = ({
   classroomId,
   isRTL,
   syllabus,
@@ -48,7 +44,7 @@ export function StudentClassroomCurriculumSection({
   onBack,
   onNavigateSection,
   onOpenModuleFullPage,
-}: StudentClassroomCurriculumSectionProps) {
+}: StudentClassroomCurriculumSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -91,4 +87,4 @@ export function StudentClassroomCurriculumSection({
       )}
     </div>
   );
-}
+};

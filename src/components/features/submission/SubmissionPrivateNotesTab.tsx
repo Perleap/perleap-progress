@@ -23,10 +23,10 @@ type SubmissionPrivateNotesTabProps = {
   isRTL: boolean;
 };
 
-export function SubmissionPrivateNotesTab({
+export const SubmissionPrivateNotesTab = ({
   submissionId,
   isRTL,
-}: SubmissionPrivateNotesTabProps) {
+}: SubmissionPrivateNotesTabProps) => {
   const { t } = useTranslation();
   const { data: entries, isLoading } = useSubmissionTeacherPrivateNoteEntries(submissionId);
   const createNote = useCreateSubmissionTeacherPrivateNoteEntry();
@@ -122,10 +122,12 @@ export function SubmissionPrivateNotesTab({
             >
               {t('common.cancel')}
             </Button>
-            <Button type="button" onClick={() => void handleSaveNew()} disabled={createNote.isPending}>
-              {createNote.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin me-2" />
-              ) : null}
+            <Button
+              type="button"
+              onClick={() => void handleSaveNew()}
+              disabled={createNote.isPending}
+            >
+              {createNote.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
               {t('submissionDetail.interactionNotes.save')}
             </Button>
           </DialogFooter>
@@ -133,4 +135,4 @@ export function SubmissionPrivateNotesTab({
       </Dialog>
     </div>
   );
-}
+};

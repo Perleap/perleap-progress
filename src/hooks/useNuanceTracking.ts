@@ -1,11 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
+import type { UnderstandingCueResult } from '@/lib/understandingCueDetection';
 import {
   trackNuanceEvent,
   flushNuanceEvents,
   flushNuanceEventsBeacon,
   type NuanceEventType,
 } from '@/services/nuanceEventService';
-import type { UnderstandingCueResult } from '@/lib/understandingCueDetection';
 
 /** No mouse/keyboard activity for this long while tab is visible counts as in-tab idle. */
 export const IN_TAB_IDLE_THRESHOLD_MS = 30_000;
@@ -18,7 +18,7 @@ export interface NuanceTrackingCallbacks {
   trackUnderstandingCue: (
     result: UnderstandingCueResult,
     messageLength: number,
-    messageIndex: number,
+    messageIndex: number
   ) => void;
 }
 
@@ -54,7 +54,7 @@ export function useNuanceTracking({
         metadata,
       });
     },
-    [canTrack, studentId, assignmentId, submissionId],
+    [canTrack, studentId, assignmentId, submissionId]
   );
 
   const clearIdleTimer = useCallback(() => {
@@ -157,7 +157,7 @@ export function useNuanceTracking({
         message_index: messageIndex,
       });
     },
-    [emit, noteUserActivity],
+    [emit, noteUserActivity]
   );
 
   const trackResponseStarted = useCallback(
@@ -165,7 +165,7 @@ export function useNuanceTracking({
       noteUserActivity();
       emit('response_started', { message_index: messageIndex });
     },
-    [emit, noteUserActivity],
+    [emit, noteUserActivity]
   );
 
   const recordAiMessageArrival = useCallback(() => {
@@ -196,7 +196,7 @@ export function useNuanceTracking({
           // eslint-disable-next-line no-console
           console.debug(
             '[Nuance] understanding_cue not emitted — tracking off (check: submission+no feedback, studentId, assignmentId, useNuanceTracking enabled)',
-            { enabled, hasStudentId: !!studentId, hasAssignmentId: !!assignmentId },
+            { enabled, hasStudentId: !!studentId, hasAssignmentId: !!assignmentId }
           );
         }
         return;
@@ -208,7 +208,7 @@ export function useNuanceTracking({
         message_index: messageIndex,
       });
     },
-    [canTrack, emit, enabled, studentId, assignmentId],
+    [canTrack, emit, enabled, studentId, assignmentId]
   );
 
   return {

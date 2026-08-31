@@ -58,7 +58,7 @@ export function getStorageCacheKey(bucket: string, path: string): string {
 export function peekStorageBlobUrl(
   bucket: string,
   filePath: string | null | undefined,
-  storedUrl: string | null | undefined,
+  storedUrl: string | null | undefined
 ): string | null {
   const path =
     filePath?.trim() ||
@@ -69,26 +69,23 @@ export function peekStorageBlobUrl(
 
 export async function createAuthenticatedBlobUrl(
   bucket: string,
-  path: string,
+  path: string
 ): Promise<AuthenticatedBlobUrl | null> {
   const cacheKey = getStorageCacheKey(bucket, path);
   const url = await getOrCreateCachedBlobUrl(cacheKey, bucket, () =>
-    downloadStorageBlob(bucket, path),
+    downloadStorageBlob(bucket, path)
   );
   if (!url) return null;
   return { url, revoke: () => {} };
 }
 
-export function prefetchStorageBlob(
-  bucket: string,
-  storedValue: string | null | undefined,
-): void {
+export function prefetchStorageBlob(bucket: string, storedValue: string | null | undefined): void {
   const trimmed = storedValue?.trim();
   if (!trimmed || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return;
 
   const path = extractStorageObjectPath(bucket, trimmed) ?? trimmed;
   prefetchCachedBlobUrl(getStorageCacheKey(bucket, path), bucket, () =>
-    downloadStorageBlob(bucket, path),
+    downloadStorageBlob(bucket, path)
   );
 }
 
@@ -99,7 +96,7 @@ export function prefetchStorageBlob(
 export async function resolveStorageStoredValue(
   bucket: string,
   filePath: string | null | undefined,
-  storedUrl: string | null | undefined,
+  storedUrl: string | null | undefined
 ): Promise<AuthenticatedBlobUrl | null> {
   const path =
     filePath?.trim() ||
@@ -123,7 +120,7 @@ export async function resolveStorageStoredValue(
 
 export async function resolveSyllabusResourceStoredValue(
   filePath: string | null | undefined,
-  storedUrl: string | null | undefined,
+  storedUrl: string | null | undefined
 ): Promise<AuthenticatedBlobUrl | null> {
   return resolveStorageStoredValue(SYLLABUS_RESOURCES_BUCKET, filePath, storedUrl);
 }
@@ -137,17 +134,14 @@ export function inferAvatarBucket(storedValue: string | null | undefined): strin
 
 export async function resolveAvatarStoredValue(
   storedValue: string | null | undefined,
-  bucket?: string,
+  bucket?: string
 ): Promise<AuthenticatedBlobUrl | null> {
   if (!storedValue?.trim()) return null;
   const resolvedBucket = bucket ?? inferAvatarBucket(storedValue);
   return resolveStorageStoredValue(resolvedBucket, null, storedValue);
 }
 
-export function prefetchAvatarBlob(
-  storedValue: string | null | undefined,
-  bucket?: string,
-): void {
+export function prefetchAvatarBlob(storedValue: string | null | undefined, bucket?: string): void {
   if (!storedValue?.trim()) return;
   prefetchStorageBlob(bucket ?? inferAvatarBucket(storedValue), storedValue);
 }

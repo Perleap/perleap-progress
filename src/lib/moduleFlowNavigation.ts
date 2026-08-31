@@ -2,6 +2,7 @@
  * Student navigation targets across module flow steps and syllabus sections.
  */
 
+import type { ModuleFlowStep, SectionResource, SyllabusSection } from '@/types/syllabus';
 import {
   orderedSections,
   resolveDisplayedModuleFlow,
@@ -9,11 +10,8 @@ import {
   type ComputedFlowItem,
   type OrderedActivityCenterFlowStepsOptions,
 } from '@/lib/moduleFlow';
-import type { ModuleFlowStep, SectionResource, SyllabusSection } from '@/types/syllabus';
 
-export type FlowStepTarget =
-  | { kind: 'resource'; id: string }
-  | { kind: 'assignment'; id: string };
+export type FlowStepTarget = { kind: 'resource'; id: string } | { kind: 'assignment'; id: string };
 
 export function getNextInSectionAfterAssignment(params: {
   usePersistedFlow: boolean;
@@ -24,7 +22,7 @@ export function getNextInSectionAfterAssignment(params: {
   const { usePersistedFlow, orderedPersisted, computed, assignmentId } = params;
   if (usePersistedFlow) {
     const idx = orderedPersisted.findIndex(
-      (s) => s.step_kind === 'assignment' && s.assignment_id === assignmentId,
+      (s) => s.step_kind === 'assignment' && s.assignment_id === assignmentId
     );
     if (idx < 0) return null;
     const next = orderedPersisted[idx + 1];
@@ -37,7 +35,9 @@ export function getNextInSectionAfterAssignment(params: {
     }
     return null;
   }
-  const idx = computed.findIndex((c) => c.kind === 'assignment' && c.assignment_id === assignmentId);
+  const idx = computed.findIndex(
+    (c) => c.kind === 'assignment' && c.assignment_id === assignmentId
+  );
   if (idx < 0) return null;
   const next = computed[idx + 1];
   if (!next) return null;
@@ -57,7 +57,7 @@ export function getFirstNavigableInSection(params: {
     params.sectionResources,
     params.assignments,
     params.persistedSteps,
-    params.flowStepOptions,
+    params.flowStepOptions
   );
   const first = local[0];
   if (!first) return null;
@@ -67,7 +67,7 @@ export function getFirstNavigableInSection(params: {
 
 export function getNextSectionId(
   sections: SyllabusSection[] | undefined,
-  currentSectionId: string | null | undefined,
+  currentSectionId: string | null | undefined
 ): string | undefined {
   if (!currentSectionId || !sections?.length) return undefined;
   const ordered = orderedSections(sections);

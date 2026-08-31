@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
   useCallback,
@@ -7,18 +8,17 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import { buildRoute } from '@/config/routes';
+import type { LiveSessionType, LiveSessionUploadMode } from '@/types/liveSession';
 import { LiveSessionProcessingBanner } from '@/components/features/liveSession/LiveSessionProcessingBanner';
+import { buildRoute } from '@/config/routes';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import {
   runLiveSessionCreatePipeline,
   type LiveSessionPipelineProgress,
 } from '@/services/liveSessionCreatePipeline';
-import type { LiveSessionType, LiveSessionUploadMode } from '@/types/liveSession';
 
 export type LiveSessionActiveJob = {
   classroomId: string;
@@ -79,7 +79,7 @@ function labelForProgress(
   }
 }
 
-export function LiveSessionProcessingProvider({ children }: { children: ReactNode }) {
+export const LiveSessionProcessingProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -121,9 +121,7 @@ export function LiveSessionProcessingProvider({ children }: { children: ReactNod
         language: input.language,
         knownDurationSeconds: input.knownDurationSeconds,
         onAssignmentCreated: (assignmentId) => {
-          setActiveJob((job) =>
-            job ? { ...job, assignmentId } : job
-          );
+          setActiveJob((job) => (job ? { ...job, assignmentId } : job));
           input.onAssignmentCreated?.(assignmentId);
         },
         onProgress: (progress) => {
@@ -198,7 +196,7 @@ export function LiveSessionProcessingProvider({ children }: { children: ReactNod
       {activeJob?.minimized ? <LiveSessionProcessingBanner job={activeJob} /> : null}
     </LiveSessionProcessingContext.Provider>
   );
-}
+};
 
 export function useLiveSessionProcessing(): LiveSessionProcessingContextValue {
   const ctx = useContext(LiveSessionProcessingContext);

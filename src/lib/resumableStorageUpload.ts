@@ -24,7 +24,7 @@ export async function uploadFileResumable(
   bucketName: string,
   objectName: string,
   file: File,
-  options?: ResumableUploadOptions,
+  options?: ResumableUploadOptions
 ): Promise<void> {
   const onProgress = options?.onProgress;
   const signal = options?.signal;

@@ -1,54 +1,8 @@
-import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
-import type { Database, Json } from '@/integrations/supabase/types';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/useAuth';
-import { createBulkNotifications } from '@/lib/notificationService';
-import { buildModuleContextTextFromSyllabusResources } from '@/lib/moduleContextTextFromSyllabus';
-import {
-  setAssignmentLinkedActivities,
-  getLinkedActivitiesForAssignment,
-  getSectionResourceIdsForSectionInOrder,
-} from '@/services/assignmentModuleActivityService';
-import {
-  generateStudentFacingTaskDraft,
-  parseEdgeFunctionErrorMessage,
-  prefillStudentFacingTaskForAssignment,
-} from '@/services/assignmentService';
-import {
-  useSyllabus,
-  syllabusKeys,
-  assignmentKeys,
-  syncModuleFlowToResolvedDisplayForSection,
-} from '@/hooks/queries';
-import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
-import { testKeys } from '@/hooks/queries/useTestQueries';
-import { WizardStepIndicator, type WizardStep } from '@/components/features/syllabus/WizardStepIndicator';
-import { normalizeTestQuestionDraft, validateTestQuestionsForPublish, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
-import {
-  deriveAllowMultipleSelections,
-  legacySingleOptionId,
-  parseOptionIds,
-} from '@/lib/testMcq';
-import { AssignmentBasicsStep } from './steps/AssignmentBasicsStep';
-import { AssignmentFormatStep } from './steps/AssignmentFormatStep';
-import { AssignmentCourseReleaseStep } from './steps/AssignmentCourseReleaseStep';
-import { AssignmentSkillsMaterialsStep } from './steps/AssignmentSkillsMaterialsStep';
-import { AssignmentTestStep } from './steps/AssignmentTestStep';
-import { AssignmentReviewStep } from './steps/AssignmentReviewStep';
-import {
-  distinctDomains,
-  parseHardSkillsFromDb,
-  resolveHardSkillDomainForDb,
-  type HardSkillPair,
-} from '@/lib/hardSkillsFormat';
 import {
   ASSIGNMENT_WIZARD_FIRST_STEP,
   assignmentCreateDraftKey,
@@ -60,10 +14,59 @@ import {
   type AssignmentWizardFormData,
   type AssignmentWizardStepId,
 } from './assignmentWizardTypes';
+import { AssignmentBasicsStep } from './steps/AssignmentBasicsStep';
+import { AssignmentCourseReleaseStep } from './steps/AssignmentCourseReleaseStep';
+import { AssignmentFormatStep } from './steps/AssignmentFormatStep';
+import { AssignmentReviewStep } from './steps/AssignmentReviewStep';
+import { AssignmentSkillsMaterialsStep } from './steps/AssignmentSkillsMaterialsStep';
+import { AssignmentTestStep } from './steps/AssignmentTestStep';
 import type { HardSkillsSuggestionStatus } from './steps/AssignmentSkillsMaterialsStep';
+import type { Database, Json } from '@/integrations/supabase/types';
+import {
+  normalizeTestQuestionDraft,
+  validateTestQuestionsForPublish,
+  type TestQuestionDraft,
+} from '@/components/features/assignment/TestQuestionBuilder';
+import {
+  WizardStepIndicator,
+  type WizardStep,
+} from '@/components/features/syllabus/WizardStepIndicator';
+import { Button } from '@/components/ui/button';
 import { dueAtLocalInputToIso } from '@/components/ui/datetime-picker';
-import { materialsMatch, isPdfUploadFile } from '@/services/materialService';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import {
+  useSyllabus,
+  syllabusKeys,
+  assignmentKeys,
+  syncModuleFlowToResolvedDisplayForSection,
+} from '@/hooks/queries';
+import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { testKeys } from '@/hooks/queries/useTestQueries';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  distinctDomains,
+  parseHardSkillsFromDb,
+  resolveHardSkillDomainForDb,
+  type HardSkillPair,
+} from '@/lib/hardSkillsFormat';
+import { buildModuleContextTextFromSyllabusResources } from '@/lib/moduleContextTextFromSyllabus';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
+import { createBulkNotifications } from '@/lib/notificationService';
+import { deriveAllowMultipleSelections, legacySingleOptionId, parseOptionIds } from '@/lib/testMcq';
+import {
+  setAssignmentLinkedActivities,
+  getLinkedActivitiesForAssignment,
+  getSectionResourceIdsForSectionInOrder,
+} from '@/services/assignmentModuleActivityService';
+import {
+  generateStudentFacingTaskDraft,
+  parseEdgeFunctionErrorMessage,
+  prefillStudentFacingTaskForAssignment,
+} from '@/services/assignmentService';
+import { materialsMatch, isPdfUploadFile } from '@/services/materialService';
 
 type DialogOpenProps = {
   open: boolean;
@@ -120,8 +123,7 @@ function dbRowToTestDraft(row: {
 }
 
 function testQuestionToInsertRow(q: TestQuestionDraft, assignmentId: string) {
-  const correct_option_ids =
-    q.question_type === 'multiple_choice' ? q.correct_option_ids : [];
+  const correct_option_ids = q.question_type === 'multiple_choice' ? q.correct_option_ids : [];
   return {
     assignment_id: assignmentId,
     question_text: q.question_text,
@@ -136,7 +138,7 @@ function testQuestionToInsertRow(q: TestQuestionDraft, assignmentId: string) {
   };
 }
 
-export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
+export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
   const { t } = useTranslation();
   const { isRTL, language: uiLanguage } = useLanguage();
   const { user } = useAuth();
@@ -155,14 +157,20 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
 
   const { data: syllabus, isLoading: isSyllabusLoading } = useSyllabus(classroomId);
 
-  const [currentStepId, setCurrentStepId] = useState<AssignmentWizardStepId>(ASSIGNMENT_WIZARD_FIRST_STEP);
-  const [formData, setFormData] = useState<AssignmentWizardFormData>(() => getDefaultAssignmentWizardFormData());
+  const [currentStepId, setCurrentStepId] = useState<AssignmentWizardStepId>(
+    ASSIGNMENT_WIZARD_FIRST_STEP
+  );
+  const [formData, setFormData] = useState<AssignmentWizardFormData>(() =>
+    getDefaultAssignmentWizardFormData()
+  );
   const [loading, setLoading] = useState(false);
   const [generatingStudentTask, setGeneratingStudentTask] = useState(false);
   const [uploadingMaterial, setUploadingMaterial] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [linkInput, setLinkInput] = useState('');
-  const [classroomDomains, setClassroomDomains] = useState<Array<{ name: string; components: string[] }>>([]);
+  const [classroomDomains, setClassroomDomains] = useState<
+    Array<{ name: string; components: string[] }>
+  >([]);
   const [classroomMaterials, setClassroomMaterials] = useState<
     Array<{ type: 'pdf' | 'link'; url: string; name: string }>
   >([]);
@@ -210,7 +218,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         id,
         title: t(`createAssignment.wizard.steps.${id}`),
       })),
-    [stepOrder, t],
+    [stepOrder, t]
   );
 
   const currentStepIndex = Math.max(0, stepOrder.indexOf(currentStepId));
@@ -269,7 +277,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         });
       })();
     },
-    [classroomId, uiLanguage],
+    [classroomId, uiLanguage]
   );
 
   useEffect(() => {
@@ -325,10 +333,16 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       if (Array.isArray(draft.testQuestions)) {
         setTestQuestions(draft.testQuestions.map((q) => normalizeTestQuestionDraft(q)));
       }
-      if (typeof draft.gradingCategoryId === 'string') setGradingCategoryId(draft.gradingCategoryId);
-      if (Array.isArray(draft.linkedModuleActivityIds)) setLinkedModuleActivityIds(draft.linkedModuleActivityIds);
+      if (typeof draft.gradingCategoryId === 'string')
+        setGradingCategoryId(draft.gradingCategoryId);
+      if (Array.isArray(draft.linkedModuleActivityIds))
+        setLinkedModuleActivityIds(draft.linkedModuleActivityIds);
       if (draft.aiMetadata && typeof draft.aiMetadata === 'object') setAiMetadata(draft.aiMetadata);
-      if (typeof draft.syllabusSectionId === 'string' && draft.syllabusSectionId && !lockSyllabusSection) {
+      if (
+        typeof draft.syllabusSectionId === 'string' &&
+        draft.syllabusSectionId &&
+        !lockSyllabusSection
+      ) {
         setSyllabusSectionId(draft.syllabusSectionId);
       }
     } catch {
@@ -358,10 +372,16 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       if (Array.isArray(draft.testQuestions)) {
         setTestQuestions(draft.testQuestions.map((q) => normalizeTestQuestionDraft(q)));
       }
-      if (typeof draft.gradingCategoryId === 'string') setGradingCategoryId(draft.gradingCategoryId);
-      if (Array.isArray(draft.linkedModuleActivityIds)) setLinkedModuleActivityIds(draft.linkedModuleActivityIds);
+      if (typeof draft.gradingCategoryId === 'string')
+        setGradingCategoryId(draft.gradingCategoryId);
+      if (Array.isArray(draft.linkedModuleActivityIds))
+        setLinkedModuleActivityIds(draft.linkedModuleActivityIds);
       if (draft.aiMetadata && typeof draft.aiMetadata === 'object') setAiMetadata(draft.aiMetadata);
-      if (typeof draft.syllabusSectionId === 'string' && draft.syllabusSectionId && !lockSyllabusSection) {
+      if (
+        typeof draft.syllabusSectionId === 'string' &&
+        draft.syllabusSectionId &&
+        !lockSyllabusSection
+      ) {
         setSyllabusSectionId(draft.syllabusSectionId);
       }
     } catch {
@@ -447,7 +467,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
               try {
                 parsedList = JSON.parse(rawSkills);
               } catch {
-                parsedList = rawSkills.split(',').map((s) => s.trim()).filter(Boolean);
+                parsedList = rawSkills
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean);
               }
             }
             const pairs = parseHardSkillsFromDb(parsedList, lastAssignment.hard_skill_domain);
@@ -486,7 +509,13 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       setSyllabusSectionId(initialData?.syllabus_section_id ?? '');
       setGradingCategoryId(initialData?.grading_category_id ?? '');
     }
-  }, [open, classroomId, initialData?.syllabus_section_id, initialData?.grading_category_id, isCreate]);
+  }, [
+    open,
+    classroomId,
+    initialData?.syllabus_section_id,
+    initialData?.grading_category_id,
+    isCreate,
+  ]);
 
   useEffect(() => {
     if (!open || isCreate) return;
@@ -539,8 +568,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         instructions: initialData.instructions || prev.instructions || '',
         type: initialData.type || prev.type || 'chatbot',
         due_at: initialData.due_at || prev.due_at || '',
-        target_dimensions:
-          initialData.target_dimensions ||
+        target_dimensions: initialData.target_dimensions ||
           prev.target_dimensions || {
             vision: false,
             values: false,
@@ -579,23 +607,30 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       const { data } = await supabase
         .from('assignments')
         .select(
-          'hard_skills, hard_skill_domain, materials, enable_ai_feedback, auto_publish_ai_feedback, use_course_memory, show_task_understanding_prompt, syllabus_section_id, grading_category_id, student_facing_task',
+          'hard_skills, hard_skill_domain, materials, enable_ai_feedback, auto_publish_ai_feedback, use_course_memory, show_task_understanding_prompt, syllabus_section_id, grading_category_id, student_facing_task'
         )
         .eq('id', assignment.id)
         .single();
 
       setFormData((prev) => ({
         ...prev,
-        enable_ai_feedback: (data as { enable_ai_feedback?: boolean })?.enable_ai_feedback !== false,
+        enable_ai_feedback:
+          (data as { enable_ai_feedback?: boolean })?.enable_ai_feedback !== false,
         auto_publish_ai_feedback: data?.auto_publish_ai_feedback !== false,
         use_course_memory: (data as { use_course_memory?: boolean }).use_course_memory !== false,
         show_task_understanding_prompt:
           (data as { show_task_understanding_prompt?: boolean }).show_task_understanding_prompt !==
           false,
-        student_facing_task: (data as { student_facing_task?: string | null })?.student_facing_task?.trim() || prev.student_facing_task,
+        student_facing_task:
+          (data as { student_facing_task?: string | null })?.student_facing_task?.trim() ||
+          prev.student_facing_task,
       }));
-      setSyllabusSectionId((data as { syllabus_section_id?: string | null })?.syllabus_section_id || '');
-      setGradingCategoryId((data as { grading_category_id?: string | null })?.grading_category_id || '');
+      setSyllabusSectionId(
+        (data as { syllabus_section_id?: string | null })?.syllabus_section_id || ''
+      );
+      setGradingCategoryId(
+        (data as { grading_category_id?: string | null })?.grading_category_id || ''
+      );
 
       let pairs: HardSkillPair[] = [];
       if (data?.hard_skills) {
@@ -605,7 +640,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           try {
             parsedList = JSON.parse(raw);
           } catch {
-            parsedList = raw.split(',').map((s) => s.trim()).filter(Boolean);
+            parsedList = raw
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
           }
         }
         pairs = parseHardSkillsFromDb(parsedList, data.hard_skill_domain);
@@ -751,9 +789,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     try {
       const sectionResources = syllabus?.section_resources?.[syllabusSectionId] ?? [];
       const referenceContext =
-        syllabusSectionId &&
-        linkedModuleActivityIds.length > 0 &&
-        sectionResources.length > 0
+        syllabusSectionId && linkedModuleActivityIds.length > 0 && sectionResources.length > 0
           ? buildModuleContextTextFromSyllabusResources(linkedModuleActivityIds, sectionResources)
           : '';
       const { data, error } = await supabase.functions.invoke('rephrase-text', {
@@ -779,7 +815,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     if (!isPdfUploadFile(file)) {
-      toast.error(t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving'));
+      toast.error(
+        t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving')
+      );
       return;
     }
     setUploadingMaterial(true);
@@ -798,7 +836,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       e.target.value = '';
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`${t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving')}: ${msg}`);
+      toast.error(
+        `${t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving')}: ${msg}`
+      );
     } finally {
       setUploadingMaterial(false);
     }
@@ -812,7 +852,8 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     try {
       const url = new URL(linkInput.trim());
       const linkName =
-        url.hostname.replace('www.', '') + (url.pathname !== '/' ? url.pathname.substring(0, 30) : '');
+        url.hostname.replace('www.', '') +
+        (url.pathname !== '/' ? url.pathname.substring(0, 30) : '');
       setFormData((prev) => ({
         ...prev,
         materials: [
@@ -886,8 +927,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           .eq('id', classroomId)
           .single();
         if (!roomErr) {
-          const list = (roomRow as { domains?: Array<{ name: string; components: string[] }> } | null)
-            ?.domains;
+          const list = (
+            roomRow as { domains?: Array<{ name: string; components: string[] }> } | null
+          )?.domains;
           domains = Array.isArray(list) ? list : [];
           if (domains.length > 0) {
             setClassroomDomains(domains);
@@ -949,7 +991,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         setHardSkillsSuggestionSource(null);
       }
     },
-    [classroomId, classroomDomains, isRTL],
+    [classroomId, classroomDomains, isRTL]
   );
 
   const handleNext = () => {
@@ -957,7 +999,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     const i = stepOrder.indexOf(currentStepId);
     if (i < 0 || i >= stepOrder.length - 1) return;
     if (currentStepId === 'basics') {
-      queueBackgroundStudentTaskPrefill({ title: formData.title, instructions: formData.instructions });
+      queueBackgroundStudentTaskPrefill({
+        title: formData.title,
+        instructions: formData.instructions,
+      });
     }
     if (currentStepId === 'format') {
       void runSuggestHardSkills({
@@ -1080,15 +1125,19 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           title: formData.title,
           instructions: formData.instructions,
           student_facing_task: studentFacingTaskForInsert || null,
-          opik_trace_ids: Object.keys(opikTraceIdsForInsert).length > 0
-            ? (opikTraceIdsForInsert as unknown as Json)
-            : {},
+          opik_trace_ids:
+            Object.keys(opikTraceIdsForInsert).length > 0
+              ? (opikTraceIdsForInsert as unknown as Json)
+              : {},
           type: formData.type as Database['public']['Enums']['assignment_type'],
           due_at: dueAtLocalInputToIso(formData.due_at),
           attempt_mode: formData.attempt_mode,
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
-          hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
+          hard_skill_domain: resolveHardSkillDomainForDb(
+            formData.hard_skills,
+            formData.hard_skill_domain
+          ),
           materials: (formData.materials ?? null) as unknown as Json | null,
           target_dimensions: formData.target_dimensions as unknown as Json,
           personalization_flag: formData.personalization_flag,
@@ -1117,35 +1166,33 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           const { error: linkErr } = await setAssignmentLinkedActivities(
             assignmentRow.id,
             syllabusSectionId || null,
-            items,
+            items
           );
           if (linkErr) {
             console.error('assignment module activities:', linkErr);
             toast.warning(
               t(
                 'syllabus.moduleActivities.linkSaveWarning',
-                'Assignment was created, but module activity links could not be saved. You can edit the assignment to fix them.',
-              ),
+                'Assignment was created, but module activity links could not be saved. You can edit the assignment to fix them.'
+              )
             );
           }
         }
 
         if (formData.type === 'test' && assignmentRow) {
           const questionsToInsert = testQuestions.map((q) =>
-            testQuestionToInsertRow(q, assignmentRow.id),
+            testQuestionToInsertRow(q, assignmentRow.id)
           );
-          const { error: questionsError } = await supabase.from('test_questions').insert(questionsToInsert);
+          const { error: questionsError } = await supabase
+            .from('test_questions')
+            .insert(questionsToInsert);
           if (questionsError) {
             toast.error(t('createAssignment.wizard.testQuestionsSaveFailed'));
             throw questionsError;
           }
         }
 
-        if (
-          assignmentRow?.id &&
-          !studentFacingTaskForInsert &&
-          formData.instructions?.trim()
-        ) {
+        if (assignmentRow?.id && !studentFacingTaskForInsert && formData.instructions?.trim()) {
           await prefillStudentFacingTaskForAssignment(assignmentRow.id, {
             instructions: formData.instructions,
             uiLanguage: uiLanguage === 'he' ? 'he' : 'en',
@@ -1215,9 +1262,14 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         toast.success(t('createAssignment.success.created'));
         if (assignmentRow?.id) onCreatedAssignment?.(assignmentRow.id);
         if (syllabusSectionId) {
-          await syncModuleFlowToResolvedDisplayForSection(queryClient, classroomId, syllabusSectionId, {
-            ensureAssignmentIds: assignmentRow?.id ? [assignmentRow.id] : undefined,
-          });
+          await syncModuleFlowToResolvedDisplayForSection(
+            queryClient,
+            classroomId,
+            syllabusSectionId,
+            {
+              ensureAssignmentIds: assignmentRow?.id ? [assignmentRow.id] : undefined,
+            }
+          );
         } else {
           await queryClient.invalidateQueries({ queryKey: syllabusKeys.byClassroom(classroomId) });
           await queryClient.invalidateQueries({
@@ -1228,7 +1280,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         }
         try {
           sessionStorage.removeItem(
-            assignmentCreateDraftKey(classroomId, syllabusSectionId || initialData?.syllabus_section_id || 'none'),
+            assignmentCreateDraftKey(
+              classroomId,
+              syllabusSectionId || initialData?.syllabus_section_id || 'none'
+            )
           );
         } catch {
           /* ignore */
@@ -1248,7 +1303,10 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           type: formData.type as Database['public']['Enums']['assignment_type'],
           status: formData.status as Database['public']['Enums']['assignment_status'],
           hard_skills: JSON.stringify(formData.hard_skills),
-          hard_skill_domain: resolveHardSkillDomainForDb(formData.hard_skills, formData.hard_skill_domain),
+          hard_skill_domain: resolveHardSkillDomainForDb(
+            formData.hard_skills,
+            formData.hard_skill_domain
+          ),
           materials: (formData.materials ?? null) as unknown as Json | null,
           enable_ai_feedback: formData.enable_ai_feedback,
           auto_publish_ai_feedback: formData.auto_publish_ai_feedback,
@@ -1285,34 +1343,41 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
         const { error: linkErr } = await setAssignmentLinkedActivities(
           assignment.id,
           syllabusSectionId || null,
-          linkItems,
+          linkItems
         );
         if (linkErr) {
           toast.warning(
             t(
               'syllabus.moduleActivities.linkSaveWarning',
-              'Assignment was saved, but module activity links could not be updated.',
-            ),
+              'Assignment was saved, but module activity links could not be updated.'
+            )
           );
         }
 
         if (formData.type === 'test' && !hasTestResponses) {
-          const { error: delErr } = await supabase.from('test_questions').delete().eq('assignment_id', assignment.id);
+          const { error: delErr } = await supabase
+            .from('test_questions')
+            .delete()
+            .eq('assignment_id', assignment.id);
           if (delErr) {
             toast.error(t('createAssignment.wizard.testQuestionsSaveFailed'));
             throw delErr;
           }
           if (testQuestions.length > 0) {
             const questionsToInsert = testQuestions.map((q) =>
-              testQuestionToInsertRow(q, assignment.id),
+              testQuestionToInsertRow(q, assignment.id)
             );
-            const { error: insErr } = await supabase.from('test_questions').insert(questionsToInsert);
+            const { error: insErr } = await supabase
+              .from('test_questions')
+              .insert(questionsToInsert);
             if (insErr) {
               toast.error(t('createAssignment.wizard.testQuestionsSaveFailed'));
               throw insErr;
             }
           }
-          await queryClient.invalidateQueries({ queryKey: [...testKeys.all, 'questions', assignment.id] });
+          await queryClient.invalidateQueries({
+            queryKey: [...testKeys.all, 'questions', assignment.id],
+          });
         }
 
         if (wasPublished) {
@@ -1373,7 +1438,9 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       }
     } catch (e) {
       console.error(e);
-      toast.error(t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving'));
+      toast.error(
+        t(isCreate ? 'createAssignment.errors.creating' : 'editAssignment.errors.saving')
+      );
     } finally {
       setLoading(false);
     }
@@ -1383,7 +1450,7 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
     ? open
       ? `${classroomId}-${initialData?.title ?? 'new'}`
       : 'closed'
-    : assignment?.id ?? 'closed';
+    : (assignment?.id ?? 'closed');
 
   const headerTitle = isCreate ? t('createAssignment.title') : t('editAssignment.title');
 
@@ -1408,8 +1475,14 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
           >
             {headerTitle}
           </h2>
-          <p className={`text-subtle text-body mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{headerDescription}</p>
-          <WizardStepIndicator steps={indicatorSteps} currentStep={currentStepIndex} isRTL={isRTL} />
+          <p className={`text-subtle text-body mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+            {headerDescription}
+          </p>
+          <WizardStepIndicator
+            steps={indicatorSteps}
+            currentStep={currentStepIndex}
+            isRTL={isRTL}
+          />
         </div>
 
         <ScrollArea className="flex-1 min-h-0">
@@ -1525,7 +1598,12 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
               )}
             </div>
             <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <Button type="button" variant="ghost" onClick={() => handleDialogOpenChange(false)} disabled={loading}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => handleDialogOpenChange(false)}
+                disabled={loading}
+              >
                 {t('createAssignment.cancel')}
               </Button>
               {!isLastStep ? (
@@ -1565,4 +1643,4 @@ export function AssignmentWizardDialog(props: AssignmentWizardDialogProps) {
       </DialogContent>
     </Dialog>
   );
-}
+};

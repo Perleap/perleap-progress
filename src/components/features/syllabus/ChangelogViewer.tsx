@@ -1,8 +1,8 @@
+import { History, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { History, Loader2 } from 'lucide-react';
 import { useChangelog } from '@/hooks/queries';
+import { cn } from '@/lib/utils';
 
 interface ChangelogViewerProps {
   syllabusId: string;
@@ -11,7 +11,8 @@ interface ChangelogViewerProps {
 
 export const ChangelogViewer = ({ syllabusId, isRTL = false }: ChangelogViewerProps) => {
   const { t } = useTranslation();
-  const { data: entries = [], isLoading } = useChangelog(syllabusId);
+  const { data: entriesData, isLoading } = useChangelog(syllabusId);
+  const entries = entriesData ?? [];
 
   return (
     <Card className="rounded-xl border-border shadow-sm">

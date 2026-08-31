@@ -87,7 +87,7 @@ export function hasDualLayerQedData(qed: FiveDQedMeasures | null | undefined): b
 export function hasAnyQedLayerData(qed: FiveDQedMeasures | null | undefined): boolean {
   if (!qed) return false;
   return FIVE_D_DIMENSION_KEYS.some(
-    (k) => qed[k].development !== null || qed[k].motivation !== null,
+    (k) => qed[k].development !== null || qed[k].motivation !== null
   );
 }
 
@@ -95,7 +95,7 @@ export function getLayerChartValue(
   qed: FiveDQedMeasures | null | undefined,
   dimension: FiveDDimensionKey,
   layer: QedLayerKey,
-  fallbackScore: number | null | undefined,
+  fallbackScore: number | null | undefined
 ): number | null {
   const dim = qed?.[dimension];
   if (layer === 'development') {
@@ -113,7 +113,7 @@ type SnapshotWithQed = { qed_measures?: Json | null };
 
 /** Average D and M per dimension independently across snapshots. */
 export function averageQedMeasuresAcrossSnapshots(
-  snapshots: SnapshotWithQed[],
+  snapshots: SnapshotWithQed[]
 ): FiveDQedMeasures | null {
   if (snapshots.length === 0) return null;
 

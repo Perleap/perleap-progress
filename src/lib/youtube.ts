@@ -52,14 +52,10 @@ export function parseYoutubeUrl(input: string): ParsedYoutubeUrl | null {
 }
 
 /** Privacy-enhanced embed URL for iframe playback */
-export function youtubeEmbedUrl(
-  videoId: string,
-  opts?: { enableApi?: boolean },
-): string {
+export function youtubeEmbedUrl(videoId: string, opts?: { enableApi?: boolean }): string {
   const base = `https://www.youtube-nocookie.com/embed/${videoId}`;
   if (!opts?.enableApi) return base;
-  const origin =
-    typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
+  const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
   return `${base}?enablejsapi=1&origin=${origin}`;
 }
 

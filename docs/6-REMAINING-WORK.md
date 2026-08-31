@@ -26,11 +26,12 @@ Page refactor tracks **A–M are complete** (Master Refactor Loop Roadmap, Aug 2
 
 These still live outside `components/features/` and may use older patterns:
 
-- `CreateClassroomDialog.tsx`, `EditClassroomDialog.tsx`
 - `CreateAssignmentDialog.tsx`, `EditAssignmentDialog.tsx`
 - `ClassroomAnalytics.tsx` (legacy; newer analytics widgets exist under `features/analytics/`)
 - `AssignmentChatInterface.tsx`
-- `RegenerateScoresButton.tsx`, `SubmissionsTab.tsx`
+- `RegenerateScoresButton.tsx`
+
+**Moved to features (R8):** `CreateClassroomDialog`, `EditClassroomDialog` → `features/classroom/dialogs/` · `SubmissionsTab` → `features/submission/`
 
 **Goal:** Move or refactor to feature modules; prefer services/hooks over direct Supabase in UI.
 
@@ -83,3 +84,16 @@ npm run verify:feature -- --id <feature-id> --run <run-id>
 ---
 
 **Last updated:** Aug 2026 — after Track M completion.
+
+## Phase 2 refactor QA gate
+
+Before merging to staging, run:
+
+```bash
+npm run qa:refactor              # local: unit + i18n + 30 E2E
+npm run qa:refactor:staging      # against staging.perleap.ai
+```
+
+Reports: `.cursor/skills/verify-perleap/evidence/refactor-qa-*/index.html`
+
+Step guides: `docs/qa/step-*.md` · Change log: `docs/FIX-LOG.md`

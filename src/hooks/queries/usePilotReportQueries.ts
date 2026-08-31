@@ -16,16 +16,23 @@ export const pilotReportKeys = {
     classroomId: string,
     scopeModule: AnalyticsModuleFilter,
     scopeAssignment: string,
-    language: 'en' | 'he',
+    language: 'en' | 'he'
   ) =>
-    [...pilotReportKeys.all, 'snapshot', classroomId, scopeModule, scopeAssignment, language] as const,
+    [
+      ...pilotReportKeys.all,
+      'snapshot',
+      classroomId,
+      scopeModule,
+      scopeAssignment,
+      language,
+    ] as const,
 };
 
 export function usePilotReportSnapshot(
   classroomId: string | undefined,
   scopeModule: AnalyticsModuleFilter,
   scopeAssignment: string,
-  language: 'en' | 'he',
+  language: 'en' | 'he'
 ) {
   return useQuery<PilotReportSnapshot | null>({
     queryKey: pilotReportKeys.snapshot(classroomId || '', scopeModule, scopeAssignment, language),
@@ -59,9 +66,9 @@ export function useEnsurePilotReportSnapshot() {
           variables.classroomId,
           variables.scopeModule,
           variables.scopeAssignment,
-          variables.language,
+          variables.language
         ),
-        data,
+        data
       );
     },
   });
@@ -96,7 +103,7 @@ export function useDeletePilotReportSnapshot() {
           variables.classroomId,
           variables.scopeModule,
           variables.scopeAssignment,
-          variables.language,
+          variables.language
         ),
       });
     },

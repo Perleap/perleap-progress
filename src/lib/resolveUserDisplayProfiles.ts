@@ -12,7 +12,7 @@ export type UserDisplayProfileRow = {
  */
 export async function resolveUserDisplayProfiles(
   client: SupabaseClient,
-  userIds: (string | null | undefined)[],
+  userIds: (string | null | undefined)[]
 ): Promise<Map<string, UserDisplayProfileRow>> {
   const unique = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
   const map = new Map<string, UserDisplayProfileRow>();

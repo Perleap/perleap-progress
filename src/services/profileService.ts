@@ -3,8 +3,8 @@
  * Handles user profile operations for teachers and students
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
 import type { TeacherProfile, StudentProfile, ApiError } from '@/types';
+import { supabase, handleSupabaseError } from '@/api/client';
 
 /**
  * Fetch teacher profile by user ID

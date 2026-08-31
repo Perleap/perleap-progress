@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { USER_ROLES } from '@/config/constants';
 import { supabase } from '@/integrations/supabase/client';
 import {
   attemptRoleRecovery,
@@ -10,9 +11,8 @@ import {
   clearPendingRole,
 } from '@/utils/roleRecovery';
 import { isSignupInProgress } from '@/utils/sessionState';
-import { USER_ROLES } from '@/config/constants';
 
-export function AuthCallbackContent() {
+export const AuthCallbackContent = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export function AuthCallbackContent() {
         } catch (cleanupError) {
           console.error(
             '⚠️ AuthCallback: Non-blocking error during orphaned data cleanup:',
-            cleanupError,
+            cleanupError
           );
         }
 
@@ -277,4 +277,4 @@ export function AuthCallbackContent() {
       </div>
     </div>
   );
-}
+};

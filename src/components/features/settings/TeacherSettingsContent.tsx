@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
-import { DashboardLayout } from '@/components/layouts';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/useAuth';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useTeacherProfile, useUpdateTeacherProfile } from '@/hooks/queries';
+import {
+  TeacherSettingsNotificationsSection,
+  type TeacherNotificationSettings,
+} from '@/components/features/settings/TeacherSettingsNotificationsSection';
 import {
   TeacherSettingsProfileSection,
   type TeacherSettingsProfileState,
@@ -19,12 +16,15 @@ import {
   TeacherSettingsTeachingPreferencesSection,
   type TeacherSettingsQuestionsState,
 } from '@/components/features/settings/TeacherSettingsTeachingPreferencesSection';
-import {
-  TeacherSettingsNotificationsSection,
-  type TeacherNotificationSettings,
-} from '@/components/features/settings/TeacherSettingsNotificationsSection';
+import { DashboardLayout } from '@/components/layouts';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useTeacherProfile, useUpdateTeacherProfile } from '@/hooks/queries';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
-export function TeacherSettingsContent() {
+export const TeacherSettingsContent = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
@@ -81,7 +81,9 @@ export function TeacherSettingsContent() {
       });
     } else if (!loading && user) {
       if (sessionStorage.getItem('is_deleting_account') === 'true') {
-        console.log('ℹ️ TeacherSettings: Account deletion in progress, skipping onboarding redirect');
+        console.log(
+          'ℹ️ TeacherSettings: Account deletion in progress, skipping onboarding redirect'
+        );
         return;
       }
 
@@ -203,7 +205,11 @@ export function TeacherSettingsContent() {
         dir={isRTL ? 'rtl' : 'ltr'}
         style={{ direction: isRTL ? 'rtl' : 'ltr' }}
       >
-        <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => setSearchParams({ tab: val })}
+          className="space-y-6"
+        >
           <TabsContent value="profile" className="space-y-6">
             <TeacherSettingsProfileSection
               isRTL={isRTL}
@@ -246,4 +252,4 @@ export function TeacherSettingsContent() {
       />
     </DashboardLayout>
   );
-}
+};

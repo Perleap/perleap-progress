@@ -1,11 +1,11 @@
+import { Bell } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { NotificationSettings } from '@/types/notifications';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Bell } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import type { NotificationSettings } from '@/types/notifications';
 
 interface NotificationSettingsSectionProps {
   notifications: NotificationSettings;
@@ -37,9 +37,13 @@ export const NotificationSettingsSection = ({
       <CardHeader>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Bell className="h-5 w-5" />
-          <CardTitle className={isRTL ? 'text-right' : 'text-left'}>{t('settings.notifications.title')}</CardTitle>
+          <CardTitle className={isRTL ? 'text-right' : 'text-left'}>
+            {t('settings.notifications.title')}
+          </CardTitle>
         </div>
-        <CardDescription className={isRTL ? 'text-right' : 'text-left'}>{t('settings.notifications.description')}</CardDescription>
+        <CardDescription className={isRTL ? 'text-right' : 'text-left'}>
+          {t('settings.notifications.description')}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">

@@ -1,8 +1,9 @@
+import { Check, Info } from 'lucide-react';
 import { useState } from 'react';
+import { Footer } from '@/components/layouts/Footer';
+import { Navbar } from '@/components/layouts/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Check, Info } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -10,9 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Navbar } from '@/components/layouts/Navbar';
-import { Footer } from '@/components/layouts/Footer';
 
 // Mock data for pricing plans
 const pricingPlans = {
@@ -151,7 +151,9 @@ const Pricing = () => {
                     </span>
                     <span className="text-muted-foreground">per month</span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">shared across unlimited users</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    shared across unlimited users
+                  </p>
                 </div>
                 <div className="flex items-center gap-4 py-4">
                   <span
@@ -171,7 +173,9 @@ const Pricing = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button className="w-full rounded-full bg-white border border-black/10 text-foreground hover:bg-black/5 shadow-sm">{pricingPlans.beginner.cta}</Button>
+                <Button className="w-full rounded-full bg-white border border-black/10 text-foreground hover:bg-black/5 shadow-sm">
+                  {pricingPlans.beginner.cta}
+                </Button>
 
                 <Select
                   value={selectedBeginnerCredits.toString()}
@@ -241,7 +245,9 @@ const Pricing = () => {
                     </span>
                     <span className="text-muted-foreground">per month</span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">shared across unlimited users</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    shared across unlimited users
+                  </p>
                 </div>
                 <div className="flex items-center gap-4 py-4">
                   <span
@@ -261,7 +267,9 @@ const Pricing = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button className="w-full rounded-full bg-black text-white hover:bg-black/90 shadow-lg">{pricingPlans.pro.cta}</Button>
+                <Button className="w-full rounded-full bg-black text-white hover:bg-black/90 shadow-lg">
+                  {pricingPlans.pro.cta}
+                </Button>
 
                 <Select
                   value={selectedProCredits.toString()}
@@ -331,7 +339,9 @@ const Pricing = () => {
                     </span>
                     <span className="text-muted-foreground">per month</span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">shared across unlimited users</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    shared across unlimited users
+                  </p>
                 </div>
                 <div className="flex items-center gap-4 py-4">
                   <span

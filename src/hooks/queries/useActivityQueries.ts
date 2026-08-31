@@ -4,8 +4,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import type { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
+import type { TeacherProfileDisplay } from '@/types/models';
+
+type ActivityEventRow = Database['public']['Tables']['activity_events']['Row'];
+
+type ActivityPerformer = { name: string; avatar_url: string };
 
 export const activityKeys = {
   all: ['activity'] as const,
@@ -17,7 +23,7 @@ export const activityKeys = {
  */
 export const useRecentActivity = (
   userId: string | undefined,
-  teacherProfile: any,
+  teacherProfile: TeacherProfileDisplay | null | undefined,
   options?: { isAppAdmin?: boolean }
 ) => {
   const isAppAdmin = options?.isAppAdmin === true;
@@ -27,7 +33,7 @@ export const useRecentActivity = (
       if (!userId) throw new Error('Missing user ID');
 
       let evQ = supabase
-        .from('activity_events' as any)
+        .from('activity_events')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
@@ -37,14 +43,14 @@ export const useRecentActivity = (
       const { data: events, error } = await evQ;
 
       if (error) throw error;
-      const rawEvents = (events as any[]) || [];
+      const rawEvents = (events ?? []) as ActivityEventRow[];
 
       // Fetch performer info for each event
       const submissionIds = rawEvents
-        .filter((e: any) => e.entity_type === 'submission')
-        .map((e: any) => e.entity_id);
+        .filter((e) => e.entity_type === 'submission')
+        .map((e) => e.entity_id);
 
-      let studentProfilesMap: Record<string, { name: string; avatar_url: string }> = {};
+      let studentProfilesMap: Record<string, ActivityPerformer> = {};
       let submissionById: Record<string, { student_id: string; is_teacher_attempt: boolean }> = {};
 
       if (submissionIds.length > 0) {
@@ -55,18 +61,23 @@ export const useRecentActivity = (
 
         const profileMap = await resolveUserDisplayProfiles(
           supabase,
-          submissions?.map((s) => s.student_id) ?? [],
+          submissions?.map((s) => s.student_id) ?? []
         );
 
         if (submissions && submissions.length > 0) {
-          studentProfilesMap = submissions.reduce((acc, s) => {
+          studentProfilesMap = submissions.reduce<Record<string, ActivityPerformer>>((acc, s) => {
             const profile = profileMap.get(s.student_id);
             if (profile) {
-              acc[s.id] = { name: profile.full_name ?? 'Unknown', avatar_url: profile.avatar_url ?? '' };
+              acc[s.id] = {
+                name: profile.full_name ?? 'Unknown',
+                avatar_url: profile.avatar_url ?? '',
+              };
             }
             return acc;
-          }, {} as any);
-          submissionById = submissions.reduce(
+          }, {});
+          submissionById = submissions.reduce<
+            Record<string, { student_id: string; is_teacher_attempt: boolean }>
+          >(
             (acc, s) => {
               acc[s.id] = {
                 student_id: s.student_id,
@@ -74,32 +85,29 @@ export const useRecentActivity = (
               };
               return acc;
             },
-            {} as Record<string, { student_id: string; is_teacher_attempt: boolean }>,
+            {}
           );
         }
       }
 
-      return rawEvents.map((event: any) => {
-        let performer = {
+      return rawEvents.map((event) => {
+        let performer: ActivityPerformer = {
           name: teacherProfile?.full_name || 'Teacher',
-          avatar_url: teacherProfile?.avatar_url
+          avatar_url: teacherProfile?.avatar_url ?? '',
         };
 
         if (event.entity_type === 'submission' && studentProfilesMap[event.entity_id]) {
           performer = studentProfilesMap[event.entity_id];
         }
 
-        let title = event.title as string;
+        let title = event.title;
         if (
           event.entity_type === 'submission' &&
           typeof title === 'string' &&
           title.startsWith('Student submitted ')
         ) {
           const meta = submissionById[event.entity_id];
-          if (
-            meta &&
-            (meta.is_teacher_attempt || meta.student_id === event.teacher_id)
-          ) {
+          if (meta && (meta.is_teacher_attempt || meta.student_id === event.teacher_id)) {
             const suffix = title.slice('Student submitted '.length);
             const who = (performer?.name ?? 'Teacher').trim() || 'Teacher';
             title = `${who} submitted ${suffix}`;
@@ -115,7 +123,7 @@ export const useRecentActivity = (
           ...event,
           title,
           performer,
-          route
+          route,
         };
       });
     },

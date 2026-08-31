@@ -3,10 +3,10 @@
  * Display individual student 5D profiles
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FiveDChart } from '@/components/FiveDChart';
 import type { StudentAnalytics } from '@/types';
+import { FiveDChart } from '@/components/FiveDChart';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface StudentProfilesListProps {
   students: StudentAnalytics[];
@@ -50,7 +50,9 @@ export const StudentProfilesList = ({ students }: StudentProfilesListProps) => {
             <Card key={student.id} className="bg-card border-border">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <CardTitle className="text-base md:text-lg text-foreground">{student.fullName}</CardTitle>
+                  <CardTitle className="text-base md:text-lg text-foreground">
+                    {student.fullName}
+                  </CardTitle>
                   <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground">
                     {student.feedbackCount} submissions
                   </Badge>

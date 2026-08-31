@@ -1,9 +1,33 @@
+import { useQuery } from '@tanstack/react-query';
+import {
+  Send,
+  Loader2,
+  CheckCircle,
+  Volume2,
+  VolumeX,
+  Mic,
+  Square,
+  Paperclip,
+  X,
+  ChevronDown,
+  Copy,
+  Flag,
+  FileText,
+  Image as ImageIcon,
+  ExternalLink,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+} from 'lucide-react';
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import SafeMathMarkdown from './SafeMathMarkdown';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
+import type { DbAssignmentType } from '@/types/models';
+import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
+import { SubmissionStoragePreview } from '@/components/features/submission/SubmissionStoragePreview';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,25 +38,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
-import { Send, Loader2, CheckCircle, Volume2, VolumeX, Mic, Square, Play, Pause, Paperclip, X, ChevronDown, Copy, Flag } from 'lucide-react';
-import { useAuth } from '@/contexts/useAuth';
-import { USER_ROLES } from '@/config/constants';
-import { isAppAdminRole } from '@/utils/role';
-import { supabase } from '@/integrations/supabase/client';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useConversation } from '@/hooks/useConversation';
-import { useStudentProfile } from '@/hooks/queries';
-import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
-import { syncOpikChatSentenceFlag } from '@/services/submissionService';
-import { validateChatAttachmentFile } from '@/lib/chatAttachment';
-import { SubmissionStoragePreview } from '@/components/features/submission/SubmissionStoragePreview';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
-  isSubmissionPdfAttachment,
-  openSubmissionFileInNewTab,
-} from '@/services/submissionFileService';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { USER_ROLES } from '@/config/constants';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useStudentProfile } from '@/hooks/queries';
+import { useConversation } from '@/hooks/useConversation';
+import { supabase } from '@/integrations/supabase/client';
+import { validateChatAttachmentFile } from '@/lib/chatAttachment';
 import {
   formatInlineListsForChatMarkdown,
   isPerleapAssistantIntro,
@@ -44,26 +72,17 @@ import {
   stripConversationCompleteMarker,
   stripProgressMarker,
 } from '@/lib/chatDisplay';
-import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
-import { getTaskUnderstandingChoice } from '@/lib/taskUnderstandingStorage';
-import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
-import SafeMathMarkdown from './SafeMathMarkdown';
+import { getTaskUnderstandingChoice } from '@/lib/taskUnderstandingStorage';
+import { detectUnderstandingCue } from '@/lib/understandingCueDetection';
 import { cn } from '@/lib/utils';
-import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
-import type { DbAssignmentType } from '@/types/models';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  fileContext?: {
-    name: string;
-    content: string;
-    url?: string;
-    type?: string;
-  };
-}
+import { synthesizeSpeech, transcribeAudio } from '@/services/speechService';
+import {
+  isSubmissionPdfAttachment,
+  openSubmissionFileInNewTab,
+} from '@/services/submissionFileService';
+import { syncOpikChatSentenceFlag } from '@/services/submissionService';
+import { isAppAdminRole } from '@/utils/role';
 
 export type AssignmentChatCompletePayload = {
   /** True when the green "conversation complete" state was true at submit. */
@@ -94,19 +113,6 @@ interface AssignmentChatInterfaceProps {
   postExplainTutoring?: boolean;
 }
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { FileText, Image as ImageIcon, ExternalLink, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-
 const CHAT_INPUT_MAX_HEIGHT_PX = 200;
 const COMPANION_CHAT_OPEN_LS = 'perleap_assignment_companion_chat_open';
 
@@ -123,7 +129,7 @@ const cleanTextForTTS = (text: string) => {
     .trim();
 };
 
-export function AssignmentChatInterface({
+export const AssignmentChatInterface = ({
   assignmentId,
   assignmentTitle: _assignmentTitle,
   teacherName: _teacherName,
@@ -141,7 +147,7 @@ export function AssignmentChatInterface({
   chatInitAllowed = true,
   initialGreetingMode = 'default',
   postExplainTutoring = false,
-}: AssignmentChatInterfaceProps) {
+}: AssignmentChatInterfaceProps) => {
   const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
@@ -165,7 +171,13 @@ export function AssignmentChatInterface({
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   const [dialogType, setDialogType] = useState<'turnLimit' | 'aiDetected'>('turnLimit');
   const [activeTab, setActiveTab] = useState('chat');
-  const [previewResource, setPreviewResource] = useState<{ name: string; content: string; url?: string; type?: string; messageIndex: number } | null>(null);
+  const [previewResource, setPreviewResource] = useState<{
+    name: string;
+    content: string;
+    url?: string;
+    type?: string;
+    messageIndex: number;
+  } | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [flagDialogMessageIndex, setFlagDialogMessageIndex] = useState<number | null>(null);
   const [flagSelectedSentenceIdx, setFlagSelectedSentenceIdx] = useState<Set<number>>(new Set());
@@ -189,7 +201,12 @@ export function AssignmentChatInterface({
   }, [variant, initialGreetingMode]);
 
   // File attachment state
-  const [attachedFile, setAttachedFile] = useState<{ name: string; content: string; url?: string; type?: string } | null>(null);
+  const [attachedFile, setAttachedFile] = useState<{
+    name: string;
+    content: string;
+    url?: string;
+    type?: string;
+  } | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -235,7 +252,7 @@ export function AssignmentChatInterface({
       }
       // If we have an active stream, stop all tracks
       if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       }
       // Cleanup TTS audio
       if (audioRef.current) {
@@ -331,12 +348,12 @@ export function AssignmentChatInterface({
   const shouldScrollRef = useRef(false);
   const firstAssistantMessageIndex = useMemo(
     () => messages.findIndex((m) => m.role === 'assistant'),
-    [messages],
+    [messages]
   );
 
   const taskUnderstandingChoice = useMemo(
     () => (studentUserId ? getTaskUnderstandingChoice(studentUserId, submissionId) : null),
-    [studentUserId, submissionId],
+    [studentUserId, submissionId]
   );
 
   const scrollToBottom = () => {
@@ -357,7 +374,7 @@ export function AssignmentChatInterface({
         toast.error(
           validated.reason === 'size'
             ? t('assignmentChat.errors.fileTooLarge')
-            : t('assignmentChat.errors.fileTypeNotAllowed'),
+            : t('assignmentChat.errors.fileTypeNotAllowed')
         );
         return;
       }
@@ -374,7 +391,9 @@ export function AssignmentChatInterface({
           const safeName = file.name?.trim() || `pasted-${Date.now()}.bin`;
           const filePath = `${submissionId}/${Date.now()}_${safeName}`;
 
-          const { error } = await supabase.storage.from('submission-files').upload(filePath, file, { upsert: true });
+          const { error } = await supabase.storage
+            .from('submission-files')
+            .upload(filePath, file, { upsert: true });
 
           if (error) {
             throw error;
@@ -389,14 +408,14 @@ export function AssignmentChatInterface({
           });
         }
         toast.success(t('assignmentChat.success.fileAttached'));
-      } catch (err) {
+      } catch (_err) {
         toast.error(t('assignmentChat.errors.fileUpload'));
       } finally {
         setUploadingFile(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
-    [submissionId, t],
+    [submissionId, t]
   );
 
   const handleFileSelect = useCallback(
@@ -405,7 +424,7 @@ export function AssignmentChatInterface({
       if (!file) return;
       await processAttachmentFile(file);
     },
-    [processAttachmentFile],
+    [processAttachmentFile]
   );
 
   const handlePaste = useCallback(
@@ -438,7 +457,7 @@ export function AssignmentChatInterface({
         await processAttachmentFile(files[0]);
       }
     },
-    [processAttachmentFile, clipboardTracking],
+    [processAttachmentFile, clipboardTracking]
   );
 
   const handleSendMessage = async () => {
@@ -461,7 +480,7 @@ export function AssignmentChatInterface({
       } else if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.debug(
-          '[Nuance] no tracking hook on chat — understanding cues are skipped (e.g. wrong route or tracking disabled)',
+          '[Nuance] no tracking hook on chat — understanding cues are skipped (e.g. wrong route or tracking disabled)'
         );
       }
     }
@@ -537,7 +556,7 @@ export function AssignmentChatInterface({
     try {
       setLoadingAudioIndex(index);
       const voice = profile?.voice_preference || 'shimmer';
-      
+
       const cleanedText = cleanTextForTTS(formatInlineListsForChatMarkdown(text));
       if (!cleanedText) {
         throw new Error('No text to play after cleaning');
@@ -545,14 +564,14 @@ export function AssignmentChatInterface({
 
       const audioUrl = await synthesizeSpeech(cleanedText, voice);
       currentAudioUrlRef.current = audioUrl;
-      
+
       if (!audioRef.current) {
         audioRef.current = new Audio();
       }
-      
+
       const audio = audioRef.current;
       audio.src = audioUrl;
-      
+
       audio.onplay = () => {
         setLoadingAudioIndex(null);
         setPlayingMessageIndex(index);
@@ -568,7 +587,7 @@ export function AssignmentChatInterface({
 
       audio.onpause = () => {
         setPlayingMessageIndex(null);
-        // We don't revoke here because it might be a temporary pause or we might want to resume 
+        // We don't revoke here because it might be a temporary pause or we might want to resume
         // (though current UI doesn't support resume, just toggle)
       };
 
@@ -592,7 +611,7 @@ export function AssignmentChatInterface({
       };
 
       // Ensure we catch the play promise error (e.g. if interrupted by another click)
-      await audio.play().catch(err => {
+      await audio.play().catch((err) => {
         if (err.name === 'AbortError') {
           // Ignore AbortError as it usually means we started a new audio before this one loaded
         } else {
@@ -694,10 +713,10 @@ export function AssignmentChatInterface({
     let stream: MediaStream | null = null;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       // Choose supported MIME type
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
-        ? 'audio/webm' 
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
         : MediaRecorder.isTypeSupported('audio/ogg')
           ? 'audio/ogg'
           : 'audio/mp4';
@@ -722,10 +741,10 @@ export function AssignmentChatInterface({
         } catch (error) {
           toast.error(t('assignmentChat.errors.stt'));
         }
-        
+
         // Stop all tracks to release microphone
         if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+          stream.getTracks().forEach((track) => track.stop());
         }
       };
 
@@ -735,7 +754,7 @@ export function AssignmentChatInterface({
     } catch (error) {
       console.error('Recording error:', error);
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
       toast.error(t('assignmentChat.errors.micAccess'));
     }
@@ -769,7 +788,7 @@ export function AssignmentChatInterface({
   const handlePreviewAttachment = useCallback(
     async (
       fileContext: { name: string; content: string; url?: string; type?: string },
-      messageIndex: number,
+      messageIndex: number
     ) => {
       if (isSubmissionPdfAttachment(fileContext.name, fileContext.type) && fileContext.url) {
         const ok = await openSubmissionFileInNewTab(fileContext.url);
@@ -778,165 +797,177 @@ export function AssignmentChatInterface({
       }
       setPreviewResource({ ...fileContext, messageIndex });
     },
-    [t],
+    [t]
   );
 
   const resources = messages
     .map((m, i) => ({ ...m, originalIndex: i }))
-    .filter(m => m.role === 'user' && m.fileContext);
-
+    .filter((m) => m.role === 'user' && m.fileContext);
 
   const chatScrollAreaClass =
-    variant === 'companion'
-      ? 'mb-4 h-[min(42vh,400px)] shrink-0 pr-4'
-      : 'mb-4 min-h-0 flex-1 pr-4';
-  const resourcesScrollAreaClass =
-    variant === 'companion' ? 'h-[min(38vh,340px)]' : 'h-[400px]';
+    variant === 'companion' ? 'mb-4 h-[min(42vh,400px)] shrink-0 pr-4' : 'mb-4 min-h-0 flex-1 pr-4';
+  const resourcesScrollAreaClass = variant === 'companion' ? 'h-[min(38vh,340px)]' : 'h-[400px]';
 
   const chatPanelBody = (
     <>
-    {chatDebugEnabled ? (
-      <Collapsible className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium text-amber-900 dark:text-amber-100">
-          <span>{t('assignmentChat.adminDebug.title')}</span>
-          <ChevronDown className="size-4 shrink-0 opacity-70" />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pb-1 pt-2">
-          <p className="text-xs text-muted-foreground mb-3">{t('assignmentChat.adminDebug.warning')}</p>
-          {lastAssistantDebug ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>
-                  {t('assignmentChat.adminDebug.model')}: {lastAssistantDebug.model}
-                </span>
-                <span>
-                  {t('assignmentChat.adminDebug.polish')}:{' '}
-                  {lastAssistantDebug.polishEnabled ? t('common.yes') : t('common.no')}
-                </span>
-                <span>
-                  {t('assignmentChat.adminDebug.temperature')}: {lastAssistantDebug.temperature}
-                </span>
-                <span>
-                  {t('assignmentChat.adminDebug.maxTokens')}: {lastAssistantDebug.maxTokens}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() =>
-                  navigator.clipboard.writeText(JSON.stringify(lastAssistantDebug, null, 2))
-                }
-              >
-                <Copy className="size-3.5" />
-                {t('assignmentChat.adminDebug.copyJson')}
-              </Button>
-              <div className="space-y-1">
-                <p className="text-xs font-medium">{t('assignmentChat.adminDebug.rawModel')}</p>
-                <pre className="text-xs font-mono whitespace-pre-wrap break-words rounded-md bg-muted p-2 max-h-[180px] overflow-auto">
-                  {lastAssistantDebug.rawModelText}
-                </pre>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium">{t('assignmentChat.adminDebug.afterPostprocess')}</p>
-                <pre className="text-xs font-mono whitespace-pre-wrap break-words rounded-md bg-muted p-2 max-h-[180px] overflow-auto">
-                  {lastAssistantDebug.afterPostprocess}
-                </pre>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium">{t('assignmentChat.adminDebug.finalClient')}</p>
-                <pre className="text-xs font-mono whitespace-pre-wrap break-words rounded-md bg-muted p-2 max-h-[180px] overflow-auto">
-                  {lastAssistantDebug.finalClientMessage}
-                </pre>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">{t('assignmentChat.adminDebug.empty')}</p>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-    ) : null}
-
-    <Tabs value={activeTab} onValueChange={setActiveTab} className={cn('flex min-h-0 flex-col flex-1', variant === 'companion' && 'overflow-hidden')}>
-      <TabsList className="grid w-full grid-cols-3 mb-2">
-        <TabsTrigger value="chat">{t('assignmentChat.tabs.chat')}</TabsTrigger>
-        <TabsTrigger value="assignment">{t('assignmentChat.tabs.assignment')}</TabsTrigger>
-        <TabsTrigger value="resources">
-          {t('assignmentChat.tabs.resources')}
-          {resources.length > 0 && (
-            <span className="ml-2 bg-primary/20 text-primary text-xs rounded-full px-2 py-0.5">
-              {resources.length}
-            </span>
-          )}
-        </TabsTrigger>
-      </TabsList>
-
-      {/* Chat Tab - Using CSS hidden instead of conditional rendering to preserve state/scroll */}
-      <div className={`flex-1 flex flex-col min-h-0 ${activeTab !== 'chat' ? 'hidden' : ''}`}>
-        <ScrollArea className={chatScrollAreaClass}>
-          <div className="space-y-4 pt-2 pb-4">
-            {messages.map((message, index) => {
-              const isUser = message.role === 'user';
-              const rawContent =
-                isUser
-                  ? String(message.content || '')
-                  : stripProgressMarker(stripConversationCompleteMarker(String(message.content || '')));
-              const isExplainTaskIntro =
-                !isUser &&
-                !!message.content &&
-                index === firstAssistantMessageIndex &&
-                taskUnderstandingChoice === 'no';
-              const isIntro =
-                !isUser &&
-                !!message.content &&
-                index === firstAssistantMessageIndex &&
-                isPerleapAssistantIntro(rawContent);
-              const formattedContent = formatInlineListsForChatMarkdown(
-                isIntro ? normalizePerleapIntroParagraphBreaks(rawContent) : rawContent,
-              );
-              const displayParts =
-                isUser || !message.content
-                  ? [rawContent]
-                  : isExplainTaskIntro
-                    ? splitExplainTaskDisplayText(formattedContent)
-                    : isIntro
-                      ? splitPerleapIntroDisplayText(formattedContent)
-                      : splitChatDisplayText(formattedContent);
-              // User messages always on the right side of the chat (end)
-              // Assistant messages always on the left side of the chat (start)
-              // This is standard chat convention regardless of language direction
-              return (
-                <div
-                  key={index}
-                  id={`message-${index}`}
-                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} transition-colors duration-500 rounded-lg`}
+      {chatDebugEnabled ? (
+        <Collapsible className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium text-amber-900 dark:text-amber-100">
+            <span>{t('assignmentChat.adminDebug.title')}</span>
+            <ChevronDown className="size-4 shrink-0 opacity-70" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pb-1 pt-2">
+            <p className="text-xs text-muted-foreground mb-3">
+              {t('assignmentChat.adminDebug.warning')}
+            </p>
+            {lastAssistantDebug ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span>
+                    {t('assignmentChat.adminDebug.model')}: {lastAssistantDebug.model}
+                  </span>
+                  <span>
+                    {t('assignmentChat.adminDebug.polish')}:{' '}
+                    {lastAssistantDebug.polishEnabled ? t('common.yes') : t('common.no')}
+                  </span>
+                  <span>
+                    {t('assignmentChat.adminDebug.temperature')}: {lastAssistantDebug.temperature}
+                  </span>
+                  <span>
+                    {t('assignmentChat.adminDebug.maxTokens')}: {lastAssistantDebug.maxTokens}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    navigator.clipboard.writeText(JSON.stringify(lastAssistantDebug, null, 2))
+                  }
                 >
-                  <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                    {displayParts.map((part, partIdx) => (
-                      <div
-                        key={`${index}-p-${partIdx}`}
-                        className={`rounded-lg p-3 bg-muted`}
-                        dir="auto"
-                        {...clipboardZoneProps({
-                          sourceKind: isUser ? 'user_message' : 'assistant_message',
-                          messageIndex: index,
-                          messageContent: isUser ? undefined : String(message.content ?? ''),
-                        })}
-                        style={{
-                          unicodeBidi: 'plaintext',
-                          animationDelay: !isUser && partIdx > 0 ? `${partIdx * 45}ms` : undefined,
-                        }}
-                      >
-                        <div className={`text-sm markdown-content`}>
-                          {part ? <SafeMathMarkdown content={part} /> : null}
+                  <Copy className="size-3.5" />
+                  {t('assignmentChat.adminDebug.copyJson')}
+                </Button>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">{t('assignmentChat.adminDebug.rawModel')}</p>
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words rounded-md bg-muted p-2 max-h-[180px] overflow-auto">
+                    {lastAssistantDebug.rawModelText}
+                  </pre>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">
+                    {t('assignmentChat.adminDebug.afterPostprocess')}
+                  </p>
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words rounded-md bg-muted p-2 max-h-[180px] overflow-auto">
+                    {lastAssistantDebug.afterPostprocess}
+                  </pre>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">
+                    {t('assignmentChat.adminDebug.finalClient')}
+                  </p>
+                  <pre className="text-xs font-mono whitespace-pre-wrap break-words rounded-md bg-muted p-2 max-h-[180px] overflow-auto">
+                    {lastAssistantDebug.finalClientMessage}
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t('assignmentChat.adminDebug.empty')}
+              </p>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className={cn('flex min-h-0 flex-col flex-1', variant === 'companion' && 'overflow-hidden')}
+      >
+        <TabsList className="grid w-full grid-cols-3 mb-2">
+          <TabsTrigger value="chat">{t('assignmentChat.tabs.chat')}</TabsTrigger>
+          <TabsTrigger value="assignment">{t('assignmentChat.tabs.assignment')}</TabsTrigger>
+          <TabsTrigger value="resources">
+            {t('assignmentChat.tabs.resources')}
+            {resources.length > 0 && (
+              <span className="ml-2 bg-primary/20 text-primary text-xs rounded-full px-2 py-0.5">
+                {resources.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Chat Tab - Using CSS hidden instead of conditional rendering to preserve state/scroll */}
+        <div className={`flex-1 flex flex-col min-h-0 ${activeTab !== 'chat' ? 'hidden' : ''}`}>
+          <ScrollArea className={chatScrollAreaClass}>
+            <div className="space-y-4 pt-2 pb-4">
+              {messages.map((message, index) => {
+                const isUser = message.role === 'user';
+                const rawContent = isUser
+                  ? String(message.content || '')
+                  : stripProgressMarker(
+                      stripConversationCompleteMarker(String(message.content || ''))
+                    );
+                const isExplainTaskIntro =
+                  !isUser &&
+                  !!message.content &&
+                  index === firstAssistantMessageIndex &&
+                  taskUnderstandingChoice === 'no';
+                const isIntro =
+                  !isUser &&
+                  !!message.content &&
+                  index === firstAssistantMessageIndex &&
+                  isPerleapAssistantIntro(rawContent);
+                const formattedContent = formatInlineListsForChatMarkdown(
+                  isIntro ? normalizePerleapIntroParagraphBreaks(rawContent) : rawContent
+                );
+                const displayParts =
+                  isUser || !message.content
+                    ? [rawContent]
+                    : isExplainTaskIntro
+                      ? splitExplainTaskDisplayText(formattedContent)
+                      : isIntro
+                        ? splitPerleapIntroDisplayText(formattedContent)
+                        : splitChatDisplayText(formattedContent);
+                // User messages always on the right side of the chat (end)
+                // Assistant messages always on the left side of the chat (start)
+                // This is standard chat convention regardless of language direction
+                return (
+                  <div
+                    key={index}
+                    id={`message-${index}`}
+                    className={`flex ${isUser ? 'justify-end' : 'justify-start'} transition-colors duration-500 rounded-lg`}
+                  >
+                    <div
+                      className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}
+                    >
+                      {displayParts.map((part, partIdx) => (
+                        <div
+                          key={`${index}-p-${partIdx}`}
+                          className="rounded-lg p-3 bg-muted"
+                          dir="auto"
+                          {...clipboardZoneProps({
+                            sourceKind: isUser ? 'user_message' : 'assistant_message',
+                            messageIndex: index,
+                            messageContent: isUser ? undefined : String(message.content ?? ''),
+                          })}
+                          style={{
+                            unicodeBidi: 'plaintext',
+                            animationDelay:
+                              !isUser && partIdx > 0 ? `${partIdx * 45}ms` : undefined,
+                          }}
+                        >
+                          <div className="text-sm markdown-content">
+                            {part ? <SafeMathMarkdown content={part} /> : null}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
 
                       {/* Render attachment underneath the message text */}
                       {message.fileContext && (
-                        <div 
+                        <div
                           className={`p-2 rounded-md border bg-background/50 flex items-center gap-2 cursor-pointer hover:bg-background transition-colors max-w-full ${!message.content ? 'mt-0' : ''}`}
                           onClick={() => void handlePreviewAttachment(message.fileContext!, index)}
                         >
@@ -950,226 +981,250 @@ export function AssignmentChatInterface({
                           </span>
                         </div>
                       )}
-                    {!isUser && message.content && (
-                      <div className="flex flex-row items-center gap-1 mt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => handlePlayTTS(message.content, index)}
-                          disabled={loadingAudioIndex !== null && loadingAudioIndex !== index}
-                        >
-                          {loadingAudioIndex === index ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : playingMessageIndex === index ? (
-                            <VolumeX className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Volume2 className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </Button>
-                        {canFlagAssistantText &&
-                          splitAssistantMessageIntoSentences(String(message.content)).length >
-                            0 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              title={t('assignmentChat.flag.open')}
-                              aria-label={t('assignmentChat.flag.open')}
-                              onClick={() => openFlagDialog(index)}
-                            >
-                              <Flag className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {(loading || sending) && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg p-3">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-
-        {variant === 'primary' && conversationEnded && (
-          <div
-            className={`bg-success/10 border border-success/20 rounded-lg p-3 text-sm text-success mb-4 ${isRTL ? 'text-right' : 'text-left'}`}
-            dir={isRTL ? 'rtl' : 'ltr'}
-          >
-            {isRTL ? '✓ ' : ''}
-            {t('assignmentChat.conversationComplete', 'Conversation complete! You can now finish the activity.')}
-            {!isRTL ? ' ✓' : ''}
-          </div>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".txt,.md,.pdf,.png,.jpg,.jpeg"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-
-        {attachedFile && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm mb-2">
-            <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="truncate text-foreground">{attachedFile.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 p-0 ml-auto shrink-0"
-              onClick={() => setAttachedFile(null)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
-
-        <div className="flex gap-1.5 items-end mb-1">
-          <div className="flex-1 relative">
-            <Textarea
-              ref={chatInputRef}
-              {...clipboardZoneProps({ sourceKind: 'chat_input' })}
-              placeholder={conversationEnded ? t('assignmentChat.conversationEndedPlaceholder', 'Conversation ended - please complete the activity') : t('assignmentChat.placeholder')}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                if (!hasTrackedTypingStart.current && e.target.value && nuanceTracking) {
-                  nuanceTracking.trackResponseStarted(messages.length);
-                  hasTrackedTypingStart.current = true;
-                }
-              }}
-              onPaste={(e) => void handlePaste(e)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (!isDisabled && (input.trim() || attachedFile)) {
-                    handleSendMessage();
-                  }
-                }
-              }}
-              disabled={isDisabled}
-              className={`min-h-[44px] max-h-[200px] resize-none overflow-y-auto ${isRTL ? 'pl-11 text-right' : 'pr-11 text-left'}`}
-              rows={1}
-              dir={isRTL ? 'rtl' : 'ltr'}
-              autoDirection
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`absolute bottom-1.5 ${isRTL ? 'left-3' : 'right-3'} h-8 w-8 rounded-full ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`}
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isDisabled}
-            >
-              {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-            </Button>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-10 w-10 shrink-0 rounded-full ${uploadingFile ? 'text-primary animate-pulse' : attachedFile ? 'text-primary' : 'text-muted-foreground'}`}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isDisabled || uploadingFile}
-            type="button"
-          >
-            {uploadingFile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-          </Button>
-          <Button
-            onClick={handleSendMessage}
-            disabled={isDisabled || (!input.trim() && !attachedFile)}
-            size="icon"
-            className="h-10 w-10 shrink-0"
-          >
-            {(loading || sending) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        {variant === 'primary' ? (
-          <>
-            {!canComplete && !loading && !sending ? (
-              <p className="text-sm text-muted-foreground mb-2" dir={isRTL ? 'rtl' : 'ltr'}>
-                {t('assignmentChat.completeNotReady')}
-              </p>
-            ) : null}
-            <Button
-              onClick={handleComplete}
-              disabled={completing || loading || sending}
-              className="w-full mt-auto"
-              variant={conversationEnded ? 'default' : 'secondary'}
-            >
-            {completing ? (
-              <>
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                {t('assignmentChat.completingActivity')}
-              </>
-            ) : (
-              <>
-                <CheckCircle className="me-2 h-4 w-4" />
-                {t('assignmentChat.completeActivity')}
-              </>
-            )}
-          </Button>
-          </>
-        ) : null}
-      </div>
-
-      <TabsContent value="assignment" className="flex-1 mt-0 overflow-visible">
-        <ScrollArea className={resourcesScrollAreaClass}>
-          <StudentFacingTaskSection
-            assignmentType={assignmentType}
-            taskText={studentFacingTask}
-            taskLoading={taskLoading}
-            className={cn('px-3 py-4', isRTL && 'text-end')}
-          />
-        </ScrollArea>
-      </TabsContent>
-
-      <TabsContent value="resources" className="flex-1 mt-0 overflow-visible">
-        <ScrollArea className={resourcesScrollAreaClass}>
-          {resources.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2 py-10">
-              <Paperclip className="h-8 w-8 opacity-50" />
-              <p>{t('assignmentChat.resources.empty', 'No resources uploaded yet')}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 px-3 pb-3">
-              {resources.map((msg, idx) => (
-                <Card 
-                  key={idx} 
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => void handlePreviewAttachment(msg.fileContext!, msg.originalIndex)}
-                >
-                  <CardContent className="p-3 flex items-start gap-3">
-                    <div className="bg-primary/10 p-2 rounded-md shrink-0">
-                      {msg.fileContext?.type === 'image' ? (
-                        <ImageIcon className="h-5 w-5 text-primary" />
-                      ) : (
-                        <FileText className="h-5 w-5 text-primary" />
+                      {!isUser && message.content && (
+                        <div className="flex flex-row items-center gap-1 mt-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handlePlayTTS(message.content, index)}
+                            disabled={loadingAudioIndex !== null && loadingAudioIndex !== index}
+                          >
+                            {loadingAudioIndex === index ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : playingMessageIndex === index ? (
+                              <VolumeX className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Volume2 className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                          {canFlagAssistantText &&
+                            splitAssistantMessageIntoSentences(String(message.content)).length >
+                              0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                title={t('assignmentChat.flag.open')}
+                                aria-label={t('assignmentChat.flag.open')}
+                                onClick={() => openFlagDialog(index)}
+                              >
+                                <Flag className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            )}
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" title={msg.fileContext?.name}>
-                        {msg.fileContext?.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {msg.fileContext?.type === 'image' ? 'Image' : 'Document'}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                );
+              })}
+              {(loading || sending) && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-lg p-3">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {variant === 'primary' && conversationEnded && (
+            <div
+              className={`bg-success/10 border border-success/20 rounded-lg p-3 text-sm text-success mb-4 ${isRTL ? 'text-right' : 'text-left'}`}
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
+              {isRTL ? '✓ ' : ''}
+              {t(
+                'assignmentChat.conversationComplete',
+                'Conversation complete! You can now finish the activity.'
+              )}
+              {!isRTL ? ' ✓' : ''}
             </div>
           )}
-        </ScrollArea>
-      </TabsContent>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt,.md,.pdf,.png,.jpg,.jpeg"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+
+          {attachedFile && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm mb-2">
+              <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="truncate text-foreground">{attachedFile.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 p-0 ml-auto shrink-0"
+                onClick={() => setAttachedFile(null)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          <div className="flex gap-1.5 items-end mb-1">
+            <div className="flex-1 relative">
+              <Textarea
+                ref={chatInputRef}
+                {...clipboardZoneProps({ sourceKind: 'chat_input' })}
+                placeholder={
+                  conversationEnded
+                    ? t(
+                        'assignmentChat.conversationEndedPlaceholder',
+                        'Conversation ended - please complete the activity'
+                      )
+                    : t('assignmentChat.placeholder')
+                }
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  if (!hasTrackedTypingStart.current && e.target.value && nuanceTracking) {
+                    nuanceTracking.trackResponseStarted(messages.length);
+                    hasTrackedTypingStart.current = true;
+                  }
+                }}
+                onPaste={(e) => void handlePaste(e)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isDisabled && (input.trim() || attachedFile)) {
+                      handleSendMessage();
+                    }
+                  }
+                }}
+                disabled={isDisabled}
+                className={`min-h-[44px] max-h-[200px] resize-none overflow-y-auto ${isRTL ? 'pl-11 text-right' : 'pr-11 text-left'}`}
+                rows={1}
+                dir={isRTL ? 'rtl' : 'ltr'}
+                autoDirection
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`absolute bottom-1.5 ${isRTL ? 'left-3' : 'right-3'} h-8 w-8 rounded-full ${isRecording ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isDisabled}
+              >
+                {isRecording ? (
+                  <Square className="h-4 w-4 fill-current" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-10 w-10 shrink-0 rounded-full ${uploadingFile ? 'text-primary animate-pulse' : attachedFile ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isDisabled || uploadingFile}
+              type="button"
+            >
+              {uploadingFile ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              onClick={handleSendMessage}
+              disabled={isDisabled || (!input.trim() && !attachedFile)}
+              size="icon"
+              className="h-10 w-10 shrink-0"
+            >
+              {loading || sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {variant === 'primary' ? (
+            <>
+              {!canComplete && !loading && !sending ? (
+                <p className="text-sm text-muted-foreground mb-2" dir={isRTL ? 'rtl' : 'ltr'}>
+                  {t('assignmentChat.completeNotReady')}
+                </p>
+              ) : null}
+              <Button
+                onClick={handleComplete}
+                disabled={completing || loading || sending}
+                className="w-full mt-auto"
+                variant={conversationEnded ? 'default' : 'secondary'}
+              >
+                {completing ? (
+                  <>
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                    {t('assignmentChat.completingActivity')}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="me-2 h-4 w-4" />
+                    {t('assignmentChat.completeActivity')}
+                  </>
+                )}
+              </Button>
+            </>
+          ) : null}
+        </div>
+
+        <TabsContent value="assignment" className="flex-1 mt-0 overflow-visible">
+          <ScrollArea className={resourcesScrollAreaClass}>
+            <StudentFacingTaskSection
+              assignmentType={assignmentType}
+              taskText={studentFacingTask}
+              taskLoading={taskLoading}
+              className={cn('px-3 py-4', isRTL && 'text-end')}
+            />
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="resources" className="flex-1 mt-0 overflow-visible">
+          <ScrollArea className={resourcesScrollAreaClass}>
+            {resources.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-2 py-10">
+                <Paperclip className="h-8 w-8 opacity-50" />
+                <p>{t('assignmentChat.resources.empty', 'No resources uploaded yet')}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 px-3 pb-3">
+                {resources.map((msg, idx) => (
+                  <Card
+                    key={idx}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() =>
+                      void handlePreviewAttachment(msg.fileContext!, msg.originalIndex)
+                    }
+                  >
+                    <CardContent className="p-3 flex items-start gap-3">
+                      <div className="bg-primary/10 p-2 rounded-md shrink-0">
+                        {msg.fileContext?.type === 'image' ? (
+                          <ImageIcon className="h-5 w-5 text-primary" />
+                        ) : (
+                          <FileText className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" title={msg.fileContext?.name}>
+                          {msg.fileContext?.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {msg.fileContext?.type === 'image' ? 'Image' : 'Document'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </TabsContent>
       </Tabs>
     </>
   );
@@ -1184,11 +1239,13 @@ export function AssignmentChatInterface({
                 type="button"
                 className={cn(
                   'flex w-full items-center justify-between gap-2 rounded-md py-1 text-start outline-none ring-offset-background transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  isRTL && 'flex-row-reverse text-end',
+                  isRTL && 'flex-row-reverse text-end'
                 )}
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <CardTitle className="text-base font-medium">{t('assignmentChat.contextHelpTitle')}</CardTitle>
+                  <CardTitle className="text-base font-medium">
+                    {t('assignmentChat.contextHelpTitle')}
+                  </CardTitle>
                   <p className="text-xs font-normal leading-snug text-muted-foreground">
                     {companionPanelOpen
                       ? t('assignmentChat.companion.expandedHint')
@@ -1198,7 +1255,7 @@ export function AssignmentChatInterface({
                 <ChevronDown
                   className={cn(
                     'size-5 shrink-0 opacity-70 transition-transform duration-200',
-                    companionPanelOpen && 'rotate-180',
+                    companionPanelOpen && 'rotate-180'
                   )}
                 />
               </CollapsibleTrigger>
@@ -1230,7 +1287,9 @@ export function AssignmentChatInterface({
             <DialogTitle>{t('assignmentChat.flag.title')}</DialogTitle>
             <DialogDescription>{t('assignmentChat.flag.description')}</DialogDescription>
           </DialogHeader>
-          <p className="text-xs text-muted-foreground -mt-1">{t('assignmentChat.flag.privacyNotice')}</p>
+          <p className="text-xs text-muted-foreground -mt-1">
+            {t('assignmentChat.flag.privacyNotice')}
+          </p>
           <div className="max-h-[min(280px,50vh)] overflow-y-auto space-y-3 py-2 pe-1">
             {flagDialogSentences.map((sentence, si) => (
               <div key={si} className="flex gap-3 items-start">
@@ -1274,8 +1333,19 @@ export function AssignmentChatInterface({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!previewResource} onOpenChange={(open) => { if (!open) { setPreviewResource(null); setZoomLevel(1); } }}>
-        <DialogContent showCloseButton={false} className="max-w-5xl w-[90vw] max-h-[92vh] flex flex-col">
+      <Dialog
+        open={!!previewResource}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewResource(null);
+            setZoomLevel(1);
+          }
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-5xl w-[90vw] max-h-[92vh] flex flex-col"
+        >
           <DialogHeader className="space-y-0 pb-2">
             <div className="flex items-start justify-between gap-3">
               <DialogTitle className="text-base font-semibold break-words line-clamp-2 min-w-0 pt-0.5">
@@ -1285,7 +1355,10 @@ export function AssignmentChatInterface({
                 variant="ghost"
                 size="icon-sm"
                 className="shrink-0"
-                onClick={() => { setPreviewResource(null); setZoomLevel(1); }}
+                onClick={() => {
+                  setPreviewResource(null);
+                  setZoomLevel(1);
+                }}
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
@@ -1297,7 +1370,7 @@ export function AssignmentChatInterface({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => setZoomLevel(z => Math.max(0.25, z - 0.25))}
+                    onClick={() => setZoomLevel((z) => Math.max(0.25, z - 0.25))}
                     disabled={zoomLevel <= 0.25}
                   >
                     <ZoomOut className="h-4 w-4" />
@@ -1309,27 +1382,23 @@ export function AssignmentChatInterface({
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => setZoomLevel(z => Math.min(5, z + 0.25))}
+                    onClick={() => setZoomLevel((z) => Math.min(5, z + 0.25))}
                     disabled={zoomLevel >= 5}
                   >
                     <ZoomIn className="h-4 w-4" />
                     <span className="sr-only">Zoom in</span>
                   </Button>
                   {zoomLevel !== 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setZoomLevel(1)}
-                    >
+                    <Button variant="ghost" size="icon-sm" onClick={() => setZoomLevel(1)}>
                       <RotateCcw className="h-3.5 w-3.5" />
                       <span className="sr-only">Reset zoom</span>
                     </Button>
                   )}
                 </div>
               )}
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => previewResource && handleViewInChat(previewResource.messageIndex)}
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -1363,7 +1432,11 @@ export function AssignmentChatInterface({
                 : t('assignmentChat.completionDialog.aiDetectedDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className={isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'}>
+          <AlertDialogFooter
+            className={
+              isRTL ? 'flex-row-reverse justify-start gap-2' : 'flex-row justify-end gap-2'
+            }
+          >
             <AlertDialogCancel onClick={handleDialogContinue} className="mt-0">
               {t('assignmentChat.completionDialog.continueButton')}
             </AlertDialogCancel>
@@ -1375,4 +1448,4 @@ export function AssignmentChatInterface({
       </AlertDialog>
     </>
   );
-}
+};

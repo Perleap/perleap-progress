@@ -1,9 +1,9 @@
-import { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { Camera, Loader2 } from 'lucide-react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 
 interface AvatarUploadProps {
   avatarUrl: string | null;

@@ -1,11 +1,6 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { StudentProfilePanel } from '@/components/StudentProfilePanel';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface StudentProfileModalProps {
   studentId: string | null;
@@ -14,17 +9,31 @@ interface StudentProfileModalProps {
   onClose: () => void;
 }
 
-export function StudentProfileModal({ studentId, studentName, open, onClose }: StudentProfileModalProps) {
+export const StudentProfileModal = ({
+  studentId,
+  studentName,
+  open,
+  onClose,
+}: StudentProfileModalProps) => {
   const { t } = useTranslation();
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('studentProfile.title')}</DialogTitle>
         </DialogHeader>
-        <StudentProfilePanel studentId={open ? studentId : null} studentName={studentName} queryEnabled={open} />
+        <StudentProfilePanel
+          studentId={open ? studentId : null}
+          studentName={studentName}
+          queryEnabled={open}
+        />
       </DialogContent>
     </Dialog>
   );
-}
+};

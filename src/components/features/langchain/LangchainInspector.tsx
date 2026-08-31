@@ -1,19 +1,5 @@
-import { useTranslation } from 'react-i18next';
-import type { Node } from '@xyflow/react';
 import { PanelRightClose } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { TrackedTextarea } from '@/components/ui/tracked-textarea';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 import {
   ensureLangchainNodeData,
   isLangchainNodeType,
@@ -26,8 +12,25 @@ import {
   type LangchainEmailNodeData,
   type TriggerMode,
 } from './langchainNodeData';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { Node } from '@xyflow/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { TrackedTextarea } from '@/components/ui/tracked-textarea';
+import { cn } from '@/lib/utils';
 
-const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'> = {
+const NODE_I18N_KEY: Record<
+  LangchainNodeType,
+  'input' | 'output' | 'llm' | 'trigger' | 'email' | 'database'
+> = {
   inputNode: 'input',
   outputNode: 'output',
   llmNode: 'llm',
@@ -36,7 +39,7 @@ const NODE_I18N_KEY: Record<LangchainNodeType, 'input' | 'output' | 'llm' | 'tri
   databaseNode: 'database',
 };
 
-function InspectorHeader({
+const InspectorHeader = ({
   title,
   subtitle,
   isRTL,
@@ -50,7 +53,7 @@ function InspectorHeader({
   dir: 'rtl' | 'ltr';
   onToggleCollapse?: () => void;
   collapseLabel: string;
-}) {
+}) => {
   return (
     <div className="flex shrink-0 items-start justify-between gap-2 border-b px-3 py-2">
       <div className="min-w-0 flex-1">
@@ -78,12 +81,14 @@ function InspectorHeader({
       ) : null}
     </div>
   );
-}
+};
 
-function ReadRow({ label, value, isRTL }: { label: string; value: string; isRTL: boolean }) {
+const ReadRow = ({ label, value, isRTL }: { label: string; value: string; isRTL: boolean }) => {
   return (
     <div className="space-y-1">
-      <p className={cn('text-xs font-medium text-muted-foreground', isRTL && 'text-end')}>{label}</p>
+      <p className={cn('text-xs font-medium text-muted-foreground', isRTL && 'text-end')}>
+        {label}
+      </p>
       <p
         className={cn(
           'text-sm whitespace-pre-wrap break-words rounded-md border border-border/60 bg-muted/20 px-3 py-2 min-h-9',
@@ -95,7 +100,7 @@ function ReadRow({ label, value, isRTL }: { label: string; value: string; isRTL:
       </p>
     </div>
   );
-}
+};
 
 export interface LangchainInspectorProps {
   node: Node | null;
@@ -107,7 +112,7 @@ export interface LangchainInspectorProps {
   className?: string;
 }
 
-export function LangchainInspector({
+export const LangchainInspector = ({
   node,
   readOnly,
   isRTL,
@@ -115,18 +120,13 @@ export function LangchainInspector({
   onToggleCollapse,
   clipboardTracking,
   className,
-}: LangchainInspectorProps) {
+}: LangchainInspectorProps) => {
   const { t } = useTranslation();
   const dir = isRTL ? 'rtl' : 'ltr';
 
   if (!node || !isLangchainNodeType(node.type)) {
     return (
-      <div
-        className={cn(
-          'flex flex-col border-border bg-card overflow-hidden',
-          className
-        )}
-      >
+      <div className={cn('flex flex-col border-border bg-card overflow-hidden', className)}>
         <InspectorHeader
           title={t('assignmentDetail.langchain.inspector.title')}
           subtitle={null}
@@ -151,7 +151,9 @@ export function LangchainInspector({
     <div className={cn('flex flex-col border-border bg-card overflow-hidden min-h-0', className)}>
       <InspectorHeader
         title={title}
-        subtitle={t(`assignmentDetail.langchain.nodes.${NODE_I18N_KEY[n.type]}`)}
+        subtitle={t(
+          `assignmentDetail.langchain.nodes.${n.type ? NODE_I18N_KEY[n.type as LangchainNodeType] : 'input'}`
+        )}
         isRTL={isRTL}
         dir={dir}
         onToggleCollapse={onToggleCollapse}
@@ -218,18 +220,32 @@ export function LangchainInspector({
         )}
 
         {n.type === 'triggerNode' && (
-          <TriggerSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainTriggerNodeData} onPatch={patch} t={t} />
+          <TriggerSection
+            readOnly={readOnly}
+            isRTL={isRTL}
+            dir={dir}
+            data={n.data as LangchainTriggerNodeData}
+            onPatch={patch}
+            t={t}
+          />
         )}
 
         {n.type === 'emailNode' && (
-          <EmailSection readOnly={readOnly} isRTL={isRTL} dir={dir} data={n.data as LangchainEmailNodeData} onPatch={patch} t={t} />
+          <EmailSection
+            readOnly={readOnly}
+            isRTL={isRTL}
+            dir={dir}
+            data={n.data as LangchainEmailNodeData}
+            onPatch={patch}
+            t={t}
+          />
         )}
       </div>
     </div>
   );
-}
+};
 
-function InputSection({
+const InputSection = ({
   readOnly,
   isRTL,
   dir,
@@ -247,11 +263,9 @@ function InputSection({
   descriptionLabel: string;
   onPatch: (p: Record<string, unknown>) => void;
   clipboardTracking?: AssignmentClipboardTrackingCallbacks;
-}) {
+}) => {
   if (readOnly) {
-    return (
-      <ReadRow label={descriptionLabel} value={data.description} isRTL={isRTL} />
-    );
+    return <ReadRow label={descriptionLabel} value={data.description} isRTL={isRTL} />;
   }
   return (
     <div className="space-y-1.5">
@@ -268,9 +282,9 @@ function InputSection({
       />
     </div>
   );
-}
+};
 
-function LlmSection({
+const LlmSection = ({
   readOnly,
   isRTL,
   dir,
@@ -288,15 +302,21 @@ function LlmSection({
   onPatch: (p: Record<string, unknown>) => void;
   t: (k: string) => string;
   clipboardTracking?: AssignmentClipboardTrackingCallbacks;
-}) {
+}) => {
   if (readOnly) {
     return (
-      <ReadRow label={t('assignmentDetail.langchain.inspector.fields.systemPrompt')} value={data.systemPrompt} isRTL={isRTL} />
+      <ReadRow
+        label={t('assignmentDetail.langchain.inspector.fields.systemPrompt')}
+        value={data.systemPrompt}
+        isRTL={isRTL}
+      />
     );
   }
   return (
     <div className="space-y-1.5">
-      <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.systemPrompt')}</Label>
+      <Label className={cn(isRTL && 'text-end block')}>
+        {t('assignmentDetail.langchain.inspector.fields.systemPrompt')}
+      </Label>
       <TrackedTextarea
         dir={dir}
         value={data.systemPrompt}
@@ -309,9 +329,9 @@ function LlmSection({
       />
     </div>
   );
-}
+};
 
-function TriggerSection({
+const TriggerSection = ({
   readOnly,
   isRTL,
   dir,
@@ -325,7 +345,7 @@ function TriggerSection({
   data: LangchainTriggerNodeData;
   onPatch: (p: Record<string, unknown>) => void;
   t: (k: string) => string;
-}) {
+}) => {
   if (readOnly) {
     return (
       <ReadRow
@@ -337,11 +357,10 @@ function TriggerSection({
   }
   return (
     <div className="space-y-1.5">
-      <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.triggerMode')}</Label>
-      <Select
-        value={data.mode}
-        onValueChange={(v) => onPatch({ mode: v as TriggerMode })}
-      >
+      <Label className={cn(isRTL && 'text-end block')}>
+        {t('assignmentDetail.langchain.inspector.fields.triggerMode')}
+      </Label>
+      <Select value={data.mode} onValueChange={(v) => onPatch({ mode: v as TriggerMode })}>
         <SelectTrigger className="w-full" dir={dir}>
           <SelectValue placeholder={t('assignmentDetail.langchain.inspector.fields.triggerMode')}>
             {(v) => (v ? t(`assignmentDetail.langchain.inspector.triggerMode.${v}`) : null)}
@@ -357,9 +376,9 @@ function TriggerSection({
       </Select>
     </div>
   );
-}
+};
 
-function EmailSection({
+const EmailSection = ({
   readOnly,
   isRTL,
   dir,
@@ -373,16 +392,27 @@ function EmailSection({
   data: LangchainEmailNodeData;
   onPatch: (p: Record<string, unknown>) => void;
   t: (k: string) => string;
-}) {
+}) => {
   if (readOnly) {
     return (
-      <ReadRow label={t('assignmentDetail.langchain.inspector.fields.sendTo')} value={data.sendTo} isRTL={isRTL} />
+      <ReadRow
+        label={t('assignmentDetail.langchain.inspector.fields.sendTo')}
+        value={data.sendTo}
+        isRTL={isRTL}
+      />
     );
   }
   return (
     <div className="space-y-1.5">
-      <Label className={cn(isRTL && 'text-end block')}>{t('assignmentDetail.langchain.inspector.fields.sendTo')}</Label>
-      <Input dir={dir} value={data.sendTo} onChange={(e) => onPatch({ sendTo: e.target.value })} placeholder={t('assignmentDetail.langchain.inspector.placeholders.sendTo')} />
+      <Label className={cn(isRTL && 'text-end block')}>
+        {t('assignmentDetail.langchain.inspector.fields.sendTo')}
+      </Label>
+      <Input
+        dir={dir}
+        value={data.sendTo}
+        onChange={(e) => onPatch({ sendTo: e.target.value })}
+        placeholder={t('assignmentDetail.langchain.inspector.placeholders.sendTo')}
+      />
     </div>
   );
-}
+};

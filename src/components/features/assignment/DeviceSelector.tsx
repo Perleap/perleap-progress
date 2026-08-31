@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RefreshCw } from 'lucide-react';
 
 export const NO_AUDIO = '__no_audio__';
 
@@ -48,7 +48,7 @@ interface DeviceSelectorProps {
   className?: string;
 }
 
-export function DeviceSelector({ value, onChange, className }: DeviceSelectorProps) {
+export const DeviceSelector = ({ value, onChange, className }: DeviceSelectorProps) => {
   const { t } = useTranslation();
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -125,7 +125,10 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
           <Label className="text-xs">{t('assignmentDetail.presentation.selectCamera')}</Label>
           <Select
             value={value.videoDeviceId || videoDevices[0]?.deviceId || ''}
-            onValueChange={(videoDeviceId) => onChange({ ...value, videoDeviceId })}
+            onValueChange={(videoDeviceId: string | null) => {
+              if (videoDeviceId == null) return;
+              onChange({ ...value, videoDeviceId });
+            }}
           >
             <SelectTrigger className="w-full min-w-0 max-w-full">
               <SelectValue
@@ -138,7 +141,9 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
             <SelectContent>
               {videoDevices.map((d, i) => (
                 <SelectItem key={d.deviceId} value={d.deviceId}>
-                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">{labelFor(d, i, 'video')}</span>
+                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">
+                    {labelFor(d, i, 'video')}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -150,7 +155,10 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
           <Select
             value={value.audioDeviceId}
             onValueChange={(audioDeviceId) =>
-              onChange({ ...value, audioDeviceId: audioDeviceId as DeviceSelection['audioDeviceId'] })
+              onChange({
+                ...value,
+                audioDeviceId: audioDeviceId as DeviceSelection['audioDeviceId'],
+              })
             }
           >
             <SelectTrigger className="w-full min-w-0 max-w-full">
@@ -165,7 +173,9 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
               <SelectItem value={NO_AUDIO}>{t('assignmentDetail.presentation.noAudio')}</SelectItem>
               {audioDevices.map((d, i) => (
                 <SelectItem key={d.deviceId} value={d.deviceId}>
-                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">{labelFor(d, i, 'audio')}</span>
+                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">
+                    {labelFor(d, i, 'audio')}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -185,4 +195,4 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
       </div>
     </div>
   );
-}
+};

@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { BookOpen, Sparkles } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { StudentDashboardAssignmentRow } from '@/components/features/dashboard/StudentDashboardAssignmentRow';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SkeletonRowList } from '@/components/ui/GsapSkeleton';
 import {
   Select,
   SelectContent,
@@ -10,21 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { SkeletonRowList } from '@/components/ui/GsapSkeleton';
-import { EmptyState } from '@/components/ui/empty-state';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useStudentAssignments } from '@/hooks/queries';
 import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { useTeacherProfilesMap } from '@/hooks/useTeacherProfilesMap';
-import { useStudentAssignments } from '@/hooks/queries';
 import {
   mapStudentDashboardAssignments,
   sortStudentDashboardAssignments,
   type AssignmentSortKey,
 } from '@/lib/studentDashboardAssignments';
-import { StudentDashboardAssignmentRow } from '@/components/features/dashboard/StudentDashboardAssignmentRow';
 
 const EMPTY_QUERY_LIST: unknown[] = [];
 
-export function StudentAssignmentsSection() {
+export const StudentAssignmentsSection = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -37,25 +37,25 @@ export function StudentAssignmentsSection() {
   const assignmentTeacherIds = useMemo(
     () =>
       rawAssignments
-        .map((a: { classrooms?: { teacher_id?: string } }) => a.classrooms?.teacher_id)
+        .map((a) => (a as { classrooms?: { teacher_id?: string } }).classrooms?.teacher_id)
         .filter((id): id is string => Boolean(id)),
-    [rawAssignments],
+    [rawAssignments]
   );
 
   const { teacherProfiles } = useTeacherProfilesMap(assignmentTeacherIds);
 
   const allAssignments = useMemo(
     () => mapStudentDashboardAssignments(rawAssignments, teacherProfiles),
-    [rawAssignments, teacherProfiles],
+    [rawAssignments, teacherProfiles]
   );
 
   const assignments = useMemo(
     () => allAssignments.filter((a) => !a.is_completed),
-    [allAssignments],
+    [allAssignments]
   );
   const finishedAssignments = useMemo(
     () => allAssignments.filter((a) => a.is_completed),
-    [allAssignments],
+    [allAssignments]
   );
 
   const assignmentsRef = useStaggerAnimation(':scope > div', 0.06, [
@@ -87,7 +87,9 @@ export function StudentAssignmentsSection() {
   return (
     <section>
       <div className="flex flex-col sm:flex-row justify-start items-start gap-4 flex-wrap mb-6">
-        <h2 className="text-xl font-semibold text-foreground">{t('studentDashboard.myAssignments')}</h2>
+        <h2 className="text-xl font-semibold text-foreground">
+          {t('studentDashboard.myAssignments')}
+        </h2>
 
         <div className="flex items-center gap-3 bg-muted/50 p-1 rounded-full">
           <Tabs
@@ -115,14 +117,21 @@ export function StudentAssignmentsSection() {
 
       <div className="space-y-4">
         {!assignmentsLoading &&
-          (assignmentsTab === 'active' ? assignments.length > 0 : finishedAssignments.length > 0) && (
+          (assignmentsTab === 'active'
+            ? assignments.length > 0
+            : finishedAssignments.length > 0) && (
             <div className="flex justify-end mb-2">
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as AssignmentSortKey)}>
+              <Select
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value as AssignmentSortKey)}
+              >
                 <SelectTrigger className="w-[180px] rounded-full border-border bg-card text-foreground">
                   <SelectValue>{sortByLabel}</SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl bg-card">
-                  <SelectItem value="due-date">{t('studentDashboard.sortOptions.dueDate')}</SelectItem>
+                  <SelectItem value="due-date">
+                    {t('studentDashboard.sortOptions.dueDate')}
+                  </SelectItem>
                   <SelectItem value="recent">{t('studentDashboard.sortOptions.recent')}</SelectItem>
                   <SelectItem value="oldest">{t('studentDashboard.sortOptions.oldest')}</SelectItem>
                 </SelectContent>
@@ -174,4 +183,4 @@ export function StudentAssignmentsSection() {
       </div>
     </section>
   );
-}
+};

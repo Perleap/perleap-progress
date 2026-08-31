@@ -28,12 +28,16 @@ dist-ssr
 *.sln
 *.sw?
 
-supabase/.temp/
+scripts/reports/
 supabase/.branches/
+
+*.tsbuildinfo
 
 # Verification skill runtime artifacts (skill + feature map stay tracked)
 .env.verify
+.env.verify.staging
 .cursor/skills/verify-perleap/evidence/
 .cursor/skills/verify-perleap/.auth/
 .cursor/skills/verify-perleap/.run/
 .cursor/skills/verify-perleap/fixtures/sandbox.json
+.cursor/skills/verify-perleap/fixtures/onboarding.json

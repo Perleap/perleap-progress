@@ -45,10 +45,13 @@ export function setLessonBriefClassNarrativeCache(
   classroomId: string,
   module: string,
   assignment: string,
-  snapshot: LessonBriefClassNarrativeSnapshot,
+  snapshot: LessonBriefClassNarrativeSnapshot
 ): void {
   try {
-    sessionStorage.setItem(classCacheKey(classroomId, module, assignment), JSON.stringify(snapshot));
+    sessionStorage.setItem(
+      classCacheKey(classroomId, module, assignment),
+      JSON.stringify(snapshot)
+    );
   } catch {
     // Ignore quota / private-mode errors
   }
@@ -57,7 +60,7 @@ export function setLessonBriefClassNarrativeCache(
 export function getLessonBriefClassNarrativeCache(
   classroomId: string,
   module: string,
-  assignment: string,
+  assignment: string
 ): LessonBriefClassNarrativeSnapshot | null {
   try {
     const raw = sessionStorage.getItem(classCacheKey(classroomId, module, assignment));
@@ -72,10 +75,13 @@ export function setLessonBriefStudentNarrativesCache(
   classroomId: string,
   module: string,
   assignment: string,
-  snapshot: LessonBriefStudentNarrativesSnapshot,
+  snapshot: LessonBriefStudentNarrativesSnapshot
 ): void {
   try {
-    sessionStorage.setItem(studentCacheKey(classroomId, module, assignment), JSON.stringify(snapshot));
+    sessionStorage.setItem(
+      studentCacheKey(classroomId, module, assignment),
+      JSON.stringify(snapshot)
+    );
   } catch {
     // Ignore quota / private-mode errors
   }
@@ -84,7 +90,7 @@ export function setLessonBriefStudentNarrativesCache(
 export function getLessonBriefStudentNarrativesCache(
   classroomId: string,
   module: string,
-  assignment: string,
+  assignment: string
 ): LessonBriefStudentNarrativesSnapshot | null {
   try {
     const raw = sessionStorage.getItem(studentCacheKey(classroomId, module, assignment));
@@ -99,7 +105,7 @@ export function setLessonBriefPreloadStatus(
   classroomId: string,
   module: string,
   assignment: string,
-  status: LessonBriefPreloadStatus,
+  status: LessonBriefPreloadStatus
 ): void {
   try {
     sessionStorage.setItem(preloadStatusKey(classroomId, module, assignment), status);
@@ -111,7 +117,7 @@ export function setLessonBriefPreloadStatus(
 export function getLessonBriefPreloadStatus(
   classroomId: string,
   module: string,
-  assignment: string,
+  assignment: string
 ): LessonBriefPreloadStatus | null {
   try {
     const raw = sessionStorage.getItem(preloadStatusKey(classroomId, module, assignment));
@@ -125,7 +131,7 @@ export function getLessonBriefPreloadStatus(
 export function isLessonBriefCacheReady(
   classroomId: string,
   module: string,
-  assignment: string,
+  assignment: string
 ): boolean {
   if (getLessonBriefPreloadStatus(classroomId, module, assignment) !== 'ready') return false;
   const students = getLessonBriefStudentNarrativesCache(classroomId, module, assignment);

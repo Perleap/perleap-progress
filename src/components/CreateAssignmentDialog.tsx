@@ -15,7 +15,7 @@ interface CreateAssignmentDialogProps {
   onCreatedAssignment?: (assignmentId: string) => void;
 }
 
-export function CreateAssignmentDialog({
+export const CreateAssignmentDialog = ({
   open,
   onOpenChange,
   classroomId,
@@ -25,7 +25,7 @@ export function CreateAssignmentDialog({
   studentName,
   lockSyllabusSection = false,
   onCreatedAssignment,
-}: CreateAssignmentDialogProps) {
+}: CreateAssignmentDialogProps) => {
   return (
     <AssignmentWizardDialog
       mode="create"
@@ -40,4 +40,4 @@ export function CreateAssignmentDialog({
       onCreatedAssignment={onCreatedAssignment}
     />
   );
-}
+};

@@ -1,5 +1,7 @@
 import { MonitoringTrafficContent } from '@/components/features/admin';
 
-export default function MonitoringTrafficPage() {
+const MonitoringTrafficPage = () => {
   return <MonitoringTrafficContent />;
-}
+};
+
+export default MonitoringTrafficPage;

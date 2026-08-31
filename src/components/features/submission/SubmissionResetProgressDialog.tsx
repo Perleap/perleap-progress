@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +11,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 export type SubmissionResetProgressDialogProps = {
   open: boolean;
@@ -20,12 +20,12 @@ export type SubmissionResetProgressDialogProps = {
   isPending: boolean;
 };
 
-export function SubmissionResetProgressDialog({
+export const SubmissionResetProgressDialog = ({
   open,
   onOpenChange,
   onConfirm,
   isPending,
-}: SubmissionResetProgressDialogProps) {
+}: SubmissionResetProgressDialogProps) => {
   const { t } = useTranslation();
 
   return (
@@ -64,4 +64,4 @@ export function SubmissionResetProgressDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
+};

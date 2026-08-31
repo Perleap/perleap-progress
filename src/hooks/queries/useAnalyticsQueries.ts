@@ -8,17 +8,17 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
+import type { AnalyticsAssignmentRef, AnalyticsModuleRef } from '@/lib/analyticsScope';
+import type { SyllabusStructureType } from '@/types/syllabus';
+import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
+import { supabase } from '@/integrations/supabase/client';
+import { parseScoreExplanations, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import {
   selectBestSubmissionIdForAggregate,
   type SubmissionAttemptForBest,
 } from '@/lib/bestSubmission';
-import type { SyllabusStructureType } from '@/types/syllabus';
-import type { AnalyticsAssignmentRef, AnalyticsModuleRef } from '@/lib/analyticsScope';
-import { parseScoreExplanations, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import { averageQedMeasuresAcrossSnapshots } from '@/lib/qedMeasures';
-import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
 
 type SubRow = {
   id: string;
@@ -39,7 +39,7 @@ type SnapshotRow = {
 
 function sectionLabelFor(
   syllabusSectionId: string | null,
-  sectionRows: { id: string; title: string }[],
+  sectionRows: { id: string; title: string }[]
 ): string {
   if (syllabusSectionId == null) return 'Unplaced';
   return sectionRows.find((s) => s.id === syllabusSectionId)?.title ?? '—';
@@ -49,9 +49,11 @@ function bestSnapshotsForStudentPair(
   studentId: string,
   assignmentId: string,
   allSubmissions: SubRow[],
-  snapshots: SnapshotRow[],
+  snapshots: SnapshotRow[]
 ): SnapshotRow[] {
-  const attempts = allSubmissions.filter((s) => s.student_id === studentId && s.assignment_id === assignmentId);
+  const attempts = allSubmissions.filter(
+    (s) => s.student_id === studentId && s.assignment_id === assignmentId
+  );
   if (attempts.length === 0) return [];
   const map = new Map<string, { scores: unknown }>();
   for (const sn of snapshots) {
@@ -74,7 +76,8 @@ function bestSnapshotsForStudentPair(
 export const analyticsKeys = {
   all: ['analytics'] as const,
   classroom: (classroomId: string) => [...analyticsKeys.all, 'classroom', classroomId] as const,
-  student: (studentId: string, classroomId: string) => [...analyticsKeys.all, 'student', studentId, classroomId] as const,
+  student: (studentId: string, classroomId: string) =>
+    [...analyticsKeys.all, 'student', studentId, classroomId] as const,
 };
 
 /**
@@ -99,7 +102,8 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         .eq('classroom_id', classroomId)
         .maybeSingle();
 
-      const structureType = (syllabusRow?.structure_type as SyllabusStructureType | undefined) ?? null;
+      const structureType =
+        (syllabusRow?.structure_type as SyllabusStructureType | undefined) ?? null;
 
       const { data: sectionRows } = syllabusRow
         ? await supabase
@@ -137,19 +141,19 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         .select('student_id, student_profiles(user_id, full_name, avatar_url)')
         .eq('classroom_id', classroomId);
 
-      const studentIds = enrollments?.map(e => e.student_id) || [];
+      const studentIds = enrollments?.map((e) => e.student_id) || [];
       const profileMap = new Map(
-        enrollments?.map(e => [e.student_id, (e as any).student_profiles]) || []
+        enrollments?.map((e) => [e.student_id, (e as any).student_profiles]) || []
       );
 
       // 5. Fetch all submissions for these assignments
-      const assignmentIds = assignments?.map(a => a.id) || [];
+      const assignmentIds = assignments?.map((a) => a.id) || [];
       const { data: allSubmissions } = await supabase
         .from('submissions')
         .select('id, student_id, assignment_id, status, attempt_number, submitted_at')
         .in('assignment_id', assignmentIds);
 
-      const submissionIds = allSubmissions?.map(s => s.id) || [];
+      const submissionIds = allSubmissions?.map((s) => s.id) || [];
 
       // 6. Fetch 5D snapshots in bulk
       const { data: snapshots } = await supabase
@@ -175,12 +179,10 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
 
       const subs = (allSubmissions || []) as SubRow[];
       const snapRows = (snapshots || []) as SnapshotRow[];
-      const assignById = new Map(
-        (assignments || []).map((a) => [a.id, a] as [string, (typeof assignments)[0]]),
-      );
-      const feedbackBySubmission = new Map(
-        (feedbackData || []).map((f) => [f.submission_id, f] as [string, (typeof feedbackData)[0]]),
-      );
+      const assignmentRows = assignments ?? [];
+      const feedbackRows = feedbackData ?? [];
+      const assignById = new Map(assignmentRows.map((a) => [a.id, a] as const));
+      const feedbackBySubmission = new Map(feedbackRows.map((f) => [f.submission_id, f] as const));
 
       // Process data into the format needed by ClassroomAnalytics
       const processedStudents = studentIds.map((sid) => {
@@ -191,7 +193,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
         const studentSnapshotsForAggregate: SnapshotRow[] = [];
         for (const aid of assignmentIds) {
           studentSnapshotsForAggregate.push(
-            ...bestSnapshotsForStudentPair(sid, aid, subs, snapRows),
+            ...bestSnapshotsForStudentPair(sid, aid, subs, snapRows)
           );
         }
 
@@ -202,8 +204,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
           const a = assignById.get(sub.assignment_id);
           if (!a) continue;
           const fb = feedbackBySubmission.get(sn.submission_id);
-          const studentFb =
-            typeof fb?.student_feedback === 'string' ? fb.student_feedback : null;
+          const studentFb = typeof fb?.student_feedback === 'string' ? fb.student_feedback : null;
           const teacherNote =
             INCLUDE_TEACHER_5D_EVIDENCE && typeof fb?.teacher_feedback === 'string'
               ? fb.teacher_feedback
@@ -237,7 +238,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
               ...acc,
               [k]: totals[k as keyof typeof totals] / studentSnapshotsForAggregate.length,
             }),
-            {} as Record<string, number>,
+            {} as Record<string, number>
           );
           latestQedMeasures = averageQedMeasuresAcrossSnapshots(studentSnapshotsForAggregate);
         }
@@ -249,7 +250,7 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
               sid,
               h.assignment_id,
               subs,
-              snapRows,
+              snapRows
             );
             return bestForAssignment.some((b) => b.submission_id === h.submission_id);
           }) || [];

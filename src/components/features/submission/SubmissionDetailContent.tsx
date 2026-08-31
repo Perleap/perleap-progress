@@ -1,24 +1,25 @@
+import { MessageSquare } from 'lucide-react';
+import type React from 'react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
+import type { SubmissionDetailLocationState } from '@/types/navigation';
+import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
+import { SubmissionDetailHeader } from '@/components/features/submission/SubmissionDetailHeader';
+import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
 import { ClassroomLayout } from '@/components/layouts';
 import { Card, CardContent } from '@/components/ui/card';
-import { generateFollowupAssignment } from '@/services/submissionService';
 import { useAuth } from '@/contexts/useAuth';
-import { MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
-import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import {
   useFullSubmissionDetails,
   useClassroom,
   useTeacherResetStudentAssignmentProgress,
 } from '@/hooks/queries';
-import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
-import { SubmissionDetailHeader } from '@/components/features/submission/SubmissionDetailHeader';
-import { isAppAdminRole } from '@/utils/role';
+import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
-import type { SubmissionDetailLocationState } from '@/types/navigation';
+import { generateFollowupAssignment } from '@/services/submissionService';
+import { isAppAdminRole } from '@/utils/role';
 
 interface GeneratedAssignmentData {
   title: string;
@@ -36,13 +37,17 @@ export type SubmissionDetailContentProps = {
   submissionId: string;
 };
 
-export function SubmissionDetailContent({ submissionId }: SubmissionDetailContentProps) {
+export const SubmissionDetailContent = ({ submissionId }: SubmissionDetailContentProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { data: submissionData, isLoading: loading, refetch } = useFullSubmissionDetails(submissionId);
+  const {
+    data: submissionData,
+    isLoading: loading,
+    refetch,
+  } = useFullSubmissionDetails(submissionId);
   const classroomId = submissionData?.assignments?.classroom_id;
   const { data: classroomRow } = useClassroom(classroomId);
   const resetProgress = useTeacherResetStudentAssignmentProgress();
@@ -67,17 +72,13 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
   useEffect(() => {
     if (submissionData && user?.id) {
       const teacherId = submissionData.assignments?.classrooms?.teacher_id;
-      if (
-        teacherId &&
-        teacherId !== user.id &&
-        !isAppAdminRole(user.user_metadata?.role)
-      ) {
+      if (teacherId && teacherId !== user.id && !isAppAdminRole(user.user_metadata?.role)) {
         console.error('Unauthorized access to submission');
         toast.error(t('submissionDetail.errors.loading'));
         navigateBackOrTo(navigate, '/teacher/dashboard');
       }
     }
-  }, [submissionData, user?.id, navigate, t, user.user_metadata?.role]);
+  }, [submissionData, user?.id, navigate, t, user?.user_metadata?.role]);
 
   const customSections = useMemo(() => getTeacherClassroomNavSections(t), [t]);
   const submissionNavState = location.state as SubmissionDetailLocationState | null;
@@ -98,7 +99,7 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
       }
       navigate(`/teacher/classroom/${classroomId}`, { replace, state: { activeSection: section } });
     },
-    [classroomId, submissionNavState?.returnTo, navigate],
+    [classroomId, submissionNavState?.returnTo, navigate]
   );
 
   const handleBackToSubmissions = useCallback(() => {
@@ -109,7 +110,7 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
     (section: string) => {
       navigateToClassroomSection(section, true);
     },
-    [navigateToClassroomSection],
+    [navigateToClassroomSection]
   );
 
   const handleGenerateFollowupAssignment = async () => {
@@ -120,8 +121,8 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
     try {
       const data = await generateFollowupAssignment({
         submissionId: submission.id,
-        teacherFeedback: feedback.teacher_feedback,
-        studentFeedback: feedback.student_feedback,
+        teacherFeedback: feedback.teacher_feedback ?? '',
+        studentFeedback: feedback.student_feedback ?? '',
         conversationContext: feedback.conversation_context,
         originalAssignmentTitle: submission.assignments.title,
         originalAssignmentInstructions: submission.assignments.instructions,
@@ -200,7 +201,7 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
     );
   }
 
-  if (!submissionData) return null;
+  if (!submissionData || !submission) return null;
 
   const classroomName = submission.assignments.classrooms.name;
   const classroomSubject = classroomRow?.subject;
@@ -229,7 +230,7 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
             studentName={studentName}
             studentAvatar={studentAvatar}
             classroomName={submission.assignments.classrooms.name}
-            submittedAt={submission.submitted_at}
+            submittedAt={submission.submitted_at ?? ''}
             canResetProgress={!!canTeacherStartNewStudentAttempt}
             resetProgressOpen={resetProgressOpen}
             onResetProgressOpenChange={setResetProgressOpen}
@@ -242,10 +243,21 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
 
           {showTabs ? (
             <SubmissionTabs
-              submission={submission}
-              feedback={feedback}
+              submission={
+                {
+                  ...submission,
+                  assignments: {
+                    ...submission.assignments,
+                    opik_trace_ids: submission.assignments.opik_trace_ids as
+                      | Record<string, string>
+                      | null
+                      | undefined,
+                  },
+                } as React.ComponentProps<typeof SubmissionTabs>['submission']
+              }
+              feedback={feedback ?? null}
               studentName={studentName}
-              alerts={alerts}
+              alerts={alerts as unknown as React.ComponentProps<typeof SubmissionTabs>['alerts']}
               onAcknowledgeAlert={refetch}
               onEvaluationComplete={refetch}
             />
@@ -284,4 +296,4 @@ export function SubmissionDetailContent({ submissionId }: SubmissionDetailConten
       )}
     </ClassroomLayout>
   );
-}
+};

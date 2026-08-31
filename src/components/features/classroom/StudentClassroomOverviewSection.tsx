@@ -1,11 +1,11 @@
 import { CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { StudentClassroomDetailView } from '@/lib/classroomDetail';
 import { CourseResumeProgressCard } from '@/components/features/syllabus/CourseResumeProgressCard';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { StudentClassroomDetailView } from '@/lib/classroomDetail';
 
 export type AboutCtaDisplay = {
   primary: string;
@@ -30,7 +30,7 @@ export type StudentClassroomOverviewSectionProps = {
   onLeaveCourse: () => void;
 };
 
-export function StudentClassroomOverviewSection({
+export const StudentClassroomOverviewSection = ({
   classroom,
   isRTL,
   teacherId,
@@ -43,7 +43,7 @@ export function StudentClassroomOverviewSection({
   aboutCtaDisplay,
   onStudyCtaClick,
   onLeaveCourse,
-}: StudentClassroomOverviewSectionProps) {
+}: StudentClassroomOverviewSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -52,7 +52,7 @@ export function StudentClassroomOverviewSection({
         <h2
           className={cn(
             'order-1 text-2xl md:text-3xl font-bold text-foreground md:col-span-3 self-start',
-            isRTL ? 'text-right' : 'text-left',
+            isRTL ? 'text-right' : 'text-left'
           )}
         >
           {classroom.name}
@@ -81,7 +81,7 @@ export function StudentClassroomOverviewSection({
 
         <div
           className={cn(
-            'max-md:contents md:col-start-3 md:row-start-2 md:flex md:w-full md:min-w-0 md:flex-col md:gap-3',
+            'max-md:contents md:col-start-3 md:row-start-2 md:flex md:w-full md:min-w-0 md:flex-col md:gap-3'
           )}
         >
           <div className="order-2 max-md:order-2 w-full">
@@ -93,7 +93,7 @@ export function StudentClassroomOverviewSection({
                 <div
                   className={cn(
                     'flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5',
-                    isRTL && 'sm:flex-row-reverse',
+                    isRTL && 'sm:flex-row-reverse'
                   )}
                 >
                   <div className="h-[76px] w-[76px] shrink-0 rounded-full bg-muted" />
@@ -107,7 +107,7 @@ export function StudentClassroomOverviewSection({
               <CourseResumeProgressCard
                 percent={aboutCourseProgress.percent}
                 headlinePrefix={t(
-                  `studentClassroom.resumeCard.headline.${aboutCtaDisplay.headlineVariant}`,
+                  `studentClassroom.resumeCard.headline.${aboutCtaDisplay.headlineVariant}`
                 )}
                 headlineHighlight={aboutCtaDisplay.secondary}
                 headlineUnitTitle={aboutCtaDisplay.unitTitle}
@@ -138,7 +138,7 @@ export function StudentClassroomOverviewSection({
                   className={cn(
                     'flex min-h-[2.5rem] items-center gap-3',
                     (classroom.start_date || classroom.end_date) && 'pb-3',
-                    isRTL && 'flex-row-reverse',
+                    isRTL && 'flex-row-reverse'
                   )}
                 >
                   {teacherLoading ? (
@@ -192,10 +192,12 @@ export function StudentClassroomOverviewSection({
                     className={cn(
                       'text-sm font-medium leading-snug text-foreground sm:text-base tabular-nums [overflow-wrap:anywhere]',
                       teacherId ? 'pt-3' : 'pt-0',
-                      isRTL ? 'text-right' : 'text-left',
+                      isRTL ? 'text-right' : 'text-left'
                     )}
                   >
-                    <span className="text-muted-foreground">{t('studentClassroom.duration')}: </span>
+                    <span className="text-muted-foreground">
+                      {t('studentClassroom.duration')}:{' '}
+                    </span>
                     <span className="text-foreground">
                       {classroom.start_date
                         ? new Date(classroom.start_date).toLocaleDateString()
@@ -284,7 +286,7 @@ export function StudentClassroomOverviewSection({
           size="default"
           className={cn(
             'gap-2 rounded-full border-destructive/40 bg-background/95 text-destructive shadow-md backdrop-blur-sm',
-            'hover:bg-destructive/10 focus-visible:ring-destructive/30',
+            'hover:bg-destructive/10 focus-visible:ring-destructive/30'
           )}
           onClick={onLeaveCourse}
           aria-label={t('studentClassroom.leaveCourse.button')}
@@ -295,4 +297,4 @@ export function StudentClassroomOverviewSection({
       </div>
     </div>
   );
-}
+};

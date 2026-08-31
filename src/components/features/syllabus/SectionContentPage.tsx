@@ -1,11 +1,3 @@
-import { useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,21 +10,9 @@ import {
   ChevronRight,
   ExternalLink,
 } from 'lucide-react';
-import { RichTextViewer } from '@/components/ui/rich-text-editor';
-import { useAuth } from '@/contexts/useAuth';
-import {
-  useUpdateStudentProgress,
-  useStudentModuleFlowProgressMap,
-  useAssignmentSubmittedOrCompletedMap,
-} from '@/hooks/queries';
-import {
-  isSectionUnlocked,
-  sectionsInCourseOrder,
-  type SectionSequentialUnlockFlow,
-} from '@/lib/sectionUnlock';
-import { getOrderedActivityCenterFlowSteps, studentModuleFlowStepOptions } from '@/lib/moduleFlow';
-import { CurriculumAssignmentTypeIcon } from '@/lib/assignmentTypeCurriculumIcon';
-import { computeSectionModuleProgressStats } from '@/lib/sectionModuleProgressStats';
+import { useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import type {
   SyllabusSection,
   SectionResource,
@@ -40,6 +20,26 @@ import type {
   ReleaseMode,
   ModuleFlowStep,
 } from '@/types/syllabus';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { RichTextViewer } from '@/components/ui/rich-text-editor';
+import { useAuth } from '@/contexts/useAuth';
+import {
+  useUpdateStudentProgress,
+  useStudentModuleFlowProgressMap,
+  useAssignmentSubmittedOrCompletedMap,
+} from '@/hooks/queries';
+import { CurriculumAssignmentTypeIcon } from '@/lib/assignmentTypeCurriculumIcon';
+import { getOrderedActivityCenterFlowSteps, studentModuleFlowStepOptions } from '@/lib/moduleFlow';
+import { computeSectionModuleProgressStats } from '@/lib/sectionModuleProgressStats';
+import {
+  isSectionUnlocked,
+  sectionsInCourseOrder,
+  type SectionSequentialUnlockFlow,
+} from '@/lib/sectionUnlock';
+import { cn } from '@/lib/utils';
 
 interface SectionContentPageProps {
   sectionId: string;
@@ -48,7 +48,10 @@ interface SectionContentPageProps {
   moduleFlowSteps: ModuleFlowStep[];
   sections: SyllabusSection[];
   sectionResources: Record<string, SectionResource[]>;
-  linkedAssignmentsMap: Record<string, Array<{ id: string; title: string; type: string; due_at: string | null }>>;
+  linkedAssignmentsMap: Record<
+    string,
+    Array<{ id: string; title: string; type: string; due_at: string | null }>
+  >;
   syllabusId: string;
   releaseMode: ReleaseMode;
   studentProgressMap: Record<string, StudentProgressStatus>;
@@ -89,11 +92,12 @@ export const SectionContentPage = ({
   const currentIndex = sortedSections.findIndex((s) => s.id === sectionId);
   const section = sortedSections[currentIndex];
   const prevSection = currentIndex > 0 ? sortedSections[currentIndex - 1] : null;
-  const nextSection = currentIndex < sortedSections.length - 1 ? sortedSections[currentIndex + 1] : null;
+  const nextSection =
+    currentIndex < sortedSections.length - 1 ? sortedSections[currentIndex + 1] : null;
   const resources = sectionResources[sectionId] || [];
   const assignments = useMemo(
     () => linkedAssignmentsMap[sectionId] ?? EMPTY_LINKED_ASSIGNMENTS,
-    [linkedAssignmentsMap, sectionId],
+    [linkedAssignmentsMap, sectionId]
   );
   const studentFlowOpts = useMemo(() => studentModuleFlowStepOptions(assignments), [assignments]);
   const orderedFlow = useMemo(
@@ -101,7 +105,7 @@ export const SectionContentPage = ({
       moduleFlowSteps.length > 0
         ? getOrderedActivityCenterFlowSteps(moduleFlowSteps, resources, studentFlowOpts)
         : [],
-    [moduleFlowSteps, resources, studentFlowOpts],
+    [moduleFlowSteps, resources, studentFlowOpts]
   );
   const useFlowList = orderedFlow.length > 0;
   const assignmentById = useMemo(() => {
@@ -142,7 +146,7 @@ export const SectionContentPage = ({
 
   const { data: assignmentDoneMap = {} } = useAssignmentSubmittedOrCompletedMap(
     assignmentIdsForSubmissionQuery,
-    user?.id,
+    user?.id
   );
 
   const moduleProgressStats = useMemo(
@@ -154,7 +158,7 @@ export const SectionContentPage = ({
         flowCtx: { progressByStep, assignmentDoneMap },
         flowStepOptions: studentFlowOpts,
       }),
-    [moduleFlowSteps, resources, assignments, progressByStep, assignmentDoneMap, studentFlowOpts],
+    [moduleFlowSteps, resources, assignments, progressByStep, assignmentDoneMap, studentFlowOpts]
   );
 
   const studentProgress = studentProgressMap[sectionId];
@@ -183,7 +187,7 @@ export const SectionContentPage = ({
     sortedSections,
     releaseMode,
     studentProgressMap,
-    sequentialUnlockFlow ?? undefined,
+    sequentialUnlockFlow ?? undefined
   );
 
   const topNavRow = (
@@ -200,7 +204,11 @@ export const SectionContentPage = ({
           onClick={() => prevSection && onNavigateSection(prevSection.id)}
           className="rounded-full gap-1 h-8"
         >
-          {isRTL ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+          {isRTL ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
           {t('syllabus.sections.previous', 'Previous')}
         </Button>
         <span className="text-xs text-muted-foreground">
@@ -214,7 +222,11 @@ export const SectionContentPage = ({
           className="rounded-full gap-1 h-8"
         >
           {t('syllabus.sections.next', 'Next')}
-          {isRTL ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {isRTL ? (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5" />
+          )}
         </Button>
       </div>
     </div>
@@ -254,7 +266,10 @@ export const SectionContentPage = ({
               {t('syllabus.sections.locked', 'Locked')}
             </h3>
             <p className="text-muted-foreground max-w-md mb-4">
-              {t('syllabus.sections.unlockRequirements', 'Complete the required sections to unlock this content.')}
+              {t(
+                'syllabus.sections.unlockRequirements',
+                'Complete the required sections to unlock this content.'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -293,7 +308,12 @@ export const SectionContentPage = ({
       {section.description && (
         <Card className="rounded-xl border-border shadow-sm">
           <CardContent className="p-5">
-            <p className={cn('text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap', isRTL && 'text-right')}>
+            <p
+              className={cn(
+                'text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap',
+                isRTL && 'text-right'
+              )}
+            >
               {section.description}
             </p>
           </CardContent>
@@ -354,8 +374,7 @@ export const SectionContentPage = ({
               ? orderedFlow.map((step) => {
                   if (step.step_kind === 'resource' && step.activity_list_id) {
                     const r = resourceById[step.activity_list_id];
-                    const title =
-                      r?.title ?? t('studentClassroom.activities.activity', 'Activity');
+                    const title = r?.title ?? t('studentClassroom.activities.activity', 'Activity');
                     const sub = t('syllabus.detail.activityStepLabel', 'Activity');
                     return (
                       <Link
@@ -365,7 +384,7 @@ export const SectionContentPage = ({
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
                           'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
-                          isRTL && 'flex-row-reverse',
+                          isRTL && 'flex-row-reverse'
                         )}
                       >
                         <div className="p-1.5 rounded-md bg-muted/50">
@@ -380,7 +399,7 @@ export const SectionContentPage = ({
                         <span
                           className={cn(
                             'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
-                            isRTL && 'flex-row-reverse',
+                            isRTL && 'flex-row-reverse'
                           )}
                         >
                           <ExternalLink className="h-3 w-3" />
@@ -400,7 +419,7 @@ export const SectionContentPage = ({
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
                           'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
-                          isRTL && 'flex-row-reverse',
+                          isRTL && 'flex-row-reverse'
                         )}
                       >
                         <div className="p-1.5 rounded-md bg-muted/50">
@@ -421,7 +440,7 @@ export const SectionContentPage = ({
                         <span
                           className={cn(
                             'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
-                            isRTL && 'flex-row-reverse',
+                            isRTL && 'flex-row-reverse'
                           )}
                         >
                           <ExternalLink className="h-3 w-3" />
@@ -440,14 +459,16 @@ export const SectionContentPage = ({
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-card/50',
                       'hover:bg-muted/60 transition-colors cursor-pointer text-foreground no-underline',
-                      isRTL && 'flex-row-reverse',
+                      isRTL && 'flex-row-reverse'
                     )}
                   >
                     <div className="p-1.5 rounded-md bg-muted/50">
                       <CurriculumAssignmentTypeIcon type={a.type} />
                     </div>
                     <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-                      <span className="text-sm font-medium text-foreground truncate block">{a.title}</span>
+                      <span className="text-sm font-medium text-foreground truncate block">
+                        {a.title}
+                      </span>
                       <span className="text-[10px] text-muted-foreground">{a.type}</span>
                     </div>
                     {a.due_at && (
@@ -459,7 +480,7 @@ export const SectionContentPage = ({
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-medium flex-shrink-0',
-                        isRTL && 'flex-row-reverse',
+                        isRTL && 'flex-row-reverse'
                       )}
                     >
                       <ExternalLink className="h-3 w-3" />

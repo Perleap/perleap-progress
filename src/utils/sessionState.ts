@@ -1,6 +1,6 @@
 /**
  * Session State Management
- * 
+ *
  * Tracks signup progress to prevent confusion between:
  * - Active signup flow (user just registered, going through onboarding)
  * - Truly stuck users (old session, missing role metadata)
@@ -46,7 +46,7 @@ export const markSignupComplete = (): void => {
 export const isSignupInProgress = (): boolean => {
   try {
     const inProgress = sessionStorage.getItem(SIGNUP_IN_PROGRESS_KEY) === 'true';
-    
+
     if (!inProgress) {
       return false;
     }
@@ -57,7 +57,7 @@ export const isSignupInProgress = (): boolean => {
       const signupTime = parseInt(timestamp);
       const now = Date.now();
       const thirtyMinutes = 30 * 60 * 1000;
-      
+
       if (now - signupTime > thirtyMinutes) {
         console.warn('⚠️ Signup timed out (30+ minutes), clearing flags');
         markSignupComplete();
@@ -106,4 +106,3 @@ export const getSignupDuration = (): number | null => {
     return null;
   }
 };
-

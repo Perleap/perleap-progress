@@ -1,16 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { ChevronDown, RefreshCw } from 'lucide-react';
-import { useAuth } from '@/contexts/useAuth';
-import { isAppAdminRole } from '@/utils/role';
-import { supabase } from '@/integrations/supabase/client';
+import { useTranslation } from 'react-i18next';
 import type { AdminMonitoringProbeResult } from '@/types/adminMonitoringProbe';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { isAppAdminRole } from '@/utils/role';
 
 export const PROBE_QUERY_KEY = ['admin-monitoring-probe'] as const;
 
@@ -27,18 +27,22 @@ export function useAdminMonitoringProbeQuery() {
       const token = sess.session?.access_token;
       if (!token) throw new Error(t('monitoring.probeNoSession'));
 
-      const { data, error } = await supabase.functions.invoke<AdminMonitoringProbeResult | { error?: string }>(
-        'admin-monitoring-probe',
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const { data, error } = await supabase.functions.invoke<
+        AdminMonitoringProbeResult | { error?: string }
+      >('admin-monitoring-probe', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (error) {
         throw new Error(error.message || t('common.error'));
       }
-      if (data && typeof data === 'object' && 'error' in data && typeof (data as { error: string }).error === 'string') {
+      if (
+        data &&
+        typeof data === 'object' &&
+        'error' in data &&
+        typeof (data as { error: string }).error === 'string'
+      ) {
         throw new Error((data as { error: string }).error);
       }
       if (!isProbePayload(data)) {
@@ -67,7 +71,7 @@ function isProbePayload(x: unknown): x is AdminMonitoringProbeResult {
   );
 }
 
-export function PlatformHealthProbeSection() {
+export const PlatformHealthProbeSection = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const probeQuery = useAdminMonitoringProbeQuery();
@@ -157,8 +161,12 @@ export function PlatformHealthProbeSection() {
                 </div>
                 <ul className="space-y-1 text-xs text-muted-foreground">
                   {probe.vercel.userEmail ? <li>{probe.vercel.userEmail}</li> : null}
-                  {probe.vercel.username ? <li className="font-mono">@{probe.vercel.username}</li> : null}
-                  {probe.vercel.message ? <li className="text-destructive">{probe.vercel.message}</li> : null}
+                  {probe.vercel.username ? (
+                    <li className="font-mono">@{probe.vercel.username}</li>
+                  ) : null}
+                  {probe.vercel.message ? (
+                    <li className="text-destructive">{probe.vercel.message}</li>
+                  ) : null}
                 </ul>
               </div>
               <div className="rounded-lg border border-border/60 bg-card/50 p-4">
@@ -168,8 +176,12 @@ export function PlatformHealthProbeSection() {
                     {probe.db.ok ? t('monitoring.statusOk') : t('monitoring.statusError')}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">{t('monitoring.probeLatency', { ms: probe.db.latencyMs })}</p>
-                {probe.db.message ? <p className="mt-1 text-xs text-destructive">{probe.db.message}</p> : null}
+                <p className="text-xs text-muted-foreground">
+                  {t('monitoring.probeLatency', { ms: probe.db.latencyMs })}
+                </p>
+                {probe.db.message ? (
+                  <p className="mt-1 text-xs text-destructive">{probe.db.message}</p>
+                ) : null}
               </div>
             </div>
             <Collapsible>
@@ -188,4 +200,4 @@ export function PlatformHealthProbeSection() {
       </CardContent>
     </Card>
   );
-}
+};

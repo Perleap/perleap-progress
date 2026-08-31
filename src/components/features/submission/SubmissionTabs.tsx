@@ -3,37 +3,29 @@ import { AlertTriangle, Clock, FileText, ImageIcon, Loader2, Sparkles } from 'lu
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { SubmissionPrivateNotesTab } from './SubmissionPrivateNotesTab';
 import { LangchainPipelineView } from './LangchainPipelineView';
 import { PresentationSubmissionView } from './PresentationSubmissionView';
 import { ProjectSubmissionView } from './ProjectSubmissionView';
-import { TestResultsView } from './TestResultsView';
-import { SubmissionExportJsonButton } from './SubmissionExportJsonButton';
-import { SubmissionStoragePreview } from './SubmissionStoragePreview';
-import {
-  isSubmissionPdfAttachment,
-  openSubmissionFileInNewTab,
-} from '@/services/submissionFileService';
 import {
   SubmissionActivitySignalsCard,
   type ActivitySignalScrollTarget,
 } from './SubmissionActivitySignalsCard';
+import { SubmissionExportJsonButton } from './SubmissionExportJsonButton';
+import { SubmissionPrivateNotesTab } from './SubmissionPrivateNotesTab';
+import { SubmissionStoragePreview } from './SubmissionStoragePreview';
+import { TestResultsView } from './TestResultsView';
 import type { Message } from '@/types';
 import type { StudentAlert } from '@/types/alerts';
+import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
+import { LessonReadingDetailsCollapsible } from '@/components/features/syllabus/content-blocks/LessonReadingDetailsCollapsible';
 import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
-import { LessonReadingDetailsCollapsible } from '@/components/features/syllabus/content-blocks/LessonReadingDetailsCollapsible';
 import { StudentAnalytics } from '@/components/StudentAnalytics';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -51,12 +43,15 @@ import {
 import { rehydrateMessages } from '@/lib/conversationMessages';
 import { cn } from '@/lib/utils';
 import {
+  isSubmissionPdfAttachment,
+  openSubmissionFileInNewTab,
+} from '@/services/submissionFileService';
+import {
   generateFeedback,
   releaseAiFeedbackToStudent,
   updateAssignmentFeedbackText,
 } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
-import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
 
 type SubmissionTabValue = 'evaluation' | 'feedback' | 'assignment' | 'notes';
 
@@ -143,13 +138,10 @@ export const SubmissionTabs = ({
   const flagsQueryEnabled = activeTab === 'assignment';
   const { data: chatSentenceFlagsRaw } = useTeacherChatSentenceFlags(
     submission.id,
-    flagsQueryEnabled && isChatLikeAssignment,
+    flagsQueryEnabled && isChatLikeAssignment
   );
   const chatSentenceFlags = chatSentenceFlagsRaw ?? [];
-  const { data: clipboardEventsRaw } = useTeacherClipboardEvents(
-    submission.id,
-    flagsQueryEnabled,
-  );
+  const { data: clipboardEventsRaw } = useTeacherClipboardEvents(submission.id, flagsQueryEnabled);
   const clipboardEvents = clipboardEventsRaw ?? [];
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const [highlightSentence, setHighlightSentence] = useState<{
@@ -172,7 +164,7 @@ export const SubmissionTabs = ({
       }
       setPreviewAttachment(fileContext);
     },
-    [t],
+    [t]
   );
 
   useEffect(() => {
@@ -227,7 +219,7 @@ export const SubmissionTabs = ({
           ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     },
-    [scrollToFlaggedChatSentence, scrollToChatMessage],
+    [scrollToFlaggedChatSentence, scrollToChatMessage]
   );
 
   const activitySignalsCard =
@@ -274,11 +266,11 @@ export const SubmissionTabs = ({
   const feedbackMainTraceId = readOpikTraceId(feedback?.opik_trace_ids, 'feedback_main');
   const studentFacingTraceId = readOpikTraceId(
     submission.assignments.opik_trace_ids,
-    'student_facing_task',
+    'student_facing_task'
   );
   const instructionsTraceId = readOpikTraceId(
     submission.assignments.opik_trace_ids,
-    'instructions',
+    'instructions'
   );
 
   const handleGenerateAiEvaluation = async () => {
@@ -370,16 +362,28 @@ export const SubmissionTabs = ({
       className="w-full"
     >
       <TabsList className="grid w-full grid-cols-2 min-[520px]:grid-cols-4 gap-1 h-auto min-h-12 rounded-xl bg-muted/50 p-1">
-        <TabsTrigger value="evaluation" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
+        <TabsTrigger
+          value="evaluation"
+          className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm"
+        >
           {t('submissionDetail.tabs.evaluation')}
         </TabsTrigger>
-        <TabsTrigger value="feedback" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
+        <TabsTrigger
+          value="feedback"
+          className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm"
+        >
           {t('submissionDetail.tabs.feedback')}
         </TabsTrigger>
-        <TabsTrigger value="assignment" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
+        <TabsTrigger
+          value="assignment"
+          className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm"
+        >
           {t('submissionDetail.tabs.assignment')}
         </TabsTrigger>
-        <TabsTrigger value="notes" className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm">
+        <TabsTrigger
+          value="notes"
+          className="rounded-lg data-[state=active]:shadow-sm text-xs sm:text-sm"
+        >
           {t('submissionDetail.tabs.notes')}
         </TabsTrigger>
       </TabsList>
@@ -600,10 +604,10 @@ export const SubmissionTabs = ({
                 <div className="space-y-6">
                   {activitySignalsCard}
                   <ProjectSubmissionView
-                  fileUrl={submission.file_url}
-                  fileUrls={submission.file_urls}
-                  headerAction={exportJsonButton}
-                  {...evalProps}
+                    fileUrl={submission.file_url}
+                    fileUrls={submission.file_urls}
+                    headerAction={exportJsonButton}
+                    {...evalProps}
                   />
                 </div>
               );
@@ -611,14 +615,22 @@ export const SubmissionTabs = ({
               return (
                 <div className="space-y-6">
                   {activitySignalsCard}
-                  <PresentationSubmissionView fileUrl={submission.file_url} headerAction={exportJsonButton} {...evalProps} />
+                  <PresentationSubmissionView
+                    fileUrl={submission.file_url}
+                    headerAction={exportJsonButton}
+                    {...evalProps}
+                  />
                 </div>
               );
             case 'langchain':
               return (
                 <div className="space-y-6">
                   {activitySignalsCard}
-                  <LangchainPipelineView textBody={submission.text_body} headerAction={exportJsonButton} {...evalProps} />
+                  <LangchainPipelineView
+                    textBody={submission.text_body}
+                    headerAction={exportJsonButton}
+                    {...evalProps}
+                  />
                 </div>
               );
             case 'text_essay':
@@ -824,7 +836,9 @@ export const SubmissionTabs = ({
                                         <button
                                           type="button"
                                           className="flex items-center gap-2 rounded-md border border-border bg-background/80 px-2 py-1.5 text-start transition-colors hover:bg-background"
-                                          onClick={() => void handleAttachmentOpen(msg.fileContext!)}
+                                          onClick={() =>
+                                            void handleAttachmentOpen(msg.fileContext!)
+                                          }
                                         >
                                           {msg.fileContext.type === 'image' ? (
                                             <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
@@ -920,7 +934,10 @@ export const SubmissionTabs = ({
         ) : null}
       </TabsContent>
 
-      <Dialog open={Boolean(previewAttachment)} onOpenChange={(open) => !open && setPreviewAttachment(null)}>
+      <Dialog
+        open={Boolean(previewAttachment)}
+        onOpenChange={(open) => !open && setPreviewAttachment(null)}
+      >
         <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
           <DialogHeader>
             <DialogTitle className="truncate">{previewAttachment?.name}</DialogTitle>

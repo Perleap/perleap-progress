@@ -1,15 +1,8 @@
 import * as React from 'react';
-import {
-  Controller,
-  ControllerProps,
-  FieldPath,
-  FieldValues,
-  FormProvider,
-  useFormContext,
-} from 'react-hook-form';
-
-import { cn } from '@/lib/utils';
+import { Controller, FormProvider, useFormContext } from 'react-hook-form';
+import type { ControllerProps, FieldPath, FieldValues } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 const Form = FormProvider;
 
@@ -94,22 +87,21 @@ const FormLabel = React.forwardRef<
 });
 FormLabel.displayName = 'FormLabel';
 
-const FormControl = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ ...props }, ref) => {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+const FormControl = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ ...props }, ref) => {
+    const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
 
-  const child = React.Children.only(props.children as React.ReactElement);
-  
-  return React.cloneElement(child, {
-    ref,
-    id: formItemId,
-    'aria-describedby': !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`,
-    'aria-invalid': !!error,
-    ...child.props,
-  } as any);
-});
+    const child = React.Children.only(props.children as React.ReactElement);
+
+    return React.cloneElement(child, {
+      ref,
+      id: formItemId,
+      'aria-describedby': !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`,
+      'aria-invalid': !!error,
+      ...child.props,
+    } as any);
+  }
+);
 FormControl.displayName = 'FormControl';
 
 const FormDescription = React.forwardRef<

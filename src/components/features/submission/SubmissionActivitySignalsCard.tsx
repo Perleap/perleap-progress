@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import type {
   AssignmentChatSentenceFlag,
   AssignmentClipboardEvent,
 } from '@/services/submissionService';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export type ActivitySignalScrollTarget =
   | { kind: 'chat_sentence'; messageIndex: number; sentenceIndex: number }
@@ -23,10 +23,9 @@ interface SubmissionActivitySignalsCardProps {
 
 function formatSourceLabel(
   t: (key: string, opts?: Record<string, unknown>) => string,
-  event: AssignmentClipboardEvent,
+  event: AssignmentClipboardEvent
 ): string {
-  const msgNum =
-    event.message_index != null ? event.message_index + 1 : undefined;
+  const msgNum = event.message_index != null ? event.message_index + 1 : undefined;
 
   switch (event.source_kind) {
     case 'assistant_message':
@@ -88,13 +87,13 @@ function clipboardScrollTarget(event: AssignmentClipboardEvent): ActivitySignalS
   return null;
 }
 
-export function SubmissionActivitySignalsCard({
+export const SubmissionActivitySignalsCard = ({
   sentenceFlags,
   clipboardEvents,
   uiLanguage,
   onScrollToTarget,
   className,
-}: SubmissionActivitySignalsCardProps) {
+}: SubmissionActivitySignalsCardProps) => {
   const { t } = useTranslation();
 
   if (sentenceFlags.length === 0 && clipboardEvents.length === 0) {
@@ -107,7 +106,7 @@ export function SubmissionActivitySignalsCard({
     <Card
       className={cn(
         'rounded-xl border-none shadow-sm bg-white dark:bg-slate-900/50 ring-1 ring-slate-200/50 dark:ring-slate-800 overflow-hidden',
-        className,
+        className
       )}
     >
       <CardHeader className="px-6 py-4 space-y-1">
@@ -135,7 +134,7 @@ export function SubmissionActivitySignalsCard({
                 className={cn(
                   'w-full rounded-lg border border-slate-100 bg-slate-50/80 p-4 text-left',
                   'transition-colors hover:bg-slate-100/90 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:bg-slate-800/70',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                 )}
               >
                 <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-900 dark:text-slate-100">
@@ -208,7 +207,7 @@ export function SubmissionActivitySignalsCard({
                   className={cn(
                     'w-full rounded-lg border border-slate-100 bg-slate-50/80 p-4 text-left',
                     'transition-colors hover:bg-slate-100/90 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:bg-slate-800/70',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                   )}
                 >
                   {inner}
@@ -220,4 +219,4 @@ export function SubmissionActivitySignalsCard({
       </CardContent>
     </Card>
   );
-}
+};

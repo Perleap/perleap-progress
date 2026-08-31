@@ -50,10 +50,7 @@ export function getAuthErrorMessage(
     return t('auth.errors.emailNotConfirmed');
   }
 
-  if (
-    lower.includes('email rate limit') ||
-    codeLower.includes('over_email_send_rate_limit')
-  ) {
+  if (lower.includes('email rate limit') || codeLower.includes('over_email_send_rate_limit')) {
     return t('auth.errors.emailSignupRateLimited');
   }
 

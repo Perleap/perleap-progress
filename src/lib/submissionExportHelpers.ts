@@ -5,7 +5,12 @@ export type SubmissionStudentWorkExport =
   | { type: 'chat'; messages: Message[] }
   | { type: 'text_essay'; text_body: string | null }
   | { type: 'test'; questions: Record<string, unknown>[]; responses: Record<string, unknown>[] }
-  | { type: 'project'; file_url: string | null; file_urls: string[] | null; artifact_transcript: string | null }
+  | {
+      type: 'project';
+      file_url: string | null;
+      file_urls: string[] | null;
+      artifact_transcript: string | null;
+    }
   | { type: 'presentation'; file_url: string | null; artifact_transcript: string | null }
   | { type: 'langchain'; pipeline: unknown };
 
@@ -25,7 +30,10 @@ export function sanitizeExportFilenamePart(name: string): string {
   );
 }
 
-export function buildSubmissionExportFilename(assignmentTitle: string, studentName: string): string {
+export function buildSubmissionExportFilename(
+  assignmentTitle: string,
+  studentName: string
+): string {
   const date = new Date().toISOString().split('T')[0];
   const assignment = sanitizeExportFilenamePart(assignmentTitle);
   const student = sanitizeExportFilenamePart(studentName);
@@ -62,7 +70,7 @@ export function buildStudentWorkExport(
     artifact_transcript?: string | null;
   },
   extras: StudentWorkExtras = {},
-  feedbackConversationContext?: Message[] | null,
+  feedbackConversationContext?: Message[] | null
 ): SubmissionStudentWorkExport {
   if (assignmentType === 'text_essay') {
     return { type: 'text_essay', text_body: submission.text_body ?? null };
@@ -100,7 +108,7 @@ export function buildStudentWorkExport(
   const messages =
     extras.messages && extras.messages.length > 0
       ? extras.messages
-      : feedbackConversationContext ?? [];
+      : (feedbackConversationContext ?? []);
 
   return { type: 'chat', messages };
 }
@@ -152,7 +160,7 @@ export function assembleClassroomStudentWorkEntries(
   rows: ClassroomSubmissionWorkRow[],
   conversationsBySubmissionId: Map<string, Message[]>,
   questionsByAssignmentId: Map<string, Record<string, unknown>[]>,
-  responsesBySubmissionId: Map<string, Record<string, unknown>[]>,
+  responsesBySubmissionId: Map<string, Record<string, unknown>[]>
 ): ClassroomStudentWorkEntry[] {
   return rows.map((row) => {
     const assignmentType = row.assignment_type;
@@ -171,7 +179,7 @@ export function assembleClassroomStudentWorkEntries(
         messages,
         testQuestions: questionsByAssignmentId.get(row.assignment_id) ?? [],
         testResponses: responsesBySubmissionId.get(row.id) ?? [],
-      },
+      }
     );
 
     return {

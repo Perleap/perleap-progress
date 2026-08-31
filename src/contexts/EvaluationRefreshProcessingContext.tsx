@@ -8,8 +8,8 @@ import {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '@/integrations/supabase/client';
 import { EvaluationRefreshProgressBanner } from '@/components/features/analytics/EvaluationRefreshProgressBanner';
+import { supabase } from '@/integrations/supabase/client';
 import {
   estimateRefreshDurationSeconds,
   estimateSecondsPerStudent,
@@ -94,7 +94,7 @@ function jobToRefreshResponse(job: JobRow, manualSkipped = 0, skipped = 0): Refr
   };
 }
 
-export function EvaluationRefreshProcessingProvider({ children }: { children: ReactNode }) {
+export const EvaluationRefreshProcessingProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
   const [activeJob, setActiveJob] = useState<EvaluationRefreshActiveJob | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -124,7 +124,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
           ? 100
           : Math.min(
               PROGRESS_CAP,
-              totalStudents > 0 ? (completedStudents / totalStudents) * 100 : 0,
+              totalStudents > 0 ? (completedStudents / totalStudents) * 100 : 0
             );
 
       const remainingStudents = Math.max(0, totalStudents - completedStudents);
@@ -147,7 +147,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
             : '',
       });
     },
-    [t],
+    [t]
   );
 
   const waitForTerminalJob = useCallback(
@@ -160,7 +160,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
             const { data, error } = await supabase
               .from('evaluation_refresh_jobs')
               .select(
-                'status, completed_students, total_students, total_submissions, batch_id, error_message',
+                'status, completed_students, total_students, total_submissions, batch_id, error_message'
               )
               .eq('id', jobId)
               .single();
@@ -195,7 +195,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
           void poll();
         }, POLL_MS);
       }),
-    [clearJob, clearPoll, updateJobFromRow],
+    [clearJob, clearPoll, updateJobFromRow]
   );
 
   const startRefresh = useCallback(
@@ -205,7 +205,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
       try {
         const { data, error } = await supabase.functions.invoke<StartResponse>(
           'refresh-class-evaluations',
-          { body: { classroomId } },
+          { body: { classroomId } }
         );
 
         if (error) {
@@ -262,7 +262,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
         return { error: e instanceof Error ? e.message : 'invoke_failed' };
       }
     },
-    [clearJob, t, waitForTerminalJob],
+    [clearJob, t, waitForTerminalJob]
   );
 
   const cancelRefresh = useCallback(async () => {
@@ -283,7 +283,7 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
       startRefresh,
       cancelRefresh,
     }),
-    [activeJob, startRefresh, cancelRefresh],
+    [activeJob, startRefresh, cancelRefresh]
   );
 
   return (
@@ -292,13 +292,13 @@ export function EvaluationRefreshProcessingProvider({ children }: { children: Re
       {activeJob ? <EvaluationRefreshProgressBanner job={activeJob} /> : null}
     </EvaluationRefreshProcessingContext.Provider>
   );
-}
+};
 
 export function useEvaluationRefreshProcessing(): EvaluationRefreshProcessingContextValue {
   const ctx = useContext(EvaluationRefreshProcessingContext);
   if (!ctx) {
     throw new Error(
-      'useEvaluationRefreshProcessing must be used within EvaluationRefreshProcessingProvider',
+      'useEvaluationRefreshProcessing must be used within EvaluationRefreshProcessingProvider'
     );
   }
   return ctx;

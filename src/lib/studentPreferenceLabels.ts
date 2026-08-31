@@ -1,7 +1,10 @@
 import type { TFunction } from 'i18next';
 
 /** Map stored enum / slug values to the same labels used in onboarding & settings. */
-export function displayPreferredLanguage(t: TFunction, raw: string | null | undefined): string | null {
+export function displayPreferredLanguage(
+  t: TFunction,
+  raw: string | null | undefined
+): string | null {
   if (!raw?.trim()) return null;
   if (raw === 'en') return t('auth.english');
   if (raw === 'he') return t('auth.hebrew');
@@ -31,7 +34,10 @@ export function displaySoloVsGroup(t: TFunction, raw: string | null | undefined)
   return path ? t(path) : raw;
 }
 
-export function displayMotivationFactor(t: TFunction, raw: string | null | undefined): string | null {
+export function displayMotivationFactor(
+  t: TFunction,
+  raw: string | null | undefined
+): string | null {
   if (!raw?.trim()) return null;
   const keys: Record<string, string> = {
     curiosity: 'studentOnboarding.step3.curiosity',
@@ -56,7 +62,10 @@ export function displayHelpPreference(t: TFunction, raw: string | null | undefin
   return path ? t(path) : raw;
 }
 
-export function displayTeacherPreference(t: TFunction, raw: string | null | undefined): string | null {
+export function displayTeacherPreference(
+  t: TFunction,
+  raw: string | null | undefined
+): string | null {
   if (!raw?.trim()) return null;
   const keys: Record<string, string> = {
     patient: 'studentOnboarding.step4.patient',

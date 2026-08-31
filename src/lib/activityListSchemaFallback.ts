@@ -29,7 +29,7 @@ export function unknownPostgrestColumnName(error: unknown): string | null {
 
 export function stripUnknownColumnFromActivityPayload(
   payload: Record<string, unknown>,
-  columnName: string,
+  columnName: string
 ): Record<string, unknown> {
   if (!Object.prototype.hasOwnProperty.call(payload, columnName)) return payload;
   const next = { ...payload };
@@ -41,7 +41,7 @@ export async function activityListWriteWithUnknownColumnFallback<T>(
   initialPayload: Record<string, unknown>,
   execute: (payload: Record<string, unknown>) => Promise<{ data: T | null; error: unknown }>,
   emptyPayloadMessage: string,
-  exhaustedMessage: string,
+  exhaustedMessage: string
 ): Promise<{ data: T | null; error: unknown }> {
   let mutable = { ...initialPayload };
   const strippedUnknownCols: string[] = [];

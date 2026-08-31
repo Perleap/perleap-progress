@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 /**
  * A hook that persists state to localStorage/sessionStorage

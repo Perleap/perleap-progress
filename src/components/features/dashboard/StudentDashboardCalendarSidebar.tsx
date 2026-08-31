@@ -1,7 +1,7 @@
 import { StudentCalendar } from '@/components/StudentCalendar';
 import { useAuth } from '@/contexts/useAuth';
 
-export function StudentDashboardCalendarSidebar() {
+export const StudentDashboardCalendarSidebar = () => {
   const { user } = useAuth();
   if (!user) return null;
 
@@ -12,4 +12,4 @@ export function StudentDashboardCalendarSidebar() {
       </div>
     </div>
   );
-}
+};
