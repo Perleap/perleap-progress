@@ -44,3 +44,9 @@ for (const file of walk(path.join(root, 'src'))) {
 const missing = [...keys].filter((k) => !hasKey(en, k)).sort();
 console.log(`Missing count: ${missing.length}`);
 for (const k of missing) console.log(k);
+
+// #region agent log
+fetch('http://127.0.0.1:7500/ingest/ed854b70-ad07-4d4d-a108-a3423d664607',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bc2fb9'},body:JSON.stringify({sessionId:'bc2fb9',location:'scripts/check-i18n-keys.mjs:exit',message:'i18n check completed',data:{missingCount:missing.length,keysScanned:keys.size},timestamp:Date.now(),hypothesisId:'H1',runId:'post-fix'})}).catch(()=>{});
+// #endregion
+
+if (missing.length > 0) process.exit(1);
