@@ -67,7 +67,7 @@ export function useAssignmentClipboardTracking({
 
   const emitCopy = useCallback(
     (params: TrackCopyParams) => {
-      if (!canTrack) return;
+      if (!canTrack || !submissionId || !assignmentId) return;
       const text = params.copiedText.trim();
       if (!text) return;
 
@@ -77,8 +77,8 @@ export function useAssignmentClipboardTracking({
       lastCopyRef.current = { text, at: now };
 
       queueClipboardEvent({
-        submission_id: submissionId!,
-        assignment_id: assignmentId!,
+        submission_id: submissionId,
+        assignment_id: assignmentId,
         event_type: 'copy',
         source_kind: params.sourceKind,
         copied_text: text,
@@ -100,13 +100,13 @@ export function useAssignmentClipboardTracking({
 
   const trackPaste = useCallback(
     (params: TrackPasteParams) => {
-      if (!canTrack) return;
+      if (!canTrack || !submissionId || !assignmentId) return;
       const text = params.pastedText.trim();
       if (!text) return;
 
       queueClipboardEvent({
-        submission_id: submissionId!,
-        assignment_id: assignmentId!,
+        submission_id: submissionId,
+        assignment_id: assignmentId,
         event_type: 'paste',
         source_kind: params.sourceKind,
         pasted_text: text,

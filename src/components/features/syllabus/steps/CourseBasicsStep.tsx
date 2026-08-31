@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { WizardData } from '../CreateClassroomWizard';
-import type { Domain } from '@/types/models';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea';

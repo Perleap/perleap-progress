@@ -38,7 +38,7 @@ export function useTeacherClassroomSections() {
     if (TEACHER_SECTION_IDS.has(normalized)) {
       setActiveSection(normalized);
     }
-  }, [location.pathname, location.key]);
+  }, [location.pathname, location.key, location.state]);
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);

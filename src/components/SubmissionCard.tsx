@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Clock, Flag, MessageSquare } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

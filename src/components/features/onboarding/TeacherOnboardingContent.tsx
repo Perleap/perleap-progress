@@ -101,28 +101,31 @@ export const TeacherOnboardingContent = () => {
 
       toast.success(t('teacherOnboarding.success.profileCreated'));
       navigate('/teacher/dashboard', { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string };
       console.error('Teacher onboarding error:', error);
 
-      if (error.message?.includes('already has a student profile')) {
+      if (err.message?.includes('already has a student profile')) {
         toast.error(
           t('teacherOnboarding.errors.alreadyHasStudentProfile') ||
             'You already have a student account. You cannot create a teacher account.'
         );
         setTimeout(() => navigate('/student/dashboard'), 2000);
-      } else if (error.code === '23505') {
+      } else if (err.code === '23505') {
         toast.error(t('teacherOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/teacher/dashboard'), 2000);
-      } else if (error.code === '42703') {
-        console.error('Database schema mismatch - column does not exist:', error);
+      } else if (err.code === '42703') {
+        console.error('Database schema mismatch - column does not exist:', err);
         toast.error(
           'Database error: Some fields are not configured properly. Please contact support.'
         );
-      } else if (error.message?.includes('violates not-null constraint')) {
-        console.error('Missing required field:', error);
+      } else if (err.message?.includes('violates not-null constraint')) {
+        console.error('Missing required field:', err);
         toast.error('Please fill in all required fields.');
       } else {
-        toast.error(error.message || t('teacherOnboarding.errors.createProfile'));
+        toast.error(
+          error instanceof Error ? error.message : t('teacherOnboarding.errors.createProfile')
+        );
       }
     } finally {
       setLoading(false);

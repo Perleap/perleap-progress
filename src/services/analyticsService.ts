@@ -201,8 +201,6 @@ export const getClassroomAnalytics = async (
       };
     }
 
-    const studentIds = enrollments.map((e) => e.student_id);
-
     // 4. Fetch all submissions for these assignments in bulk
     const { data: allSubmissions } = await supabase
       .from('submissions')
@@ -233,13 +231,16 @@ export const getClassroomAnalytics = async (
     // 7. Process data into student analytics
     const studentAnalytics: StudentAnalytics[] = enrollments.map((enrollment) => {
       const studentId = enrollment.student_id;
-      const profile = (enrollment as any).student_profiles;
+      const profile = (enrollment as { student_profiles?: { full_name?: string } | null })
+        .student_profiles;
       const fullName = profile?.full_name || 'Unknown';
 
       // Filter snapshots for this student
       const studentSnapshots = allSnapshots?.filter((s) => s.user_id === studentId) || [];
       const averageScores =
-        studentSnapshots.length > 0 ? calculateAverageScores(studentSnapshots as any) : null;
+        studentSnapshots.length > 0
+          ? calculateAverageScores(studentSnapshots as unknown as FiveDSnapshot[])
+          : null;
 
       // Filter feedback for this student
       const studentFeedback = allFeedback?.filter((f) => f.student_id === studentId) || [];
@@ -304,7 +305,7 @@ export const regenerateClassroomScores = async (
   classroomId: string
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase.functions.invoke('regenerate-scores', {
+    const { error } = await supabase.functions.invoke('regenerate-scores', {
       body: { classroomId },
     });
 

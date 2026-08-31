@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Plus, Trash2, GripVertical, CircleDot, AlignLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';

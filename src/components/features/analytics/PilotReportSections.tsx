@@ -8,14 +8,16 @@ import {
   badgeCircleStyle,
   readinessPillStyle,
 } from './pilotReportViewUtils';
-import type { buildCohortOutcome } from '@/lib/pilotReport/buildPilotReportData';
 import { Button } from '@/components/ui/button';
 import {
   buildPieChartSvg,
   READINESS_PIE_COLORS,
   type PieChartSegment,
 } from '@/lib/pilotReport/buildPieChartSvg';
-import { formatCompletionPercent } from '@/lib/pilotReport/buildPilotReportData';
+import {
+  formatCompletionPercent,
+  type buildCohortOutcome,
+} from '@/lib/pilotReport/buildPilotReportData';
 import {
   PILOT_DIMENSION_KEYS,
   PILOT_READINESS_VALUES,

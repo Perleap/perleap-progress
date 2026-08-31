@@ -1,8 +1,8 @@
 import { BookOpen, FileText } from 'lucide-react';
+import type { Classroom } from '@/types/models';
 import SafeMathMarkdown from '@/components/SafeMathMarkdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCourseDuration } from '@/lib/dateUtils';
-import type { Classroom } from '@/types/models';
 
 interface CourseInfoCardsProps {
   classroom: Classroom;
@@ -10,7 +10,7 @@ interface CourseInfoCardsProps {
   t: (key: string) => string;
 }
 
-export function CourseInfoCards({ classroom, isRTL, t }: CourseInfoCardsProps) {
+export const CourseInfoCards = ({ classroom, isRTL, t }: CourseInfoCardsProps) => {
   if (!classroom.course_title && !classroom.resources) return null;
 
   return (
@@ -55,9 +55,7 @@ export function CourseInfoCards({ classroom, isRTL, t }: CourseInfoCardsProps) {
                 >
                   {t('classroomDetail.overview.duration')}
                 </h3>
-                <p
-                  className={`font-medium text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
-                >
+                <p className={`font-medium text-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
                   {formatCourseDuration(classroom.start_date, classroom.end_date)}
                 </p>
               </div>
@@ -77,8 +75,7 @@ export function CourseInfoCards({ classroom, isRTL, t }: CourseInfoCardsProps) {
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
                       <span className="text-sm">
-                        {t('common.start')}:{' '}
-                        {new Date(classroom.start_date).toLocaleDateString()}
+                        {t('common.start')}: {new Date(classroom.start_date).toLocaleDateString()}
                       </span>
                     </div>
                   )}
@@ -122,4 +119,4 @@ export function CourseInfoCards({ classroom, isRTL, t }: CourseInfoCardsProps) {
       )}
     </div>
   );
-}
+};

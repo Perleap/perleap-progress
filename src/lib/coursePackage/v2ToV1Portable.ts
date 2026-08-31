@@ -2,17 +2,18 @@
  * Converts a merge-safe v2 package into portable v1 for create-classroom / full apply flows.
  */
 
-import type {
-  PerleapCoursePackageV1,
-  PerleapCoursePackageV2,
-  CoursePackageAssignmentActivityLinkV1,
-  CoursePackageAssignmentV1,
-  CoursePackageCourseV1,
-  CoursePackageModuleFlowStepV1,
-  CoursePackageSectionV1,
-  CoursePackageSyllabusV1,
+import {
+  COURSE_PACKAGE_FORMAT,
+  COURSE_PACKAGE_VERSION,
+  type PerleapCoursePackageV1,
+  type PerleapCoursePackageV2,
+  type CoursePackageAssignmentActivityLinkV1,
+  type CoursePackageAssignmentV1,
+  type CoursePackageCourseV1,
+  type CoursePackageModuleFlowStepV1,
+  type CoursePackageSectionV1,
+  type CoursePackageSyllabusV1,
 } from '@/types/coursePackage';
-import { COURSE_PACKAGE_FORMAT, COURSE_PACKAGE_VERSION } from '@/types/coursePackage';
 
 function sectionLocalId(index: number): string {
   return `sec_${index}`;

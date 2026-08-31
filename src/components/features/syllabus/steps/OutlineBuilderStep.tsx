@@ -9,10 +9,6 @@ import {
   Calendar,
   Target,
   FileText,
-  Maximize2,
-  Minimize2,
-  Sparkles,
-  Loader2,
   Pencil,
   Lock,
   Unlock,
@@ -28,13 +24,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -104,10 +93,13 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
     setSelectedIndex(target);
   };
 
-  const updateSection = (index: number, partial: Partial<WizardSectionData>) => {
-    const updated = sections.map((s, i) => (i === index ? { ...s, ...partial } : s));
-    onChange({ sections: updated });
-  };
+  const updateSection = useCallback(
+    (index: number, partial: Partial<WizardSectionData>) => {
+      const updated = sections.map((s, i) => (i === index ? { ...s, ...partial } : s));
+      onChange({ sections: updated });
+    },
+    [sections, onChange]
+  );
 
   const addObjective = () => {
     if (selected) {
@@ -149,7 +141,7 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
         setRewritingField(null);
       }
     },
-    [selected?.tempId, selectedIndex, language, t]
+    [selected?.tempId, selectedIndex, language, t, updateSection]
   );
 
   return (

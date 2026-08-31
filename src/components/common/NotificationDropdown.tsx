@@ -74,7 +74,6 @@ export const NotificationDropdown = ({ userId, triggerClassName }: NotificationD
             // keep original link
           }
         }
-        console.log('Navigating to:', targetLink);
         navigate(targetLink);
       } else {
         console.warn('Notification clicked but no valid link to navigate to:', {

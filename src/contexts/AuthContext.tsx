@@ -1,8 +1,20 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { Session, User } from '@supabase/supabase-js';
-import type { ReactNode } from 'react';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthProfileQuery } from './auth/useAuthProfileQuery';
+import { useAuthSessionEffects } from './auth/useAuthSessionEffects';
+import { useSessionHealthMonitor } from './auth/useSessionHealthMonitor';
+import type { AuthUserProfile } from './auth/types';
+import type { Session, User } from '@supabase/supabase-js';
 import { USER_ROLES } from '@/config/constants';
 import { profileKeys } from '@/hooks/queries';
 import { clearAllPersistedForms } from '@/hooks/usePersistedState';
@@ -14,10 +26,6 @@ import {
   STUDENT_AVATARS_BUCKET,
   TEACHER_AVATARS_BUCKET,
 } from '@/utils/storageUrls';
-import { useAuthProfileQuery } from './auth/useAuthProfileQuery';
-import { useAuthSessionEffects } from './auth/useAuthSessionEffects';
-import { useSessionHealthMonitor } from './auth/useSessionHealthMonitor';
-import type { AuthUserProfile } from './auth/types';
 
 interface AuthContextType {
   user: User | null;

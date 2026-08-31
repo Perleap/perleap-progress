@@ -79,7 +79,7 @@ async function flushQueue(): Promise<void> {
       student_id: uid,
     }));
 
-    const { error } = await supabase.from('student_nuance_events').insert(rows as any);
+    const { error } = await supabase.from('student_nuance_events').insert(rows as never);
 
     if (error) {
       console.error('[Nuance] Failed to flush events:', error.message);

@@ -1,8 +1,8 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { ArrowLeft } from 'lucide-react';
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import type { ClassroomNavSection } from '@/lib/classroomNavSections';
 import type { AssignmentLinkState } from '@/types/navigation';
 import { ClassroomLayout } from '@/components/layouts';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
 import {
   getStudentClassroomNavSections,
   getTeacherClassroomNavSections,
+  type ClassroomNavSection,
 } from '@/lib/classroomNavSections';
 import { cn } from '@/lib/utils';
 

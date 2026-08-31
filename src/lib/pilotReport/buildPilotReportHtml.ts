@@ -283,9 +283,10 @@ function buildParticipantSignalsHtml(
   p: PilotParticipantRow,
   staticCopy: PilotReportStaticCopy
 ): string {
-  if (!p.dimensions) return '';
+  const dims = p.dimensions;
+  if (!dims) return '';
   const rows = PILOT_DIMENSION_KEYS.map((key) => {
-    const value = p.dimensions![key];
+    const value = dims[key];
     const pct = Math.max(0, Math.min(100, value));
     const label = escapeHtml(staticCopy.dimensionLabels[key]);
     return `<div class="signal-row">

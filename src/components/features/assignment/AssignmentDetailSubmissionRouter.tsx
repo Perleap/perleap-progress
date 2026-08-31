@@ -99,12 +99,13 @@ export const AssignmentDetailSubmissionRouter = ({
             type="button"
             variant="outline"
             className="gap-1 bg-background"
-            onClick={() =>
-              onNavigateToFlowTarget(assignmentFlowContinue.nextIn!, {
-                priorSubmissionId:
-                  assignmentFlowContinue.nextIn!.kind === 'assignment' ? submission.id : undefined,
-              })
-            }
+            onClick={() => {
+              const nextIn = assignmentFlowContinue.nextIn;
+              if (!nextIn) return;
+              onNavigateToFlowTarget(nextIn, {
+                priorSubmissionId: nextIn.kind === 'assignment' ? submission.id : undefined,
+              });
+            }}
           >
             {assignmentFlowContinue.nextIn.kind === 'assignment'
               ? t('assignmentDetail.continue')
@@ -117,14 +118,13 @@ export const AssignmentDetailSubmissionRouter = ({
             type="button"
             variant="outline"
             className="gap-1 bg-background"
-            onClick={() =>
-              onNavigateToFlowTarget(assignmentFlowContinue.firstNext!, {
-                priorSubmissionId:
-                  assignmentFlowContinue.firstNext!.kind === 'assignment'
-                    ? submission.id
-                    : undefined,
-              })
-            }
+            onClick={() => {
+              const firstNext = assignmentFlowContinue.firstNext;
+              if (!firstNext) return;
+              onNavigateToFlowTarget(firstNext, {
+                priorSubmissionId: firstNext.kind === 'assignment' ? submission.id : undefined,
+              });
+            }}
           >
             {t('assignmentDetail.continueNextModule')}
             <ChevronRight className="h-4 w-4" />

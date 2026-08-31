@@ -98,25 +98,28 @@ export const DeviceSelector = ({ value, onChange, className }: DeviceSelectorPro
     });
   }, [videoDevices, audioDevices, onChange]);
 
-  const labelFor = (d: MediaDeviceInfo, index: number, kind: 'video' | 'audio') => {
-    if (d.label?.trim()) return d.label.trim();
-    return kind === 'video'
-      ? `${t('assignmentDetail.presentation.selectCamera')} ${index + 1}`
-      : `${t('assignmentDetail.presentation.selectMicrophone')} ${index + 1}`;
-  };
+  const labelFor = useCallback(
+    (d: MediaDeviceInfo, index: number, kind: 'video' | 'audio') => {
+      if (d.label?.trim()) return d.label.trim();
+      return kind === 'video'
+        ? `${t('assignmentDetail.presentation.selectCamera')} ${index + 1}`
+        : `${t('assignmentDetail.presentation.selectMicrophone')} ${index + 1}`;
+    },
+    [t]
+  );
 
   const videoDisplayLabel = useMemo(() => {
     const d = videoDevices.find((x) => x.deviceId === value.videoDeviceId);
     if (!d) return '';
     return labelFor(d, videoDevices.indexOf(d), 'video');
-  }, [videoDevices, value.videoDeviceId, t]);
+  }, [videoDevices, value.videoDeviceId, labelFor]);
 
   const micDisplayLabel = useMemo(() => {
     if (value.audioDeviceId === NO_AUDIO) return t('assignmentDetail.presentation.noAudio');
     const d = audioDevices.find((x) => x.deviceId === value.audioDeviceId);
     if (!d) return '';
     return labelFor(d, audioDevices.indexOf(d), 'audio');
-  }, [audioDevices, value.audioDeviceId, t]);
+  }, [audioDevices, value.audioDeviceId, labelFor, t]);
 
   return (
     <div className={className}>

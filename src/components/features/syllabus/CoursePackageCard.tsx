@@ -4,11 +4,6 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import type {
-  PerleapCoursePackageAny,
-  PerleapCoursePackageV1,
-  PerleapCoursePackageV2,
-} from '@/types/coursePackage';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -36,7 +31,12 @@ import {
   importCoursePackageV1,
 } from '@/services/coursePackageService';
 import { getMergeFailureFromApiError } from '@/types/api.types';
-import { COURSE_PACKAGE_VERSION_V2 } from '@/types/coursePackage';
+import {
+  COURSE_PACKAGE_VERSION_V2,
+  type PerleapCoursePackageAny,
+  type PerleapCoursePackageV1,
+  type PerleapCoursePackageV2,
+} from '@/types/coursePackage';
 
 function safeFileSlug(name: string): string {
   return (

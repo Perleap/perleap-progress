@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LiveSession } from '@/types/liveSession';

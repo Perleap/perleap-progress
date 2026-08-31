@@ -70,26 +70,23 @@ export const StudentSettingsContent = () => {
       setProfile({
         full_name: profileData.full_name || '',
         avatar_url: profileData.avatar_url || null,
-        voice_preference: (profileData as any).voice_preference || 'shimmer',
+        voice_preference: profileData.voice_preference || 'shimmer',
       });
 
       setQuestions({
-        learning_methods: (profileData as any).learning_methods || '',
-        solo_vs_group: (profileData as any).solo_vs_group || '',
-        scheduled_vs_flexible: (profileData as any).scheduled_vs_flexible || '',
-        motivation_factors: (profileData as any).motivation_factors || '',
-        help_preferences: (profileData as any).help_preferences || '',
-        teacher_preferences: (profileData as any).teacher_preferences || '',
-        feedback_preferences: (profileData as any).feedback_preferences || '',
-        learning_goal: (profileData as any).learning_goal || '',
-        special_needs: (profileData as any).special_needs || '',
-        additional_notes: (profileData as any).additional_notes || '',
+        learning_methods: profileData.learning_methods || '',
+        solo_vs_group: profileData.solo_vs_group || '',
+        scheduled_vs_flexible: profileData.scheduled_vs_flexible || '',
+        motivation_factors: profileData.motivation_factors || '',
+        help_preferences: profileData.help_preferences || '',
+        teacher_preferences: profileData.teacher_preferences || '',
+        feedback_preferences: profileData.feedback_preferences || '',
+        learning_goal: profileData.learning_goal || '',
+        special_needs: profileData.special_needs || '',
+        additional_notes: profileData.additional_notes || '',
       });
     } else if (!loading && user) {
       if (sessionStorage.getItem('is_deleting_account') === 'true') {
-        console.log(
-          'ℹ️ StudentSettings: Account deletion in progress, skipping onboarding redirect'
-        );
         return;
       }
 
@@ -158,7 +155,7 @@ export const StudentSettingsContent = () => {
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
         voice_preference: profile.voice_preference,
-      } as any);
+      });
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -184,7 +181,7 @@ export const StudentSettingsContent = () => {
         learning_goal: questions.learning_goal,
         special_needs: questions.special_needs,
         additional_notes: questions.additional_notes,
-      } as any);
+      });
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error saving interests:', error);

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { ResetPreviewSummary } from './ResetPreviewSummary';
+import { matchesTypedConfirm, TypedConfirmInput } from '@/components/shared/TypedConfirmInput';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,10 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { matchesTypedConfirm, TypedConfirmInput } from '@/components/shared/TypedConfirmInput';
 import { useClassroomResetPreview, useResetClassroom } from '@/hooks/queries';
 import { logAdminEvent } from '@/services/adminAuditService';
-import { ResetPreviewSummary } from './ResetPreviewSummary';
 
 export type ClassroomResetDialogsProps = {
   classroomId: string;

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { format } from 'date-fns/format';
 import { getDay } from 'date-fns/getDay';
 import { enUS } from 'date-fns/locale/en-US';

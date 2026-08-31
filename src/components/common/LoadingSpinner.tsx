@@ -31,9 +31,11 @@ export const LoadingSpinner = ({
   };
 
   useEffect(() => {
-    if (spinnerRef.current) {
-      // GSAP spin animation
-      gsap.to(spinnerRef.current, {
+    const spinner = spinnerRef.current;
+    const text = textRef.current;
+
+    if (spinner) {
+      gsap.to(spinner, {
         rotation: 360,
         duration: 1,
         repeat: -1,
@@ -42,9 +44,8 @@ export const LoadingSpinner = ({
       });
     }
 
-    if (textRef.current) {
-      // Subtle pulse on text
-      gsap.to(textRef.current, {
+    if (text) {
+      gsap.to(text, {
         opacity: 0.6,
         duration: 0.8,
         repeat: -1,
@@ -54,12 +55,8 @@ export const LoadingSpinner = ({
     }
 
     return () => {
-      if (spinnerRef.current) {
-        gsap.killTweensOf(spinnerRef.current);
-      }
-      if (textRef.current) {
-        gsap.killTweensOf(textRef.current);
-      }
+      if (spinner) gsap.killTweensOf(spinner);
+      if (text) gsap.killTweensOf(text);
     };
   }, []);
 

@@ -1,8 +1,8 @@
 import { Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Classroom } from '@/types/models';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Classroom } from '@/types/models';
 
 interface InviteCodeCardProps {
   classroom: Classroom;
@@ -10,7 +10,7 @@ interface InviteCodeCardProps {
   t: (key: string) => string;
 }
 
-export function InviteCodeCard({ classroom, isRTL, t }: InviteCodeCardProps) {
+export const InviteCodeCard = ({ classroom, isRTL, t }: InviteCodeCardProps) => {
   return (
     <Card
       className="w-full rounded-xl border-none shadow-sm bg-muted/30 overflow-hidden"
@@ -46,4 +46,4 @@ export function InviteCodeCard({ classroom, isRTL, t }: InviteCodeCardProps) {
       </CardContent>
     </Card>
   );
-}
+};

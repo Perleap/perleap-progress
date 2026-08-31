@@ -1,6 +1,6 @@
 import { BarChart3, Users } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import type { Classroom } from '@/types/models';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface LearningOutcomesChallengesCardProps {
   classroom: Classroom;
@@ -8,11 +8,11 @@ interface LearningOutcomesChallengesCardProps {
   t: (key: string) => string;
 }
 
-export function LearningOutcomesChallengesCard({
+export const LearningOutcomesChallengesCard = ({
   classroom,
   isRTL,
   t,
-}: LearningOutcomesChallengesCardProps) {
+}: LearningOutcomesChallengesCardProps) => {
   if (!classroom.learning_outcomes?.length && !classroom.key_challenges?.length) return null;
 
   return (
@@ -75,4 +75,4 @@ export function LearningOutcomesChallengesCard({
       </CardContent>
     </Card>
   );
-}
+};

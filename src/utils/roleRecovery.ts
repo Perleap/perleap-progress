@@ -18,7 +18,6 @@ const ROLE_RECOVERY_ATTEMPT_KEY = 'role_recovery_attempt';
 export const savePendingRole = (role: 'teacher' | 'student'): void => {
   try {
     localStorage.setItem(PENDING_ROLE_KEY, role);
-    console.log('💾 Role saved to localStorage as backup:', role);
   } catch (error) {
     console.error('Failed to save pending role:', error);
   }
@@ -42,7 +41,6 @@ export const getPendingRole = (): string | null => {
 export const clearPendingRole = (): void => {
   try {
     localStorage.removeItem(PENDING_ROLE_KEY);
-    console.log('🗑️ Cleared pending role from localStorage');
   } catch (error) {
     console.error('Failed to clear pending role:', error);
   }
@@ -70,8 +68,6 @@ export const updateUserRole = async (role: 'teacher' | 'student' | 'admin'): Pro
       }
     }
 
-    console.log('🔄 Attempting to update user role to:', role);
-
     const { data, error } = await supabase.auth.updateUser({
       data: { role },
     });
@@ -82,7 +78,6 @@ export const updateUserRole = async (role: 'teacher' | 'student' | 'admin'): Pro
     }
 
     if (data?.user?.user_metadata?.role === role) {
-      console.log('✅ User role updated successfully:', role);
       return true;
     }
 
@@ -112,8 +107,6 @@ export const verifyUserRole = async (): Promise<{
 
     const role = user.user_metadata?.role;
     const hasRole = role === 'teacher' || role === 'student' || role === USER_ROLES.ADMIN;
-
-    console.log('🔍 Role verification:', { hasRole, role, userId: user.id });
 
     return { hasRole, role };
   } catch (error) {
@@ -162,14 +155,12 @@ export const attemptRoleRecovery = async (): Promise<{
       }
     }
 
-    console.log('🔍 Checking database for existing profile to recover role...');
     const { data: tp } = await supabase
       .from('teacher_profiles')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle();
     if (tp) {
-      console.log('✅ Found teacher profile, updating role metadata');
       await updateUserRole('teacher');
       return { recovered: true, role: 'teacher', source: 'database' };
     }
@@ -180,7 +171,6 @@ export const attemptRoleRecovery = async (): Promise<{
       .eq('user_id', user.id)
       .maybeSingle();
     if (sp) {
-      console.log('✅ Found student profile, updating role metadata');
       await updateUserRole('student');
       return { recovered: true, role: 'student', source: 'database' };
     }
@@ -190,8 +180,6 @@ export const attemptRoleRecovery = async (): Promise<{
   const pendingRole = getPendingRole();
 
   if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {
-    console.log('🔄 Attempting to recover role from localStorage:', pendingRole);
-
     const updated = await updateUserRole(pendingRole as 'teacher' | 'student');
 
     if (updated) {
@@ -212,7 +200,7 @@ export const incrementRecoveryAttempt = (): number => {
     const next = current + 1;
     localStorage.setItem(ROLE_RECOVERY_ATTEMPT_KEY, next.toString());
     return next;
-  } catch (error) {
+  } catch {
     return 1;
   }
 };
@@ -235,7 +223,7 @@ export const shouldAttemptRecovery = (): boolean => {
   try {
     const attempts = parseInt(localStorage.getItem(ROLE_RECOVERY_ATTEMPT_KEY) || '0');
     return attempts < 3;
-  } catch (error) {
+  } catch {
     return true;
   }
 };

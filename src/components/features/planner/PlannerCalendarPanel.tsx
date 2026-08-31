@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './planner-calendar.css';
 import { PlannerCalendarEventChip, plannerLocalizer } from './plannerCalendarSetup';
-import { pickContrastForegroundHex } from './plannerTypes';
-import type { PlannerCalendarEvent } from './plannerTypes';
+import { pickContrastForegroundHex, type PlannerCalendarEvent } from './plannerTypes';
 import { Card, CardContent } from '@/components/ui/card';
 
 export type PlannerCalendarPanelProps = {

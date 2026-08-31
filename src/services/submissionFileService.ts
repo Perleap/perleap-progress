@@ -68,7 +68,9 @@ export async function enrichConversationMessagesWithAttachmentPaths(
 
   const resolved = new Map<string, string>();
   for (const msg of needsLookup) {
-    const name = msg.fileContext!.name;
+    const fileContext = msg.fileContext;
+    if (!fileContext?.name) continue;
+    const name = fileContext.name;
     if (resolved.has(name)) continue;
     const path = await resolveChatAttachmentStoragePath(submissionId, name);
     if (path) resolved.set(name, path);

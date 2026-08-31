@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
 import type { ClassroomViewMode } from '@/lib/classroomViewMode';
+import type { CSSProperties } from 'react';
 
 export function getClassroomCardsContainerProps(viewMode: ClassroomViewMode): {
   className: string;

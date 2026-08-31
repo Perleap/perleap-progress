@@ -32,7 +32,6 @@ const Landing = () => {
   // redirect to the dedicated callback handler
   useEffect(() => {
     if (isOAuthCallback) {
-      console.log('🔄 Landing: OAuth callback detected, redirecting to /auth/callback');
       navigate(`/auth/callback${window.location.search}`, { replace: true });
     }
   }, [isOAuthCallback, navigate]);
@@ -48,7 +47,6 @@ const Landing = () => {
         if (!authLoading && !user) {
           clearAccountJustDeletedSessionFlag();
         } else {
-          console.log('ℹ️ Landing: Account deletion in progress, staying on landing page');
           return;
         }
       }
@@ -59,17 +57,12 @@ const Landing = () => {
       if (user && hasProfile === null) return;
 
       if (user) {
-        console.log('🔍 Landing: Checking authenticated user profile status...');
-
         const userRole = user.user_metadata?.role;
 
         // Check if user has completed their profile
         if (userRole === 'teacher' || userRole === 'student') {
           // Use cached profile check from AuthContext
           if (hasProfile === false) {
-            console.log(
-              `⚠️ Landing: User has ${userRole} role but no profile, redirecting to onboarding`
-            );
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
           }
@@ -86,21 +79,18 @@ const Landing = () => {
 
         // Otherwise, redirect to appropriate dashboard based on role
         if (userRole === 'teacher' || userRole === 'admin') {
-          console.log('🚀 Landing: Redirecting authenticated teacher to dashboard');
           navigate('/teacher/dashboard');
         } else if (userRole === 'student') {
-          console.log('🚀 Landing: Redirecting authenticated student to dashboard');
           navigate('/student/dashboard');
         } else {
           // User is authenticated but has no role metadata
-          console.log('⚠️ Landing: User has no role, redirecting to role selection');
           navigate('/role-selection', { replace: true });
         }
       }
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]);
+  }, [user, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]);
 
   // If OAuth callback is in progress or user is already authenticated, show loading state
   // This prevents the Landing page from rendering and causing a flicker
@@ -126,7 +116,6 @@ const Landing = () => {
   // If user is logged in but has no role, redirect to role selection instead of showing spinner
   // Only do this if we are not currently handling a callback
   if (user && hasUserButNoRole && !authLoading && !isOAuthCallback) {
-    console.log('⚠️ Landing: User has no role metadata, redirecting to role selection');
     navigate('/role-selection', { replace: true });
     return null;
   }

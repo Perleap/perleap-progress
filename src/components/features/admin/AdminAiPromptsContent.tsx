@@ -195,7 +195,7 @@ export const AdminAiPromptsContent = () => {
       staleTime: ADMIN_COURSE_DATA_STALE_MS,
     }
   );
-  const assignments = assignmentsData ?? [];
+  const assignments = useMemo(() => assignmentsData ?? [], [assignmentsData]);
   const { data: enrolledData, isPending: studentsPending } = useEnrolledStudents(
     courseId || undefined,
     {
@@ -590,7 +590,7 @@ export const AdminAiPromptsContent = () => {
           </p>
         ) : (
           <div className="space-y-6">
-            {comparisonQuery.data!.map((turn) => (
+            {(comparisonQuery.data ?? []).map((turn) => (
               <div
                 key={turn.turnIndex}
                 className="grid gap-4 rounded-lg border bg-card p-4 lg:grid-cols-3"

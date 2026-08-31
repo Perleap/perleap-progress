@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { NavigationMenu as NavigationMenuPrimitive } from '@base-ui/react/navigation-menu';
 import { cva } from 'class-variance-authority';
 import { ChevronDownIcon } from 'lucide-react';

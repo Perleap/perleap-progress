@@ -48,8 +48,8 @@ export const TeacherCalendar = ({ teacherId, isAppAdmin = false }: TeacherCalend
     isAdmin: isAppAdmin || undefined,
   });
 
-  const classrooms = data?.classrooms || [];
-  const assignments = data?.assignments || [];
+  const classrooms = useMemo(() => data?.classrooms ?? [], [data?.classrooms]);
+  const assignments = useMemo(() => data?.assignments ?? [], [data?.assignments]);
 
   // Memoize assignment dates to avoid recalculating on every render
   const datesWithAssignments = useMemo(

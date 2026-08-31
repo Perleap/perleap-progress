@@ -103,7 +103,7 @@ export const ContentVideoBlock = ({
       void flush();
     };
   }, [
-    parsedYoutube?.videoId,
+    parsedYoutube,
     tracking,
     youtubeContainerId,
     handlePlay,

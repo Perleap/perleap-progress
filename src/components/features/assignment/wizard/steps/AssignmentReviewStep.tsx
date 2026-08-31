@@ -150,7 +150,7 @@ export const AssignmentReviewStep = ({
           value: (() => {
             const doms = distinctDomains(formData.hard_skills);
             if (doms.length > 1) return doms.join(', ');
-            if (doms.length === 1) return doms[0]!;
+            if (doms.length === 1) return doms[0] ?? '';
             return formData.hard_skill_domain?.trim() || '';
           })(),
         },

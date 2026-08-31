@@ -53,7 +53,7 @@ export const PilotReportContent = () => {
   const selectedModule = (searchParams.get('analyticsModule') as AnalyticsModuleFilter) || 'all';
   const selectedAssignment = searchParams.get('analyticsAssignment') || 'all';
 
-  const { data, isLoading } = useClassroomAnalytics(classroomId!);
+  const { data, isLoading } = useClassroomAnalytics(classroomId ?? '');
   const { data: classroom } = useClassroom(classroomId);
   const { data: snapshot, isLoading: snapshotLoading } = usePilotReportSnapshot(
     classroomId,
@@ -72,12 +72,12 @@ export const PilotReportContent = () => {
   const [reportId, setReportId] = useState(() => buildPilotReportId(undefined));
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  const assignments = data?.assignments || [];
+  const assignments = useMemo(() => data?.assignments ?? [], [data?.assignments]);
   const reportableAssignments = useMemo(
     () => filterReportableAssignments(assignments),
     [assignments]
   );
-  const modules = data?.modules || [];
+  const modules = useMemo(() => data?.modules ?? [], [data?.modules]);
 
   const effectiveAssignmentIds = useMemo(
     () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
@@ -125,7 +125,7 @@ export const PilotReportContent = () => {
     });
   }, [data, selectedModule, selectedAssignment, analyticsLanguage, sectionTitleResolver]);
 
-  const participants = snapshot?.participantRows ?? [];
+  const participants = useMemo(() => snapshot?.participantRows ?? [], [snapshot?.participantRows]);
   const cohortSummary: PilotCohortSummary | null =
     snapshot?.status === 'ready' && snapshot.dataHash === dataHash ? snapshot.cohortSummary : null;
 
@@ -184,13 +184,14 @@ export const PilotReportContent = () => {
     snapshotLoading,
     dataHash,
     isSnapshotFresh,
-    snapshot?.status,
+    snapshot,
     selectedModule,
     selectedAssignment,
     analyticsLanguage,
     sectionTitleResolver,
     regenerateKey,
     pendingTick,
+    ensureSnapshot,
     t,
   ]);
 

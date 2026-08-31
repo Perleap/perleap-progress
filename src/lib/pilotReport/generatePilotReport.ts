@@ -1,8 +1,7 @@
-import type { Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import type { PilotReportAnalyticsData } from '@/lib/pilotReport/computePilotReportDataHash';
 import type { PilotCohortSummary, PilotParticipantRow } from '@/lib/pilotReport/types';
 import type { HardSkillAssessment } from '@/types/hard-skills';
-import { build5dNarrativeEvidence } from '@/lib/analytics5dEvidence';
+import { build5dNarrativeEvidence, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import {
   filterReportableAssignments,
   getAllowedAssignmentIds,

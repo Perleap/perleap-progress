@@ -9,7 +9,6 @@ import type {
   Classroom,
   FiveDScores,
   FiveDQedMeasures,
-  Message,
   Submission,
   TeacherProfile,
   TeacherProfileDisplay,

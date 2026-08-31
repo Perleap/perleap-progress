@@ -48,7 +48,7 @@ export const useClassrooms = (role: 'teacher' | 'student'): UseClassroomsResult 
     }
 
     setLoading(false);
-  }, [user?.id, role]);
+  }, [user, role]);
 
   useEffect(() => {
     fetchClassrooms();

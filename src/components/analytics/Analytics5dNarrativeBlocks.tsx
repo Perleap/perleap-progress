@@ -50,9 +50,9 @@ const NarrativeFraming = ({
           {scopeSummary}
         </p>
       )}
-      {showEvidenceStatus && evidenceSourceCount! > 0 ? (
+      {showEvidenceStatus && (evidenceSourceCount ?? 0) > 0 ? (
         <p className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
-          {t('analytics.narrative.basedOnSources', { count: evidenceSourceCount! })}
+          {t('analytics.narrative.basedOnSources', { count: evidenceSourceCount ?? 0 })}
         </p>
       ) : null}
       {showEvidenceStatus && evidenceSourceCount === 0 ? (

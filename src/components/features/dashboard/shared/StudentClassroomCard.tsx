@@ -5,8 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import type { ClassroomViewMode } from '@/lib/classroomViewMode';
-import { formatClassroomDate } from '@/lib/classroomViewMode';
+import { formatClassroomDate, type ClassroomViewMode } from '@/lib/classroomViewMode';
 import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 export type StudentClassroomCardProps = {
@@ -16,11 +15,11 @@ export type StudentClassroomCardProps = {
   onWarm?: () => void;
 };
 
-function TeacherAvatarRow({
+const TeacherAvatarRow = ({
   teacher,
 }: {
   teacher: NonNullable<StudentEnrolledClassroom['teacher_profiles']>;
-}) {
+}) => {
   return (
     <div className="flex items-center gap-2 pt-1">
       <Avatar className="h-6 w-6 border border-background">
@@ -31,17 +30,19 @@ function TeacherAvatarRow({
           {(teacher.full_name || 'T').charAt(0)}
         </AvatarFallback>
       </Avatar>
-      <span className="text-xs text-muted-foreground truncate max-w-[120px]">{teacher.full_name}</span>
+      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+        {teacher.full_name}
+      </span>
     </div>
   );
-}
+};
 
-export function StudentClassroomCard({
+export const StudentClassroomCard = ({
   classroom,
   variant,
   onNavigate,
   onWarm,
-}: StudentClassroomCardProps) {
+}: StudentClassroomCardProps) => {
   const { t } = useTranslation();
   const unavailable = t('classroomList.dateUnavailable');
   const handlers = {
@@ -78,7 +79,9 @@ export function StudentClassroomCard({
                 <span>{formatClassroomDate(classroom.start_date, { unavailable })}</span>
               </div>
             </div>
-            {classroom.teacher_profiles && <TeacherAvatarRow teacher={classroom.teacher_profiles} />}
+            {classroom.teacher_profiles && (
+              <TeacherAvatarRow teacher={classroom.teacher_profiles} />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -143,13 +146,19 @@ export function StudentClassroomCard({
                 {classroom.name}
               </h3>
               <div className="flex items-center gap-3 flex-wrap">
-                <Badge variant="secondary" className="bg-muted text-muted-foreground h-5 text-[10px]">
+                <Badge
+                  variant="secondary"
+                  className="bg-muted text-muted-foreground h-5 text-[10px]"
+                >
                   {classroom.subject}
                 </Badge>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {formatClassroomDate(classroom.start_date, { format: 'long', unavailable })} -{' '}
-                  {formatClassroomDate(classroom.end_date, { format: 'long', unavailable })}
+                  {formatClassroomDate(classroom.start_date, {
+                    format: 'long',
+                    unavailable,
+                  })}{' '}
+                  - {formatClassroomDate(classroom.end_date, { format: 'long', unavailable })}
                 </span>
                 {classroom.teacher_profiles && (
                   <span className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -240,4 +249,4 @@ export function StudentClassroomCard({
       </CardContent>
     </Card>
   );
-}
+};

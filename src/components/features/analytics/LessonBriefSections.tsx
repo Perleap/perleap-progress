@@ -226,19 +226,27 @@ export const LessonBriefStudentTableSection = ({
                       {student.completedInScope} / {student.assignmentsInScope}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      {student.scores ? (
-                        <span className="text-xs leading-relaxed">
-                          {DIMENSION_ORDER.map((dimension) => (
-                            <span key={dimension}>
-                              {t(`dimensions.${dimension}.abbrev`)}:
-                              {safeScore(student.scores![dimension]).toFixed(1)}
-                              {dimension !== 'action' ? ' · ' : ''}
+                      {(() => {
+                        const scores = student.scores;
+                        if (!scores) {
+                          return (
+                            <span className="text-slate-400">
+                              {t('analytics.lessonBrief.dash')}
                             </span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">{t('analytics.lessonBrief.dash')}</span>
-                      )}
+                          );
+                        }
+                        return (
+                          <span className="text-xs leading-relaxed">
+                            {DIMENSION_ORDER.map((dimension) => (
+                              <span key={dimension}>
+                                {t(`dimensions.${dimension}.abbrev`)}:
+                                {safeScore(scores[dimension]).toFixed(1)}
+                                {dimension !== 'action' ? ' · ' : ''}
+                              </span>
+                            ))}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {student.weakestDimension

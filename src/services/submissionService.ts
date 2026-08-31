@@ -208,7 +208,7 @@ export const getStudentSubmissionContext = async (
       }
 
       if (inProgress) {
-        const allAttempts = teacherAttempts.some((s) => s.id === inProgress!.id)
+        const allAttempts = teacherAttempts.some((s) => s.id === inProgress.id)
           ? teacherAttempts
           : [...teacherAttempts, inProgress];
         return {

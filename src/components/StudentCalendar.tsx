@@ -27,11 +27,11 @@ export const StudentCalendar = ({ studentId }: StudentCalendarProps) => {
 
   const { data, isLoading: loading } = useStudentCalendarData(studentId);
 
-  const assignments = data?.assignments || [];
-  const classrooms = data?.classrooms || [];
+  const assignments = useMemo(() => data?.assignments ?? [], [data?.assignments]);
+  const classrooms = useMemo(() => data?.classrooms ?? [], [data?.classrooms]);
 
   const datesWithAssignments = useMemo(
-    () => assignments.map((a: any) => new Date(a.due_at)),
+    () => assignments.flatMap((a) => (a.due_at ? [new Date(a.due_at)] : [])),
     [assignments]
   );
 

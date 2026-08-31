@@ -143,7 +143,11 @@ export const useClassroomAnalytics = (classroomId: string | undefined) => {
 
       const studentIds = enrollments?.map((e) => e.student_id) || [];
       const profileMap = new Map(
-        enrollments?.map((e) => [e.student_id, (e as any).student_profiles]) || []
+        enrollments?.map((e) => [
+          e.student_id,
+          (e as { student_profiles?: { full_name?: string; avatar_url?: string } | null })
+            .student_profiles,
+        ]) || []
       );
 
       // 5. Fetch all submissions for these assignments

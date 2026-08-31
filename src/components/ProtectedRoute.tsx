@@ -72,8 +72,6 @@ const ProtectedRoute = ({
           return;
         }
 
-        console.log('🔒 Protected route: No valid session, redirecting to auth');
-
         // Save current path for post-login redirect (except auth pages)
         if (!currentPath.startsWith('/auth') && currentPath !== '/') {
           sessionStorage.setItem('redirectAfterLogin', currentPath);
@@ -117,11 +115,6 @@ const ProtectedRoute = ({
           adminOnStudentAssignment;
 
         if (!roleOk) {
-          console.log('🔒 Protected route: Role mismatch', {
-            required: requiredRole,
-            actual: userRole,
-          });
-
           const dashboardRoute =
             userRole === 'teacher' || isAdmin
               ? '/teacher/dashboard'
@@ -142,9 +135,6 @@ const ProtectedRoute = ({
           // Use cached profile check from AuthContext
           // Only redirect if we ARE NOT currently loading the profile and we know it's missing
           if (hasProfile === false && !isProfileLoading) {
-            console.log(
-              `🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`
-            );
             const onboardingPath = `/onboarding/${userRole}`;
 
             if (currentPath !== onboardingPath) {

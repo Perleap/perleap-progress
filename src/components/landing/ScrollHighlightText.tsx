@@ -15,7 +15,7 @@ export const ScrollHighlightText = ({ text, className }: ScrollHighlightTextProp
       if (!containerRef.current) return;
 
       const element = containerRef.current;
-      const { top, height } = element.getBoundingClientRect();
+      const { top } = element.getBoundingClientRect();
       const windowHeight = window.innerHeight;
 
       // Calculate progress based on element position in viewport

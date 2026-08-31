@@ -1,4 +1,4 @@
-import { Sparkles, Zap, Shield, BarChart3, Brain, Cpu } from 'lucide-react';
+import { Sparkles, Zap, Shield, BarChart3, Brain, Cpu, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Footer } from '@/components/layouts/Footer';
 import { Navbar } from '@/components/layouts/Navbar';
@@ -125,7 +125,7 @@ const FeatureCard = ({
   description,
   delay,
 }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description: string;
   delay: number;

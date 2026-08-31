@@ -3,28 +3,6 @@
  */
 
 import type { Json } from '@/integrations/supabase/types';
-import type {
-  CoursePackageActivityV1,
-  CoursePackageAssignmentActivityLinkV1,
-  CoursePackageAssignmentV1,
-  CoursePackageClassroomV1,
-  CoursePackageCourseV1,
-  CoursePackageGradingCategoryV1,
-  CoursePackageModuleFlowStepV1,
-  CoursePackagePolicyV1,
-  CoursePackageSectionV1,
-  CoursePackageSyllabusV1,
-  PerleapCoursePackageV1,
-  CoursePackageActivityV2,
-  CoursePackageAssignmentActivityLinkV2,
-  CoursePackageAssignmentV2,
-  CoursePackageCourseV2,
-  CoursePackageGradingCategoryV2,
-  CoursePackageModuleFlowStepV2,
-  CoursePackageSectionV2,
-  CoursePackageSyllabusV2,
-  PerleapCoursePackageV2,
-} from '@/types/coursePackage';
 import type { Assignment } from '@/types/models';
 import type {
   GradingCategory,
@@ -38,6 +16,26 @@ import {
   COURSE_PACKAGE_FORMAT,
   COURSE_PACKAGE_VERSION,
   COURSE_PACKAGE_VERSION_V2,
+  type CoursePackageActivityV1,
+  type CoursePackageAssignmentActivityLinkV1,
+  type CoursePackageAssignmentV1,
+  type CoursePackageClassroomV1,
+  type CoursePackageCourseV1,
+  type CoursePackageGradingCategoryV1,
+  type CoursePackageModuleFlowStepV1,
+  type CoursePackagePolicyV1,
+  type CoursePackageSectionV1,
+  type CoursePackageSyllabusV1,
+  type PerleapCoursePackageV1,
+  type CoursePackageActivityV2,
+  type CoursePackageAssignmentActivityLinkV2,
+  type CoursePackageAssignmentV2,
+  type CoursePackageCourseV2,
+  type CoursePackageGradingCategoryV2,
+  type CoursePackageModuleFlowStepV2,
+  type CoursePackageSectionV2,
+  type CoursePackageSyllabusV2,
+  type PerleapCoursePackageV2,
 } from '@/types/coursePackage';
 
 export type BuildCoursePackageInput = {

@@ -185,7 +185,9 @@ export const LessonResourceBody = ({
           }
         }
         const source =
-          Array.isArray(slideList) && slideList.length === 1 ? slideList[0]! : block.body;
+          Array.isArray(slideList) && slideList.length === 1
+            ? (slideList[0] ?? block.body)
+            : block.body;
         if (!source || !String(source).trim()) return null;
         return (
           <div key={block.id} className="w-full min-w-0">

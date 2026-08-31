@@ -20,7 +20,7 @@ import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import { type ClassroomViewMode } from '@/lib/classroomViewMode';
 import { copyToClipboard } from '@/lib/utils';
 
-const CARD_VIEW_MODES = ['grid', 'compact', 'list', 'detailed'] as const;
+type CardViewMode = Extract<ClassroomViewMode, 'grid' | 'compact' | 'list' | 'detailed'>;
 
 export const TeacherClassroomsSection = () => {
   const { t } = useTranslation();
@@ -107,7 +107,7 @@ export const TeacherClassroomsSection = () => {
             <TeacherClassroomCard
               key={classroom.id}
               classroom={classroom}
-              variant={viewMode as (typeof CARD_VIEW_MODES)[number]}
+              variant={viewMode as CardViewMode}
               onNavigate={() => navigate(`/teacher/classroom/${classroom.id}`)}
               onCopyInviteCode={handleCopyInviteCode}
             />

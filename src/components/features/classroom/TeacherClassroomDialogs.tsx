@@ -1,8 +1,8 @@
 import type { Classroom, Assignment } from '@/types/models';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
-import { EditClassroomDialog } from '@/components/features/classroom/dialogs';
 import { ClassroomDeleteDialog } from '@/components/features/classroom/ClassroomDeleteDialog';
 import { ClassroomResetDialogs } from '@/components/features/classroom/ClassroomResetDialogs';
+import { EditClassroomDialog } from '@/components/features/classroom/dialogs';
 
 type TeacherClassroomDialogsProps = {
   classroomId: string;

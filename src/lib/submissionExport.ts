@@ -185,8 +185,8 @@ function mapDetailToPayload(
       is_teacher_attempt: detail.is_teacher_attempt ?? false,
       awaiting_teacher_feedback_release: detail.awaiting_teacher_feedback_release ?? null,
       conversation_complete_at_submit:
-        (detail as { conversation_complete_at_submit?: boolean | null }).conversation_complete_at_submit ??
-        null,
+        (detail as { conversation_complete_at_submit?: boolean | null })
+          .conversation_complete_at_submit ?? null,
     },
     student_work: studentWork,
     feedback: feedback

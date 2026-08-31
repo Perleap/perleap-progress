@@ -35,8 +35,6 @@ export const RoleSelectionContent = () => {
 
     setLoading(true);
     try {
-      console.log('🎭 RoleSelection: User selected role:', selectedRole);
-
       // Update user's role metadata
       const success = await updateUserRole(selectedRole);
 
@@ -54,7 +52,6 @@ export const RoleSelectionContent = () => {
       toast.success(t('roleSelection.success.roleSet'));
 
       // Redirect to onboarding for the selected role
-      console.log(`🚀 RoleSelection: Redirecting to /onboarding/${selectedRole}`);
       navigate(`/onboarding/${selectedRole}`, { replace: true });
     } catch (error) {
       console.error('❌ RoleSelection: Error setting role:', error);

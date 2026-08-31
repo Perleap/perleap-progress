@@ -29,6 +29,7 @@ import {
   useImperativeHandle,
   forwardRef,
   useRef,
+  type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -41,7 +42,6 @@ import {
 import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
 import type { ActivityLinkState } from '@/types/navigation';
 import type { SectionResource } from '@/types/syllabus';
-import type { ReactNode } from 'react';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { CreateLiveSessionDialog } from '@/components/features/liveSession/CreateLiveSessionDialog';
 import {

@@ -19,9 +19,10 @@ export const GsapSkeleton = ({ className, variant = 'default' }: GsapSkeletonPro
   const skeletonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (skeletonRef.current) {
-      // GSAP pulse animation - smoother than CSS
-      gsap.to(skeletonRef.current, {
+    const skeleton = skeletonRef.current;
+
+    if (skeleton) {
+      gsap.to(skeleton, {
         opacity: 0.5,
         duration: 1,
         repeat: -1,
@@ -31,9 +32,7 @@ export const GsapSkeleton = ({ className, variant = 'default' }: GsapSkeletonPro
     }
 
     return () => {
-      if (skeletonRef.current) {
-        gsap.killTweensOf(skeletonRef.current);
-      }
+      if (skeleton) gsap.killTweensOf(skeleton);
     };
   }, []);
 

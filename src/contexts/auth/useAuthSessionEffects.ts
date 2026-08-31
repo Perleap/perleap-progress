@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
-import type { QueryClient } from '@tanstack/react-query';
+import { useEffect, type Dispatch, type SetStateAction } from 'react';
+import { authDebug } from './authDebug';
 import type { Session, User } from '@supabase/supabase-js';
+import type { QueryClient } from '@tanstack/react-query';
 import type { NavigateFunction } from 'react-router-dom';
 import { USER_ROLES } from '@/config/constants';
 import { profileKeys } from '@/hooks/queries';
@@ -13,7 +13,6 @@ import {
   incrementRecoveryAttempt,
 } from '@/utils/roleRecovery';
 import { isSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
-import { authDebug } from './authDebug';
 
 type AuthSessionEffectsArgs = {
   navigate: NavigateFunction;

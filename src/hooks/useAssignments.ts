@@ -82,7 +82,7 @@ export const useStudentAssignments = (): UseAssignmentsResult => {
     }
 
     setLoading(false);
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     fetchAssignments();

@@ -71,7 +71,7 @@ function enrichAssessments(
     const title = aj?.title?.trim() || t('cra.unknownAssignment');
     const sectionId = aj?.syllabus_section_id ?? null;
     const sectionTitle = sec?.title?.trim() || (sectionId ? '—' : t('cra.unplacedSection'));
-    const order = typeof sec?.order_index === 'number' ? sec.order_index! : 9999;
+    const order = typeof sec?.order_index === 'number' ? sec.order_index : 9999;
     return {
       ...a,
       _assignmentTitle: title,
@@ -554,12 +554,14 @@ export const HardSkillsAssessmentTable = ({
           byAssignment: new Map(),
         });
       }
-      const m = byModule.get(modKey)!;
-      m.order = Math.min(m.order, r._sectionOrder);
-      if (!m.byAssignment.has(r.assignment_id)) {
-        m.byAssignment.set(r.assignment_id, { title: r._assignmentTitle, rows: [] });
+      const modEntry = byModule.get(modKey);
+      if (!modEntry) continue;
+      modEntry.order = Math.min(modEntry.order, r._sectionOrder);
+      if (!modEntry.byAssignment.has(r.assignment_id)) {
+        modEntry.byAssignment.set(r.assignment_id, { title: r._assignmentTitle, rows: [] });
       }
-      m.byAssignment.get(r.assignment_id)!.rows.push(r);
+      const assignmentEntry = modEntry.byAssignment.get(r.assignment_id);
+      if (assignmentEntry) assignmentEntry.rows.push(r);
     }
     const modules = [...byModule.entries()].sort((a, b) => {
       if (a[1].order !== b[1].order) return a[1].order - b[1].order;
@@ -838,7 +840,8 @@ function mergeAllAssignmentsFromModules(
       if (!out.has(aid)) {
         out.set(aid, { title: val.title, rows: [...val.rows] });
       } else {
-        out.get(aid)!.rows.push(...val.rows);
+        const existing = out.get(aid);
+        if (existing) existing.rows.push(...val.rows);
       }
     }
   }
@@ -850,7 +853,8 @@ function groupRowsByDomain(rows: EnrichedAssessment[]) {
   for (const r of rows) {
     const d = r.domain;
     if (!m.has(d)) m.set(d, []);
-    m.get(d)!.push(r);
+    const domainRows = m.get(d);
+    if (domainRows) domainRows.push(r);
   }
   return [...m.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))

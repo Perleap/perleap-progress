@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { LoadingSpinner } from './common/LoadingSpinner';
@@ -44,17 +44,7 @@ export const StudentAnalytics = ({
     qed_measures: FiveDQedMeasures | null;
   } | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [studentId, classroomId]);
-
-  useEffect(() => {
-    if (viewMode === 'perSubmission' && selectedSubmissionId) {
-      fetchPerSubmissionData();
-    }
-  }, [selectedSubmissionId, viewMode]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -82,7 +72,7 @@ export const StudentAnalytics = ({
         const rows = submissionsData.data;
         const submissionsList = rows.map((sub) => ({
           id: sub.id,
-          title: (sub.assignments as any)?.title || 'Unknown Assignment',
+          title: (sub.assignments as { title?: string } | null)?.title || 'Unknown Assignment',
           submitted_at: sub.submitted_at || new Date().toISOString(),
         }));
         setSubmissions(submissionsList);
@@ -124,7 +114,8 @@ export const StudentAnalytics = ({
             map
           );
           if (bestId && snapBySub.has(bestId)) {
-            bestForAverage.push(snapBySub.get(bestId)!);
+            const snap = snapBySub.get(bestId);
+            if (snap) bestForAverage.push(snap);
           }
         }
 
@@ -145,14 +136,14 @@ export const StudentAnalytics = ({
           }
         }
       }
-    } catch (error) {
+    } catch {
       toast.error(t('analytics.loadError'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId, classroomId, selectedSubmissionId, currentSubmissionId, t]);
 
-  const fetchPerSubmissionData = async () => {
+  const fetchPerSubmissionData = useCallback(async () => {
     if (!selectedSubmissionId) return;
 
     try {
@@ -183,7 +174,17 @@ export const StudentAnalytics = ({
     } catch {
       toast.error(t('analytics.scoresError'));
     }
-  };
+  }, [selectedSubmissionId, studentId, t]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (viewMode === 'perSubmission' && selectedSubmissionId) {
+      void fetchPerSubmissionData();
+    }
+  }, [selectedSubmissionId, viewMode, fetchPerSubmissionData]);
 
   if (loading) {
     return (

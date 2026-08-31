@@ -67,23 +67,20 @@ export const TeacherSettingsContent = () => {
       setProfile({
         full_name: profileData.full_name || '',
         avatar_url: profileData.avatar_url || null,
-        phone_number: (profileData as any).phone_number || '',
-        subjects: (profileData as any).subjects || [],
-        years_experience: (profileData as any).years_experience || null,
-        student_education_level: (profileData as any).student_education_level || '',
+        phone_number: profileData.phone_number || '',
+        subjects: profileData.subjects || [],
+        years_experience: profileData.years_experience || null,
+        student_education_level: profileData.student_education_level || '',
       });
 
       setQuestions({
-        teaching_goals: (profileData as any).teaching_goals || '',
-        style_notes: (profileData as any).style_notes || '',
-        teaching_examples: (profileData as any).teaching_examples || '',
-        sample_explanation: (profileData as any).sample_explanation || '',
+        teaching_goals: profileData.teaching_goals || '',
+        style_notes: profileData.style_notes || '',
+        teaching_examples: profileData.teaching_examples || '',
+        sample_explanation: profileData.sample_explanation || '',
       });
     } else if (!loading && user) {
       if (sessionStorage.getItem('is_deleting_account') === 'true') {
-        console.log(
-          'ℹ️ TeacherSettings: Account deletion in progress, skipping onboarding redirect'
-        );
         return;
       }
 
@@ -155,7 +152,7 @@ export const TeacherSettingsContent = () => {
         subjects: profile.subjects,
         years_experience: profile.years_experience,
         student_education_level: profile.student_education_level,
-      } as any);
+      });
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -175,7 +172,7 @@ export const TeacherSettingsContent = () => {
         style_notes: questions.style_notes,
         teaching_examples: questions.teaching_examples,
         sample_explanation: questions.sample_explanation,
-      } as any);
+      });
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating questions:', error);

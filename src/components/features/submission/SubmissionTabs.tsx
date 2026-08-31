@@ -255,7 +255,7 @@ export const SubmissionTabs = ({
     if (!feedback) return;
     setTeacherDraft(feedback.teacher_feedback ?? '');
     setStudentDraft(feedback.student_feedback ?? '');
-  }, [feedback?.teacher_feedback, feedback?.student_feedback, feedback?.visible_to_student]);
+  }, [feedback]);
 
   const canGenerateAiFeedback =
     submission.status === 'completed' &&
@@ -837,7 +837,8 @@ export const SubmissionTabs = ({
                                           type="button"
                                           className="flex items-center gap-2 rounded-md border border-border bg-background/80 px-2 py-1.5 text-start transition-colors hover:bg-background"
                                           onClick={() =>
-                                            void handleAttachmentOpen(msg.fileContext!)
+                                            msg.fileContext &&
+                                            void handleAttachmentOpen(msg.fileContext)
                                           }
                                         >
                                           {msg.fileContext.type === 'image' ? (

@@ -127,7 +127,7 @@ export const AssignmentCourseOutlineLinkCard = ({
                   </SelectTrigger>
                   <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
-                    {syllabus!.sections.map((s) => (
+                    {(syllabus?.sections ?? []).map((s) => (
                       <SelectItem
                         key={s.id}
                         value={s.id}
@@ -168,7 +168,7 @@ export const AssignmentCourseOutlineLinkCard = ({
                 </SelectTrigger>
                 <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                   <SelectItem value="_none">{t('common.none', 'None')}</SelectItem>
-                  {syllabus!.grading_categories.map((c) => (
+                  {(syllabus?.grading_categories ?? []).map((c) => (
                     <SelectItem
                       key={c.id}
                       value={c.id}

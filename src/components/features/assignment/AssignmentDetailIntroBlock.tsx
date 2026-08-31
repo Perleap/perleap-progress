@@ -1,6 +1,13 @@
-import { useState, useMemo, useEffect, useCallback, type RefObject } from 'react';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  type RefObject,
+  type ComponentProps,
+} from 'react';
 import type { DbAssignmentType } from '@/types/models';
-import type { ComponentProps } from 'react';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
 import { SUBMISSION_STATUS } from '@/config/constants';
 import { useAssignmentConversationHasMessages } from '@/hooks/queries';
@@ -145,6 +152,7 @@ export function useAssignmentDetailIntro({
     });
     return () => cancelAnimationFrame(frameId);
   }, [
+    assignment,
     assignment?.type,
     storedTaskUnderstandingChoice,
     companionScrollTick,

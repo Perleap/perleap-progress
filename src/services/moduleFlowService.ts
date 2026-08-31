@@ -48,7 +48,7 @@ export const getModuleFlowSteps = async (
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: (data ?? []) as any[] as ModuleFlowStep[], error: null };
+    return { data: (data ?? []) as ModuleFlowStep[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }

@@ -45,13 +45,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/useAuth';
@@ -440,7 +434,7 @@ export const CourseOutlineSection = ({
             classroomId={classroomId}
             sections={syllabus.sections}
             gradingCategories={syllabus.grading_categories}
-            assignments={assignments as any[]}
+            assignments={assignments}
             isRTL={isRTL}
           />
         </TabsContent>
@@ -478,8 +472,6 @@ export const CourseOutlineSection = ({
 // ---------------------------------------------------------------------------
 // Settings sub-component (metadata editing)
 // ---------------------------------------------------------------------------
-
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const SETTINGS_PRESETS: {
   type: SyllabusPolicyType;

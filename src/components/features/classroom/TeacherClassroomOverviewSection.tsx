@@ -1,6 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { CoursePackageCard } from '@/components/features/syllabus';
-import type { Classroom } from '@/types/models';
 import {
   ClassroomActionBar,
   CourseInfoCards,
@@ -9,6 +7,8 @@ import {
   InviteCodeCard,
   LearningOutcomesChallengesCard,
 } from './overview';
+import type { Classroom } from '@/types/models';
+import { CoursePackageCard } from '@/components/features/syllabus';
 
 export type TeacherClassroomOverviewSectionProps = {
   classroomId: string;

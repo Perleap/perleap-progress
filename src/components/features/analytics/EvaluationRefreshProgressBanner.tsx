@@ -1,11 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import {
-  Progress,
-  ProgressLabel,
-  ProgressValue,
-} from '@/components/ui/progress';
+import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress';
 import {
   useEvaluationRefreshProcessing,
   type EvaluationRefreshActiveJob,

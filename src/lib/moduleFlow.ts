@@ -116,15 +116,17 @@ export function getOrderedActivityCenterFlowSteps(
 ): ModuleFlowStep[] {
   let filtered = filterActivityCenterModuleFlowSteps(steps, sectionResources);
   if (options?.assignmentsById) {
+    const assignmentsById = options.assignmentsById;
     filtered = filtered.filter((step) => {
       if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
-      return step.assignment_id in options.assignmentsById!;
+      return step.assignment_id in assignmentsById;
     });
   }
   if (options?.hideLiveSessions && options.assignmentsById) {
+    const assignmentsById = options.assignmentsById;
     filtered = filtered.filter((step) => {
       if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
-      const type = options.assignmentsById![step.assignment_id]?.type;
+      const type = assignmentsById[step.assignment_id]?.type;
       return !isLiveSessionAssignmentType(type);
     });
   }
@@ -231,7 +233,7 @@ export function resolveDisplayedModuleFlowBase(
       base = ordered.map((s) =>
         s.step_kind === 'resource' && s.activity_list_id
           ? { kind: 'resource', resourceId: s.activity_list_id }
-          : { kind: 'assignment', assignmentId: s.assignment_id! }
+          : { kind: 'assignment', assignmentId: s.assignment_id ?? '' }
       );
     } else {
       base = computedFlowItemsToLocalSteps(computedDefault);

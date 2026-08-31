@@ -5,8 +5,7 @@ import { cn } from '@/lib/utils';
 const Input = ({
   className,
   type,
-  // @ts-ignore - Filter out autoDirection prop
-  autoDirection,
+  autoDirection: _autoDirection,
   ...props
 }: React.ComponentProps<'input'> & { autoDirection?: boolean }) => {
   return (

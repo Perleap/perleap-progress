@@ -582,12 +582,12 @@ export const VideoEditor = ({ videoUrl, onSave, onDiscard }: VideoEditorProps) =
           setPlayhead(t);
         }
       } else if (mode === 'trimIn') {
-        setTrimRange(([start, end]) => {
+        setTrimRange(([_start, end]) => {
           const ns = Math.min(t, end - TRIM_MIN_GAP);
           return [Math.max(0, ns), end];
         });
       } else if (mode === 'trimOut') {
-        setTrimRange(([start, end]) => {
+        setTrimRange(([start, _end]) => {
           const ne = Math.max(t, start + TRIM_MIN_GAP);
           return [start, Math.min(duration, ne)];
         });

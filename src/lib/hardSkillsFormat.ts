@@ -73,7 +73,7 @@ export function distinctDomains(pairs: HardSkillPair[]): string[] {
 /** For hard_skill_domain column: single domain or null if none / multiple */
 export function deriveSingleDomainField(pairs: HardSkillPair[]): string | null {
   const d = distinctDomains(pairs);
-  if (d.length === 1) return d[0]!;
+  if (d.length === 1) return d[0] ?? null;
   return null;
 }
 

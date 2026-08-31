@@ -87,7 +87,7 @@ function rowHasText(r: Analytics5dNarrativeRow, includeTeacherNotes: boolean): b
   if (fb.length > 0) return true;
   const se = r.scoreExplanations;
   if (!se) return false;
-  return DIMS.some((d) => (se[d] && se[d]!.trim().length > 0) ?? false);
+  return DIMS.some((d) => (se[d]?.trim().length ?? 0) > 0);
 }
 
 function formatScoreExplanations(se: Partial<Record<keyof FiveDScores, string>> | null): string {
@@ -183,7 +183,8 @@ function build5dNarrativeEvidenceImpl(input: Build5dNarrativeEvidenceInput): {
     const byStudent = new Map<string, Analytics5dNarrativeRow[]>();
     for (const r of pool) {
       if (!byStudent.has(r.studentId)) byStudent.set(r.studentId, []);
-      byStudent.get(r.studentId)!.push(r);
+      const studentRows = byStudent.get(r.studentId);
+      if (studentRows) studentRows.push(r);
     }
     const ids = [...byStudent.keys()].sort();
     const picked = ids.slice(0, MAX_CLASS_STUDENT_SAMPLE);
@@ -195,7 +196,8 @@ function build5dNarrativeEvidenceImpl(input: Build5dNarrativeEvidenceInput): {
   for (const r of pool) {
     if (!rowHasText(r, includeTeacherNotes)) continue;
     if (!byAssign.has(r.assignmentId)) byAssign.set(r.assignmentId, []);
-    byAssign.get(r.assignmentId)!.push(r);
+    const assignRows = byAssign.get(r.assignmentId);
+    if (assignRows) assignRows.push(r);
   }
   const assignKeys = [...byAssign.keys()].sort();
   const stratified: Analytics5dNarrativeRow[] = [];
@@ -205,13 +207,14 @@ function build5dNarrativeEvidenceImpl(input: Build5dNarrativeEvidenceInput): {
   while (added < MAX_EXCERPT_BLOCKS && round < maxRounds) {
     let any = false;
     for (const aid of assignKeys) {
-      const list = byAssign.get(aid)!;
-      if (round < list.length) {
-        stratified.push(list[round]!);
-        added++;
-        any = true;
-        if (added >= MAX_EXCERPT_BLOCKS) break;
-      }
+      const list = byAssign.get(aid);
+      if (!list || round >= list.length) continue;
+      const row = list[round];
+      if (!row) continue;
+      stratified.push(row);
+      added++;
+      any = true;
+      if (added >= MAX_EXCERPT_BLOCKS) break;
     }
     if (!any) break;
     round++;

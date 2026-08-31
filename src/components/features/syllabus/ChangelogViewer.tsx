@@ -33,7 +33,7 @@ export const ChangelogViewer = ({ syllabusId, isRTL = false }: ChangelogViewerPr
           </p>
         ) : (
           <div className="space-y-3">
-            {(entries as any[]).map((entry) => (
+            {entries.map((entry) => (
               <div
                 key={entry.id}
                 className={cn(

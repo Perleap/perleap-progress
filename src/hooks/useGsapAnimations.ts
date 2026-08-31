@@ -199,7 +199,7 @@ export function useAnimatedList<T>(items: T[], childSelector = ':scope > *', sta
 export function useButtonPress() {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleClick = useCallback((_e: React.MouseEvent) => {
     if (buttonRef.current) {
       gsap.to(buttonRef.current, {
         scale: 0.95,

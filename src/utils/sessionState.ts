@@ -17,7 +17,6 @@ export const markSignupInProgress = (): void => {
   try {
     sessionStorage.setItem(SIGNUP_IN_PROGRESS_KEY, 'true');
     sessionStorage.setItem(SIGNUP_TIMESTAMP_KEY, Date.now().toString());
-    console.log('✅ Signup marked as in progress');
   } catch (error) {
     console.error('Failed to mark signup in progress:', error);
   }
@@ -31,7 +30,6 @@ export const markSignupComplete = (): void => {
   try {
     sessionStorage.removeItem(SIGNUP_IN_PROGRESS_KEY);
     sessionStorage.removeItem(SIGNUP_TIMESTAMP_KEY);
-    console.log('✅ Signup marked as complete');
   } catch (error) {
     console.error('Failed to mark signup complete:', error);
   }
@@ -80,7 +78,6 @@ export const clearAllSignupState = (): void => {
   try {
     sessionStorage.removeItem(SIGNUP_IN_PROGRESS_KEY);
     sessionStorage.removeItem(SIGNUP_TIMESTAMP_KEY);
-    console.log('🗑️ Cleared all signup state');
   } catch (error) {
     console.error('Failed to clear signup state:', error);
   }
@@ -102,7 +99,7 @@ export const getSignupDuration = (): number | null => {
     }
 
     return Date.now() - parseInt(timestamp);
-  } catch (error) {
+  } catch {
     return null;
   }
 };

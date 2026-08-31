@@ -6,20 +6,16 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { DbAssignmentType } from '@/types/models';
 import type { AssignmentLinkState } from '@/types/navigation';
-import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
-import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
 import type { AssignmentCompletionTone } from '@/types/submission';
-import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
-import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+import {
+  AssignmentDetailIntroBlock,
+  useAssignmentDetailIntro,
+} from '@/components/features/assignment/AssignmentDetailIntroBlock';
 import {
   AssignmentDetailBackBar,
   AssignmentDetailLayout,
   useAssignmentDetailNav,
 } from '@/components/features/assignment/AssignmentDetailLayout';
-import {
-  AssignmentDetailIntroBlock,
-  useAssignmentDetailIntro,
-} from '@/components/features/assignment/AssignmentDetailIntroBlock';
 import { AssignmentDetailMaterialsPanel } from '@/components/features/assignment/AssignmentDetailMaterialsPanel';
 import { AssignmentDetailSubmissionRouter } from '@/components/features/assignment/AssignmentDetailSubmissionRouter';
 import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
@@ -39,6 +35,8 @@ import {
 import { notificationKeys } from '@/hooks/queries/useNotificationQueries';
 import { useAssignmentClipboardTracking } from '@/hooks/useAssignmentClipboardTracking';
 import { useNuanceTracking } from '@/hooks/useNuanceTracking';
+import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
+import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import {
   pickEligiblePriorSubmissionIds,
   readAssignmentContextCarryover,
@@ -51,7 +49,9 @@ import {
   getNextSectionId,
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
+import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
 import { getUnreadNotifications, markAsRead } from '@/lib/notificationService';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import { ensureStudentFacingTask } from '@/services/assignmentService';
 import {
   completeSubmission,
@@ -756,14 +756,14 @@ export const AssignmentDetailContent = ({
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() =>
-                        navigateToFlowTarget(assignmentFlowContinue.nextIn!, {
+                      onClick={() => {
+                        const nextIn = assignmentFlowContinue.nextIn;
+                        if (!nextIn) return;
+                        navigateToFlowTarget(nextIn, {
                           priorSubmissionId:
-                            assignmentFlowContinue.nextIn!.kind === 'assignment'
-                              ? submission.id
-                              : undefined,
-                        })
-                      }
+                            nextIn.kind === 'assignment' ? submission.id : undefined,
+                        });
+                      }}
                     >
                       {assignmentFlowContinue.nextIn.kind === 'assignment'
                         ? t('assignmentDetail.continue')
@@ -776,14 +776,14 @@ export const AssignmentDetailContent = ({
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() =>
-                        navigateToFlowTarget(assignmentFlowContinue.firstNext!, {
+                      onClick={() => {
+                        const firstNext = assignmentFlowContinue.firstNext;
+                        if (!firstNext) return;
+                        navigateToFlowTarget(firstNext, {
                           priorSubmissionId:
-                            assignmentFlowContinue.firstNext!.kind === 'assignment'
-                              ? submission.id
-                              : undefined,
-                        })
-                      }
+                            firstNext.kind === 'assignment' ? submission.id : undefined,
+                        });
+                      }}
                     >
                       {t('assignmentDetail.continueNextModule')}
                       <ChevronRight className="h-4 w-4" />

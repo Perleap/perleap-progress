@@ -98,7 +98,7 @@ export const ModuleLessonActivityDialog = ({
       setLessonTitle('');
       setLessonBlocks([]);
     }
-  }, [open, sectionId, editingLesson?.id, classroomId]);
+  }, [open, sectionId, editingLesson, classroomId]);
 
   useEffect(() => {
     if (!open || !sectionId || editingLesson) return;

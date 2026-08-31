@@ -51,7 +51,6 @@ export const AuthContent = () => {
   // redirect to the dedicated callback handler
   useEffect(() => {
     if (isOAuthCallback) {
-      console.log('🔄 Auth: OAuth callback detected, redirecting to /auth/callback');
       navigate(`/auth/callback${window.location.search}`, { replace: true });
     }
   }, [isOAuthCallback, navigate]);
@@ -74,17 +73,12 @@ export const AuthContent = () => {
       if (user && hasProfile === null) return;
 
       if (user) {
-        console.log('🔍 Auth: Checking authenticated user profile status...');
-
         const userRole = user.user_metadata?.role;
 
         // Check if user has completed their profile
         if (userRole === 'teacher' || userRole === 'student') {
           // Use cached profile check from AuthContext
           if (hasProfile === false) {
-            console.log(
-              `⚠️ Auth: User has ${userRole} role but no profile, redirecting to onboarding`
-            );
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
           }
@@ -106,14 +100,13 @@ export const AuthContent = () => {
           navigate('/student/dashboard');
         } else {
           // User is authenticated but has no role metadata
-          console.log('⚠️ Auth: User has no role, redirecting to role selection');
           navigate('/role-selection', { replace: true });
         }
       }
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]); // Use user?.id to avoid refetch on user object reference change
+  }, [user, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]);
 
   // Set the active tab based on the route
   useEffect(() => {
@@ -213,8 +206,6 @@ export const AuthContent = () => {
 
       // Handle signup response
       if (data.user) {
-        console.log('✅ Signup successful, role metadata should be set:', role);
-
         // If we have a session, user is confirmed - proceed to onboarding
         if (data.session) {
           toast.success(t('auth.success.accountCreatedSuccess'));

@@ -96,7 +96,7 @@ export const EditClassroomDialog = ({
         materials: (classroom.materials || []) as CourseMaterial[],
       });
     }
-  }, [open, classroom?.id]); // Only re-run when open state changes or classroom ID changes
+  }, [open, classroom]);
 
   const handleRephraseCourseDescription = async () => {
     if (!formData.courseDescription.trim()) {
@@ -161,8 +161,8 @@ export const EditClassroomDialog = ({
       toast.success(t('editClassroom.success.saved'));
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error.message || t('editClassroom.errors.saving'));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t('editClassroom.errors.saving'));
     } finally {
       setLoading(false);
     }
@@ -247,12 +247,11 @@ export const EditClassroomDialog = ({
 
     setUploadingMaterial(true);
     setUploadProgress(0);
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    console.log(`Starting PDF upload: ${file.name} (${fileSizeMB} MB)`, { type: file.type });
 
     try {
       const fileExt = 'pdf';
-      const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
+      if (!user?.id) throw new Error('User required');
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const uploadOptions: StorageUploadOptions = {
         cacheControl: '3600',
@@ -261,13 +260,10 @@ export const EditClassroomDialog = ({
           if (progress.total <= 0) return;
           const percentage = Math.round((progress.loaded / progress.total) * 100);
           setUploadProgress(percentage);
-          console.log(
-            `Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`
-          );
         },
       };
 
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('course-materials')
         .upload(fileName, file, uploadOptions);
 
@@ -275,8 +271,6 @@ export const EditClassroomDialog = ({
         console.error('Supabase upload error:', uploadError);
         throw uploadError;
       }
-
-      console.log('Upload successful', data);
 
       setFormData({
         ...formData,
@@ -286,9 +280,11 @@ export const EditClassroomDialog = ({
       toast.success(t('createClassroom.success.pdfUploaded'));
       setSelectedFileName(''); // Clear the selected file name on success
       e.target.value = ''; // Reset file input
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Detailed upload error:', error);
-      toast.error(`${t('createClassroom.errors.creating')}: ${error.message || 'Unknown error'}`);
+      toast.error(
+        `${t('createClassroom.errors.creating')}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setUploadingMaterial(false);
       setUploadProgress(0);
@@ -320,7 +316,7 @@ export const EditClassroomDialog = ({
       });
       setLinkInput('');
       toast.success(t('createClassroom.success.linkAdded'));
-    } catch (error) {
+    } catch {
       toast.error(t('createClassroom.errors.validUrl'));
     }
   };

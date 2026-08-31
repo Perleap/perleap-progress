@@ -324,8 +324,11 @@ export function useStudentCurriculumFlowContext(options: {
     userId,
     enabled
   );
-  const assignmentDoneMap = flowMaps?.completedMap ?? {};
-  const assignmentHasSubmissionRowMap = flowMaps?.hasAnyRowMap ?? {};
+  const assignmentDoneMap = useMemo(() => flowMaps?.completedMap ?? {}, [flowMaps?.completedMap]);
+  const assignmentHasSubmissionRowMap = useMemo(
+    () => flowMaps?.hasAnyRowMap ?? {},
+    [flowMaps?.hasAnyRowMap]
+  );
 
   const flowCtx = useMemo(
     () => ({ progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap }),

@@ -1,6 +1,5 @@
-import { BarChart3, FileText, Info, LayoutList, Map, Users } from 'lucide-react';
+import { BarChart3, FileText, Info, LayoutList, Map, Users, type LucideIcon } from 'lucide-react';
 import type { TFunction } from 'i18next';
-import type { LucideIcon } from 'lucide-react';
 
 export type ClassroomNavSection = {
   id: string;

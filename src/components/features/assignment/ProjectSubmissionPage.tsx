@@ -109,7 +109,7 @@ export const ProjectSubmissionPage = ({
 
         const index = uploadedEntries.findIndex((item) => item.id === entry.id);
         if (index >= 0) {
-          uploadedEntries[index] = { ...uploadedEntries[index]!, uploadedPath: filePath };
+          uploadedEntries[index] = { ...(uploadedEntries[index] ?? entry), uploadedPath: filePath };
         }
 
         completed += 1;

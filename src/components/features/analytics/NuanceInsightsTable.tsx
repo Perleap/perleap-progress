@@ -10,7 +10,6 @@ import type {
   AnalyticsModuleRef,
   AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -119,8 +118,8 @@ export const NuanceInsightsTable = ({
     });
   }, [classBaseline, t]);
 
-  const metrics = data?.metrics || [];
-  const recommendations = data?.recommendations || [];
+  const metrics = useMemo(() => data?.metrics ?? [], [data?.metrics]);
+  const recommendations = useMemo(() => data?.recommendations ?? [], [data?.recommendations]);
 
   const filteredMetrics = useMemo(() => {
     if (filterAssignmentIds.length === 0) return [];
@@ -189,7 +188,8 @@ export const NuanceInsightsTable = ({
     const grouped = new Map<string, NuanceMetric[]>();
     for (const m of filtered) {
       if (!grouped.has(m.student_id)) grouped.set(m.student_id, []);
-      grouped.get(m.student_id)!.push(m);
+      const studentMetrics = grouped.get(m.student_id);
+      if (studentMetrics) studentMetrics.push(m);
     }
 
     const totalAssignments = selectedAssignment !== 'all' ? 1 : Math.max(scopingAssignmentCount, 1);

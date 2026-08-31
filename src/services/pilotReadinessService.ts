@@ -1,9 +1,3 @@
-import type {
-  PilotConfidence,
-  PilotDimensionScores,
-  PilotReadiness,
-  PilotRoleFit,
-} from '@/lib/pilotReport/types';
 import type { FiveDScores } from '@/types/models';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -11,6 +5,10 @@ import {
   PILOT_DIMENSION_KEYS,
   PILOT_READINESS_VALUES,
   PILOT_ROLE_FIT_VALUES,
+  type PilotConfidence,
+  type PilotDimensionScores,
+  type PilotReadiness,
+  type PilotRoleFit,
 } from '@/lib/pilotReport/types';
 
 export interface PilotParticipantAssessmentInput {

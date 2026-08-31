@@ -59,7 +59,7 @@ export const useMarkAsRead = () => {
     mutationFn: async (notificationId: string) => {
       return await markAsRead(notificationId);
     },
-    onSuccess: (_, notificationId) => {
+    onSuccess: (_, _notificationId) => {
       // Invalidate both count and list
       queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     },

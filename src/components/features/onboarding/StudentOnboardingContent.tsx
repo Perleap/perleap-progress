@@ -89,7 +89,7 @@ export const StudentOnboardingContent = () => {
         }
       }
 
-      const { data, error } = await insertStudentOnboardingProfile(
+      const { error } = await insertStudentOnboardingProfile(
         user.id,
         user.email,
         formData,
@@ -102,8 +102,6 @@ export const StudentOnboardingContent = () => {
         throw error;
       }
 
-      console.log('Profile created successfully:', data);
-
       // Mark signup as complete
       markSignupComplete();
 
@@ -114,32 +112,35 @@ export const StudentOnboardingContent = () => {
 
       // Navigate directly to dashboard with replace to prevent back navigation
       navigate('/student/dashboard', { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string };
       console.error('Student onboarding error:', error);
 
       // Check for dual profile trigger error from database
-      if (error.message?.includes('already has a teacher profile')) {
+      if (err.message?.includes('already has a teacher profile')) {
         toast.error(
           t('studentOnboarding.errors.alreadyHasTeacherProfile') ||
             'You already have a teacher account. You cannot create a student account.'
         );
         setTimeout(() => navigate('/teacher/dashboard'), 2000);
-      } else if (error.code === '23505') {
+      } else if (err.code === '23505') {
         // Duplicate key - profile already exists
         toast.error(t('studentOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/student/dashboard'), 2000);
-      } else if (error.code === '42703') {
+      } else if (err.code === '42703') {
         // Undefined column
-        console.error('Database schema mismatch - column does not exist:', error);
+        console.error('Database schema mismatch - column does not exist:', err);
         toast.error(
           'Database error: Some fields are not configured properly. Please contact support.'
         );
-      } else if (error.message?.includes('violates not-null constraint')) {
+      } else if (err.message?.includes('violates not-null constraint')) {
         // Missing required field
-        console.error('Missing required field:', error);
+        console.error('Missing required field:', err);
         toast.error('Please fill in all required fields.');
       } else {
-        toast.error(error.message || t('studentOnboarding.errors.createProfile'));
+        toast.error(
+          error instanceof Error ? error.message : t('studentOnboarding.errors.createProfile')
+        );
       }
     } finally {
       setLoading(false);

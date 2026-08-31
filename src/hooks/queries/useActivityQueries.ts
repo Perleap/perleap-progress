@@ -5,9 +5,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { Database } from '@/integrations/supabase/types';
+import type { TeacherProfileDisplay } from '@/types/models';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
-import type { TeacherProfileDisplay } from '@/types/models';
 
 type ActivityEventRow = Database['public']['Tables']['activity_events']['Row'];
 
@@ -77,16 +77,13 @@ export const useRecentActivity = (
           }, {});
           submissionById = submissions.reduce<
             Record<string, { student_id: string; is_teacher_attempt: boolean }>
-          >(
-            (acc, s) => {
-              acc[s.id] = {
-                student_id: s.student_id,
-                is_teacher_attempt: Boolean(s.is_teacher_attempt),
-              };
-              return acc;
-            },
-            {}
-          );
+          >((acc, s) => {
+            acc[s.id] = {
+              student_id: s.student_id,
+              is_teacher_attempt: Boolean(s.is_teacher_attempt),
+            };
+            return acc;
+          }, {});
         }
       }
 

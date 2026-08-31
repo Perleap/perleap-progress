@@ -10,6 +10,9 @@ import {
   Controls,
   MiniMap,
 } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { BookOpen, List, Plus } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import {
   useMemo,
   useCallback,
@@ -19,10 +22,7 @@ import {
   useLayoutEffect,
   type MouseEvent,
 } from 'react';
-import '@xyflow/react/dist/style.css';
-
 import { useTranslation } from 'react-i18next';
-import { useTheme } from 'next-themes';
 import { RoadmapNode } from './RoadmapNode';
 import { SectionDetailModal } from './SectionDetailModal';
 import {
@@ -42,11 +42,9 @@ import type {
   ReleaseMode,
   SyllabusStructureType,
 } from '@/types/syllabus';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { BookOpen, Plus, List } from 'lucide-react';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
 import { cn } from '@/lib/utils';
 

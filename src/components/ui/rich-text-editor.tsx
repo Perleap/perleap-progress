@@ -45,13 +45,12 @@ interface RichTextEditorProps {
 }
 
 const ToolbarButton = ({
-  editor,
   action,
   isActive,
   icon: Icon,
   title,
 }: {
-  editor: Editor;
+  editor?: Editor;
   action: () => void;
   isActive: boolean;
   icon: React.ComponentType<{ className?: string }>;

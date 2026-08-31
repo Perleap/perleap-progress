@@ -10,7 +10,7 @@ export type ResetPreviewSummaryProps = {
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
-export function ResetPreviewSummary({
+export const ResetPreviewSummary = ({
   resetPreview,
   resetPreviewLoading,
   resetPreviewError,
@@ -18,7 +18,7 @@ export function ResetPreviewSummary({
   assignmentCount,
   isRTL,
   t,
-}: ResetPreviewSummaryProps) {
+}: ResetPreviewSummaryProps) => {
   if (resetPreviewLoading) {
     return <p>{t('classroomDetail.resetDialog.previewLoading')}</p>;
   }
@@ -33,9 +33,7 @@ export function ResetPreviewSummary({
         <p className="font-medium text-foreground mb-1">
           {t('classroomDetail.resetDialog.willRemoveTitle')}
         </p>
-        <ul
-          className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}
-        >
+        <ul className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
           <li>
             {t('classroomDetail.resetDialog.willRemoveStudents', {
               count: resetPreview?.active_enrollments ?? studentCount,
@@ -53,9 +51,7 @@ export function ResetPreviewSummary({
         <p className="font-medium text-foreground mb-1">
           {t('classroomDetail.resetDialog.willKeepTitle')}
         </p>
-        <ul
-          className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}
-        >
+        <ul className={`list-disc space-y-1 ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
           <li>{t('classroomDetail.resetDialog.willKeepCourse')}</li>
           <li>
             {t('classroomDetail.resetDialog.willKeepAssignments', {
@@ -67,4 +63,4 @@ export function ResetPreviewSummary({
       </div>
     </>
   );
-}
+};

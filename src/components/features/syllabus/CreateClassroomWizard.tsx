@@ -303,7 +303,7 @@ export const CreateClassroomWizard = ({
 
       // 5. Log activity
       try {
-        await supabase.from('activity_events' as any).insert([
+        await supabase.from('activity_events').insert([
           {
             teacher_id: user.id,
             type: 'create',
@@ -325,8 +325,8 @@ export const CreateClassroomWizard = ({
       onOpenChange(false);
       onSuccess(classroom.id);
       resetWizard();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create classroom');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create classroom');
     } finally {
       setLoading(false);
     }

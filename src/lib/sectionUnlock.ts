@@ -1,13 +1,15 @@
 import type { AssignmentRow } from '@/lib/moduleFlow';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import type {
   ModuleFlowStep,
-  SectionResource,
-  SyllabusSection,
   ReleaseMode,
+  SectionResource,
   StudentProgressStatus,
+  SyllabusSection,
 } from '@/types/syllabus';
-import { isSectionActivityFlowFullyComplete } from '@/lib/moduleFlowStudent';
+import {
+  isSectionActivityFlowFullyComplete,
+  type StudentFlowProgressContext,
+} from '@/lib/moduleFlowStudent';
 
 /** Course order: `order_index` then stable `id` so ties are not non-deterministic across renders. */
 export function sectionsInCourseOrder(sections: SyllabusSection[]): SyllabusSection[] {

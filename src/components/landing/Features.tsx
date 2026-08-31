@@ -1,4 +1,4 @@
-import { Brain, Users, Zap, Shield, BarChart3, Globe } from 'lucide-react';
+import { Brain, Users, Zap, Shield, BarChart3, Globe, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -56,8 +56,8 @@ export const Features = () => {
 
           {/* Right Column: Scrolling List */}
           <div className="lg:w-2/3 flex flex-col gap-24 pb-24">
-            {features.map((feature, index) => (
-              <FeatureItem key={index} feature={feature} index={index} />
+            {features.map((feature) => (
+              <FeatureItem key={feature.title} feature={feature} />
             ))}
           </div>
         </div>
@@ -66,11 +66,16 @@ export const Features = () => {
   );
 };
 
-const FeatureItem = ({ feature, index }: { feature: any; index: number }) => {
+const FeatureItem = ({
+  feature,
+}: {
+  feature: { icon: LucideIcon; title: string; description: string };
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    const node = ref.current;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -80,14 +85,12 @@ const FeatureItem = ({ feature, index }: { feature: any; index: number }) => {
       { threshold: 0.2 }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
+    if (node) {
+      observer.observe(node);
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
+      if (node) observer.unobserve(node);
     };
   }, []);
 

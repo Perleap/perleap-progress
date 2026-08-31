@@ -437,7 +437,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         const rawId = typeof sec.id === 'string' ? sec.id.trim() : '';
         if (!rawId || !isUuid(rawId)) continue;
 
-        const chk = await assertSectionBelongs(sec.id!, syId);
+        const chk = await assertSectionBelongs(rawId, syId);
         if (chk)
           return {
             data: null,
@@ -454,7 +454,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
             ),
           };
 
-        const { error: secErr } = await updateSyllabusSection(sec.id!, {
+        const { error: secErr } = await updateSyllabusSection(rawId, {
           title: sec.title,
           description: sec.description ?? undefined,
           content: sec.content ?? undefined,
@@ -571,7 +571,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           const rawAid = typeof act.id === 'string' ? act.id.trim() : '';
 
           if (rawAid && isUuid(rawAid)) {
-            const chkA = await assertActivityBelongsToSection(act.id!, secDb);
+            const chkA = await assertActivityBelongsToSection(rawAid, secDb);
             if (chkA)
               return {
                 data: null,
@@ -588,7 +588,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
                 ),
               };
             /** Same columns as `merge_course_package_v2` activity UPDATE — do not PATCH denormalized file/url/text columns slim DB may omit (data lives in `lesson_content`). */
-            const { error: ua } = await updateSectionResource(act.id!, {
+            const { error: ua } = await updateSectionResource(rawAid, {
               title: act.title,
               resource_type: act.resource_type as Parameters<
                 typeof updateSectionResource

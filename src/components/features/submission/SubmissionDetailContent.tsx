@@ -1,9 +1,9 @@
 import { MessageSquare } from 'lucide-react';
-import type React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { AssignmentWizardCreateInitialData } from '@/components/features/assignment/wizard/assignmentWizardTypes';
 import type { SubmissionDetailLocationState } from '@/types/navigation';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { SubmissionDetailHeader } from '@/components/features/submission/SubmissionDetailHeader';
@@ -20,18 +20,6 @@ import { navigateBackOrTo } from '@/hooks/useNavigateBack';
 import { getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
 import { generateFollowupAssignment } from '@/services/submissionService';
 import { isAppAdminRole } from '@/utils/role';
-
-interface GeneratedAssignmentData {
-  title: string;
-  instructions: string;
-  type: string;
-  difficulty_level?: string;
-  success_criteria?: string[];
-  scaffolding_tips?: string;
-  target_dimensions: Record<string, boolean>;
-  due_at: string;
-  opik_trace_ids?: Record<string, string>;
-}
 
 export type SubmissionDetailContentProps = {
   submissionId: string;
@@ -56,7 +44,7 @@ export const SubmissionDetailContent = ({ submissionId }: SubmissionDetailConten
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [resetProgressOpen, setResetProgressOpen] = useState(false);
   const [generatedAssignmentData, setGeneratedAssignmentData] =
-    useState<GeneratedAssignmentData | null>(null);
+    useState<AssignmentWizardCreateInitialData | null>(null);
 
   const submission = submissionData;
   const feedback = submissionData?.feedback;
@@ -117,7 +105,6 @@ export const SubmissionDetailContent = ({ submissionId }: SubmissionDetailConten
     if (!feedback || !submission) return;
 
     setGeneratingAssignment(true);
-    console.log('Generating follow-up for student:', studentName, 'ID:', submission.student_id);
     try {
       const data = await generateFollowupAssignment({
         submissionId: submission.id,
@@ -144,7 +131,8 @@ export const SubmissionDetailContent = ({ submissionId }: SubmissionDetailConten
         difficulty_level: data.difficulty_level,
         success_criteria: data.success_criteria,
         scaffolding_tips: data.scaffolding_tips,
-        target_dimensions: data.target_dimensions,
+        target_dimensions:
+          data.target_dimensions as AssignmentWizardCreateInitialData['target_dimensions'],
         due_at: defaultDueDate,
         opik_trace_ids: data.opikTraceId ? { instructions: data.opikTraceId } : undefined,
       });
@@ -253,11 +241,11 @@ export const SubmissionDetailContent = ({ submissionId }: SubmissionDetailConten
                       | null
                       | undefined,
                   },
-                } as React.ComponentProps<typeof SubmissionTabs>['submission']
+                } as ComponentProps<typeof SubmissionTabs>['submission']
               }
               feedback={feedback ?? null}
               studentName={studentName}
-              alerts={alerts as unknown as React.ComponentProps<typeof SubmissionTabs>['alerts']}
+              alerts={alerts as unknown as ComponentProps<typeof SubmissionTabs>['alerts']}
               onAcknowledgeAlert={refetch}
               onEvaluationComplete={refetch}
             />
@@ -289,7 +277,7 @@ export const SubmissionDetailContent = ({ submissionId }: SubmissionDetailConten
             setAssignmentDialogOpen(false);
             setGeneratedAssignmentData(null);
           }}
-          initialData={generatedAssignmentData as any}
+          initialData={generatedAssignmentData ?? undefined}
           assignedStudentId={submission.student_id}
           studentName={studentName}
         />

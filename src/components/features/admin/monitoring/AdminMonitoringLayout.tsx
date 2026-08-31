@@ -14,7 +14,8 @@ export const AdminMonitoringLayout = () => {
     queryKey: ['is_app_admin_db', user?.id],
     enabled: !loading && !!user?.id && user.user_metadata?.role === USER_ROLES.ADMIN,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_app_admin', { _user_id: user!.id });
+      if (!user?.id) throw new Error('user id required');
+      const { data, error } = await supabase.rpc('is_app_admin', { _user_id: user.id });
       if (error) throw error;
       return data === true;
     },

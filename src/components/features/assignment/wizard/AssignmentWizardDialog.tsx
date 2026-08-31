@@ -18,9 +18,11 @@ import { AssignmentBasicsStep } from './steps/AssignmentBasicsStep';
 import { AssignmentCourseReleaseStep } from './steps/AssignmentCourseReleaseStep';
 import { AssignmentFormatStep } from './steps/AssignmentFormatStep';
 import { AssignmentReviewStep } from './steps/AssignmentReviewStep';
-import { AssignmentSkillsMaterialsStep } from './steps/AssignmentSkillsMaterialsStep';
+import {
+  AssignmentSkillsMaterialsStep,
+  type HardSkillsSuggestionStatus,
+} from './steps/AssignmentSkillsMaterialsStep';
 import { AssignmentTestStep } from './steps/AssignmentTestStep';
-import type { HardSkillsSuggestionStatus } from './steps/AssignmentSkillsMaterialsStep';
 import type { Database, Json } from '@/integrations/supabase/types';
 import {
   normalizeTestQuestionDraft,
@@ -280,10 +282,12 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
     [classroomId, uiLanguage]
   );
 
+  const wizardResetKey = isCreate ? classroomId : assignment?.id;
+
   useEffect(() => {
     if (!open) return;
     setCurrentStepId(ASSIGNMENT_WIZARD_FIRST_STEP);
-  }, [open, isCreate ? classroomId : assignment?.id]);
+  }, [open, wizardResetKey]);
 
   useEffect(() => {
     if (currentStepId === 'test' && formData.type !== 'test') {
@@ -476,7 +480,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
             const pairs = parseHardSkillsFromDb(parsedList, lastAssignment.hard_skill_domain);
             if (pairs.length > 0) {
               const doms = distinctDomains(pairs);
-              const singleDomain = doms.length === 1 ? doms[0]! : '';
+              const singleDomain = doms.length === 1 ? (doms[0] ?? '') : '';
               setFormData((prev) => ({
                 ...prev,
                 hard_skill_domain: singleDomain,
@@ -587,7 +591,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
     if (!open && isCreate) {
       setTestQuestions([]);
     }
-  }, [open, isCreate, initialData == null ? '' : JSON.stringify(initialData)]);
+  }, [open, isCreate, initialData]);
 
   useEffect(() => {
     if (!open || !assignment || isCreate) return;
@@ -663,7 +667,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
         pairs.length === 0
           ? hd
           : distinctDomains(pairs).length === 1
-            ? distinctDomains(pairs)[0]!
+            ? (distinctDomains(pairs)[0] ?? '')
             : '';
       setFormData((prev) => ({
         ...prev,
@@ -685,7 +689,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
     };
 
     void loadAssignmentData();
-  }, [open, assignment?.id, isCreate]);
+  }, [open, assignment, isCreate]);
 
   useEffect(() => {
     if (!open || isCreate || !formData.hard_skill_domain) return;
@@ -712,7 +716,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
     return () => {
       cancelled = true;
     };
-  }, [open, assignment?.id, assignment?.type, isCreate]);
+  }, [open, assignment, isCreate]);
 
   useEffect(() => {
     if (!open || isCreate) return;
@@ -959,14 +963,14 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
           return;
         }
         if (error) throw error;
-        const suggestions = Array.isArray(data?.suggestions) ? data!.suggestions! : [];
+        const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
         if (suggestions.length === 0) {
           setHardSkillsSuggestionStatus('idle');
           setHardSkillsSuggestionSource(null);
           return;
         }
         const doms = distinctDomains(suggestions);
-        const singleDomain = doms.length === 1 ? doms[0]! : '';
+        const singleDomain = doms.length === 1 ? (doms[0] ?? '') : '';
         setFormData((prev) => ({
           ...prev,
           hard_skills: suggestions,
@@ -1011,13 +1015,15 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
         title: formData.title,
       });
     }
-    setCurrentStepId(stepOrder[i + 1]!);
+    const nextStep = stepOrder[i + 1];
+    if (nextStep) setCurrentStepId(nextStep);
   };
 
   const handleBack = () => {
     const i = stepOrder.indexOf(currentStepId);
     if (i <= 0) return;
-    setCurrentStepId(stepOrder[i - 1]!);
+    const prevStep = stepOrder[i - 1];
+    if (prevStep) setCurrentStepId(prevStep);
   };
 
   const handleGenerateStudentFacingTask = useCallback(async () => {
@@ -1082,6 +1088,10 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
 
   const handleSubmit = async () => {
     if (loading) return;
+    if (!user?.id) {
+      toast.error(t('auth.errors.notAuthenticated', 'Please sign in again'));
+      return;
+    }
     if (!canProceedForStep('basics') || !canProceedForStep('format')) {
       toast.error(t('createAssignment.wizard.fixValidation'));
       return;
@@ -1209,7 +1219,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
                   title: 'New Personalized Assignment',
                   message: `A follow-up assignment "${formData.title}" has been created for you`,
                   link: `/student/assignment/${assignmentRow.id}`,
-                  actorId: user!.id,
+                  actorId: user.id,
                   metadata: {
                     assignment_id: assignmentRow.id,
                     classroom_id: classroomId,
@@ -1229,7 +1239,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
                   title: 'New Assignment',
                   message: `New assignment "${formData.title}" has been posted`,
                   link: `/student/assignment/${assignmentRow.id}`,
-                  actorId: user!.id,
+                  actorId: user.id,
                   metadata: {
                     assignment_id: assignmentRow.id,
                     classroom_id: classroomId,
@@ -1247,7 +1257,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
         try {
           await supabase.from('activity_events').insert([
             {
-              teacher_id: user!.id,
+              teacher_id: user.id,
               type: 'create',
               entity_type: 'assignment',
               entity_id: assignmentRow.id,
@@ -1403,7 +1413,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
                   title: 'New Assignment Posted',
                   message: `${formData.title} has been assigned`,
                   link: `/student/assignment/${assignment.id}`,
-                  actorId: user!.id,
+                  actorId: user.id,
                   metadata: {
                     assignment_id: assignment.id,
                     classroom_id: classroomIdForNotify,

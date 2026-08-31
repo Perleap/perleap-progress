@@ -25,7 +25,7 @@ import { type ClassroomViewMode } from '@/lib/classroomViewMode';
 export type { StudentEnrolledClassroom };
 
 const EMPTY_QUERY_LIST: unknown[] = [];
-const CARD_VIEW_MODES = ['grid', 'compact', 'list', 'detailed'] as const;
+type CardViewMode = Extract<ClassroomViewMode, 'grid' | 'compact' | 'list' | 'detailed'>;
 
 export const StudentClassroomsSection = () => {
   const { t } = useTranslation();
@@ -165,7 +165,7 @@ export const StudentClassroomsSection = () => {
             <StudentClassroomCard
               key={classroom.id}
               classroom={classroom}
-              variant={viewMode as (typeof CARD_VIEW_MODES)[number]}
+              variant={viewMode as CardViewMode}
               onNavigate={() => navigate(`/student/classroom/${classroom.id}`)}
               onWarm={() => warmSyllabusForClassroom(classroom.id)}
             />

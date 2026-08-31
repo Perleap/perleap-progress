@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { TFunction } from 'i18next';
+import { matchesTypedConfirm, TypedConfirmInput } from '@/components/shared/TypedConfirmInput';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,7 +13,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { matchesTypedConfirm, TypedConfirmInput } from '@/components/shared/TypedConfirmInput';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
 import { supabase } from '@/integrations/supabase/client';

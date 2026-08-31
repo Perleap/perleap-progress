@@ -325,7 +325,8 @@ export const RadarChart = ({
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           {FIVE_D_DIMENSION_KEYS.map((dimension) => {
             const config = DIMENSION_CONFIG[dimension];
-            const point = data.find((d) => d.dimension === dimension)!;
+            const point = data.find((d) => d.dimension === dimension);
+            if (!point) return null;
             const explanation = explanations?.[dimension];
             const isHovered = hoveredDimension === dimension;
 

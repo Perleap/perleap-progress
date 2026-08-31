@@ -59,7 +59,6 @@ import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import {
   useCreateSyllabusSection,
   useUpdateSyllabusSection,
@@ -157,7 +156,7 @@ export const SyllabusEditor = ({
   const selected = sections[clampedIndex] ?? null;
   const moduleFlowResources = useMemo(
     () => (selected ? sectionResources[selected.id] : undefined) ?? EMPTY_SECTION_RESOURCES,
-    [sectionResources, selected?.id]
+    [sectionResources, selected]
   );
   const outlineResources = useMemo(
     () => filterOutlineMaterialResources(moduleFlowResources),
@@ -183,7 +182,7 @@ export const SyllabusEditor = ({
 
   const getValue = <K extends keyof SyllabusSection>(key: K): SyllabusSection[K] => {
     if (key in editValues) return editValues[key] as SyllabusSection[K];
-    return selected ? selected[key] : ('' as any);
+    return selected ? selected[key] : ('' as SyllabusSection[K]);
   };
 
   const setField = (key: string, value: unknown) => {

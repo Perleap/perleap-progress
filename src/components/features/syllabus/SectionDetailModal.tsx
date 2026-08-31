@@ -1,7 +1,6 @@
 import {
   Calendar,
   Target,
-  FileText,
   BookOpen,
   CheckCircle2,
   Clock,
@@ -16,7 +15,6 @@ import type {
   SectionResource,
   SectionStatus,
   StudentProgressStatus,
-  CompletionStatus,
 } from '@/types/syllabus';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

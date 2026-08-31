@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import {
   Briefcase,
   ClipboardList,
@@ -12,9 +13,9 @@ import {
   Clapperboard,
   Workflow,
   Radio,
+  type LucideIcon,
 } from 'lucide-react';
 import type { DbAssignmentType } from '@/types/models';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CURRICULUM_ICON_SIZE_PX = 14;

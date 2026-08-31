@@ -107,7 +107,7 @@ export const useConversation = ({
   }, []);
 
   /** Replace the last assistant message body atomically (used for post-stream polish frame). */
-  const replaceLastAssistantContent = useCallback((streamGen: number, polished: string) => {
+  const _replaceLastAssistantContent = useCallback((streamGen: number, polished: string) => {
     if (streamGen !== streamGenerationRef.current) return;
     setMessages((prev) => {
       const last = prev[prev.length - 1];

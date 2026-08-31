@@ -1,11 +1,4 @@
-import {
-  CalendarDays,
-  Grid2x2,
-  LayoutGrid,
-  LayoutList,
-  List,
-  Table2,
-} from 'lucide-react';
+import { CalendarDays, Grid2x2, LayoutGrid, LayoutList, List, Table2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   Select,
@@ -31,11 +24,11 @@ export type ClassroomViewModeSelectProps = {
   className?: string;
 };
 
-export function ClassroomViewModeSelect({
+export const ClassroomViewModeSelect = ({
   value,
   onValueChange,
   className,
-}: ClassroomViewModeSelectProps) {
+}: ClassroomViewModeSelectProps) => {
   const { t } = useTranslation();
 
   return (
@@ -60,4 +53,4 @@ export function ClassroomViewModeSelect({
       </Select>
     </div>
   );
-}
+};

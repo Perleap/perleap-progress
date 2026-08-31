@@ -94,7 +94,7 @@ export const SectionContentPage = ({
   const prevSection = currentIndex > 0 ? sortedSections[currentIndex - 1] : null;
   const nextSection =
     currentIndex < sortedSections.length - 1 ? sortedSections[currentIndex + 1] : null;
-  const resources = sectionResources[sectionId] || [];
+  const resources = useMemo(() => sectionResources[sectionId] ?? [], [sectionResources, sectionId]);
   const assignments = useMemo(
     () => linkedAssignmentsMap[sectionId] ?? EMPTY_LINKED_ASSIGNMENTS,
     [linkedAssignmentsMap, sectionId]

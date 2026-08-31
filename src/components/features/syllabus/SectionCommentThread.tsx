@@ -85,7 +85,7 @@ export const SectionCommentThread = ({ sectionId, isRTL = false }: SectionCommen
   const { t } = useTranslation();
   const { user, profile } = useAuth();
   const { data: commentsData, isLoading } = useSectionComments(sectionId);
-  const comments = commentsData ?? [];
+  const comments = useMemo(() => commentsData ?? [], [commentsData]);
 
   /** When DB author snapshot columns are missing, show the signed-in user's name/avatar from Auth. */
   const displayComments = useMemo((): SectionComment[] => {

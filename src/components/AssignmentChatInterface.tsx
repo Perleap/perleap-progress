@@ -156,7 +156,8 @@ export const AssignmentChatInterface = ({
     queryKey: ['is_app_admin_db', user?.id],
     enabled: !authLoading && !!user?.id && user?.user_metadata?.role === USER_ROLES.ADMIN,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_app_admin', { _user_id: user!.id });
+      if (!user?.id) throw new Error('user id required');
+      const { data, error } = await supabase.rpc('is_app_admin', { _user_id: user.id });
       if (error) throw error;
       return data === true;
     },
@@ -510,7 +511,7 @@ export const AssignmentChatInterface = ({
     setCompleting(true);
     try {
       await onComplete({ conversationComplete: conversationEnded });
-    } catch (error) {
+    } catch {
       toast.error(t('assignmentChat.errors.completing'));
     } finally {
       setCompleting(false);
@@ -548,7 +549,7 @@ export const AssignmentChatInterface = ({
         // Resetting src helps stop the actual network request/buffering
         audioRef.current.src = '';
         audioRef.current.load();
-      } catch (e) {
+      } catch {
         // Ignore reset errors
       }
     }
@@ -627,7 +628,7 @@ export const AssignmentChatInterface = ({
         currentAudioUrlRef.current = null;
       }
       // Only toast if it wasn't a manual abort
-      if ((error as any).name !== 'AbortError') {
+      if (error instanceof Error && error.name !== 'AbortError') {
         toast.error(t('assignmentChat.errors.tts'));
       }
     }
@@ -738,7 +739,7 @@ export const AssignmentChatInterface = ({
           if (text.trim()) {
             setInput((prev) => prev + (prev ? ' ' : '') + text.trim());
           }
-        } catch (error) {
+        } catch {
           toast.error(t('assignmentChat.errors.stt'));
         }
 
@@ -969,7 +970,10 @@ export const AssignmentChatInterface = ({
                       {message.fileContext && (
                         <div
                           className={`p-2 rounded-md border bg-background/50 flex items-center gap-2 cursor-pointer hover:bg-background transition-colors max-w-full ${!message.content ? 'mt-0' : ''}`}
-                          onClick={() => void handlePreviewAttachment(message.fileContext!, index)}
+                          onClick={() =>
+                            message.fileContext &&
+                            void handlePreviewAttachment(message.fileContext, index)
+                          }
                         >
                           {message.fileContext.type === 'image' ? (
                             <ImageIcon className="h-4 w-4 text-primary" />
@@ -1199,7 +1203,8 @@ export const AssignmentChatInterface = ({
                     key={idx}
                     className="cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() =>
-                      void handlePreviewAttachment(msg.fileContext!, msg.originalIndex)
+                      msg.fileContext &&
+                      void handlePreviewAttachment(msg.fileContext, msg.originalIndex)
                     }
                   >
                     <CardContent className="p-3 flex items-start gap-3">

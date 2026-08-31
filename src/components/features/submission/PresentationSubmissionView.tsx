@@ -45,7 +45,7 @@ export const PresentationSubmissionView = ({
   const {
     blobUrl,
     isLoading,
-    error: blobError,
+    error: _blobError,
   } = useAuthenticatedBlobUrl(SUBMISSION_FILES_BUCKET, fileUrl, Boolean(fileUrl));
 
   const handleDownloadVideo = useCallback(async () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Json } from '@/integrations/supabase/types';
 import {
   EVIDENCE_MAX_TOTAL_CHARS,
   hashEvidenceKey,
@@ -49,7 +50,7 @@ function minInput(
 describe('parseScoreExplanations', () => {
   it('returns null for empty or non-object', () => {
     expect(parseScoreExplanations(null)).toBeNull();
-    expect(parseScoreExplanations('x' as any)).toBeNull();
+    expect(parseScoreExplanations('x' as Json)).toBeNull();
   });
 
   it('parses dimension strings', () => {
@@ -57,7 +58,7 @@ describe('parseScoreExplanations', () => {
       vision: 'a',
       values: 'b',
       thinking: ' ',
-      connection: 1 as any,
+      connection: 1 as Json,
     });
     expect(o).toEqual({ vision: 'a', values: 'b' });
   });

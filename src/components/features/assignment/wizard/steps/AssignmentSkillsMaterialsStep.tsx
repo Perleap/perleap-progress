@@ -273,7 +273,9 @@ export const AssignmentSkillsMaterialsStep = ({
                     const v = e.target.value;
                     onFormChange((prev) => {
                       const next = [...prev.hard_skills];
-                      next[index] = { ...next[index]!, skill: v };
+                      const existing = next[index];
+                      if (!existing) return prev;
+                      next[index] = { ...existing, skill: v };
                       return { ...prev, hard_skills: next };
                     });
                   }}

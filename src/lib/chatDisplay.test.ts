@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   createChatStreamEmission,
   formatInlineListsForChatMarkdown,
-  isPerleapAssistantIntro,
   normalizePerleapIntroParagraphBreaks,
   splitAssistantMessageIntoSentences,
   splitChatDisplayText,

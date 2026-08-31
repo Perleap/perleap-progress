@@ -1,4 +1,5 @@
 import {
+  type LucideIcon,
   Brain,
   GraduationCap,
   School,
@@ -8,7 +9,6 @@ import {
   Users,
   BookOpen,
   Lightbulb,
-  Sparkles,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { PerleapLogo } from '@/components/PerleapLogo';
@@ -206,10 +206,10 @@ export const FlowChart = () => {
 const NodeGroup = ({
   isActive,
   nodes,
-  connectionSide,
+  connectionSide: _connectionSide,
 }: {
   isActive: boolean;
-  nodes: any[];
+  nodes: { icon: LucideIcon; label: string; position: string }[];
   connectionSide: string;
 }) => (
   <>
@@ -231,9 +231,9 @@ const Node = ({
   label,
   position,
   isActive,
-  delay,
+  delay: _delay,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   position: string;
   isActive: boolean;

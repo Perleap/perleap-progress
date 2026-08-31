@@ -65,7 +65,7 @@ export const LessonBriefContent = () => {
 
   const analyticsLanguage = uiLanguage === 'he' ? 'he' : 'en';
 
-  const { data, isLoading } = useClassroomAnalytics(classroomId!);
+  const { data, isLoading } = useClassroomAnalytics(classroomId ?? '');
 
   const { data: classroom } = useClassroom(classroomId);
 
@@ -79,7 +79,7 @@ export const LessonBriefContent = () => {
 
   const selectedAssignment = searchParams.get('analyticsAssignment') || 'all';
 
-  const assignments = data?.assignments || [];
+  const assignments = useMemo(() => data?.assignments ?? [], [data?.assignments]);
 
   const reportableAssignments = useMemo(
     () => filterReportableAssignments(assignments),
@@ -87,7 +87,7 @@ export const LessonBriefContent = () => {
     [assignments]
   );
 
-  const modules = data?.modules || [];
+  const modules = useMemo(() => data?.modules ?? [], [data?.modules]);
 
   const effectiveAssignmentIds = useMemo(
     () => getAllowedAssignmentIds(reportableAssignments, selectedModule, selectedAssignment),
@@ -123,7 +123,7 @@ export const LessonBriefContent = () => {
     if (!data || effectiveAssignmentIds.length === 0) return null;
 
     return getClassroomAverage5D(
-      data.students as any,
+      data.students,
 
       data.rawSubmissions,
 

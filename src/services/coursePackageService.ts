@@ -1,7 +1,6 @@
 /**
  * Export / import course packages (perleap.course): portable v1, merge-safe v2, merge + full replace imports.
  */
-import type { BuildCoursePackageInput } from '@/lib/coursePackage/buildCoursePackage';
 import type { ApiError } from '@/types';
 import type { CreateAssignmentInput } from '@/types/api.types';
 import type {
@@ -22,7 +21,11 @@ import type {
 } from '@/types/syllabus';
 import { supabase, handleSupabaseError } from '@/api/client';
 import { omitOptionalActivityListFields } from '@/lib/activityListOptionalColumns';
-import { buildCoursePackageV1, buildCoursePackageV2 } from '@/lib/coursePackage/buildCoursePackage';
+import {
+  buildCoursePackageV1,
+  buildCoursePackageV2,
+  type BuildCoursePackageInput,
+} from '@/lib/coursePackage/buildCoursePackage';
 import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
 import { normalizeReleaseMode } from '@/lib/releaseMode';
 import { setAssignmentLinkedActivities } from '@/services/assignmentModuleActivityService';

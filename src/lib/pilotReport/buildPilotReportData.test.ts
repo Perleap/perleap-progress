@@ -79,7 +79,7 @@ describe('buildParticipantRow', () => {
       completedInScope: 5,
       assignmentsInScope: 6,
       assessment: {
-        dimensions: assessedParticipant.dimensions!,
+        dimensions: assessedParticipant.dimensions as PilotDimensionScores,
         readiness: 'ready',
         roleFit: 'builder',
         keyStrength: 'Strong builds.',

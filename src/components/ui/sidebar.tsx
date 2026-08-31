@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 'use client';
 
 import { mergeProps } from '@base-ui/react/merge-props';

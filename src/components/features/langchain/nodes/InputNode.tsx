@@ -1,4 +1,4 @@
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { MessageSquare } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,6 @@ import {
   LANGCHAIN_NODE_OUTER_CLASS,
   LANGCHAIN_NODE_PREVIEW_CLASS,
 } from './langchainNodeShell';
-import type { NodeProps } from '@xyflow/react';
 
 const InputNodeComponent = ({ id, selected, ...node }: NodeProps) => {
   const { t } = useTranslation();

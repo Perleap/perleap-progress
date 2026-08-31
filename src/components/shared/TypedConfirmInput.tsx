@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { matchesTypedConfirm } from '@/lib/typedConfirm';
@@ -14,7 +15,7 @@ export type TypedConfirmInputProps = {
   isRTL?: boolean;
 };
 
-export function TypedConfirmInput({
+export const TypedConfirmInput = ({
   id,
   value,
   onChange,
@@ -24,7 +25,7 @@ export function TypedConfirmInput({
   mismatchMessage,
   disabled,
   isRTL,
-}: TypedConfirmInputProps) {
+}: TypedConfirmInputProps) => {
   const matches = matchesTypedConfirm(value, expectedText);
   const showMismatch = value.trim().length > 0 && !matches;
 
@@ -46,6 +47,6 @@ export function TypedConfirmInput({
       {showMismatch && <p className="text-xs text-destructive">{mismatchMessage}</p>}
     </div>
   );
-}
+};
 
 export { matchesTypedConfirm };

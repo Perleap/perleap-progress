@@ -363,7 +363,7 @@ export const createSectionResource = async (
                 ...fileRest,
                 status: normalizedInput.status ?? 'published',
                 lesson_content: outlineFileLessonJson({
-                  file_path: normalizedInput.file_path!,
+                  file_path: normalizedInput.file_path ?? '',
                   url: normalizedInput.url,
                   mime_type: normalizedInput.mime_type ?? '',
                   file_size: normalizedInput.file_size ?? 0,

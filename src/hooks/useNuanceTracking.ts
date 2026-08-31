@@ -45,10 +45,10 @@ export function useNuanceTracking({
 
   const emit = useCallback(
     (eventType: NuanceEventType, metadata?: Record<string, unknown>) => {
-      if (!canTrack) return;
+      if (!canTrack || !studentId || !assignmentId) return;
       trackNuanceEvent({
-        student_id: studentId!,
-        assignment_id: assignmentId!,
+        student_id: studentId,
+        assignment_id: assignmentId,
         submission_id: submissionId,
         event_type: eventType,
         metadata,

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

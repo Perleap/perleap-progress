@@ -89,7 +89,7 @@ describe('computePilotReportDataHash', () => {
                 ...s,
                 snapshots: [
                   {
-                    ...s.snapshots[0]!,
+                    ...(s.snapshots[0] ?? {}),
                     scores: { vision: 9, values: 9, thinking: 9, connection: 9, action: 9 },
                   },
                 ],

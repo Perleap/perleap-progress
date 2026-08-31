@@ -1,8 +1,8 @@
 import { FileText, Link as LinkIcon } from 'lucide-react';
+import type { Classroom } from '@/types/models';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { openOrDownloadMaterial } from '@/services/materialService';
-import type { Classroom } from '@/types/models';
 import { COURSE_MATERIALS_BUCKET } from '@/utils/storageUrls';
 
 interface CourseMaterialsGridProps {
@@ -11,7 +11,7 @@ interface CourseMaterialsGridProps {
   t: (key: string) => string;
 }
 
-export function CourseMaterialsGrid({ classroom, isRTL, t }: CourseMaterialsGridProps) {
+export const CourseMaterialsGrid = ({ classroom, isRTL, t }: CourseMaterialsGridProps) => {
   if (!classroom.materials?.length) return null;
 
   return (
@@ -55,4 +55,4 @@ export function CourseMaterialsGrid({ classroom, isRTL, t }: CourseMaterialsGrid
       </CardContent>
     </Card>
   );
-}
+};

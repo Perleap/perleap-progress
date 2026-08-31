@@ -114,7 +114,7 @@ export function buildCohortOutcome(participants: PilotParticipantRow[]): PilotCo
   if (withDims.length > 0) {
     meanDimensions = {} as PilotDimensionScores;
     for (const key of PILOT_DIMENSION_KEYS) {
-      const sum = withDims.reduce((acc, p) => acc + (p.dimensions![key] ?? 0), 0);
+      const sum = withDims.reduce((acc, p) => acc + (p.dimensions?.[key] ?? 0), 0);
       meanDimensions[key] = Math.round(sum / withDims.length);
     }
   }

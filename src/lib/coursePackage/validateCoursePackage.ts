@@ -2,15 +2,13 @@
  * Parse and validate perleap.course v1 / v2 JSON from unknown input.
  */
 
-import type {
-  PerleapCoursePackageAny,
-  PerleapCoursePackageV1,
-  PerleapCoursePackageV2,
-} from '@/types/coursePackage';
 import {
   COURSE_PACKAGE_FORMAT,
   COURSE_PACKAGE_VERSION,
   COURSE_PACKAGE_VERSION_V2,
+  type PerleapCoursePackageAny,
+  type PerleapCoursePackageV1,
+  type PerleapCoursePackageV2,
 } from '@/types/coursePackage';
 
 export type ParseCoursePackageResult =

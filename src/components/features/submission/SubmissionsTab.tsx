@@ -12,11 +12,13 @@ import {
   Rows3,
   Table2,
   Calendar,
+  type LucideIcon,
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { SubmissionDetailLocationState } from '@/types/navigation';
 import {
   SubmissionCard,
   formatSubmissionAssignmentTitle,
@@ -24,8 +26,6 @@ import {
   SubmissionFlaggedSentencesBadge,
   type SubmissionCardVariant,
 } from '@/components/SubmissionCard';
-import type { SubmissionDetailLocationState } from '@/types/navigation';
-import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

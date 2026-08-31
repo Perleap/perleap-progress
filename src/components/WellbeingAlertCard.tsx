@@ -3,16 +3,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import SafeMathMarkdown from './SafeMathMarkdown';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 import {
   ALERT_LEVEL_COLORS,
   ALERT_TYPE_LABELS,
   type AlertLevel,
   type StudentAlert,
 } from '@/types/alerts';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
 
 interface WellbeingAlertCardProps {
   alerts: StudentAlert[];
@@ -54,7 +54,7 @@ export const WellbeingAlertCard = ({
     current.ai_analysis.length > best.ai_analysis.length ? current : best
   ).ai_analysis;
 
-  const handleAcknowledge = async (alertId: string) => {
+  const _handleAcknowledge = async (alertId: string) => {
     setAcknowledging(alertId);
     try {
       const {

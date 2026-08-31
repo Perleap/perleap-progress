@@ -1,8 +1,8 @@
 import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import type { Classroom } from '@/types/models';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Classroom } from '@/types/models';
 
 interface DomainsAccordionProps {
   classroom: Classroom;
@@ -10,7 +10,7 @@ interface DomainsAccordionProps {
   t: (key: string) => string;
 }
 
-export function DomainsAccordion({ classroom, isRTL, t }: DomainsAccordionProps) {
+export const DomainsAccordion = ({ classroom, isRTL, t }: DomainsAccordionProps) => {
   const [expandedDomains, setExpandedDomains] = useState<Set<number>>(new Set());
 
   if (!classroom.domains?.length) return null;
@@ -69,9 +69,7 @@ export function DomainsAccordion({ classroom, isRTL, t }: DomainsAccordionProps)
                 >
                   {t('classroomDetail.skills')}
                 </p>
-                <div
-                  className={`flex flex-wrap gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}
-                >
+                <div className={`flex flex-wrap gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                   {domain.components.map((component, compIndex) => (
                     <Badge
                       key={compIndex}
@@ -89,4 +87,4 @@ export function DomainsAccordion({ classroom, isRTL, t }: DomainsAccordionProps)
       </CardContent>
     </Card>
   );
-}
+};

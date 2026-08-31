@@ -1,6 +1,13 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import * as React from 'react';
-import { Controller, FormProvider, useFormContext } from 'react-hook-form';
-import type { ControllerProps, FieldPath, FieldValues } from 'react-hook-form';
+import {
+  Controller,
+  FormProvider,
+  useFormContext,
+  type ControllerProps,
+  type FieldPath,
+  type FieldValues,
+} from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
@@ -99,7 +106,7 @@ const FormControl = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
       'aria-describedby': !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`,
       'aria-invalid': !!error,
       ...child.props,
-    } as any);
+    } as React.ComponentPropsWithoutRef<React.ElementType>);
   }
 );
 FormControl.displayName = 'FormControl';

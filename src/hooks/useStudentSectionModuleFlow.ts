@@ -57,7 +57,7 @@ export function useStudentSectionModuleFlow(
             studentFlowOpts
           )
         : [],
-    [sectionId, sectionResources, assignments]
+    [sectionId, sectionResources, assignments, studentFlowOpts]
   );
 
   const usePersistedFlow = orderedPersisted.length > 0;
@@ -82,8 +82,11 @@ export function useStudentSectionModuleFlow(
     studentId,
     !!studentId && !!sectionId
   );
-  const assignmentDoneMap = flowMaps?.completedMap ?? {};
-  const assignmentHasSubmissionRowMap = flowMaps?.hasAnyRowMap ?? {};
+  const assignmentDoneMap = useMemo(() => flowMaps?.completedMap ?? {}, [flowMaps?.completedMap]);
+  const assignmentHasSubmissionRowMap = useMemo(
+    () => flowMaps?.hasAnyRowMap ?? {},
+    [flowMaps?.hasAnyRowMap]
+  );
 
   const ctx: StudentFlowProgressContext = useMemo(
     () => ({ progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap }),

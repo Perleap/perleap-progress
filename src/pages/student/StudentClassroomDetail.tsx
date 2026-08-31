@@ -11,7 +11,9 @@ const StudentClassroomDetail = () => {
   const { data: rawClassroom, isLoading: classroomLoading } = useClassroom(id);
   const classroom = useMemo(
     () =>
-      normalizeStudentClassroomDetail(rawClassroom as unknown as Record<string, unknown> | null | undefined),
+      normalizeStudentClassroomDetail(
+        rawClassroom as unknown as Record<string, unknown> | null | undefined
+      ),
     [rawClassroom]
   );
 

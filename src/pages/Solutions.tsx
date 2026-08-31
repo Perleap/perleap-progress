@@ -1,4 +1,4 @@
-import { ArrowRight, GraduationCap, School, Users } from 'lucide-react';
+import { ArrowRight, type LucideIcon, GraduationCap, School, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Footer } from '@/components/layouts/Footer';
 import { Navbar } from '@/components/layouts/Navbar';
@@ -109,6 +109,16 @@ const Solutions = () => {
   );
 };
 
+type SolutionSectionProps = {
+  icon: LucideIcon;
+  title: string;
+  headline: string;
+  description: string;
+  features: string[];
+  imageBg: string;
+  reversed?: boolean;
+};
+
 const SolutionSection = ({
   icon: Icon,
   title,
@@ -117,7 +127,7 @@ const SolutionSection = ({
   features,
   imageBg,
   reversed,
-}: any) => (
+}: SolutionSectionProps) => (
   <div
     className={`flex flex-col md:flex-row items-center gap-12 ${reversed ? 'md:flex-row-reverse' : ''}`}
   >

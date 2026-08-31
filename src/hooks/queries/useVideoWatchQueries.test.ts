@@ -1,3 +1,4 @@
+/* eslint-disable import/order -- vi.mock must run before module under test */
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/integrations/supabase/client', () => ({

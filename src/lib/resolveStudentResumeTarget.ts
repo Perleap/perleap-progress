@@ -3,13 +3,12 @@
  */
 
 import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
 import type {
+  ModuleFlowStep,
   ReleaseMode,
+  SectionResource,
   StudentProgressStatus,
   SyllabusSection,
-  ModuleFlowStep,
-  SectionResource,
 } from '@/types/syllabus';
 import {
   getOrderedActivityCenterFlowSteps,
@@ -21,6 +20,7 @@ import {
 import {
   isAssignmentMissedDeadline,
   localResourceInferredDoneFromLaterAssignments,
+  type StudentFlowProgressContext,
 } from '@/lib/moduleFlowStudent';
 import { isSectionUnlocked } from '@/lib/sectionUnlock';
 

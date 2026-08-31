@@ -264,6 +264,8 @@ export const AnalyticsCompare5dCard = ({
 
   const canShowResults =
     compareSideA && compareSideB && compareSideA !== compareSideB && sideA.scores && sideB.scores;
+  const compareScoresA = sideA.scores;
+  const compareScoresB = sideB.scores;
 
   return (
     <Card
@@ -449,13 +451,13 @@ export const AnalyticsCompare5dCard = ({
           </p>
         ) : null}
 
-        {canShowResults ? (
+        {canShowResults && compareScoresA && compareScoresB ? (
           <Compare5dResults
             classroomId={classroomId}
             labelA={sideA.label}
             labelB={sideB.label}
-            scoresA={sideA.scores!}
-            scoresB={sideB.scores!}
+            scoresA={compareScoresA}
+            scoresB={compareScoresB}
             qedA={sideA.qed}
             qedB={sideB.qed}
             evidenceA={sideA.evidence}

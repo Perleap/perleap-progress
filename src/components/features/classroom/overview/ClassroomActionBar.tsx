@@ -10,14 +10,14 @@ interface ClassroomActionBarProps {
   t: (key: string) => string;
 }
 
-export function ClassroomActionBar({
+export const ClassroomActionBar = ({
   isRTL,
   resetButtonDisabled,
   onEdit,
   onRequestReset,
   onRequestDelete,
   t,
-}: ClassroomActionBarProps) {
+}: ClassroomActionBarProps) => {
   return (
     <div className="pt-6 border-t border-border">
       <div
@@ -57,4 +57,4 @@ export function ClassroomActionBar({
       </div>
     </div>
   );
-}
+};

@@ -116,14 +116,16 @@ export const useTeacherCalendarData = (
       allEnrollments?.forEach((e) => {
         if (!enrollmentsByClassroom.has(e.classroom_id))
           enrollmentsByClassroom.set(e.classroom_id, []);
-        enrollmentsByClassroom.get(e.classroom_id)!.push(e.student_id);
+        const enrolled = enrollmentsByClassroom.get(e.classroom_id);
+        if (enrolled) enrolled.push(e.student_id);
       });
 
       const submissionsByAssignment = new Map<string, string[]>();
       allSubmissions?.forEach((s) => {
         if (!submissionsByAssignment.has(s.assignment_id))
           submissionsByAssignment.set(s.assignment_id, []);
-        submissionsByAssignment.get(s.assignment_id)!.push(s.student_id);
+        const submitted = submissionsByAssignment.get(s.assignment_id);
+        if (submitted) submitted.push(s.student_id);
       });
 
       const assignmentsWithIncomplete = assignmentsData.map((assignment) => {

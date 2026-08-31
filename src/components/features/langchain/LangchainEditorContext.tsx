@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { createContext, useContext, type ReactNode } from 'react';
 
 type LangchainEditorContextValue = {

@@ -1,9 +1,8 @@
 import { Calendar, Copy, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '@/components/ui/card';
-import type { ClassroomViewMode } from '@/lib/classroomViewMode';
-import { formatClassroomDate } from '@/lib/classroomViewMode';
 import type { ClassroomWithEnrollmentCount } from '@/types/api.types';
+import { Card, CardContent } from '@/components/ui/card';
+import { formatClassroomDate, type ClassroomViewMode } from '@/lib/classroomViewMode';
 
 export type TeacherClassroomCardProps = {
   classroom: ClassroomWithEnrollmentCount;
@@ -12,7 +11,7 @@ export type TeacherClassroomCardProps = {
   onCopyInviteCode: (e: React.MouseEvent, inviteCode: string) => void;
 };
 
-function InviteCodeButton({
+const InviteCodeButton = ({
   inviteCode,
   onCopy,
   size = 'default',
@@ -20,7 +19,7 @@ function InviteCodeButton({
   inviteCode: string;
   onCopy: (e: React.MouseEvent) => void;
   size?: 'default' | 'compact' | 'list';
-}) {
+}) => {
   const sizeClasses =
     size === 'compact'
       ? 'gap-1 px-2 py-1 text-xs'
@@ -39,14 +38,14 @@ function InviteCodeButton({
       <Copy className={size === 'compact' ? 'h-3 w-3 text-primary' : 'h-4 w-4 text-primary'} />
     </div>
   );
-}
+};
 
-export function TeacherClassroomCard({
+export const TeacherClassroomCard = ({
   classroom,
   variant,
   onNavigate,
   onCopyInviteCode,
-}: TeacherClassroomCardProps) {
+}: TeacherClassroomCardProps) => {
   const { t } = useTranslation();
   const unavailable = t('classroomList.dateUnavailable');
   const enrollmentCount = classroom._count?.enrollments || 0;
@@ -104,7 +103,11 @@ export function TeacherClassroomCard({
               <Calendar className="h-3 w-3" />
               <span>{formatClassroomDate(classroom.start_date, { unavailable })}</span>
             </div>
-            <InviteCodeButton inviteCode={classroom.invite_code} onCopy={copyHandler} size="compact" />
+            <InviteCodeButton
+              inviteCode={classroom.invite_code}
+              onCopy={copyHandler}
+              size="compact"
+            />
           </div>
         </CardContent>
       </Card>
@@ -130,8 +133,11 @@ export function TeacherClassroomCard({
                 </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {formatClassroomDate(classroom.start_date, { format: 'long', unavailable })} -{' '}
-                  {formatClassroomDate(classroom.end_date, { format: 'long', unavailable })}
+                  {formatClassroomDate(classroom.start_date, {
+                    format: 'long',
+                    unavailable,
+                  })}{' '}
+                  - {formatClassroomDate(classroom.end_date, { format: 'long', unavailable })}
                 </span>
               </div>
             </div>
@@ -182,4 +188,4 @@ export function TeacherClassroomCard({
       </CardContent>
     </Card>
   );
-}
+};

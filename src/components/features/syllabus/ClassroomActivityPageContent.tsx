@@ -1,7 +1,7 @@
 import { Loader2, Lock } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { ActivityLinkState } from '@/types/navigation';
 import type { SectionResource } from '@/types/syllabus';
 import { ClassroomActivityContent } from '@/components/features/syllabus/ClassroomActivityContent';

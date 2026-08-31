@@ -39,7 +39,6 @@ type SyllabusSectionInsert = Database['public']['Tables']['syllabus_sections']['
 type SyllabusSectionUpdate = Database['public']['Tables']['syllabus_sections']['Update'];
 type GradingCategoryRow = Database['public']['Tables']['grading_categories']['Row'];
 type GradingCategoryInsert = Database['public']['Tables']['grading_categories']['Insert'];
-type GradingCategoryUpdate = Database['public']['Tables']['grading_categories']['Update'];
 type ActivityListRow = Database['public']['Tables']['activity_list']['Row'];
 
 type SyllabusSectionWithActivities = SyllabusSectionRow & {

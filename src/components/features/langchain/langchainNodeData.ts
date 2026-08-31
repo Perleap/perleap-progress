@@ -274,7 +274,8 @@ export function hasPathFromStartToOutput(nodes: Node[], edges: Edge[]): boolean 
     const seen = new Set<string>([start]);
     const q = [start];
     while (q.length) {
-      const u = q.pop()!;
+      const u = q.pop();
+      if (u === undefined) break;
       if (outputIds.has(u)) return true;
       for (const v of adj.get(u) ?? []) {
         if (!seen.has(v)) {

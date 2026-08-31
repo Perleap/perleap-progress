@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import type { AuthUserProfile } from './types';
 import type { User } from '@supabase/supabase-js';
 import { USER_ROLES } from '@/config/constants';
 import { profileKeys } from '@/hooks/queries';
 import { getTeacherProfile, getStudentProfile } from '@/services/profileService';
-import type { AuthUserProfile } from './types';
 
 export function useAuthProfileQuery(user: User | null) {
   const {
