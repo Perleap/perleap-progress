@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
 import { legacySingleOptionId } from '@/lib/testMcq';
 
 export const testKeys = {
@@ -17,13 +17,14 @@ export type StudentTestQuestion = Pick<
 
 export function useTestQuestions(assignmentId: string | undefined) {
   return useQuery({
-    queryKey: testKeys.questions(assignmentId!, false),
+    queryKey: testKeys.questions(assignmentId ?? '', false),
     enabled: !!assignmentId,
     queryFn: async () => {
+      if (!assignmentId) throw new Error('assignmentId required');
       const { data, error } = await supabase
         .from('test_questions')
         .select('*')
-        .eq('assignment_id', assignmentId!)
+        .eq('assignment_id', assignmentId)
         .order('order_index', { ascending: true });
 
       if (error) throw error;
@@ -34,15 +35,14 @@ export function useTestQuestions(assignmentId: string | undefined) {
 
 export function useStudentTestQuestions(assignmentId: string | undefined) {
   return useQuery({
-    queryKey: testKeys.questions(assignmentId!, true),
+    queryKey: testKeys.questions(assignmentId ?? '', true),
     enabled: !!assignmentId,
     queryFn: async () => {
+      if (!assignmentId) throw new Error('assignmentId required');
       const { data, error } = await supabase
         .from('test_questions')
-        .select(
-          'id, question_text, question_type, options, order_index, allow_multiple_selections',
-        )
-        .eq('assignment_id', assignmentId!)
+        .select('id, question_text, question_type, options, order_index, allow_multiple_selections')
+        .eq('assignment_id', assignmentId)
         .order('order_index', { ascending: true });
 
       if (error) throw error;
@@ -53,13 +53,14 @@ export function useStudentTestQuestions(assignmentId: string | undefined) {
 
 export function useTestResponses(submissionId: string | undefined) {
   return useQuery({
-    queryKey: testKeys.responses(submissionId!),
+    queryKey: testKeys.responses(submissionId ?? ''),
     enabled: !!submissionId,
     queryFn: async () => {
+      if (!submissionId) throw new Error('submissionId required');
       const { data, error } = await supabase
         .from('test_responses')
         .select('*')
-        .eq('submission_id', submissionId!);
+        .eq('submission_id', submissionId);
 
       if (error) throw error;
       return data;

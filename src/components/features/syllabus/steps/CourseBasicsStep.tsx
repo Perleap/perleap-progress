@@ -1,23 +1,15 @@
+import { X, Plus, Trash2, BookOpen, Target, FileText } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { WizardData } from '../CreateClassroomWizard';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import {
-  X,
-  Plus,
-  Trash2,
-  BookOpen,
-  Target,
-  FileText,
-} from 'lucide-react';
-import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
-import type { WizardData } from '../CreateClassroomWizard';
-import type { Domain } from '@/types/models';
 
 interface CourseBasicsStepProps {
   data: WizardData;
@@ -31,7 +23,8 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
 
   // Domain helpers
   const addDomain = () => onChange({ domains: [...data.domains, { name: '', components: [''] }] });
-  const removeDomain = (index: number) => onChange({ domains: data.domains.filter((_, i) => i !== index) });
+  const removeDomain = (index: number) =>
+    onChange({ domains: data.domains.filter((_, i) => i !== index) });
   const updateDomainName = (index: number, name: string) => {
     const d = [...data.domains];
     d[index] = { ...d[index], name };
@@ -98,7 +91,9 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
     <div className="space-y-8">
       {/* Basic Info */}
       <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-        <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
           <BookOpen className="h-5 w-5" />
           <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('createClassroom.courseBasics', 'Course Basics')}
@@ -106,8 +101,12 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="courseTitle" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
-            {t('createClassroom.courseTitle', 'Course Title')} <span className="text-destructive">*</span>
+          <Label
+            htmlFor="courseTitle"
+            className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+          >
+            {t('createClassroom.courseTitle', 'Course Title')}{' '}
+            <span className="text-destructive">*</span>
           </Label>
           <Input
             id="courseTitle"
@@ -115,23 +114,40 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
             onChange={(e) => onChange({ courseTitle: e.target.value })}
             required
             className="rounded-xl h-11 focus-visible:ring-primary"
-            placeholder={t('createClassroom.courseTitlePlaceholder', 'e.g. Introduction to Biology')}
+            placeholder={t(
+              'createClassroom.courseTitlePlaceholder',
+              'e.g. Introduction to Biology'
+            )}
             autoDirection
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="startDate"
+              className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('createClassroom.startDate', 'Start Date')}
             </Label>
-            <DatePicker value={data.startDate} onChange={(v) => onChange({ startDate: v })} placeholder={t('createClassroom.startDate', 'Start Date')} />
+            <DatePicker
+              value={data.startDate}
+              onChange={(v) => onChange({ startDate: v })}
+              placeholder={t('createClassroom.startDate', 'Start Date')}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+            <Label
+              htmlFor="endDate"
+              className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('createClassroom.endDate', 'End Date')}
             </Label>
-            <DatePicker value={data.endDate} onChange={(v) => onChange({ endDate: v })} placeholder={t('createClassroom.endDate', 'End Date')} />
+            <DatePicker
+              value={data.endDate}
+              onChange={(v) => onChange({ endDate: v })}
+              placeholder={t('createClassroom.endDate', 'End Date')}
+            />
           </div>
         </div>
 
@@ -147,7 +163,7 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
             id="courseDescription"
             placeholder={t(
               'createClassroom.courseDescriptionPlaceholder',
-              'Describe what students will learn, how the course runs, and what to expect…',
+              'Describe what students will learn, how the course runs, and what to expect…'
             )}
             value={data.courseDescription}
             onChange={(v) => onChange({ courseDescription: v })}
@@ -158,52 +174,108 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
             isRewriting={rephrasingCourseDescription}
           />
         </div>
-
       </div>
 
       {/* Subject Areas */}
       <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
         <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div
+            className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
             <Target className="h-5 w-5" />
-            <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.subjectAreas', 'Subject Areas')}</h3>
+            <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('createClassroom.subjectAreas', 'Subject Areas')}
+            </h3>
           </div>
-          <Button type="button" variant="outline" onClick={addDomain} className="rounded-full border-border text-foreground hover:bg-muted" size="sm">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addDomain}
+            className="rounded-full border-border text-foreground hover:bg-muted"
+            size="sm"
+          >
             <Plus className="h-4 w-4 me-1" /> {t('createClassroom.addArea', 'Add Area')}
           </Button>
         </div>
         <p className={`text-sm text-subtle mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-          {t('createClassroom.subjectAreasHelper', 'Define the subject areas and skills for this course.')}
+          {t(
+            'createClassroom.subjectAreasHelper',
+            'Define the subject areas and skills for this course.'
+          )}
         </p>
         {data.domains.length === 0 && (
           <div className="p-8 border-2 border-dashed border-border rounded-xl bg-muted/10">
-            <p className={`text-subtle text-sm ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addAreaPrompt', 'Click "Add Area" to add a subject area')}</p>
+            <p className={`text-subtle text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t('createClassroom.addAreaPrompt', 'Click "Add Area" to add a subject area')}
+            </p>
           </div>
         )}
         <div className="grid gap-4">
           {data.domains.map((domain, di) => (
-            <div key={di} className="space-y-4 p-5 border border-border rounded-xl bg-muted/5 shadow-sm">
+            <div
+              key={di}
+              className="space-y-4 p-5 border border-border rounded-xl bg-muted/5 shadow-sm"
+            >
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">{di + 1}</div>
-                <Input placeholder={t('createClassroom.subjectAreaPlaceholder', 'Subject area name')} value={domain.name} onChange={(e) => updateDomainName(di, e.target.value)} className="flex-1 rounded-xl h-10" autoDirection />
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeDomain(di)} className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                  {di + 1}
+                </div>
+                <Input
+                  placeholder={t('createClassroom.subjectAreaPlaceholder', 'Subject area name')}
+                  value={domain.name}
+                  onChange={(e) => updateDomainName(di, e.target.value)}
+                  className="flex-1 rounded-xl h-10"
+                  autoDirection
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeDomain(di)}
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
               <div className="ps-11 space-y-3">
-                <Label className={`text-xs font-bold text-primary uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.skills', 'Skills')}</Label>
+                <Label
+                  className={`text-xs font-bold text-primary uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}
+                >
+                  {t('createClassroom.skills', 'Skills')}
+                </Label>
                 <div className="grid gap-2">
                   {domain.components.map((component, ci) => (
                     <div key={ci} className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary/30" />
-                      <Input placeholder={t('createClassroom.skillPlaceholder', { number: ci + 1, defaultValue: `Skill ${ci + 1}` })} value={component} onChange={(e) => updateComponent(di, ci, e.target.value)} className="flex-1 rounded-lg h-9 text-sm" autoDirection />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeComponent(di, ci)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                      <Input
+                        placeholder={t('createClassroom.skillPlaceholder', {
+                          number: ci + 1,
+                          defaultValue: `Skill ${ci + 1}`,
+                        })}
+                        value={component}
+                        onChange={(e) => updateComponent(di, ci, e.target.value)}
+                        className="flex-1 rounded-lg h-9 text-sm"
+                        autoDirection
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeComponent(di, ci)}
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => addComponent(di)} className="text-primary hover:text-primary/80 hover:bg-primary/5 text-xs font-semibold">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addComponent(di)}
+                  className="text-primary hover:text-primary/80 hover:bg-primary/5 text-xs font-semibold"
+                >
                   <Plus className="h-3 w-3 me-1" /> {t('createClassroom.addSkill', 'Add Skill')}
                 </Button>
               </div>
@@ -222,26 +294,62 @@ export const CourseBasicsStep = ({ data, onChange, isRTL }: CourseBasicsStepProp
               <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden />
               {t('createClassroom.learningOutcomes', 'Learning Outcomes')}
             </Label>
-            <Button type="button" variant="ghost" size="sm" onClick={addOutcome} className="text-primary hover:bg-primary/5 h-8 text-xs font-bold">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addOutcome}
+              className="text-primary hover:bg-primary/5 h-8 text-xs font-bold"
+            >
               <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add', 'Add')}
             </Button>
           </div>
           <div className="space-y-3">
             {data.learningOutcomes.map((outcome, index) => (
-              <Input key={index} placeholder={t('createClassroom.outcomePlaceholder', { number: index + 1, defaultValue: `Outcome ${index + 1}` })} value={outcome} onChange={(e) => handleOutcomeChange(index, e.target.value)} className="rounded-xl border-border bg-background focus-visible:ring-primary" autoDirection />
+              <Input
+                key={index}
+                placeholder={t('createClassroom.outcomePlaceholder', {
+                  number: index + 1,
+                  defaultValue: `Outcome ${index + 1}`,
+                })}
+                value={outcome}
+                onChange={(e) => handleOutcomeChange(index, e.target.value)}
+                className="rounded-xl border-border bg-background focus-visible:ring-primary"
+                autoDirection
+              />
             ))}
           </div>
         </div>
         <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Label className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.keyChallenges', 'Key Challenges')}</Label>
-            <Button type="button" variant="ghost" size="sm" onClick={addChallenge} className="text-primary hover:bg-primary/5 h-8 text-xs font-bold">
+            <Label
+              className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}
+            >
+              {t('createClassroom.keyChallenges', 'Key Challenges')}
+            </Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addChallenge}
+              className="text-primary hover:bg-primary/5 h-8 text-xs font-bold"
+            >
               <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add', 'Add')}
             </Button>
           </div>
           <div className="space-y-3">
             {data.keyChallenges.map((challenge, index) => (
-              <Input key={index} placeholder={t('createClassroom.challengePlaceholder', { number: index + 1, defaultValue: `Challenge ${index + 1}` })} value={challenge} onChange={(e) => handleChallengeChange(index, e.target.value)} className="rounded-xl border-border bg-background focus-visible:ring-primary" autoDirection />
+              <Input
+                key={index}
+                placeholder={t('createClassroom.challengePlaceholder', {
+                  number: index + 1,
+                  defaultValue: `Challenge ${index + 1}`,
+                })}
+                value={challenge}
+                onChange={(e) => handleChallengeChange(index, e.target.value)}
+                className="rounded-xl border-border bg-background focus-visible:ring-primary"
+                autoDirection
+              />
             ))}
           </div>
         </div>

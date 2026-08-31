@@ -1,4 +1,7 @@
-import { fail } from '../helpers/shared.mjs';
+import {
+  fail,
+  navigationWaitUntil,
+} from '../helpers/shared.mjs';
 import { dismissAssignmentIntro } from './complete-chat-assignment.mjs';
 
 export function requireSandboxFixture(fixture) {
@@ -11,7 +14,7 @@ export function requireSandboxFixture(fixture) {
 export async function openStudentSandboxClassroom(page, env, fixture) {
   const f = requireSandboxFixture(fixture);
   await page.goto(`${env.VERIFY_BASE_URL}/student/classroom/${f.classroomId}`, {
-    waitUntil: 'networkidle',
+    waitUntil: navigationWaitUntil(env),
   });
   if (!page.url().includes('/student/classroom/')) {
     fail(`Expected student classroom URL, got ${page.url()}`);
@@ -21,7 +24,7 @@ export async function openStudentSandboxClassroom(page, env, fixture) {
 export async function openTeacherSandboxClassroom(page, env, fixture) {
   const f = requireSandboxFixture(fixture);
   await page.goto(`${env.VERIFY_BASE_URL}/teacher/classroom/${f.classroomId}`, {
-    waitUntil: 'networkidle',
+    waitUntil: navigationWaitUntil(env),
   });
   if (!page.url().includes('/teacher/classroom/')) {
     fail(`Expected teacher classroom URL, got ${page.url()}`);
@@ -45,7 +48,7 @@ export async function ensureFreshAttemptIfNeeded(page) {
 
 export async function openStudentActivity(page, env, classroomId, activityResourceId) {
   await page.goto(`${env.VERIFY_BASE_URL}/student/classroom/${classroomId}/activity/${activityResourceId}`, {
-    waitUntil: 'networkidle',
+    waitUntil: navigationWaitUntil(env),
   });
   if (!page.url().includes('/activity/')) {
     fail(`Expected student activity URL, got ${page.url()}`);
@@ -54,7 +57,7 @@ export async function openStudentActivity(page, env, classroomId, activityResour
 
 export async function openStudentAssignment(page, env, assignmentId, { freshAttempt = false } = {}) {
   await page.goto(`${env.VERIFY_BASE_URL}/student/assignment/${assignmentId}`, {
-    waitUntil: 'networkidle',
+    waitUntil: navigationWaitUntil(env),
   });
   await dismissAssignmentIntro(page);
   if (freshAttempt) {

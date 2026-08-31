@@ -1,5 +1,5 @@
 import { Info, BookOpen, Users, FileText, BarChart3, Map } from 'lucide-react';
-import React from 'react';
+import type React from 'react';
 
 export interface ClassroomSection {
   id: string;

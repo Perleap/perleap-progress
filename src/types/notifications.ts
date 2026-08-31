@@ -35,11 +35,10 @@ export interface Notification {
 
 export interface NotificationWithProfile extends Notification {
   actor_profile?: {
-    full_name: string;
+    full_name: string | null;
     avatar_url: string | null;
   } | null;
 }
-
 
 export interface NotificationMetadata {
   classroom_id?: string;

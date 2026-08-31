@@ -1,12 +1,12 @@
-import { Outlet, Navigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Outlet, Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layouts';
+import { USER_ROLES } from '@/config/constants';
 import { useAuth } from '@/contexts/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { USER_ROLES } from '@/config/constants';
 
-export function AdminMonitoringLayout() {
+export const AdminMonitoringLayout = () => {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
 
@@ -14,7 +14,8 @@ export function AdminMonitoringLayout() {
     queryKey: ['is_app_admin_db', user?.id],
     enabled: !loading && !!user?.id && user.user_metadata?.role === USER_ROLES.ADMIN,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_app_admin', { _user_id: user!.id });
+      if (!user?.id) throw new Error('user id required');
+      const { data, error } = await supabase.rpc('is_app_admin', { _user_id: user.id });
       if (error) throw error;
       return data === true;
     },
@@ -31,7 +32,9 @@ export function AdminMonitoringLayout() {
   if (loading || (user?.user_metadata?.role === USER_ROLES.ADMIN && dbAdminQuery.isLoading)) {
     return (
       <DashboardLayout>
-        <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">{t('common.loading')}</div>
+        <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+          {t('common.loading')}
+        </div>
       </DashboardLayout>
     );
   }
@@ -43,4 +46,4 @@ export function AdminMonitoringLayout() {
       </div>
     </DashboardLayout>
   );
-}
+};

@@ -9,6 +9,7 @@ export * from './ClassAverageChart';
 export * from './ClassPerformanceSummary';
 export * from './StudentProfilesList';
 export * from './VideoEngagementPanel';
+export * from './ClassroomAnalytics';
 
 // Lesson brief report
 export * from './LessonBriefContent';

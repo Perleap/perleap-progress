@@ -1,16 +1,16 @@
+import { Download, Loader2, Video } from 'lucide-react';
 import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, Loader2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeacherEvaluationForm } from './TeacherEvaluationForm';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthenticatedBlobUrl } from '@/hooks/useAuthenticatedBlobUrl';
-import { SUBMISSION_FILES_BUCKET } from '@/utils/storageUrls';
 import {
   downloadSubmissionFile,
   extractSubmissionStoragePath,
 } from '@/services/submissionFileService';
+import { SUBMISSION_FILES_BUCKET } from '@/utils/storageUrls';
 
 function extensionFromVideo(blobType: string, storedPath: string): string {
   if (blobType.includes('webm')) return 'webm';
@@ -31,7 +31,7 @@ interface PresentationSubmissionViewProps {
   headerAction?: ReactNode;
 }
 
-export function PresentationSubmissionView({
+export const PresentationSubmissionView = ({
   fileUrl,
   submissionId,
   studentId,
@@ -39,14 +39,14 @@ export function PresentationSubmissionView({
   hasFeedback,
   onEvaluationComplete,
   headerAction,
-}: PresentationSubmissionViewProps) {
+}: PresentationSubmissionViewProps) => {
   const { t } = useTranslation();
   const [downloading, setDownloading] = useState(false);
-  const { blobUrl, isLoading, error: blobError } = useAuthenticatedBlobUrl(
-    SUBMISSION_FILES_BUCKET,
-    fileUrl,
-    Boolean(fileUrl),
-  );
+  const {
+    blobUrl,
+    isLoading,
+    error: _blobError,
+  } = useAuthenticatedBlobUrl(SUBMISSION_FILES_BUCKET, fileUrl, Boolean(fileUrl));
 
   const handleDownloadVideo = useCallback(async () => {
     if (!fileUrl) return;
@@ -77,7 +77,9 @@ export function PresentationSubmissionView({
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="text-base">{t('submissionDetail.presentationView.title')}</CardTitle>
+          <CardTitle className="text-base">
+            {t('submissionDetail.presentationView.title')}
+          </CardTitle>
           {headerAction}
         </CardHeader>
         <CardContent>
@@ -89,12 +91,7 @@ export function PresentationSubmissionView({
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : blobUrl ? (
-                  <video
-                    src={blobUrl}
-                    controls
-                    className="w-full h-full"
-                    preload="metadata"
-                  />
+                  <video src={blobUrl} controls className="w-full h-full" preload="metadata" />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                     {t('submissionDetail.presentationView.noVideo')}
@@ -138,4 +135,4 @@ export function PresentationSubmissionView({
       />
     </div>
   );
-}
+};

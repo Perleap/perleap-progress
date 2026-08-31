@@ -2,20 +2,23 @@
  * React Query hooks for module flow steps and student progress
  */
 
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  type QueryClient,
-} from '@tanstack/react-query';
+import { syllabusKeys } from './useSyllabusQueries';
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
+import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 import {
   computeDefaultModuleFlow,
   getOrderedActivityCenterFlowSteps,
   studentModuleFlowStepOptions,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
+import {
+  STUDENT_TIMELINE_CACHE_GC_MS,
+  STUDENT_TIMELINE_CACHE_STALE_MS,
+} from '@/lib/studentTimelineCache';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
+import { isUuidLike } from '@/lib/utils';
 import {
   getModuleFlowSteps,
   getModuleFlowStepsBySections,
@@ -26,17 +29,12 @@ import {
   getAssignmentFlowProgressMaps,
   type FlowStepInput,
 } from '@/services/moduleFlowService';
-import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
 import { getAssignmentSubmittedOrCompletedMap } from '@/services/syllabusService';
-import { STUDENT_TIMELINE_CACHE_GC_MS, STUDENT_TIMELINE_CACHE_STALE_MS } from '@/lib/studentTimelineCache';
-import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
-import { isUuidLike } from '@/lib/utils';
-import { syllabusKeys } from './useSyllabusQueries';
 
 /** Client-only rows so the module-flow query matches the save payload before refetch (instant UI). */
 function optimisticModuleFlowStepsFromInputs(
   sectionId: string,
-  steps: FlowStepInput[],
+  steps: FlowStepInput[]
 ): ModuleFlowStep[] {
   const now = new Date().toISOString();
   return steps.map((s) => ({
@@ -44,8 +42,8 @@ function optimisticModuleFlowStepsFromInputs(
     section_id: sectionId,
     order_index: s.order_index,
     step_kind: s.step_kind,
-    activity_list_id: s.step_kind === 'resource' ? s.activity_list_id ?? null : null,
-    assignment_id: s.step_kind === 'assignment' ? s.assignment_id ?? null : null,
+    activity_list_id: s.step_kind === 'resource' ? (s.activity_list_id ?? null) : null,
+    assignment_id: s.step_kind === 'assignment' ? (s.assignment_id ?? null) : null,
     created_at: now,
     updated_at: now,
   }));
@@ -54,7 +52,7 @@ function optimisticModuleFlowStepsFromInputs(
 /** Invalidate only queries that include this section (not `module-flow` root, syllabus, or resources). */
 export function invalidateModuleFlowQueriesForSection(
   queryClient: QueryClient,
-  sectionId: string,
+  sectionId: string
 ): Promise<void> {
   return queryClient.invalidateQueries({
     predicate: (q) => {
@@ -83,7 +81,11 @@ export const studentFlowProgressKeys = {
 export const assignmentSubmittedFlagsKeys = {
   all: ['assignment-submitted-flags'] as const,
   byStudentAssignments: (studentId: string, assignmentIds: string[]) =>
-    [...assignmentSubmittedFlagsKeys.all, studentId, assignmentIds.slice().sort().join(',')] as const,
+    [
+      ...assignmentSubmittedFlagsKeys.all,
+      studentId,
+      assignmentIds.slice().sort().join(','),
+    ] as const,
 };
 
 /** Per-assignment completion for curriculum module flow (matches hasCompletedAssignmentSubmission). */
@@ -99,20 +101,26 @@ export const assignmentFlowCompleteKeys = {
 export function useAssignmentFlowProgressMaps(
   assignmentIds: string[],
   studentId: string | undefined,
-  enabled: boolean,
+  enabled: boolean
 ) {
   const sortedIdsJoin = useMemo(
     () => [...new Set(assignmentIds.filter(Boolean))].sort().join(','),
-    [assignmentIds],
+    [assignmentIds]
   );
 
   return useQuery({
     queryKey: assignmentFlowCompleteKeys.bulkByStudentAssignments(studentId || '', sortedIdsJoin),
     queryFn: async () => {
       if (!studentId || sortedIdsJoin === '') {
-        return { completedMap: {} as Record<string, boolean>, hasAnyRowMap: {} as Record<string, boolean> };
+        return {
+          completedMap: {} as Record<string, boolean>,
+          hasAnyRowMap: {} as Record<string, boolean>,
+        };
       }
-      const { data, error } = await getAssignmentFlowProgressMaps(sortedIdsJoin.split(','), studentId);
+      const { data, error } = await getAssignmentFlowProgressMaps(
+        sortedIdsJoin.split(','),
+        studentId
+      );
       if (error) throw error;
       return data;
     },
@@ -126,7 +134,7 @@ export function useAssignmentFlowProgressMaps(
 export function useAssignmentCompletedMap(
   assignmentIds: string[],
   studentId: string | undefined,
-  enabled: boolean,
+  enabled: boolean
 ) {
   const q = useAssignmentFlowProgressMaps(assignmentIds, studentId, enabled);
   return {
@@ -137,7 +145,7 @@ export function useAssignmentCompletedMap(
 
 export const useAssignmentSubmittedOrCompletedMap = (
   assignmentIds: string[],
-  studentId: string | undefined,
+  studentId: string | undefined
 ) => {
   return useQuery({
     queryKey: assignmentSubmittedFlagsKeys.byStudentAssignments(studentId || '', assignmentIds),
@@ -163,7 +171,7 @@ export function prefetchModuleFlowStepsBulk(
   queryClient: QueryClient,
   sectionIds: string[],
   staleTimeMs = MODULE_FLOW_BULK_STALE_MS,
-  gcTimeMs: number = STUDENT_TIMELINE_CACHE_GC_MS,
+  gcTimeMs: number = STUDENT_TIMELINE_CACHE_GC_MS
 ) {
   const persistedIds = persistedSectionIds(sectionIds);
   if (persistedIds.length === 0) return Promise.resolve();
@@ -243,10 +251,12 @@ export const useReplaceModuleFlow = () => {
     },
     onMutate: async ({ sectionId, steps }) => {
       await queryClient.cancelQueries({ queryKey: moduleFlowKeys.bySection(sectionId) });
-      const previous = queryClient.getQueryData<ModuleFlowStep[]>(moduleFlowKeys.bySection(sectionId));
+      const previous = queryClient.getQueryData<ModuleFlowStep[]>(
+        moduleFlowKeys.bySection(sectionId)
+      );
       queryClient.setQueryData(
         moduleFlowKeys.bySection(sectionId),
-        optimisticModuleFlowStepsFromInputs(sectionId, steps),
+        optimisticModuleFlowStepsFromInputs(sectionId, steps)
       );
       return { previous };
     },
@@ -274,7 +284,7 @@ export function useStudentCurriculumFlowContext(options: {
 
   const studentFlowOpts = useMemo(
     () => studentModuleFlowStepOptions(assignments as Array<{ id: string; type?: string | null }>),
-    [assignments],
+    [assignments]
   );
 
   const allStepIds = useMemo(() => {
@@ -284,16 +294,14 @@ export function useStudentCurriculumFlowContext(options: {
       const persisted = flowBulk[sid] ?? [];
       const resources = resourceMap[sid] ?? [];
       getOrderedActivityCenterFlowSteps(persisted, resources, studentFlowOpts).forEach((s) =>
-        ids.push(s.id),
+        ids.push(s.id)
       );
     });
     return ids;
   }, [enabled, flowBulk, sectionIds, resourceMap, studentFlowOpts]);
 
-  const { data: progressByStep = {}, isLoading: isLoadingStepProgress } = useStudentModuleFlowProgressMap(
-    enabled ? userId : undefined,
-    allStepIds,
-  );
+  const { data: progressByStep = {}, isLoading: isLoadingStepProgress } =
+    useStudentModuleFlowProgressMap(enabled ? userId : undefined, allStepIds);
 
   const assignmentIdsInFlow = useMemo(() => {
     if (!enabled) return [];
@@ -314,14 +322,17 @@ export function useStudentCurriculumFlowContext(options: {
   const { data: flowMaps, isLoading: isLoadingAssignmentDone } = useAssignmentFlowProgressMaps(
     assignmentIdsInFlow,
     userId,
-    enabled,
+    enabled
   );
-  const assignmentDoneMap = flowMaps?.completedMap ?? {};
-  const assignmentHasSubmissionRowMap = flowMaps?.hasAnyRowMap ?? {};
+  const assignmentDoneMap = useMemo(() => flowMaps?.completedMap ?? {}, [flowMaps?.completedMap]);
+  const assignmentHasSubmissionRowMap = useMemo(
+    () => flowMaps?.hasAnyRowMap ?? {},
+    [flowMaps?.hasAnyRowMap]
+  );
 
   const flowCtx = useMemo(
     () => ({ progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap }),
-    [progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap],
+    [progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap]
   );
 
   return { flowCtx, isLoadingProgress: isLoadingStepProgress || isLoadingAssignmentDone };
@@ -329,7 +340,7 @@ export function useStudentCurriculumFlowContext(options: {
 
 export const useStudentModuleFlowProgressMap = (
   studentId: string | undefined,
-  stepIds: string[],
+  stepIds: string[]
 ) => {
   return useQuery({
     queryKey: studentFlowProgressKeys.byStudentSteps(studentId || '', stepIds),
@@ -357,8 +368,8 @@ export const useMarkFlowStepComplete = () => {
     mutationFn: async ({
       studentId,
       moduleFlowStepId,
-      sectionId,
-      classroomId,
+      sectionId: _sectionId,
+      classroomId: _classroomId,
     }: {
       studentId: string;
       moduleFlowStepId: string;
@@ -368,7 +379,7 @@ export const useMarkFlowStepComplete = () => {
       const { data, error } = await upsertStudentModuleFlowProgress(
         studentId,
         moduleFlowStepId,
-        'completed',
+        'completed'
       );
       if (error) throw error;
       return data;
@@ -386,16 +397,13 @@ export const useMarkFlowStepComplete = () => {
 
 export const useAssignmentFlowCompletion = (
   assignmentId: string | undefined,
-  studentId: string | undefined,
+  studentId: string | undefined
 ) => {
   return useQuery({
     queryKey: assignmentFlowCompleteKeys.byAssignmentStudent(assignmentId || '', studentId || ''),
     queryFn: async () => {
       if (!assignmentId || !studentId) return false;
-      const { completed, error } = await hasCompletedAssignmentSubmission(
-        assignmentId,
-        studentId,
-      );
+      const { completed, error } = await hasCompletedAssignmentSubmission(assignmentId, studentId);
       if (error) throw error;
       return completed;
     },

@@ -1,17 +1,19 @@
-import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
-import type { EvaluationRefreshActiveJob } from '@/contexts/EvaluationRefreshProcessingContext';
-import { useEvaluationRefreshProcessing } from '@/contexts/EvaluationRefreshProcessingContext';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import {
+  useEvaluationRefreshProcessing,
+  type EvaluationRefreshActiveJob,
+} from '@/contexts/EvaluationRefreshProcessingContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
 
 type EvaluationRefreshProgressBannerProps = {
   job: EvaluationRefreshActiveJob;
 };
 
-export function EvaluationRefreshProgressBanner({ job }: EvaluationRefreshProgressBannerProps) {
+export const EvaluationRefreshProgressBanner = ({ job }: EvaluationRefreshProgressBannerProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const { cancelRefresh } = useEvaluationRefreshProcessing();
@@ -21,7 +23,7 @@ export function EvaluationRefreshProgressBanner({ job }: EvaluationRefreshProgre
     <div
       className={cn(
         'fixed bottom-4 z-50 w-[min(100%,28rem)] rounded-xl border border-border bg-background p-4 shadow-lg',
-        isRTL ? 'left-4' : 'right-4',
+        isRTL ? 'left-4' : 'right-4'
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
       role="status"
@@ -57,7 +59,9 @@ export function EvaluationRefreshProgressBanner({ job }: EvaluationRefreshProgre
               {job.progressLabel}
             </ProgressLabel>
             {job.etaLabel ? (
-              <p className="truncate text-xs leading-relaxed text-muted-foreground">{job.etaLabel}</p>
+              <p className="truncate text-xs leading-relaxed text-muted-foreground">
+                {job.etaLabel}
+              </p>
             ) : null}
           </div>
           <ProgressValue className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
@@ -70,4 +74,4 @@ export function EvaluationRefreshProgressBanner({ job }: EvaluationRefreshProgre
       </p>
     </div>
   );
-}
+};

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
+import type { TranscriptionProgressUpdate } from '@/services/liveSessionService';
 import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import type { TranscriptionProgressUpdate } from '@/services/liveSessionService';
 
 interface LiveSessionCreateProgressProps {
   percent: number;
@@ -10,12 +10,12 @@ interface LiveSessionCreateProgressProps {
   className?: string;
 }
 
-export function LiveSessionCreateProgress({
+export const LiveSessionCreateProgress = ({
   percent,
   label,
   transcriptionPhase,
   className,
-}: LiveSessionCreateProgressProps) {
+}: LiveSessionCreateProgressProps) => {
   const { t } = useTranslation();
   const clamped = Math.min(100, Math.max(0, Math.round(percent)));
 
@@ -30,10 +30,7 @@ export function LiveSessionCreateProgress({
 
   return (
     <div
-      className={cn(
-        'min-w-0 rounded-xl border border-border/80 bg-card p-4 shadow-sm',
-        className,
-      )}
+      className={cn('min-w-0 rounded-xl border border-border/80 bg-card p-4 shadow-sm', className)}
       role="status"
       aria-live="polite"
     >
@@ -59,4 +56,4 @@ export function LiveSessionCreateProgress({
       </Progress>
     </div>
   );
-}
+};

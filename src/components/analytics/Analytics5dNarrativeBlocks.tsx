@@ -1,14 +1,17 @@
-import type { ReactNode } from 'react';
-import { FiveDChart } from '@/components/FiveDChart';
-import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
-import { useAnalytics5dNarrative, type Analytics5dNarrativeContext } from '@/hooks/queries/useAnalytics5dNarrative';
+import { useTranslation } from 'react-i18next';
 import type { Compare5dNarrativeContext } from '@/lib/analyticsCompare5d/types';
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
+import type { ReactNode } from 'react';
+import { FiveDChart } from '@/components/FiveDChart';
+import {
+  useAnalytics5dNarrative,
+  type Analytics5dNarrativeContext,
+} from '@/hooks/queries/useAnalytics5dNarrative';
 
 type Lang = 'en' | 'he';
 
-function NarrativeFraming({
+const NarrativeFraming = ({
   isLoading,
   isError,
   scopeSummary,
@@ -26,7 +29,7 @@ function NarrativeFraming({
    */
   evidenceSourceCount?: number;
   children: ReactNode;
-}) {
+}) => {
   const { t } = useTranslation();
   const showEvidenceStatus = !isLoading && !isError && evidenceSourceCount != null;
   return (
@@ -47,26 +50,22 @@ function NarrativeFraming({
           {scopeSummary}
         </p>
       )}
-      {showEvidenceStatus && evidenceSourceCount! > 0 ? (
-        <p
-          className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}
-        >
-          {t('analytics.narrative.basedOnSources', { count: evidenceSourceCount! })}
+      {showEvidenceStatus && (evidenceSourceCount ?? 0) > 0 ? (
+        <p className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
+          {t('analytics.narrative.basedOnSources', { count: evidenceSourceCount ?? 0 })}
         </p>
       ) : null}
       {showEvidenceStatus && evidenceSourceCount === 0 ? (
-        <p
-          className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}
-        >
+        <p className={`text-xs text-muted-foreground/80 ${isRTL ? 'text-right' : 'text-left'}`}>
           {t('analytics.narrative.scoresOnlyHint')}
         </p>
       ) : null}
       <div className={isLoading ? 'opacity-60 pointer-events-none' : ''}>{children}</div>
     </div>
   );
-}
+};
 
-export function MainAnalytics5dNarrativeBlock({
+export const MainAnalytics5dNarrativeBlock = ({
   classroomId,
   classAverage,
   classAverageQed,
@@ -92,8 +91,9 @@ export function MainAnalytics5dNarrativeBlock({
   narrativeId: string;
   evidenceText?: string;
   evidenceSourceCount?: number;
-}) {
-  const context: Analytics5dNarrativeContext = selectedStudent === 'all' ? 'class_avg' : 'student_avg';
+}) => {
+  const context: Analytics5dNarrativeContext =
+    selectedStudent === 'all' ? 'class_avg' : 'student_avg';
   const { data, isLoading, isError } = useAnalytics5dNarrative(
     {
       classroomId,
@@ -105,7 +105,7 @@ export function MainAnalytics5dNarrativeBlock({
       evidenceText,
       evidenceSourceCount,
     },
-    { enabled: enabled && !!classroomId, narrativeId },
+    { enabled: enabled && !!classroomId, narrativeId }
   );
   return (
     <NarrativeFraming
@@ -122,9 +122,9 @@ export function MainAnalytics5dNarrativeBlock({
       />
     </NarrativeFraming>
   );
-}
+};
 
-export function CompareSide5dNarrativeBlock({
+export const CompareSide5dNarrativeBlock = ({
   classroomId,
   sideScores,
   sideQedMeasures,
@@ -154,7 +154,7 @@ export function CompareSide5dNarrativeBlock({
   evidenceText?: string;
   evidenceSourceCount?: number;
   context?: Compare5dNarrativeContext;
-}) {
+}) => {
   const { data, isLoading, isError } = useAnalytics5dNarrative(
     {
       classroomId,
@@ -168,7 +168,7 @@ export function CompareSide5dNarrativeBlock({
       evidenceText,
       evidenceSourceCount,
     },
-    { enabled: enabled && !!classroomId, narrativeId },
+    { enabled: enabled && !!classroomId, narrativeId }
   );
   return (
     <NarrativeFraming
@@ -188,9 +188,9 @@ export function CompareSide5dNarrativeBlock({
       />
     </NarrativeFraming>
   );
-}
+};
 
-export function StudentList5dNarrativeBlock({
+export const StudentList5dNarrativeBlock = ({
   classroomId,
   studentId,
   studentName,
@@ -216,7 +216,7 @@ export function StudentList5dNarrativeBlock({
   enabled: boolean;
   evidenceText?: string;
   evidenceSourceCount?: number;
-}) {
+}) => {
   const { data, isLoading, isError } = useAnalytics5dNarrative(
     {
       classroomId,
@@ -228,7 +228,7 @@ export function StudentList5dNarrativeBlock({
       evidenceText,
       evidenceSourceCount,
     },
-    { enabled: enabled && isOpen, narrativeId: `student-5d-${studentId}` },
+    { enabled: enabled && isOpen, narrativeId: `student-5d-${studentId}` }
   );
   return (
     <NarrativeFraming
@@ -238,7 +238,11 @@ export function StudentList5dNarrativeBlock({
       isRTL={isRTL}
       evidenceSourceCount={evidenceSourceCount ?? 0}
     >
-      <FiveDChart scores={scores} qedMeasures={qedMeasures} explanations={data?.explanations ?? null} />
+      <FiveDChart
+        scores={scores}
+        qedMeasures={qedMeasures}
+        explanations={data?.explanations ?? null}
+      />
     </NarrativeFraming>
   );
-}
+};

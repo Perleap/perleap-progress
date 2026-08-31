@@ -44,3 +44,5 @@ for (const file of walk(path.join(root, 'src'))) {
 const missing = [...keys].filter((k) => !hasKey(en, k)).sort();
 console.log(`Missing count: ${missing.length}`);
 for (const k of missing) console.log(k);
+
+if (missing.length > 0) process.exit(1);

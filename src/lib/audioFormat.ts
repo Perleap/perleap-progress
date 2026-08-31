@@ -31,13 +31,7 @@ async function inferExtensionFromMagic(blob: Blob): Promise<string> {
   if (buf.length >= 4 && buf[0] === 0x1a && buf[1] === 0x45) return 'webm';
   if (buf.length >= 4 && buf[0] === 0x4f && buf[1] === 0x67) return 'ogg';
   if (buf.length >= 4 && buf[0] === 0x52 && buf[1] === 0x49) return 'wav';
-  if (
-    buf.length >= 8 &&
-    buf[4] === 0x66 &&
-    buf[5] === 0x74 &&
-    buf[6] === 0x79 &&
-    buf[7] === 0x70
-  ) {
+  if (buf.length >= 8 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) {
     return 'm4a';
   }
   if (buf.length >= 3 && buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) return 'mp3';

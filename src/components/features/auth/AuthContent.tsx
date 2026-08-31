@@ -13,15 +13,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
 import { supabase } from '@/integrations/supabase/client';
 import { getAuthErrorMessage } from '@/utils/authErrors';
 import { savePendingRole } from '@/utils/roleRecovery';
 import { markSignupInProgress, clearAllSignupState } from '@/utils/sessionState';
-import { useNavigateBack } from '@/hooks/useNavigateBack';
 
-export function AuthContent() {
+export const AuthContent = () => {
   const { t } = useTranslation();
   const { isRTL, setLanguage, language = 'en' } = useLanguage();
   const location = useLocation();
@@ -51,7 +51,6 @@ export function AuthContent() {
   // redirect to the dedicated callback handler
   useEffect(() => {
     if (isOAuthCallback) {
-      console.log('🔄 Auth: OAuth callback detected, redirecting to /auth/callback');
       navigate(`/auth/callback${window.location.search}`, { replace: true });
     }
   }, [isOAuthCallback, navigate]);
@@ -74,17 +73,12 @@ export function AuthContent() {
       if (user && hasProfile === null) return;
 
       if (user) {
-        console.log('🔍 Auth: Checking authenticated user profile status...');
-
         const userRole = user.user_metadata?.role;
 
         // Check if user has completed their profile
         if (userRole === 'teacher' || userRole === 'student') {
           // Use cached profile check from AuthContext
           if (hasProfile === false) {
-            console.log(
-              `⚠️ Auth: User has ${userRole} role but no profile, redirecting to onboarding`
-            );
             navigate(`/onboarding/${userRole}`, { replace: true });
             return;
           }
@@ -106,14 +100,13 @@ export function AuthContent() {
           navigate('/student/dashboard');
         } else {
           // User is authenticated but has no role metadata
-          console.log('⚠️ Auth: User has no role, redirecting to role selection');
           navigate('/role-selection', { replace: true });
         }
       }
     };
 
     checkAuthAndRedirect();
-  }, [user?.id, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]); // Use user?.id to avoid refetch on user object reference change
+  }, [user, authLoading, navigate, hasProfile, isProfileLoading, isOAuthCallback]);
 
   // Set the active tab based on the route
   useEffect(() => {
@@ -213,8 +206,6 @@ export function AuthContent() {
 
       // Handle signup response
       if (data.user) {
-        console.log('✅ Signup successful, role metadata should be set:', role);
-
         // If we have a session, user is confirmed - proceed to onboarding
         if (data.session) {
           toast.success(t('auth.success.accountCreatedSuccess'));
@@ -414,10 +405,7 @@ export function AuthContent() {
             <span className="truncate">{t('auth.backToHome')}</span>
           </Button>
         </div>
-        <PerleapLogo
-          className="h-24 w-24 md:h-28 md:w-28 lg:h-32 lg:w-32"
-          title="Perleap"
-        />
+        <PerleapLogo className="h-24 w-24 md:h-28 md:w-28 lg:h-32 lg:w-32" title="Perleap" />
         <div className="flex min-w-0 items-center justify-end gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
@@ -731,4 +719,4 @@ export function AuthContent() {
       </div>
     </BreathingBackground>
   );
-}
+};

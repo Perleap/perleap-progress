@@ -14,7 +14,7 @@ export type StudentClassroomDetailView = {
 };
 
 export function normalizeClassroomDetail(
-  raw: Record<string, unknown> | null | undefined,
+  raw: Record<string, unknown> | null | undefined
 ): Classroom | null {
   if (!raw) return null;
   return {
@@ -22,16 +22,14 @@ export function normalizeClassroomDetail(
     learning_outcomes: Array.isArray(raw.learning_outcomes)
       ? raw.learning_outcomes.map(String)
       : null,
-    key_challenges: Array.isArray(raw.key_challenges)
-      ? raw.key_challenges.map(String)
-      : null,
+    key_challenges: Array.isArray(raw.key_challenges) ? raw.key_challenges.map(String) : null,
     domains: raw.domains as Domain[] | null,
     materials: raw.materials as CourseMaterial[] | null,
   } as unknown as Classroom;
 }
 
 export function normalizeStudentClassroomDetail(
-  raw: Record<string, unknown> | null | undefined,
+  raw: Record<string, unknown> | null | undefined
 ): StudentClassroomDetailView | null {
   if (!raw) return null;
   const base = normalizeClassroomDetail(raw);
@@ -48,8 +46,6 @@ export function normalizeStudentClassroomDetail(
     learning_outcomes: Array.isArray(raw.learning_outcomes)
       ? raw.learning_outcomes.map(String)
       : [],
-    key_challenges: Array.isArray(raw.key_challenges)
-      ? raw.key_challenges.map(String)
-      : [],
+    key_challenges: Array.isArray(raw.key_challenges) ? raw.key_challenges.map(String) : [],
   };
 }

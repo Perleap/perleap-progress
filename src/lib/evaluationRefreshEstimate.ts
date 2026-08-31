@@ -7,7 +7,7 @@ export type EligibleRefreshMeta = {
 };
 
 async function loadEligibleRefreshRows(
-  classroomId: string,
+  classroomId: string
 ): Promise<{ studentIds: Set<string>; submissionCount: number } | null> {
   const { supabase } = await import('@/integrations/supabase/client');
 
@@ -41,7 +41,7 @@ async function loadEligibleRefreshRows(
   const eligibleSubmissionIds = new Set(
     (feedbackRows ?? [])
       .filter((f) => f.evaluation_source !== 'teacher_manual')
-      .map((f) => f.submission_id),
+      .map((f) => f.submission_id)
   );
 
   const studentIds = new Set<string>();
@@ -79,14 +79,14 @@ export function estimateRefreshDurationSeconds(
   studentCount: number,
   submissionCount?: number,
   concurrency = DEFAULT_REFRESH_CONCURRENCY,
-  secondsPerSubmission = DEFAULT_SECONDS_PER_SUBMISSION,
+  secondsPerSubmission = DEFAULT_SECONDS_PER_SUBMISSION
 ): number {
   if (studentCount <= 0) return 0;
   const subs = submissionCount ?? studentCount;
   const avgSubsPerStudent = subs / studentCount;
   const secondsPerStudent = Math.max(
     secondsPerSubmission,
-    Math.ceil(avgSubsPerStudent) * secondsPerSubmission,
+    Math.ceil(avgSubsPerStudent) * secondsPerSubmission
   );
   return Math.ceil(studentCount / concurrency) * secondsPerStudent;
 }
@@ -95,13 +95,13 @@ export function estimateSecondsPerStudent(
   studentCount: number,
   submissionCount: number,
   concurrency = DEFAULT_REFRESH_CONCURRENCY,
-  secondsPerSubmission = DEFAULT_SECONDS_PER_SUBMISSION,
+  secondsPerSubmission = DEFAULT_SECONDS_PER_SUBMISSION
 ): number {
   if (studentCount <= 0) return secondsPerSubmission;
   const avgSubsPerStudent = submissionCount / studentCount;
   const secondsPerStudent = Math.max(
     secondsPerSubmission,
-    Math.ceil(avgSubsPerStudent) * secondsPerSubmission,
+    Math.ceil(avgSubsPerStudent) * secondsPerSubmission
   );
   return Math.ceil(secondsPerStudent / concurrency) * concurrency;
 }

@@ -1,10 +1,8 @@
+import Image from '@tiptap/extension-image';
+import Placeholder from '@tiptap/extension-placeholder';
+import Youtube from '@tiptap/extension-youtube';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
-import Youtube from '@tiptap/extension-youtube';
-import Placeholder from '@tiptap/extension-placeholder';
-import { cn } from '@/lib/utils';
-import { useCallback, useEffect } from 'react';
 import {
   Bold,
   Italic,
@@ -27,9 +25,11 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
+import { Toggle } from '@/components/ui/toggle';
+import { cn } from '@/lib/utils';
 
 interface RichTextEditorProps {
   content: string;
@@ -44,19 +44,18 @@ interface RichTextEditorProps {
   isRewriting?: boolean;
 }
 
-function ToolbarButton({
-  editor,
+const ToolbarButton = ({
   action,
   isActive,
   icon: Icon,
   title,
 }: {
-  editor: Editor;
+  editor?: Editor;
   action: () => void;
   isActive: boolean;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
-}) {
+}) => {
   return (
     <Toggle
       size="sm"
@@ -69,9 +68,9 @@ function ToolbarButton({
       <Icon className="h-4 w-4" />
     </Toggle>
   );
-}
+};
 
-function EditorToolbar({
+const EditorToolbar = ({
   editor,
   onRewrite,
   isRewriting,
@@ -81,7 +80,7 @@ function EditorToolbar({
   onRewrite?: () => void;
   isRewriting?: boolean;
   rewriteDisabled?: boolean;
-}) {
+}) => {
   const addImage = useCallback(() => {
     const url = window.prompt('Image URL');
     if (url) editor.chain().focus().setImage({ src: url }).run();
@@ -260,9 +259,9 @@ function EditorToolbar({
       ) : null}
     </div>
   );
-}
+};
 
-export function RichTextEditor({
+export const RichTextEditor = ({
   content,
   onChange,
   placeholder = 'Start writing...',
@@ -272,7 +271,7 @@ export function RichTextEditor({
   dir,
   onRewrite,
   isRewriting,
-}: RichTextEditorProps) {
+}: RichTextEditorProps) => {
   const canEdit = editable && !disabled;
   const editor = useEditor({
     extensions: [
@@ -337,9 +336,9 @@ export function RichTextEditor({
       <EditorContent editor={editor} />
     </div>
   );
-}
+};
 
-export function RichTextViewer({
+export const RichTextViewer = ({
   content,
   className,
   variant = 'default',
@@ -348,7 +347,7 @@ export function RichTextViewer({
   className?: string;
   /** `plain`: borderless reading layout with larger prose (e.g. lesson activity page). */
   variant?: 'default' | 'plain';
-}) {
+}) => {
   const editor = useEditor(
     {
       extensions: [
@@ -364,12 +363,12 @@ export function RichTextViewer({
         attributes: {
           class: cn(
             'prose dark:prose-invert max-w-none',
-            variant === 'plain' ? 'prose-base px-0 py-1' : 'prose-sm px-4 py-3',
+            variant === 'plain' ? 'prose-base px-0 py-1' : 'prose-sm px-4 py-3'
           ),
         },
       },
     },
-    [variant],
+    [variant]
   );
 
   useEffect(() => {
@@ -385,10 +384,10 @@ export function RichTextViewer({
       className={cn(
         variant === 'default' && 'rounded-xl border bg-background overflow-hidden',
         variant === 'plain' && 'overflow-visible border-0 bg-transparent shadow-none',
-        className,
+        className
       )}
     >
       <EditorContent editor={editor} />
     </div>
   );
-}
+};

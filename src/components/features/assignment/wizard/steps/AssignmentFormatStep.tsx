@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next';
+import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import type { Database } from '@/integrations/supabase/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -7,14 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DateTimePicker } from '@/components/ui/datetime-picker';
-import { cn } from '@/lib/utils';
-import type { Database } from '@/integrations/supabase/types';
-import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
 import { defaultAutoPublishForAssignmentType } from '@/lib/artifactAssignmentTypes';
+import { cn } from '@/lib/utils';
 
 interface AssignmentFormatStepProps {
   formData: AssignmentWizardFormData;
@@ -24,13 +24,13 @@ interface AssignmentFormatStepProps {
   attemptPolicyFrozen?: boolean;
 }
 
-export function AssignmentFormatStep({
+export const AssignmentFormatStep = ({
   formData,
   onFormChange,
   isRTL,
   dueDateDisabled = false,
   attemptPolicyFrozen = false,
-}: AssignmentFormatStepProps) {
+}: AssignmentFormatStepProps) => {
   const { t } = useTranslation();
 
   return (
@@ -58,19 +58,20 @@ export function AssignmentFormatStep({
               </Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) =>
+                onValueChange={(value: string | null) => {
+                  if (value == null) return;
                   onFormChange((prev) => ({
                     ...prev,
                     type: value,
                     auto_publish_ai_feedback: defaultAutoPublishForAssignmentType(value),
-                  }))
-                }
+                  }));
+                }}
               >
                 <SelectTrigger
                   id="wiz-type"
                   className={cn(
                     'h-9 w-full min-w-0 rounded-lg text-sm',
-                    isRTL ? 'text-right' : 'text-left',
+                    isRTL ? 'text-right' : 'text-left'
                   )}
                   dir={isRTL ? 'rtl' : 'ltr'}
                 >
@@ -126,7 +127,7 @@ export function AssignmentFormatStep({
           <p
             className={cn(
               'max-w-[24rem] text-muted-foreground text-xs leading-snug',
-              isRTL ? 'text-right' : 'text-left',
+              isRTL ? 'text-right' : 'text-left'
             )}
           >
             {formData.attempt_mode === 'multiple_until_due'
@@ -135,8 +136,12 @@ export function AssignmentFormatStep({
           </p>
         </div>
 
-        <div className={cn('space-y-2 max-w-[min(100%,28rem)]', isRTL ? 'text-right' : 'text-left')}>
-          <Label className="text-body font-medium mb-0 block">{t('createAssignment.attemptMode.label')}</Label>
+        <div
+          className={cn('space-y-2 max-w-[min(100%,28rem)]', isRTL ? 'text-right' : 'text-left')}
+        >
+          <Label className="text-body font-medium mb-0 block">
+            {t('createAssignment.attemptMode.label')}
+          </Label>
           <RadioGroup
             value={formData.attempt_mode}
             onValueChange={(v) =>
@@ -156,7 +161,7 @@ export function AssignmentFormatStep({
                   htmlFor="wiz-am-single"
                   className={cn(
                     'block text-sm leading-snug font-semibold text-foreground',
-                    attemptPolicyFrozen ? 'cursor-not-allowed' : 'cursor-pointer',
+                    attemptPolicyFrozen ? 'cursor-not-allowed' : 'cursor-pointer'
                   )}
                 >
                   {t('createAssignment.attemptMode.single')}
@@ -173,7 +178,7 @@ export function AssignmentFormatStep({
                   htmlFor="wiz-am-until"
                   className={cn(
                     'block text-sm leading-snug font-semibold text-foreground',
-                    attemptPolicyFrozen ? 'cursor-not-allowed' : 'cursor-pointer',
+                    attemptPolicyFrozen ? 'cursor-not-allowed' : 'cursor-pointer'
                   )}
                 >
                   {t('createAssignment.attemptMode.multipleUntilDue')}
@@ -190,7 +195,7 @@ export function AssignmentFormatStep({
                   htmlFor="wiz-am-unlim"
                   className={cn(
                     'block text-sm leading-snug font-semibold text-foreground',
-                    attemptPolicyFrozen ? 'cursor-not-allowed' : 'cursor-pointer',
+                    attemptPolicyFrozen ? 'cursor-not-allowed' : 'cursor-pointer'
                   )}
                 >
                   {t('createAssignment.attemptMode.unlimited')}
@@ -205,7 +210,7 @@ export function AssignmentFormatStep({
             <p
               className={cn(
                 'text-muted-foreground text-xs leading-snug',
-                isRTL ? 'text-right' : 'text-left',
+                isRTL ? 'text-right' : 'text-left'
               )}
             >
               {t('editAssignment.attemptPolicyFrozen')}
@@ -216,7 +221,7 @@ export function AssignmentFormatStep({
         <div
           className={cn(
             'flex items-start justify-between gap-3 rounded-lg border border-border/60 p-3 max-w-[min(100%,28rem)]',
-            isRTL && 'flex-row-reverse',
+            isRTL && 'flex-row-reverse'
           )}
         >
           <div className={cn('min-w-0 flex-1 space-y-0.5', isRTL ? 'text-right' : 'text-left')}>
@@ -238,4 +243,4 @@ export function AssignmentFormatStep({
       </CardContent>
     </Card>
   );
-}
+};

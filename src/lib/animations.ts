@@ -61,11 +61,7 @@ export const fadeInRight = (element: Element | null, delay = 0, duration = 0.5) 
  */
 export const fadeIn = (element: Element | null, delay = 0, duration = 0.4) => {
   if (!element) return;
-  return gsap.fromTo(
-    element,
-    { opacity: 0 },
-    { opacity: 1, duration, delay, ease: 'power2.out' }
-  );
+  return gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration, delay, ease: 'power2.out' });
 };
 
 /**
@@ -96,19 +92,19 @@ export const staggerFadeInUp = (
   if (!elements || (elements as Element[]).length === 0) return;
   return gsap.fromTo(
     elements,
-    { 
-      opacity: 0, 
+    {
+      opacity: 0,
       y: 20, // Reduced distance for smoother animation
-      willChange: 'transform, opacity' 
+      willChange: 'transform, opacity',
     },
-    { 
-      opacity: 1, 
-      y: 0, 
-      duration, 
-      stagger, 
+    {
+      opacity: 1,
+      y: 0,
+      duration,
+      stagger,
       ease: 'power2.out', // Lighter easing function
       clearProps: 'willChange', // Clean up will-change after animation
-      force3D: true // Enable hardware acceleration
+      force3D: true, // Enable hardware acceleration
     }
   );
 };
@@ -278,7 +274,7 @@ export const pageEnter = (container: Element | null) => {
       onComplete: () => {
         gsap.set(container, { clearProps: 'transform' });
       },
-    },
+    }
   );
 };
 
@@ -327,8 +323,3 @@ export const cardHoverLeave = (element: Element | null) => {
 
 // Export GSAP and ScrollTrigger for direct use
 export { gsap, ScrollTrigger };
-
-
-
-
-

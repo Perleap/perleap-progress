@@ -2,8 +2,8 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Session } from '@supabase/supabase-js';
-import { useAuth } from '@/contexts/useAuth';
 import { USER_ROLES } from '@/config/constants';
+import { useAuth } from '@/contexts/useAuth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -72,8 +72,6 @@ const ProtectedRoute = ({
           return;
         }
 
-        console.log('🔒 Protected route: No valid session, redirecting to auth');
-
         // Save current path for post-login redirect (except auth pages)
         if (!currentPath.startsWith('/auth') && currentPath !== '/') {
           sessionStorage.setItem('redirectAfterLogin', currentPath);
@@ -117,11 +115,6 @@ const ProtectedRoute = ({
           adminOnStudentAssignment;
 
         if (!roleOk) {
-          console.log('🔒 Protected route: Role mismatch', {
-            required: requiredRole,
-            actual: userRole,
-          });
-
           const dashboardRoute =
             userRole === 'teacher' || isAdmin
               ? '/teacher/dashboard'
@@ -142,9 +135,6 @@ const ProtectedRoute = ({
           // Use cached profile check from AuthContext
           // Only redirect if we ARE NOT currently loading the profile and we know it's missing
           if (hasProfile === false && !isProfileLoading) {
-            console.log(
-              `🔒 Protected route: User has ${userRole} role but no profile, redirecting to onboarding`
-            );
             const onboardingPath = `/onboarding/${userRole}`;
 
             if (currentPath !== onboardingPath) {
@@ -195,7 +185,9 @@ const ProtectedRoute = ({
   if (requireAppAdmin) {
     const r = user.user_metadata?.role;
     if (r !== USER_ROLES.ADMIN) {
-      return <Navigate to={r === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />;
+      return (
+        <Navigate to={r === 'student' ? '/student/dashboard' : '/teacher/dashboard'} replace />
+      );
     }
   }
 

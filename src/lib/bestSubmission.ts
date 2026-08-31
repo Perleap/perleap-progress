@@ -24,7 +24,7 @@ export interface SubmissionAttemptForBest {
  */
 export function selectBestSubmissionIdForAggregate(
   attempts: SubmissionAttemptForBest[],
-  snapshotBySubmissionId: Map<string, { scores: unknown } | null | undefined>,
+  snapshotBySubmissionId: Map<string, { scores: unknown } | null | undefined>
 ): string | null {
   const completed = attempts.filter((a) => a.status === 'completed');
   if (completed.length === 0) return null;

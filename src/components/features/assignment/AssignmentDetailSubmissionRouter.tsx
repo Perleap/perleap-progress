@@ -1,17 +1,18 @@
+import { ChevronRight, Clock, CheckCircle } from 'lucide-react';
 import { type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ChevronRight, Clock, CheckCircle } from 'lucide-react';
-import { AssignmentDetailChatPanel } from '@/components/features/assignment/AssignmentDetailChatPanel';import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
-import { ProjectSubmissionPage } from '@/components/features/assignment/ProjectSubmissionPage';
-import { PresentationSubmissionPage } from '@/components/features/assignment/PresentationSubmissionPage';
-import { LangchainBuilderPage } from '@/components/features/assignment/LangchainBuilderPage';
-import { EssaySubmissionPage } from '@/components/features/assignment/EssaySubmissionPage';
-import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
-import type { AssignmentCompletionTone } from '@/types/submission';
 import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
+import type { FlowStepTarget } from '@/lib/moduleFlowNavigation';
+import type { AssignmentCompletionTone } from '@/types/submission';
+import { AssignmentDetailChatPanel } from '@/components/features/assignment/AssignmentDetailChatPanel';
+import { EssaySubmissionPage } from '@/components/features/assignment/EssaySubmissionPage';
+import { LangchainBuilderPage } from '@/components/features/assignment/LangchainBuilderPage';
+import { PresentationSubmissionPage } from '@/components/features/assignment/PresentationSubmissionPage';
+import { ProjectSubmissionPage } from '@/components/features/assignment/ProjectSubmissionPage';
+import { TestTakingPage } from '@/components/features/assignment/TestTakingPage';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { EVALUATION_STATUS } from '@/config/constants';
 type RouterAssignment = {
   id: string;
@@ -64,7 +65,7 @@ export type AssignmentDetailSubmissionRouterProps = {
   onActivityComplete: (args?: { conversationComplete?: boolean }) => void | Promise<void>;
 };
 
-export function AssignmentDetailSubmissionRouter({
+export const AssignmentDetailSubmissionRouter = ({
   assignment,
   submission,
   hasFeedback,
@@ -84,24 +85,27 @@ export function AssignmentDetailSubmissionRouter({
   onGoCurriculum,
   onAssignmentCompleted,
   onActivityComplete,
-}: AssignmentDetailSubmissionRouterProps) {
+}: AssignmentDetailSubmissionRouterProps) => {
   const { t } = useTranslation();
   const isCompleted = submission.status === 'completed';
 
   const flowContinueRow =
-    assignmentFlowContinue && assignment.syllabus_section_id && submission.status === 'completed' ? (
+    assignmentFlowContinue &&
+    assignment.syllabus_section_id &&
+    submission.status === 'completed' ? (
       <div className="flex flex-wrap justify-center gap-2 pt-4" dir={isRTL ? 'rtl' : 'ltr'}>
         {assignmentFlowContinue.nextIn ? (
           <Button
             type="button"
             variant="outline"
             className="gap-1 bg-background"
-            onClick={() =>
-              onNavigateToFlowTarget(assignmentFlowContinue.nextIn!, {
-                priorSubmissionId:
-                  assignmentFlowContinue.nextIn!.kind === 'assignment' ? submission.id : undefined,
-              })
-            }
+            onClick={() => {
+              const nextIn = assignmentFlowContinue.nextIn;
+              if (!nextIn) return;
+              onNavigateToFlowTarget(nextIn, {
+                priorSubmissionId: nextIn.kind === 'assignment' ? submission.id : undefined,
+              });
+            }}
           >
             {assignmentFlowContinue.nextIn.kind === 'assignment'
               ? t('assignmentDetail.continue')
@@ -114,21 +118,25 @@ export function AssignmentDetailSubmissionRouter({
             type="button"
             variant="outline"
             className="gap-1 bg-background"
-            onClick={() =>
-              onNavigateToFlowTarget(assignmentFlowContinue.firstNext!, {
-                priorSubmissionId:
-                  assignmentFlowContinue.firstNext!.kind === 'assignment'
-                    ? submission.id
-                    : undefined,
-              })
-            }
+            onClick={() => {
+              const firstNext = assignmentFlowContinue.firstNext;
+              if (!firstNext) return;
+              onNavigateToFlowTarget(firstNext, {
+                priorSubmissionId: firstNext.kind === 'assignment' ? submission.id : undefined,
+              });
+            }}
           >
             {t('assignmentDetail.continueNextModule')}
             <ChevronRight className="h-4 w-4" />
           </Button>
         ) : null}
         {!assignmentFlowContinue.nextIn && !assignmentFlowContinue.firstNext ? (
-          <Button type="button" variant="outline" className="gap-1 bg-background" onClick={onGoCurriculum}>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-1 bg-background"
+            onClick={onGoCurriculum}
+          >
             {t('assignmentDetail.openCurriculum')}
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -157,7 +165,9 @@ export function AssignmentDetailSubmissionRouter({
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <Clock className="h-10 w-10 text-primary mb-4" />
-          <p className="text-sm font-medium text-primary">{t('assignmentDetail.aiFeedbackFailed')}</p>
+          <p className="text-sm font-medium text-primary">
+            {t('assignmentDetail.aiFeedbackFailed')}
+          </p>
           {flowContinueRow}
         </CardContent>
       </Card>
@@ -192,7 +202,9 @@ export function AssignmentDetailSubmissionRouter({
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-2">
           <CheckCircle className="h-10 w-10 text-primary mb-2" />
-          <p className="text-sm font-medium text-primary">{t('assignmentDetail.success.completed')}</p>
+          <p className="text-sm font-medium text-primary">
+            {t('assignmentDetail.success.completed')}
+          </p>
           <p className="text-sm text-muted-foreground max-w-md">
             {t('assignmentDetail.assessmentInProgress')}
           </p>
@@ -230,7 +242,8 @@ export function AssignmentDetailSubmissionRouter({
     />
   );
 
-  switch (assignment.type) {    case 'test':
+  switch (assignment.type) {
+    case 'test':
       return wrapAssignmentWorkspace(
         <>
           <TestTakingPage
@@ -245,7 +258,7 @@ export function AssignmentDetailSubmissionRouter({
             onComplete={onAssignmentCompleted}
           />
           {companionBlock}
-        </>,
+        </>
       );
     case 'text_essay':
       return wrapAssignmentWorkspace(
@@ -262,7 +275,7 @@ export function AssignmentDetailSubmissionRouter({
             onComplete={onAssignmentCompleted}
           />
           {companionBlock}
-        </>,
+        </>
       );
     case 'project':
       return wrapAssignmentWorkspace(
@@ -277,7 +290,7 @@ export function AssignmentDetailSubmissionRouter({
             onComplete={onAssignmentCompleted}
           />
           {companionBlock}
-        </>,
+        </>
       );
     case 'presentation':
       return wrapAssignmentWorkspace(
@@ -292,7 +305,7 @@ export function AssignmentDetailSubmissionRouter({
             onComplete={onAssignmentCompleted}
           />
           {companionBlock}
-        </>,
+        </>
       );
     case 'langchain':
       return wrapAssignmentWorkspace(
@@ -310,7 +323,7 @@ export function AssignmentDetailSubmissionRouter({
             onComplete={onAssignmentCompleted}
           />
           {companionBlock}
-        </>,
+        </>
       );
     default:
       return wrapAssignmentWorkspace(
@@ -318,7 +331,7 @@ export function AssignmentDetailSubmissionRouter({
           {...chatPanelProps}
           variant="primary"
           onComplete={onActivityComplete}
-        />,
+        />
       );
   }
-}
+};

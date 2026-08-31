@@ -1,7 +1,7 @@
+import type { FiveDScores } from '@/types/models';
+import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { evidenceSourceNoteForBundle } from '@/lib/analytics5dEvidence';
-import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
-import type { FiveDScores } from '@/types/models';
 
 export type Analytics5dNarrativeContext =
   | 'class_avg'
@@ -38,7 +38,7 @@ export interface Analytics5dNarrativeResult {
  * Calls `explain-analytics-5d`. Shared by React Query hooks and exporters (lesson brief PDF).
  */
 export async function invokeExplainAnalytics5d(
-  input: Analytics5dNarrativeInput,
+  input: Analytics5dNarrativeInput
 ): Promise<Analytics5dNarrativeResult> {
   const { data, error } = await supabase.functions.invoke<{
     explanations: Record<keyof FiveDScores, string>;
@@ -63,7 +63,9 @@ export async function invokeExplainAnalytics5d(
         ? {
             evidenceText: input.evidenceText,
             evidenceSourceNote: evidenceSourceNoteForBundle(INCLUDE_TEACHER_5D_EVIDENCE),
-            ...(input.evidenceSourceCount != null ? { evidenceSourceCount: input.evidenceSourceCount } : {}),
+            ...(input.evidenceSourceCount != null
+              ? { evidenceSourceCount: input.evidenceSourceCount }
+              : {}),
           }
         : {}),
     },
@@ -72,12 +74,25 @@ export async function invokeExplainAnalytics5d(
   if (error) {
     throw error;
   }
-  const d = data as { explanations?: unknown; scopeSummary?: string; strengths?: string[]; weaknesses?: string[]; nextSteps?: string[]; error?: string } | null;
+  const d = data as {
+    explanations?: unknown;
+    scopeSummary?: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    nextSteps?: string[];
+    error?: string;
+  } | null;
   if (d && typeof d === 'object' && 'error' in d && d.error) {
     throw new Error(String(d.error));
   }
   if (!d?.explanations) {
-    return { explanations: null, scopeSummary: d?.scopeSummary ?? null, strengths: d?.strengths, weaknesses: d?.weaknesses, nextSteps: d?.nextSteps };
+    return {
+      explanations: null,
+      scopeSummary: d?.scopeSummary ?? null,
+      strengths: d?.strengths,
+      weaknesses: d?.weaknesses,
+      nextSteps: d?.nextSteps,
+    };
   }
   return {
     explanations: d.explanations as Partial<Record<keyof FiveDScores, string>>,

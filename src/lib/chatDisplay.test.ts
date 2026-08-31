@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   createChatStreamEmission,
   formatInlineListsForChatMarkdown,
-  isPerleapAssistantIntro,
   normalizePerleapIntroParagraphBreaks,
   splitAssistantMessageIntoSentences,
   splitChatDisplayText,
@@ -85,7 +84,7 @@ describe('formatInlineListsForChatMarkdown + splitChatDisplayText', () => {
 
   it('keeps course-recall prompt quotes in one bubble', () => {
     const t =
-      "Yes, your final prompt was:\n\n# Email Organizer Agent\n\n**Goal**\n\nYou are an email organizer agent.";
+      'Yes, your final prompt was:\n\n# Email Organizer Agent\n\n**Goal**\n\nYou are an email organizer agent.';
     expect(splitChatDisplayText(t)).toEqual([t]);
   });
 
@@ -114,8 +113,7 @@ describe('splitPerleapIntroDisplayText', () => {
   });
 
   it('normalizes a single newline after the intro line', () => {
-    const singleNl =
-      "Hello! I am Perleap, Dor Abookasis's AI teaching assistant.\nWhat is 1 + 1?";
+    const singleNl = "Hello! I am Perleap, Dor Abookasis's AI teaching assistant.\nWhat is 1 + 1?";
     expect(normalizePerleapIntroParagraphBreaks(singleNl)).toContain('\n\n');
     expect(splitPerleapIntroDisplayText(singleNl)).toHaveLength(2);
   });
@@ -137,11 +135,19 @@ describe('splitAssistantMessageIntoSentences', () => {
   });
 
   it('splits English sentences on period / question / exclamation', () => {
-    expect(splitAssistantMessageIntoSentences('Hello. World! How?')).toEqual(['Hello.', 'World!', 'How?']);
+    expect(splitAssistantMessageIntoSentences('Hello. World! How?')).toEqual([
+      'Hello.',
+      'World!',
+      'How?',
+    ]);
   });
 
   it('consumes runs of terminators and trailing space', () => {
-    expect(splitAssistantMessageIntoSentences('Wait... Really.  Next')).toEqual(['Wait...', 'Really.', 'Next']);
+    expect(splitAssistantMessageIntoSentences('Wait... Really.  Next')).toEqual([
+      'Wait...',
+      'Really.',
+      'Next',
+    ]);
   });
 
   it('keeps one segment when no terminator is followed by whitespace (e.g. compact !)', () => {
@@ -154,6 +160,9 @@ describe('splitAssistantMessageIntoSentences', () => {
   });
 
   it('splits after newline following terminator', () => {
-    expect(splitAssistantMessageIntoSentences('First.\nSecond sentence.')).toEqual(['First.', 'Second sentence.']);
+    expect(splitAssistantMessageIntoSentences('First.\nSecond sentence.')).toEqual([
+      'First.',
+      'Second sentence.',
+    ]);
   });
 });

@@ -1,5 +1,18 @@
+import { Brain, ChevronDown, Loader2, ArrowUpDown, RefreshCw, Info } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AnalyticsFilterControls } from './AnalyticsFilterControls';
+import { NuanceUnderstandingCuePanel } from './NuanceUnderstandingCuePanel';
+import { StudentInsightCard } from './StudentInsightCard';
+import type { NuanceMetric, NuanceRecommendation } from '@/hooks/queries/useNuanceQueries';
+import type {
+  AnalyticsAssignmentRef,
+  AnalyticsModuleRef,
+  AnalyticsModuleFilter,
+} from '@/lib/analyticsScope';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Table,
   TableBody,
@@ -8,20 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Brain, ChevronDown, Loader2, ArrowUpDown, RefreshCw, Info } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useNuanceInsights } from '@/hooks/queries';
-import type { NuanceMetric, NuanceRecommendation } from '@/hooks/queries/useNuanceQueries';
-import { StudentInsightCard } from './StudentInsightCard';
-import { NuanceUnderstandingCuePanel } from './NuanceUnderstandingCuePanel';
-import { AnalyticsFilterControls } from './AnalyticsFilterControls';
-import type { AnalyticsAssignmentRef, AnalyticsModuleRef } from '@/lib/analyticsScope';
-import type { AnalyticsModuleFilter } from '@/lib/analyticsScope';
 
 interface NuanceInsightsTableProps {
   classroomId: string;
@@ -75,7 +77,7 @@ interface AggregatedRow {
   recommendation?: NuanceRecommendation;
 }
 
-export function NuanceInsightsTable({
+export const NuanceInsightsTable = ({
   classroomId,
   students,
   assignments,
@@ -92,7 +94,7 @@ export function NuanceInsightsTable({
   selectedAssignment,
   onStudentChange,
   onAssignmentChange,
-}: NuanceInsightsTableProps) {
+}: NuanceInsightsTableProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const dir = isRTL ? 'rtl' : 'ltr';
@@ -109,17 +111,15 @@ export function NuanceInsightsTable({
       return null;
     }
     return t('nuance.classReference', {
-      latency: formatLatency(
-        classBaseline.avg_latency > 0 ? classBaseline.avg_latency : null,
-      ),
+      latency: formatLatency(classBaseline.avg_latency > 0 ? classBaseline.avg_latency : null),
       idle: formatPercent(classBaseline.avg_idle_ratio),
       completion: formatPercent(classBaseline.avg_completion_rate),
       n: classBaseline.assignment_count,
     });
   }, [classBaseline, t]);
 
-  const metrics = data?.metrics || [];
-  const recommendations = data?.recommendations || [];
+  const metrics = useMemo(() => data?.metrics ?? [], [data?.metrics]);
+  const recommendations = useMemo(() => data?.recommendations ?? [], [data?.recommendations]);
 
   const filteredMetrics = useMemo(() => {
     if (filterAssignmentIds.length === 0) return [];
@@ -156,7 +156,9 @@ export function NuanceInsightsTable({
 
     // Specific student → one row per assignment
     if (selectedStudent !== 'all') {
-      const studentMetrics = filteredMetrics.filter((m) => sameStudent(m.student_id, selectedStudent));
+      const studentMetrics = filteredMetrics.filter((m) =>
+        sameStudent(m.student_id, selectedStudent)
+      );
       const filtered =
         selectedAssignment !== 'all'
           ? studentMetrics.filter((m) => sameAssignment(m.assignment_id, selectedAssignment))
@@ -186,7 +188,8 @@ export function NuanceInsightsTable({
     const grouped = new Map<string, NuanceMetric[]>();
     for (const m of filtered) {
       if (!grouped.has(m.student_id)) grouped.set(m.student_id, []);
-      grouped.get(m.student_id)!.push(m);
+      const studentMetrics = grouped.get(m.student_id);
+      if (studentMetrics) studentMetrics.push(m);
     }
 
     const totalAssignments = selectedAssignment !== 'all' ? 1 : Math.max(scopingAssignmentCount, 1);
@@ -208,12 +211,13 @@ export function NuanceInsightsTable({
         key: sid,
         label: studentNameMap.get(sid) || 'Unknown',
         studentId: sid,
-        avgLatency: latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null,
+        avgLatency:
+          latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null,
         idleRatio: mets.reduce((s, m) => s + m.idle_ratio, 0) / mets.length,
         completionRate: denominator > 0 ? completed / denominator : 0,
         sessionCount: Math.round(mets.reduce((s, m) => s + m.session_count, 0) / mets.length),
         understandingCueCount: Math.round(
-          mets.reduce((s, m) => s + (m.understanding_cue_count ?? 0), 0) / mets.length,
+          mets.reduce((s, m) => s + (m.understanding_cue_count ?? 0), 0) / mets.length
         ),
         assignmentDurationSeconds:
           durations.length > 0
@@ -271,7 +275,7 @@ export function NuanceInsightsTable({
     if (selectedStudent === 'all' || filterAssignmentIds.length === 0) return false;
     const scope = new Set(filterAssignmentIds);
     return metrics.some(
-      (m) => String(m.student_id) === String(selectedStudent) && !scope.has(m.assignment_id),
+      (m) => String(m.student_id) === String(selectedStudent) && !scope.has(m.assignment_id)
     );
   }, [metrics, filterAssignmentIds, selectedStudent]);
 
@@ -283,7 +287,7 @@ export function NuanceInsightsTable({
     if (filteredMetrics.length === 0) return t('nuance.emptyNoDataInFilter');
     if (selectedStudent !== 'all' && selectedAssignment !== 'all') {
       const ok = filteredMetrics.some(
-        (m) => same(m.student_id, selectedStudent) && same(m.assignment_id, selectedAssignment),
+        (m) => same(m.student_id, selectedStudent) && same(m.assignment_id, selectedAssignment)
       );
       if (!ok) return t('nuance.emptyNoDataForPairInFilter');
     }
@@ -316,24 +320,22 @@ export function NuanceInsightsTable({
     }
   };
 
-  const SortableHeader = ({ 
-    field, 
-    children, 
+  const SortableHeader = ({
+    field,
+    children,
     align = 'center',
     className = '',
     tooltip,
-  }: { 
-    field: SortField; 
-    children: React.ReactNode; 
+  }: {
+    field: SortField;
+    children: React.ReactNode;
     align?: 'start' | 'center';
     className?: string;
     tooltip?: string;
   }) => (
     <TableHead
       className={`overflow-hidden align-middle px-2 py-2 ${
-        align === 'center'
-          ? 'h-auto min-h-12 whitespace-normal text-center'
-          : 'text-left'
+        align === 'center' ? 'h-auto min-h-12 whitespace-normal text-center' : 'text-left'
       } ${className}`}
     >
       <Tooltip>
@@ -422,7 +424,9 @@ export function NuanceInsightsTable({
           onAssignmentChange={onAssignmentChange}
           allAssignmentsInScopeLabel={allAssignmentsInScopeLabel}
         />
-        <div className={`space-y-2 text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
+        <div
+          className={`space-y-2 text-xs text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}
+        >
           <p>{t('nuance.baselinesClassWide')}</p>
           <p>{t('nuance.insightScope')}</p>
           {classReferenceLine && (
@@ -434,12 +438,18 @@ export function NuanceInsightsTable({
                   </p>
                 }
               />
-              <TooltipContent className="max-w-sm">{t('nuance.classReferenceScope')}</TooltipContent>
+              <TooltipContent className="max-w-sm">
+                {t('nuance.classReferenceScope')}
+              </TooltipContent>
             </Tooltip>
           )}
         </div>
 
-        <Collapsible open={howNuanceOpen} onOpenChange={setHowNuanceOpen} className="rounded-xl border border-border bg-muted/20">
+        <Collapsible
+          open={howNuanceOpen}
+          onOpenChange={setHowNuanceOpen}
+          className="rounded-xl border border-border bg-muted/20"
+        >
           <CollapsibleTrigger asChild>
             <button
               type="button"
@@ -479,143 +489,150 @@ export function NuanceInsightsTable({
         ) : (
           <div className="space-y-2">
             <div className="rounded-xl border border-border overflow-hidden [&_[data-slot=table-container]]:overflow-hidden">
-            <Table className="w-full table-fixed">
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="w-[36px]" />
-                  <SortableHeader field="name" align="start" tooltip={t('nuance.tooltips.student')}>
-                    {selectedStudent !== 'all'
-                      ? t('nuance.columns.activity', 'Activity')
-                      : t('nuance.columns.student', 'Student')}
-                  </SortableHeader>
-                  <SortableHeader field="latency" tooltip={t('nuance.tooltips.responseTime')}>
-                    {t('nuance.columns.responseTime', 'Avg Response')}
-                  </SortableHeader>
-                  <SortableHeader field="idle" tooltip={t('nuance.tooltips.idleRatio')}>
-                    {t('nuance.columns.idleRatio', 'Time away from tab')}
-                  </SortableHeader>
-                  <SortableHeader field="completion" tooltip={t('nuance.tooltips.completion')}>
-                    {t('nuance.columns.completion', 'Completion')}
-                  </SortableHeader>
-                  <SortableHeader field="sessions" tooltip={t('nuance.tooltips.sessions')}>
-                    {t('nuance.columns.sessions', 'Sessions')}
-                  </SortableHeader>
-                  <SortableHeader
-                    field="duration"
-                    tooltip={t(
-                      'nuance.tooltips.timeOnAssignment',
-                      'Wall-clock time from when the student started the assignment until they submitted.',
-                    )}
-                  >
-                    {t('nuance.columns.timeOnAssignment', 'Time on assignment')}
-                  </SortableHeader>
-                  <SortableHeader
-                    field="cues"
-                    tooltip={t('nuance.tooltips.cuesInChatColumn', t('nuance.tooltips.cuesInChat'))}
-                  >
-                    {t('nuance.columns.cuesInChat', 'Cues in chat')}
-                  </SortableHeader>
-                  <TableHead className="w-[100px] min-w-[5.5rem] px-1">
-                    <div className="flex justify-center ltr:-translate-x-0.5">
-                      <Tooltip>
-                        <TooltipTrigger className="text-xs font-semibold uppercase tracking-wider cursor-default">
-                          {t('nuance.columns.status', 'Status')}
-                        </TooltipTrigger>
-                        <TooltipContent>{t('nuance.tooltips.status')}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedRows.map((row) => (
-                  <React.Fragment key={row.key}>
-                    <TableRow
-                      className="cursor-pointer hover:bg-muted/30 transition-colors"
-                      onClick={() =>
-                        setExpandedRow(expandedRow === row.key ? null : row.key)
-                      }
+              <Table className="w-full table-fixed">
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-[36px]" />
+                    <SortableHeader
+                      field="name"
+                      align="start"
+                      tooltip={t('nuance.tooltips.student')}
                     >
-                      <TableCell className="w-[36px] px-2">
-                        <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                            expandedRow === row.key ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium truncate px-2 py-3">{row.label}</TableCell>
-                      <TableCell className="px-2 py-3 text-center tabular-nums">
-                        {formatLatency(row.avgLatency)}
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center tabular-nums">
-                        {formatPercent(row.idleRatio)}
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center tabular-nums">
-                        {formatPercent(row.completionRate)}
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center tabular-nums">{row.sessionCount}</TableCell>
-                      <TableCell className="px-2 py-3 text-center tabular-nums">
-                        {formatDuration(row.assignmentDurationSeconds)}
-                      </TableCell>
-                      <TableCell className="px-2 py-3 text-center tabular-nums text-xs">
-                        {row.understandingCueCount}
-                      </TableCell>
-                      <TableCell className="px-1 py-2 text-center">
-                        <div
-                          className="flex items-center justify-center gap-1.5 flex-wrap"
-                          title={
-                            row.recommendation
-                              ? t(`nuance.types.${row.recommendation.recommendation_type}`)
-                              : t('nuance.statusRow.typical')
-                          }
-                        >
-                          {row.recommendation ? (
-                            <>
-                              <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
-                              <span className="text-[10px] font-medium leading-tight text-amber-700 dark:text-amber-400 max-w-[4.5rem]">
-                                {t('nuance.statusRow.insight')}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70 shrink-0" />
-                              <span className="text-[10px] font-medium leading-tight text-muted-foreground max-w-[4.5rem]">
-                                {t('nuance.statusRow.typical')}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {expandedRow === row.key && (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={9} className="p-0">
-                          <div className="px-4 py-3 bg-muted/20 border-t border-border w-0 min-w-full overflow-hidden space-y-1">
+                      {selectedStudent !== 'all'
+                        ? t('nuance.columns.activity', 'Activity')
+                        : t('nuance.columns.student', 'Student')}
+                    </SortableHeader>
+                    <SortableHeader field="latency" tooltip={t('nuance.tooltips.responseTime')}>
+                      {t('nuance.columns.responseTime', 'Avg Response')}
+                    </SortableHeader>
+                    <SortableHeader field="idle" tooltip={t('nuance.tooltips.idleRatio')}>
+                      {t('nuance.columns.idleRatio', 'Time away from tab')}
+                    </SortableHeader>
+                    <SortableHeader field="completion" tooltip={t('nuance.tooltips.completion')}>
+                      {t('nuance.columns.completion', 'Completion')}
+                    </SortableHeader>
+                    <SortableHeader field="sessions" tooltip={t('nuance.tooltips.sessions')}>
+                      {t('nuance.columns.sessions', 'Sessions')}
+                    </SortableHeader>
+                    <SortableHeader
+                      field="duration"
+                      tooltip={t(
+                        'nuance.tooltips.timeOnAssignment',
+                        'Wall-clock time from when the student started the assignment until they submitted.'
+                      )}
+                    >
+                      {t('nuance.columns.timeOnAssignment', 'Time on assignment')}
+                    </SortableHeader>
+                    <SortableHeader
+                      field="cues"
+                      tooltip={t(
+                        'nuance.tooltips.cuesInChatColumn',
+                        t('nuance.tooltips.cuesInChat')
+                      )}
+                    >
+                      {t('nuance.columns.cuesInChat', 'Cues in chat')}
+                    </SortableHeader>
+                    <TableHead className="w-[100px] min-w-[5.5rem] px-1">
+                      <div className="flex justify-center ltr:-translate-x-0.5">
+                        <Tooltip>
+                          <TooltipTrigger className="text-xs font-semibold uppercase tracking-wider cursor-default">
+                            {t('nuance.columns.status', 'Status')}
+                          </TooltipTrigger>
+                          <TooltipContent>{t('nuance.tooltips.status')}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedRows.map((row) => (
+                    <React.Fragment key={row.key}>
+                      <TableRow
+                        className="cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => setExpandedRow(expandedRow === row.key ? null : row.key)}
+                      >
+                        <TableCell className="w-[36px] px-2">
+                          <ChevronDown
+                            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                              expandedRow === row.key ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium truncate px-2 py-3">
+                          {row.label}
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center tabular-nums">
+                          {formatLatency(row.avgLatency)}
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center tabular-nums">
+                          {formatPercent(row.idleRatio)}
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center tabular-nums">
+                          {formatPercent(row.completionRate)}
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center tabular-nums">
+                          {row.sessionCount}
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center tabular-nums">
+                          {formatDuration(row.assignmentDurationSeconds)}
+                        </TableCell>
+                        <TableCell className="px-2 py-3 text-center tabular-nums text-xs">
+                          {row.understandingCueCount}
+                        </TableCell>
+                        <TableCell className="px-1 py-2 text-center">
+                          <div
+                            className="flex items-center justify-center gap-1.5 flex-wrap"
+                            title={
+                              row.recommendation
+                                ? t(`nuance.types.${row.recommendation.recommendation_type}`)
+                                : t('nuance.statusRow.typical')
+                            }
+                          >
                             {row.recommendation ? (
-                              <StudentInsightCard recommendation={row.recommendation} />
+                              <>
+                                <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />
+                                <span className="text-[10px] font-medium leading-tight text-amber-700 dark:text-amber-400 max-w-[4.5rem]">
+                                  {t('nuance.statusRow.insight')}
+                                </span>
+                              </>
                             ) : (
-                              <div className="text-sm text-muted-foreground text-center py-4">
-                                {t('nuance.noRecommendation')}
-                              </div>
+                              <>
+                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70 shrink-0" />
+                                <span className="text-[10px] font-medium leading-tight text-muted-foreground max-w-[4.5rem]">
+                                  {t('nuance.statusRow.typical')}
+                                </span>
+                              </>
                             )}
-                            <NuanceUnderstandingCuePanel
-                              studentId={row.studentId}
-                              assignmentScopeIds={
-                                row.assignmentId
-                                  ? [row.assignmentId]
-                                  : filterAssignmentIds
-                              }
-                              isExpanded
-                              assignmentTitleMap={assignmentTitleMap}
-                            />
                           </div>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
-              </TableBody>
-            </Table>
+                      {expandedRow === row.key && (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={9} className="p-0">
+                            <div className="px-4 py-3 bg-muted/20 border-t border-border w-0 min-w-full overflow-hidden space-y-1">
+                              {row.recommendation ? (
+                                <StudentInsightCard recommendation={row.recommendation} />
+                              ) : (
+                                <div className="text-sm text-muted-foreground text-center py-4">
+                                  {t('nuance.noRecommendation')}
+                                </div>
+                              )}
+                              <NuanceUnderstandingCuePanel
+                                studentId={row.studentId}
+                                assignmentScopeIds={
+                                  row.assignmentId ? [row.assignmentId] : filterAssignmentIds
+                                }
+                                isExpanded
+                                assignmentTitleMap={assignmentTitleMap}
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
             {filterAssignmentIds.length > 0 && selectedStudent === 'all' && (
               <p
@@ -631,4 +648,4 @@ export function NuanceInsightsTable({
       </CardContent>
     </Card>
   );
-}
+};

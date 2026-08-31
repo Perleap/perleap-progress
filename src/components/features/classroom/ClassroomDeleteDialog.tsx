@@ -9,8 +9,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { logAdminEvent } from '@/services/adminAuditService';
 import { useSoftDeleteClassroom } from '@/hooks/queries';
+import { logAdminEvent } from '@/services/adminAuditService';
 
 export type ClassroomDeleteDialogProps = {
   open: boolean;
@@ -25,7 +25,7 @@ export type ClassroomDeleteDialogProps = {
   onDeleted?: () => void;
 };
 
-export function ClassroomDeleteDialog({
+export const ClassroomDeleteDialog = ({
   open,
   onOpenChange,
   classroomId,
@@ -36,7 +36,7 @@ export function ClassroomDeleteDialog({
   restrictToTeacherId,
   isAppAdmin,
   onDeleted,
-}: ClassroomDeleteDialogProps) {
+}: ClassroomDeleteDialogProps) => {
   const { t } = useTranslation();
   const deleteMutation = useSoftDeleteClassroom();
   const isDeleting = deleteMutation.isPending;
@@ -74,9 +74,13 @@ export function ClassroomDeleteDialog({
       <AlertDialogContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
         <AlertDialogHeader className={isRTL ? 'text-right' : 'text-left'}>
           <AlertDialogTitle>{t('classroomDetail.deleteDialog.title')}</AlertDialogTitle>
-          <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'} text-sm text-muted-foreground`}>
+          <div
+            className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'} text-sm text-muted-foreground`}
+          >
             <p>{t('classroomDetail.deleteDialog.description')}</p>
-            <ul className={`list-disc space-y-1 text-sm ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}>
+            <ul
+              className={`list-disc space-y-1 text-sm ${isRTL ? 'list-inside pr-4' : 'list-inside pl-4'}`}
+            >
               <li>
                 <strong>{assignmentCount}</strong>{' '}
                 {assignmentCount !== 1
@@ -116,4 +120,4 @@ export function ClassroomDeleteDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
+};

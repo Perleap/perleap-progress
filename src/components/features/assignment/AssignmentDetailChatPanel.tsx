@@ -1,9 +1,9 @@
-import { type RefObject } from 'react';
+import { type Ref, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
-import type { DbAssignmentType } from '@/types/models';
 import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
+import type { DbAssignmentType } from '@/types/models';
+import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
 
 type ChatAssignment = {
   id: string;
@@ -39,7 +39,7 @@ export type AssignmentDetailChatPanelProps = {
   onComplete: (args?: { conversationComplete?: boolean }) => void | Promise<void>;
 };
 
-export function AssignmentDetailChatPanel({
+export const AssignmentDetailChatPanel = ({
   variant,
   assignment,
   submission,
@@ -55,7 +55,7 @@ export function AssignmentDetailChatPanel({
   clipboardTracking,
   companionChatAnchorRef,
   onComplete,
-}: AssignmentDetailChatPanelProps) {
+}: AssignmentDetailChatPanelProps) => {
   const { t } = useTranslation();
 
   const chat = (
@@ -82,7 +82,7 @@ export function AssignmentDetailChatPanel({
 
   if (variant === 'companion') {
     return (
-      <div ref={companionChatAnchorRef} className="space-y-2">
+      <div ref={companionChatAnchorRef as Ref<HTMLDivElement> | undefined} className="space-y-2">
         <p className="text-xs text-muted-foreground px-0.5" dir={isRTL ? 'rtl' : 'ltr'}>
           {t('assignmentDetail.contextChatHint')}
         </p>
@@ -92,4 +92,4 @@ export function AssignmentDetailChatPanel({
   }
 
   return chat;
-}
+};

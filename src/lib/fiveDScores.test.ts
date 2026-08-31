@@ -18,7 +18,7 @@ describe('fiveDScores', () => {
         thinking: 8,
         connection: null,
         action: 6,
-      }),
+      })
     ).toBe(6);
   });
 
@@ -35,7 +35,12 @@ describe('fiveDScores', () => {
   });
 
   it('fiveDScoreForChart returns 0 for null', () => {
-    expect(fiveDScoreForChart({ vision: null, values: 5, thinking: 5, connection: 5, action: 5 }, 'vision')).toBe(0);
+    expect(
+      fiveDScoreForChart(
+        { vision: null, values: 5, thinking: 5, connection: 5, action: 5 },
+        'vision'
+      )
+    ).toBe(0);
   });
 
   it('stableFiveDScoresKey does not throw when dimensions are null', () => {
@@ -46,7 +51,7 @@ describe('fiveDScores', () => {
         thinking: 6,
         connection: null,
         action: 8,
-      }),
+      })
     ).toBe('7.50,null,6.00,null,8.00');
     expect(stableFiveDScoresKey(null)).toBe('no-scores');
   });
@@ -73,7 +78,7 @@ describe('fiveDScores', () => {
         thinking: 6,
         connection: null,
         action: 5,
-      }),
+      })
     ).toEqual(['thinking', 'action']);
   });
 
@@ -85,7 +90,7 @@ describe('fiveDScores', () => {
         thinking: null,
         connection: null,
         action: null,
-      }),
+      })
     ).toEqual([]);
     expect(getAssessedFiveDDimensions(null)).toEqual([]);
   });

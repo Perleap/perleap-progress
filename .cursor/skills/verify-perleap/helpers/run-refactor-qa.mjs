@@ -12,7 +12,9 @@ import {
 } from './shared.mjs';
 
 const args = parseArgs(process.argv.slice(2));
-const runId = args.run ?? `refactor-qa-${new Date().toISOString().slice(0, 10)}`;
+const profilePrefix =
+  process.env.VERIFY_PROFILE === 'staging' ? 'refactor-qa-staging' : 'refactor-qa';
+const runId = args.run ?? `${profilePrefix}-${new Date().toISOString().slice(0, 10)}`;
 const watch = args.watch === 'true' || process.env.VERIFY_HEADED === '1';
 const env = loadVerifyEnv();
 const runDir = evidenceDirForRun(runId);
@@ -21,7 +23,18 @@ fs.mkdirSync(runDir, { recursive: true });
 const startedAt = new Date().toISOString();
 fs.writeFileSync(
   path.join(runDir, 'qa-meta.json'),
-  JSON.stringify({ startedAt, watch, runId }, null, 2),
+  JSON.stringify(
+    {
+      startedAt,
+      watch,
+      runId,
+      target: env.VERIFY_BASE_URL,
+      verifyTarget: env.VERIFY_TARGET,
+      verifyProfile: env.VERIFY_PROFILE,
+    },
+    null,
+    2,
+  ),
 );
 
 function spawnShell(command, opts = {}) {

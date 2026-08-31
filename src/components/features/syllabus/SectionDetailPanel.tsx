@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { X, Calendar, Target, FileText, StickyNote } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { SyllabusSection } from '@/types/syllabus';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface SectionDetailPanelProps {
   section: SyllabusSection;
@@ -32,10 +32,19 @@ export const SectionDetailPanel = ({
         <div className="flex items-center gap-2">
           {assignmentCount > 0 && (
             <Badge variant="secondary" className="rounded-full">
-              <FileText className="h-3 w-3 me-1" /> {assignmentCount} {assignmentCount !== 1 ? t('syllabus.roadmap.assignments') : t('syllabus.roadmap.assignment')}
+              <FileText className="h-3 w-3 me-1" /> {assignmentCount}{' '}
+              {assignmentCount !== 1
+                ? t('syllabus.roadmap.assignments')
+                : t('syllabus.roadmap.assignment')}
             </Badge>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-8 w-8" aria-label={t('syllabus.detail.closeDetails')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="rounded-full h-8 w-8"
+            aria-label={t('syllabus.detail.closeDetails')}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -43,8 +52,12 @@ export const SectionDetailPanel = ({
 
       {section.description && (
         <div className="mb-4">
-          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{t('syllabus.detail.description')}</h4>
-          <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{section.description}</p>
+          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+            {t('syllabus.detail.description')}
+          </h4>
+          <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+            {section.description}
+          </p>
         </div>
       )}
 

@@ -4,15 +4,21 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/api/client';
-import { streamChatMessage } from '@/services';
-import type { Message, ApiError, ChatRequest, ChatDebugPayload, InitialGreetingMode } from '@/types';
 import { toast } from 'sonner';
+import type {
+  Message,
+  ApiError,
+  ChatRequest,
+  ChatDebugPayload,
+  InitialGreetingMode,
+} from '@/types';
+import { supabase } from '@/api/client';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getAssignmentLanguage } from '@/utils/languageDetection';
-import { rehydrateMessages } from '@/lib/conversationMessages';
-import { hasConversationCompleteMarker } from '@/lib/chatDisplay';
 import { areAllParsedTasksComplete, resolveAssignmentTutorText } from '@/lib/assignmentTasks';
+import { hasConversationCompleteMarker } from '@/lib/chatDisplay';
+import { rehydrateMessages } from '@/lib/conversationMessages';
+import { streamChatMessage } from '@/services';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
 
 interface UseConversationResult {
   messages: Message[];
@@ -22,7 +28,10 @@ interface UseConversationResult {
   conversationEnded: boolean;
   language: string;
   lastAssistantDebug: ChatDebugPayload | null;
-  sendMessage: (content: string, fileContext?: { name: string; content: string; url?: string; type?: string }) => Promise<void>;
+  sendMessage: (
+    content: string,
+    fileContext?: { name: string; content: string; url?: string; type?: string }
+  ) => Promise<void>;
   initializeConversation: (mode?: InitialGreetingMode) => Promise<void>;
 }
 
@@ -98,7 +107,7 @@ export const useConversation = ({
   }, []);
 
   /** Replace the last assistant message body atomically (used for post-stream polish frame). */
-  const replaceLastAssistantContent = useCallback((streamGen: number, polished: string) => {
+  const _replaceLastAssistantContent = useCallback((streamGen: number, polished: string) => {
     if (streamGen !== streamGenerationRef.current) return;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
@@ -137,12 +146,9 @@ export const useConversation = ({
         setMessages([aiMessage]);
         setLastAssistantDebug(null);
 
-        const { data: endData, error: chatError } = await streamChatMessage(
-          request,
-          (token) => {
-            appendAssistantStreamToken(streamGen, token);
-          }
-        );
+        const { data: endData, error: chatError } = await streamChatMessage(request, (token) => {
+          appendAssistantStreamToken(streamGen, token);
+        });
 
         if (streamGen !== streamGenerationRef.current) {
           return;
@@ -172,7 +178,7 @@ export const useConversation = ({
         }
       }
     },
-    [submissionId, assignmentId, language, debugChat, companionMode, appendAssistantStreamToken],
+    [submissionId, assignmentId, language, debugChat, companionMode, appendAssistantStreamToken]
   );
 
   const loadConversation = useCallback(async () => {
@@ -204,11 +210,11 @@ export const useConversation = ({
             'FINISHED THE ASSIGNMENT',
             'YOU HAVE COMPLETED ALL',
             'YOU COMPLETED ALL',
-            'YOU\'VE COMPLETED ALL',
+            "YOU'VE COMPLETED ALL",
             'SUCCESSFULLY ANSWERED ALL',
             'ACTIVITY IS COMPLETE',
             'YES, WE ARE DONE',
-            'WE\'VE ACTUALLY COMPLETED ALL',
+            "WE'VE ACTUALLY COMPLETED ALL",
             'JOB ON COMPLETING THE TASKS',
             'COMPLETING THE TASKS',
             'DONE WITH THE TASKS',
@@ -216,7 +222,7 @@ export const useConversation = ({
             'FINISHED THE ACTIVITY',
             'COMPLETED THE ACTIVITY',
             'YOU HAVE FINISHED',
-            'YOU\'VE FINISHED',
+            "YOU'VE FINISHED",
             'ALL TASKS ARE COMPLETE',
             'סיימנו את המשימה',
             'השלמת את כל המשימות',
@@ -249,7 +255,7 @@ export const useConversation = ({
 
   const sendMessage = async (
     content: string,
-    fileContext?: { name: string; content: string; url?: string; type?: string },
+    fileContext?: { name: string; content: string; url?: string; type?: string }
   ) => {
     if (!content.trim() && !fileContext) return;
 
@@ -274,12 +280,9 @@ export const useConversation = ({
         ...(companionMode ? { companionMode: true } : {}),
       };
 
-      const { data, error: chatError } = await streamChatMessage(
-        request,
-        (token) => {
-          appendAssistantStreamToken(streamGen, token);
-        }
-      );
+      const { data, error: chatError } = await streamChatMessage(request, (token) => {
+        appendAssistantStreamToken(streamGen, token);
+      });
 
       if (streamGen !== streamGenerationRef.current) {
         return;
@@ -323,7 +326,13 @@ export const useConversation = ({
 
   /** Start greeting when task-understanding gate opens (autoInitialize false → true). */
   useEffect(() => {
-    if (!autoInitialize || !loadCompletedRef.current || loading || sending || initInFlightRef.current) {
+    if (
+      !autoInitialize ||
+      !loadCompletedRef.current ||
+      loading ||
+      sending ||
+      initInFlightRef.current
+    ) {
       return;
     }
     if (messages.length > 0) return;
@@ -338,7 +347,7 @@ export const useConversation = ({
     async (mode: InitialGreetingMode = 'default') => {
       await initializeConversation(mode);
     },
-    [initializeConversation],
+    [initializeConversation]
   );
 
   return {

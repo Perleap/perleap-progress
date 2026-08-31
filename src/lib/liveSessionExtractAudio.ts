@@ -7,7 +7,6 @@
  */
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 /** Match installed @ffmpeg/ffmpeg; worker ESM files are copied to public/ffmpeg/{version}/ at build/dev. */
@@ -33,7 +32,7 @@ const CHUNK_MAX_SECONDS = 600;
 
 const CHUNK_SECONDS = Math.min(
   CHUNK_MAX_SECONDS,
-  Math.floor((WHISPER_MAX_CHUNK_BYTES * 8) / (64 * 1000)),
+  Math.floor((WHISPER_MAX_CHUNK_BYTES * 8) / (64 * 1000))
 );
 
 export type ExtractProgress = {

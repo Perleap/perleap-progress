@@ -1,17 +1,23 @@
-import { useState, useMemo } from 'react';
-import { Calendar } from '@/components/ui/calendar';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 import { format, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Calendar as CalendarIcon, AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { CALENDAR_MODIFIERS_CLASSNAMES } from '@/lib/calendarUtils';
+import {
+  Calendar as CalendarIcon,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent } from '@/components/ui/card';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useTeacherCalendarData } from '@/hooks/queries';
+import { CALENDAR_MODIFIERS_CLASSNAMES } from '@/lib/calendarUtils';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 // Utility function for date range checking
 const isDateInRange = (date: Date, startDate: string | null, endDate: string | null): boolean => {
@@ -32,10 +38,7 @@ interface TeacherCalendarProps {
   isAppAdmin?: boolean;
 }
 
-export function TeacherCalendar({
-  teacherId,
-  isAppAdmin = false,
-}: TeacherCalendarProps) {
+export const TeacherCalendar = ({ teacherId, isAppAdmin = false }: TeacherCalendarProps) => {
   const { t } = useTranslation();
   const { language = 'en' } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -45,19 +48,21 @@ export function TeacherCalendar({
     isAdmin: isAppAdmin || undefined,
   });
 
-  const classrooms = data?.classrooms || [];
-  const assignments = data?.assignments || [];
+  const classrooms = useMemo(() => data?.classrooms ?? [], [data?.classrooms]);
+  const assignments = useMemo(() => data?.assignments ?? [], [data?.assignments]);
 
   // Memoize assignment dates to avoid recalculating on every render
   const datesWithAssignments = useMemo(
-    () => assignments.map((a) => new Date(a.due_at)),
+    () => assignments.flatMap((a) => (a.due_at ? [new Date(a.due_at)] : [])),
     [assignments]
   );
 
   // Memoize assignments for selected date
   const assignmentsForSelectedDate = useMemo(
     () =>
-      selectedDate ? assignments.filter((a) => isSameDay(new Date(a.due_at), selectedDate)) : [],
+      selectedDate
+        ? assignments.filter((a) => a.due_at != null && isSameDay(new Date(a.due_at), selectedDate))
+        : [],
     [assignments, selectedDate]
   );
 
@@ -135,23 +140,25 @@ export function TeacherCalendar({
             modifiers={modifiers}
             modifiersClassNames={{
               ...CALENDAR_MODIFIERS_CLASSNAMES,
-              selected: "[&_button]:!bg-gradient-to-br [&_button]:!from-primary [&_button]:!to-primary/80 [&_button]:!text-white [&_button]:shadow-sm [&_button]:scale-[1.3]",
-              today: "[&_button]:text-primary [&_button]:font-bold",
+              selected:
+                '[&_button]:!bg-gradient-to-br [&_button]:!from-primary [&_button]:!to-primary/80 [&_button]:!text-white [&_button]:shadow-sm [&_button]:scale-[1.3]',
+              today: '[&_button]:text-primary [&_button]:font-bold',
             }}
             className="w-full"
             classNames={{
-              month: "flex flex-col items-center w-full",
-              month_caption: "hidden",
-              caption_label: "hidden",
-              nav: "hidden",
-              button_previous: "hidden",
-              button_next: "hidden",
-              month_grid: "border-collapse mx-auto",
-              weekdays: "flex justify-center gap-1 mb-1",
-              weekday: "text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center",
-              week: "flex mt-1 justify-center gap-1",
-              day: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex items-center justify-center w-8 h-8",
-              day_button: "h-6 w-6 p-0 rounded-full flex items-center justify-center mx-auto",
+              month: 'flex flex-col items-center w-full',
+              month_caption: 'hidden',
+              caption_label: 'hidden',
+              nav: 'hidden',
+              button_previous: 'hidden',
+              button_next: 'hidden',
+              month_grid: 'border-collapse mx-auto',
+              weekdays: 'flex justify-center gap-1 mb-1',
+              weekday:
+                'text-muted-foreground w-8 font-normal text-[10px] uppercase tracking-wider text-center',
+              week: 'flex mt-1 justify-center gap-1',
+              day: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex items-center justify-center w-8 h-8',
+              day_button: 'h-6 w-6 p-0 rounded-full flex items-center justify-center mx-auto',
             }}
           />
         </div>
@@ -160,7 +167,9 @@ export function TeacherCalendar({
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 rounded-xl border border-primary/20">
               <h3 className="font-bold text-lg text-primary">
-                {format(selectedDate, 'MMMM d, yyyy', { locale: language === 'he' ? he : undefined })}
+                {format(selectedDate, 'MMMM d, yyyy', {
+                  locale: language === 'he' ? he : undefined,
+                })}
               </h3>
             </div>
 
@@ -177,7 +186,9 @@ export function TeacherCalendar({
                       key={classroom.id}
                       className="group p-4 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-primary/40 backdrop-blur-sm"
                     >
-                      <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{classroom.name}</p>
+                      <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                        {classroom.name}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-0.5">{classroom.subject}</p>
                       {classroom.start_date && classroom.end_date && (
                         <p className="text-[10px] text-muted-foreground mt-2 font-medium bg-background/50 px-2 py-1 rounded-md inline-block">
@@ -194,7 +205,9 @@ export function TeacherCalendar({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground ps-1 py-2">{t('calendar.noActiveClasses')}</p>
+                <p className="text-xs text-muted-foreground ps-1 py-2">
+                  {t('calendar.noActiveClasses')}
+                </p>
               )}
             </div>
 
@@ -217,12 +230,17 @@ export function TeacherCalendar({
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <p className="font-bold text-sm text-foreground group-hover:text-destructive transition-colors">{assignment.title}</p>
+                          <p className="font-bold text-sm text-foreground group-hover:text-destructive transition-colors">
+                            {assignment.title}
+                          </p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {assignment.classrooms.name}
                           </p>
                         </div>
-                        <Badge variant="outline" className="text-[10px] bg-background/80 border-destructive/30 text-destructive font-semibold">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-background/80 border-destructive/30 text-destructive font-semibold"
+                        >
                           {assignment.type.replace('_', ' ')}
                         </Badge>
                       </div>
@@ -231,12 +249,21 @@ export function TeacherCalendar({
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
                           <span>Progress</span>
-                          <span className="text-foreground">{Math.round(((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100)}%</span>
+                          <span className="text-foreground">
+                            {Math.round(
+                              ((assignment.totalStudents - assignment.incompleteStudents.length) /
+                                assignment.totalStudents) *
+                                100
+                            )}
+                            %
+                          </span>
                         </div>
                         <div className="h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
                           <div
                             className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full transition-all duration-700 ease-out shadow-sm"
-                            style={{ width: `${((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100}%` }}
+                            style={{
+                              width: `${((assignment.totalStudents - assignment.incompleteStudents.length) / assignment.totalStudents) * 100}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -250,9 +277,16 @@ export function TeacherCalendar({
                           </div>
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {assignment.incompleteStudents.slice(0, 5).map((student) => (
-                              <Avatar key={student.user_id} className="h-6 w-6 border-2 border-background shadow-sm ring-1 ring-destructive/20">
+                              <Avatar
+                                key={student.user_id}
+                                className="h-6 w-6 border-2 border-background shadow-sm ring-1 ring-destructive/20"
+                              >
                                 {student.avatar_url && (
-                                  <SecureAvatarImage src={student.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt={student.full_name} />
+                                  <SecureAvatarImage
+                                    src={student.avatar_url ?? undefined}
+                                    bucket={STUDENT_AVATARS_BUCKET}
+                                    alt={student.full_name ?? undefined}
+                                  />
                                 )}
                                 <AvatarFallback className="text-[8px] bg-destructive/10 text-destructive font-semibold">
                                   {student.full_name?.charAt(0) || '?'}
@@ -277,4 +311,4 @@ export function TeacherCalendar({
       </CardContent>
     </Card>
   );
-}
+};

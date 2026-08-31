@@ -1,15 +1,14 @@
-"use client"
+'use client';
 
-import * as React from 'react';
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { X } from 'lucide-react';
-
+import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const ToastProvider = ToastPrimitive.Provider;
 
-function ToastViewport({ className, ...props }: React.ComponentProps<'ol'>) {
+const ToastViewport = ({ className, ...props }: React.ComponentProps<'ol'>) => {
   return (
     <ol
       data-slot="toast-viewport"
@@ -20,7 +19,7 @@ function ToastViewport({ className, ...props }: React.ComponentProps<'ol'>) {
       {...props}
     />
   );
-}
+};
 
 const toastVariants = cva(
   'group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-open:animate-in data-closed:animate-out data-closed:fade-out-80 data-closed:slide-out-to-right-full data-open:slide-in-from-top-full data-open:sm:slide-in-from-bottom-full',
@@ -38,11 +37,11 @@ const toastVariants = cva(
   }
 );
 
-function Toast({ 
-  className, 
-  variant, 
-  ...props 
-}: ToastPrimitive.Root.Props & VariantProps<typeof toastVariants>) {
+const Toast = ({
+  className,
+  variant,
+  ...props
+}: ToastPrimitive.Root.Props & VariantProps<typeof toastVariants>) => {
   return (
     <ToastPrimitive.Root
       data-slot="toast"
@@ -50,12 +49,9 @@ function Toast({
       {...props}
     />
   );
-}
+};
 
-function ToastAction({ 
-  className, 
-  ...props 
-}: React.ComponentProps<'button'>) {
+const ToastAction = ({ className, ...props }: React.ComponentProps<'button'>) => {
   return (
     <button
       data-slot="toast-action"
@@ -66,9 +62,9 @@ function ToastAction({
       {...props}
     />
   );
-}
+};
 
-function ToastClose({ className, ...props }: ToastPrimitive.Close.Props) {
+const ToastClose = ({ className, ...props }: ToastPrimitive.Close.Props) => {
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
@@ -81,9 +77,9 @@ function ToastClose({ className, ...props }: ToastPrimitive.Close.Props) {
       <X className="h-4 w-4" />
     </ToastPrimitive.Close>
   );
-}
+};
 
-function ToastTitle({ className, ...props }: ToastPrimitive.Title.Props) {
+const ToastTitle = ({ className, ...props }: ToastPrimitive.Title.Props) => {
   return (
     <ToastPrimitive.Title
       data-slot="toast-title"
@@ -91,12 +87,9 @@ function ToastTitle({ className, ...props }: ToastPrimitive.Title.Props) {
       {...props}
     />
   );
-}
+};
 
-function ToastDescription({ 
-  className, 
-  ...props 
-}: ToastPrimitive.Description.Props) {
+const ToastDescription = ({ className, ...props }: ToastPrimitive.Description.Props) => {
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
@@ -104,7 +97,7 @@ function ToastDescription({
       {...props}
     />
   );
-}
+};
 
 type ToastProps = ToastPrimitive.Root.Props & VariantProps<typeof toastVariants>;
 

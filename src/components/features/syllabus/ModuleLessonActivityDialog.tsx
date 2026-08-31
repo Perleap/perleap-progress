@@ -1,5 +1,9 @@
+import { Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { LessonBlocksEditor } from './LessonBlocksEditor';
+import type { LessonBlockV1, SectionResource } from '@/types/syllabus';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -8,12 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { Label } from '@/components/ui/label';
 import { useCreateLessonActivity, useUpdateSectionResource } from '@/hooks/queries';
+import { supabase } from '@/integrations/supabase/client';
 import {
   legacyLessonToBlocks,
   lessonBlocksHaveContent,
@@ -21,9 +23,7 @@ import {
   toPersistedLessonContent,
 } from '@/lib/lessonContent';
 import { lessonHtmlToPlainText, plainRephraseToLessonHtml } from '@/lib/lessonRichText';
-import type { LessonBlockV1, SectionResource } from '@/types/syllabus';
 import { cn } from '@/lib/utils';
-import { LessonBlocksEditor } from './LessonBlocksEditor';
 
 const lessonActivityDraftKey = (classroomId: string, sectionId: string) =>
   `perleap:lesson-activity-draft:${classroomId}:${sectionId}`;
@@ -42,7 +42,7 @@ export interface ModuleLessonActivityDialogProps {
   onLessonCreated?: (resourceId: string) => void | Promise<void>;
 }
 
-export function ModuleLessonActivityDialog({
+export const ModuleLessonActivityDialog = ({
   classroomId,
   isRTL,
   open,
@@ -51,7 +51,7 @@ export function ModuleLessonActivityDialog({
   editingLesson,
   sectionResourcesBySection,
   onLessonCreated,
-}: ModuleLessonActivityDialogProps) {
+}: ModuleLessonActivityDialogProps) => {
   const { t } = useTranslation();
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonBlocks, setLessonBlocks] = useState<LessonBlockV1[]>([]);
@@ -80,7 +80,10 @@ export function ModuleLessonActivityDialog({
       try {
         const raw = sessionStorage.getItem(lessonActivityDraftKey(classroomId, sectionId));
         if (raw) {
-          const parsed = JSON.parse(raw) as { lessonTitle?: string; lessonBlocks?: LessonBlockV1[] };
+          const parsed = JSON.parse(raw) as {
+            lessonTitle?: string;
+            lessonBlocks?: LessonBlockV1[];
+          };
           const title = typeof parsed.lessonTitle === 'string' ? parsed.lessonTitle : '';
           const blocks = Array.isArray(parsed.lessonBlocks) ? parsed.lessonBlocks : [];
           if (title.trim() || blocks.length > 0) {
@@ -95,7 +98,7 @@ export function ModuleLessonActivityDialog({
       setLessonTitle('');
       setLessonBlocks([]);
     }
-  }, [open, sectionId, editingLesson?.id, classroomId]);
+  }, [open, sectionId, editingLesson, classroomId]);
 
   useEffect(() => {
     if (!open || !sectionId || editingLesson) return;
@@ -282,7 +285,12 @@ export function ModuleLessonActivityDialog({
         </div>
         <div className="flex-shrink-0 border-t border-border px-6 py-4">
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={resetAndClose} disabled={editorDisabled}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetAndClose}
+              disabled={editorDisabled}
+            >
               {t('common.cancel')}
             </Button>
             <Button type="button" onClick={() => void submitLesson()} disabled={saveDisabled}>
@@ -296,4 +304,4 @@ export function ModuleLessonActivityDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

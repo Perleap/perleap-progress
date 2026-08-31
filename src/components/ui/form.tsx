@@ -1,15 +1,15 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import * as React from 'react';
 import {
   Controller,
-  ControllerProps,
-  FieldPath,
-  FieldValues,
   FormProvider,
   useFormContext,
+  type ControllerProps,
+  type FieldPath,
+  type FieldValues,
 } from 'react-hook-form';
-
-import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 const Form = FormProvider;
 
@@ -94,22 +94,21 @@ const FormLabel = React.forwardRef<
 });
 FormLabel.displayName = 'FormLabel';
 
-const FormControl = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ ...props }, ref) => {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
+const FormControl = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ ...props }, ref) => {
+    const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
 
-  const child = React.Children.only(props.children as React.ReactElement);
-  
-  return React.cloneElement(child, {
-    ref,
-    id: formItemId,
-    'aria-describedby': !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`,
-    'aria-invalid': !!error,
-    ...child.props,
-  } as any);
-});
+    const child = React.Children.only(props.children as React.ReactElement);
+
+    return React.cloneElement(child, {
+      ref,
+      id: formItemId,
+      'aria-describedby': !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`,
+      'aria-invalid': !!error,
+      ...child.props,
+    } as React.ComponentPropsWithoutRef<React.ElementType>);
+  }
+);
 FormControl.displayName = 'FormControl';
 
 const FormDescription = React.forwardRef<

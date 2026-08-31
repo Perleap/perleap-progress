@@ -13,7 +13,7 @@
  */
 export function formatCourseDuration(
   startDate: string | null | undefined,
-  endDate: string | null | undefined,
+  endDate: string | null | undefined
 ): string | null {
   if (!startDate || !endDate) return null;
 
@@ -23,9 +23,7 @@ export function formatCourseDuration(
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
   if (end <= start) return null;
 
-  const totalDays = Math.round(
-    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const totalDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
   if (totalDays < 7) {
     return `${totalDays} day${totalDays !== 1 ? 's' : ''}`;

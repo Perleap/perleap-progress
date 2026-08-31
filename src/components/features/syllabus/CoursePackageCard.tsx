@@ -1,10 +1,9 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { Download, Loader2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Download, Loader2, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -14,25 +13,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/useAuth';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { USER_ROLES } from '@/config/constants';
-import { classroomKeys } from '@/hooks/queries/useClassroomQueries';
+import { buildRoute } from '@/config/routes';
+import { useAuth } from '@/contexts/useAuth';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import { syllabusKeys, resourceKeys } from '@/hooks/queries/useSyllabusQueries';
+import { classroomKeys } from '@/hooks/queries/useClassroomQueries';
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { syllabusKeys, resourceKeys } from '@/hooks/queries/useSyllabusQueries';
+import { parseCoursePackageJson } from '@/lib/coursePackage/validateCoursePackage';
+import { cn } from '@/lib/utils';
+import { packageForNewClassroomFromAny } from '@/services/coursePackageNewImportUtils';
 import {
   buildExportPackageForClassroom,
   mergeCoursePackageIntoClassroom,
   importCoursePackageV1,
 } from '@/services/coursePackageService';
-import { parseCoursePackageJson } from '@/lib/coursePackage/validateCoursePackage';
-import { COURSE_PACKAGE_VERSION_V2 } from '@/types/coursePackage';
-import type { PerleapCoursePackageAny, PerleapCoursePackageV1, PerleapCoursePackageV2 } from '@/types/coursePackage';
-import { packageForNewClassroomFromAny } from '@/services/coursePackageNewImportUtils';
 import { getMergeFailureFromApiError } from '@/types/api.types';
-import { cn } from '@/lib/utils';
-import { buildRoute } from '@/config/routes';
+import {
+  COURSE_PACKAGE_VERSION_V2,
+  type PerleapCoursePackageAny,
+  type PerleapCoursePackageV1,
+  type PerleapCoursePackageV2,
+} from '@/types/coursePackage';
 
 function safeFileSlug(name: string): string {
   return (
@@ -44,7 +48,7 @@ function safeFileSlug(name: string): string {
   );
 }
 
-export function CoursePackageCard({
+export const CoursePackageCard = ({
   classroomId,
   classroomName,
   isRTL,
@@ -52,7 +56,7 @@ export function CoursePackageCard({
   classroomId: string;
   classroomName: string;
   isRTL: boolean;
-}) {
+}) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -132,21 +136,28 @@ export function CoursePackageCard({
     if (mergeErr || !mergeData) {
       const ctx = getMergeFailureFromApiError(mergeErr ?? undefined);
       const phaseKey =
-        ctx && ctx.phase ? `coursePackage.mergeError.phase.${ctx.phase}` : 'coursePackage.importFailed';
+        ctx && ctx.phase
+          ? `coursePackage.mergeError.phase.${ctx.phase}`
+          : 'coursePackage.importFailed';
       const title =
-        ctx && ctx.phase && i18n.exists(phaseKey) ? String(t(phaseKey)) : String(t('coursePackage.importFailed'));
+        ctx && ctx.phase && i18n.exists(phaseKey)
+          ? String(t(phaseKey))
+          : String(t('coursePackage.importFailed'));
       const parts: string[] = [];
       if (mergeErr?.message) parts.push(mergeErr.message);
       if (ctx?.humanLabel) {
         const step =
-          ctx.indexInPkg != null ? ` (${t('coursePackage.mergeError.step')} ${ctx.indexInPkg + 1})` : '';
+          ctx.indexInPkg != null
+            ? ` (${t('coursePackage.mergeError.step')} ${ctx.indexInPkg + 1})`
+            : '';
         parts.push(`${t('coursePackage.mergeError.location')}: «${ctx.humanLabel}»${step}`);
       }
-      if (ctx?.entityId) parts.push(`${t('coursePackage.mergeError.entityIdLabel')}: ${ctx.entityId}`);
+      if (ctx?.entityId)
+        parts.push(`${t('coursePackage.mergeError.entityIdLabel')}: ${ctx.entityId}`);
       parts.push(
         ctx?.atomic === true
           ? t('coursePackage.mergeRollbackHint')
-          : t('coursePackage.mergePartialApplyWarning'),
+          : t('coursePackage.mergePartialApplyWarning')
       );
       toast.error(title, { description: parts.join('\n'), duration: 14000 });
       return;
@@ -167,8 +178,7 @@ export function CoursePackageCard({
       pkgV1 = packageForNewClassroomFromAny(pkg);
     } catch (normalizeErr) {
       toast.error(t('coursePackage.importFailed'), {
-        description:
-          normalizeErr instanceof Error ? normalizeErr.message : String(normalizeErr),
+        description: normalizeErr instanceof Error ? normalizeErr.message : String(normalizeErr),
       });
       return;
     }
@@ -199,7 +209,9 @@ export function CoursePackageCard({
       try {
         json = JSON.parse(text);
       } catch {
-        toast.error(t('coursePackage.importFailed'), { description: t('coursePackage.invalidFile') });
+        toast.error(t('coursePackage.importFailed'), {
+          description: t('coursePackage.invalidFile'),
+        });
         return;
       }
       const parsed = parseCoursePackageJson(json);
@@ -322,7 +334,7 @@ export function CoursePackageCard({
             <AlertDialogDescription
               className={cn(
                 'text-muted-foreground text-sm text-balance md:text-pretty space-y-2',
-                isRTL ? 'text-right' : 'text-left',
+                isRTL ? 'text-right' : 'text-left'
               )}
             >
               <span className="block">{t('coursePackage.importModeDescription')}</span>
@@ -331,7 +343,7 @@ export function CoursePackageCard({
           <div
             className={cn(
               'flex flex-col gap-3 py-1 sm:items-stretch',
-              isRTL ? 'sm:flex-row-reverse sm:justify-between' : 'sm:flex-row sm:justify-between',
+              isRTL ? 'sm:flex-row-reverse sm:justify-between' : 'sm:flex-row sm:justify-between'
             )}
           >
             <div className="flex min-w-0 flex-1 flex-col gap-1 rounded-lg border border-border/60 bg-muted/20 p-3">
@@ -341,7 +353,7 @@ export function CoursePackageCard({
               <p
                 className={cn(
                   'flex-1 text-muted-foreground text-xs leading-snug',
-                  isRTL ? 'text-right' : 'text-left',
+                  isRTL ? 'text-right' : 'text-left'
                 )}
               >
                 {t('coursePackage.importModeCreateHint')}
@@ -362,7 +374,7 @@ export function CoursePackageCard({
               <p
                 className={cn(
                   'flex-1 text-muted-foreground text-xs leading-snug',
-                  isRTL ? 'text-right' : 'text-left',
+                  isRTL ? 'text-right' : 'text-left'
                 )}
               >
                 {t('coursePackage.importModeMergeHint')}
@@ -379,10 +391,9 @@ export function CoursePackageCard({
           </div>
           <AlertDialogFooter className={cn(isRTL ? 'sm:flex-row-reverse' : '')}>
             <AlertDialogCancel>{t('syllabus.cancel')}</AlertDialogCancel>
-
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
   );
-}
+};

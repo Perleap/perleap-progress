@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
+import type { PlannerClassroom } from '@/services/plannerService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { PlannerClassroom } from '@/services/plannerService';
 
 export type PlannerClassroomFilterSectionProps = {
   classrooms: PlannerClassroom[];
@@ -18,7 +18,7 @@ export type PlannerClassroomFilterSectionProps = {
   onToggleClassroom: (classroomId: string, checked: boolean) => void;
 };
 
-export function PlannerClassroomFilterSection({
+export const PlannerClassroomFilterSection = ({
   filteredClassrooms,
   selectedClassrooms,
   classroomSearch,
@@ -27,7 +27,7 @@ export function PlannerClassroomFilterSection({
   onSelectAll,
   onClearAll,
   onToggleClassroom,
-}: PlannerClassroomFilterSectionProps) {
+}: PlannerClassroomFilterSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -42,7 +42,13 @@ export function PlannerClassroomFilterSection({
           className="h-9"
         />
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" className="flex-1" onClick={onSelectAll}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={onSelectAll}
+          >
             {t('planner.selectAll')}
           </Button>
           <Button type="button" variant="outline" size="sm" className="flex-1" onClick={onClearAll}>
@@ -61,9 +67,7 @@ export function PlannerClassroomFilterSection({
                   id={`class-${classroom.id}`}
                   className="size-5 shrink-0"
                   checked={selectedClassrooms.has(classroom.id)}
-                  onCheckedChange={(checked) =>
-                    onToggleClassroom(classroom.id, checked === true)
-                  }
+                  onCheckedChange={(checked) => onToggleClassroom(classroom.id, checked === true)}
                 />
                 <Label
                   htmlFor={`class-${classroom.id}`}
@@ -82,4 +86,4 @@ export function PlannerClassroomFilterSection({
       </CardContent>
     </Card>
   );
-}
+};

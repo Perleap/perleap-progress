@@ -1,7 +1,3 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { Badge } from '@/components/ui/badge';
 import {
   Loader2,
   Mail,
@@ -15,8 +11,11 @@ import {
   StickyNote,
   Heart,
 } from 'lucide-react';
-import { useStudentProfileById } from '@/hooks/queries';
 import { useTranslation } from 'react-i18next';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { useStudentProfileById } from '@/hooks/queries';
 import {
   displayPreferredLanguage,
   displayLearningMethod,
@@ -26,6 +25,7 @@ import {
   displaySoloVsGroup,
   displayMotivationFactor,
 } from '@/lib/studentPreferenceLabels';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 interface ProfileRowProps {
   icon: React.ReactNode;
@@ -33,7 +33,7 @@ interface ProfileRowProps {
   value: string | null | undefined;
 }
 
-function ProfileRow({ icon, label, value }: ProfileRowProps) {
+const ProfileRow = ({ icon, label, value }: ProfileRowProps) => {
   if (!value) return null;
   return (
     <div className="flex items-start gap-3 py-2.5 border-b border-border/50 last:border-0">
@@ -44,7 +44,7 @@ function ProfileRow({ icon, label, value }: ProfileRowProps) {
       </div>
     </div>
   );
-}
+};
 
 export interface StudentProfilePanelProps {
   studentId: string | null;
@@ -56,7 +56,11 @@ export interface StudentProfilePanelProps {
 /**
  * Teacher-facing student onboarding/preferences body (shared by modal and tabbed dialogs).
  */
-export function StudentProfilePanel({ studentId, studentName, queryEnabled = true }: StudentProfilePanelProps) {
+export const StudentProfilePanel = ({
+  studentId,
+  studentName,
+  queryEnabled = true,
+}: StudentProfilePanelProps) => {
   const { t } = useTranslation();
   const { data: profile, isLoading } = useStudentProfileById(queryEnabled ? studentId : null);
 
@@ -82,9 +86,15 @@ export function StudentProfilePanel({ studentId, studentName, queryEnabled = tru
       <div className="flex flex-col items-center gap-3 pt-2 pb-4 border-b border-border">
         <Avatar className="h-20 w-20 border-2 border-border shadow-md">
           {profile?.avatar_url && (
-            <SecureAvatarImage src={profile.avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt={displayName} />
+            <SecureAvatarImage
+              src={profile.avatar_url}
+              bucket={STUDENT_AVATARS_BUCKET}
+              alt={displayName}
+            />
           )}
-          <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">{initials}</AvatarFallback>
+          <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
+            {initials}
+          </AvatarFallback>
         </Avatar>
         <div className="text-center">
           <h2 className="text-lg font-bold text-foreground">{displayName}</h2>
@@ -156,8 +166,10 @@ export function StudentProfilePanel({ studentId, studentName, queryEnabled = tru
       </div>
 
       {!profile && (
-        <p className="text-sm text-muted-foreground text-center py-4">{t('studentProfile.noData')}</p>
+        <p className="text-sm text-muted-foreground text-center py-4">
+          {t('studentProfile.noData')}
+        </p>
       )}
     </div>
   );
-}
+};

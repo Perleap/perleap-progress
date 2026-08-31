@@ -3,8 +3,12 @@ import { ClassroomActivityPageContent } from '@/components/features/syllabus';
 
 type Role = 'teacher' | 'student';
 
-export default function ClassroomActivityPage({ role }: { role: Role }) {
-  const { id: idParam, classroomId: classroomIdParam, resourceId } = useParams<{
+const ClassroomActivityPage = ({ role }: { role: Role }) => {
+  const {
+    id: idParam,
+    classroomId: classroomIdParam,
+    resourceId,
+  } = useParams<{
     id?: string;
     classroomId?: string;
     resourceId: string;
@@ -18,4 +22,6 @@ export default function ClassroomActivityPage({ role }: { role: Role }) {
   return (
     <ClassroomActivityPageContent role={role} classroomId={classroomId} resourceId={resourceId} />
   );
-}
+};
+
+export default ClassroomActivityPage;

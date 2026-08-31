@@ -1,37 +1,43 @@
-import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Upload,
+  X,
+  Link as LinkIcon,
+  Plus,
+  Trash2,
+  BookOpen,
+  Target,
+  FileText,
+  Loader2,
+  Eye,
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 import type { StorageUploadOptions } from '@/lib/storageUpload';
-import { useAuth } from '@/contexts/useAuth';
-import { toast } from 'sonner';
-import { Upload, X, Link as LinkIcon, Plus, Trash2, BookOpen, Target, FileText, Loader2, Eye } from 'lucide-react';
 import type { Domain, CourseMaterial } from '@/types/models';
+import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import { openOrDownloadMaterial } from '@/services/materialService';
 import { COURSE_MATERIALS_BUCKET } from '@/utils/storageUrls';
-import { DatePicker } from '@/components/ui/date-picker';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 
 interface Classroom {
   id: string;
   name: string;
   subject: string;
-  course_title: string;
-  start_date: string;
-  end_date: string;
-  resources: string;
+  course_title: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  resources: string | null;
   learning_outcomes: string[] | null;
   key_challenges: string[] | null;
   domains: Domain[] | null;
@@ -78,17 +84,19 @@ export const EditClassroomDialog = ({
         startDate: classroom.start_date || '',
         endDate: classroom.end_date || '',
         courseDescription: classroom.resources || '',
-        learningOutcomes: (classroom.learning_outcomes && classroom.learning_outcomes.length > 0)
-          ? classroom.learning_outcomes
-          : ['', '', ''],
-        keyChallenges: (classroom.key_challenges && classroom.key_challenges.length > 0)
-          ? classroom.key_challenges
-          : ['', ''],
+        learningOutcomes:
+          classroom.learning_outcomes && classroom.learning_outcomes.length > 0
+            ? classroom.learning_outcomes
+            : ['', '', ''],
+        keyChallenges:
+          classroom.key_challenges && classroom.key_challenges.length > 0
+            ? classroom.key_challenges
+            : ['', ''],
         domains: (classroom.domains || []) as Domain[],
         materials: (classroom.materials || []) as CourseMaterial[],
       });
     }
-  }, [open, classroom?.id]); // Only re-run when open state changes or classroom ID changes
+  }, [open, classroom]);
 
   const handleRephraseCourseDescription = async () => {
     if (!formData.courseDescription.trim()) {
@@ -124,12 +132,12 @@ export const EditClassroomDialog = ({
     try {
       // Filter out empty domains and components
       const filteredDomains = formData.domains
-        .filter(d => d.name.trim())
-        .map(d => ({
+        .filter((d) => d.name.trim())
+        .map((d) => ({
           name: d.name,
-          components: d.components.filter(c => c.trim())
+          components: d.components.filter((c) => c.trim()),
         }))
-        .filter(d => d.components.length > 0);
+        .filter((d) => d.components.length > 0);
 
       // Update classroom
       const { error } = await supabase
@@ -153,8 +161,8 @@ export const EditClassroomDialog = ({
       toast.success(t('editClassroom.success.saved'));
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error.message || t('editClassroom.errors.saving'));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : t('editClassroom.errors.saving'));
     } finally {
       setLoading(false);
     }
@@ -239,12 +247,11 @@ export const EditClassroomDialog = ({
 
     setUploadingMaterial(true);
     setUploadProgress(0);
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    console.log(`Starting PDF upload: ${file.name} (${fileSizeMB} MB)`, { type: file.type });
-    
+
     try {
       const fileExt = 'pdf';
-      const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
+      if (!user?.id) throw new Error('User required');
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const uploadOptions: StorageUploadOptions = {
         cacheControl: '3600',
@@ -253,13 +260,10 @@ export const EditClassroomDialog = ({
           if (progress.total <= 0) return;
           const percentage = Math.round((progress.loaded / progress.total) * 100);
           setUploadProgress(percentage);
-          console.log(
-            `Upload progress: ${percentage}% (${(progress.loaded / (1024 * 1024)).toFixed(2)} MB / ${fileSizeMB} MB)`,
-          );
         },
       };
 
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('course-materials')
         .upload(fileName, file, uploadOptions);
 
@@ -267,8 +271,6 @@ export const EditClassroomDialog = ({
         console.error('Supabase upload error:', uploadError);
         throw uploadError;
       }
-
-      console.log('Upload successful', data);
 
       setFormData({
         ...formData,
@@ -278,9 +280,11 @@ export const EditClassroomDialog = ({
       toast.success(t('createClassroom.success.pdfUploaded'));
       setSelectedFileName(''); // Clear the selected file name on success
       e.target.value = ''; // Reset file input
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Detailed upload error:', error);
-      toast.error(`${t('createClassroom.errors.creating')}: ${error.message || 'Unknown error'}`);
+      toast.error(
+        `${t('createClassroom.errors.creating')}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setUploadingMaterial(false);
       setUploadProgress(0);
@@ -312,7 +316,7 @@ export const EditClassroomDialog = ({
       });
       setLinkInput('');
       toast.success(t('createClassroom.success.linkAdded'));
-    } catch (error) {
+    } catch {
       toast.error(t('createClassroom.errors.validUrl'));
     }
   };
@@ -326,7 +330,10 @@ export const EditClassroomDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir={isRTL ? 'rtl' : 'ltr'} className="sm:max-w-6xl max-h-[90vh] p-0 overflow-hidden rounded-xl border-none shadow-2xl bg-background">
+      <DialogContent
+        dir={isRTL ? 'rtl' : 'ltr'}
+        className="sm:max-w-6xl max-h-[90vh] p-0 overflow-hidden rounded-xl border-none shadow-2xl bg-background"
+      >
         <DialogHeader className="px-8 pt-8 pb-6 bg-gradient-to-br from-muted/20 to-transparent">
           <div className="flex items-center gap-3 mb-2">
             <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-heading">
@@ -340,16 +347,22 @@ export const EditClassroomDialog = ({
 
         <ScrollArea className="max-h-[calc(90vh-160px)] px-8 pb-8">
           <form onSubmit={handleSubmit} className="space-y-8 pt-4">
-
             {/* Basic Info Section */}
             <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-              <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div
+                className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+              >
                 <BookOpen className="h-5 w-5" />
-                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseBasics')}</h3>
+                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createClassroom.courseBasics')}
+                </h3>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="courseTitle" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>
+                <Label
+                  htmlFor="courseTitle"
+                  className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+                >
                   {t('createClassroom.courseTitle')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -365,12 +378,30 @@ export const EditClassroomDialog = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.startDate')}</Label>
-                  <DatePicker value={formData.startDate} onChange={(v) => setFormData({ ...formData, startDate: v })} placeholder={t('createClassroom.startDate')} />
+                  <Label
+                    htmlFor="startDate"
+                    className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('createClassroom.startDate')}
+                  </Label>
+                  <DatePicker
+                    value={formData.startDate}
+                    onChange={(v) => setFormData({ ...formData, startDate: v })}
+                    placeholder={t('createClassroom.startDate')}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate" className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.endDate')}</Label>
-                  <DatePicker value={formData.endDate} onChange={(v) => setFormData({ ...formData, endDate: v })} placeholder={t('createClassroom.endDate')} />
+                  <Label
+                    htmlFor="endDate"
+                    className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('createClassroom.endDate')}
+                  </Label>
+                  <DatePicker
+                    value={formData.endDate}
+                    onChange={(v) => setFormData({ ...formData, endDate: v })}
+                    placeholder={t('createClassroom.endDate')}
+                  />
                 </div>
               </div>
 
@@ -394,15 +425,20 @@ export const EditClassroomDialog = ({
                   isRewriting={rephrasingCourseDescription}
                 />
               </div>
-
             </div>
 
             {/* Subject Areas Section */}
             <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div
+                className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
+              >
+                <div
+                  className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}
+                >
                   <Target className="h-5 w-5" />
-                  <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.subjectAreas')}</h3>
+                  <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createClassroom.subjectAreas')}
+                  </h3>
                 </div>
                 <Button
                   type="button"
@@ -415,20 +451,25 @@ export const EditClassroomDialog = ({
                   {t('createClassroom.addArea')}
                 </Button>
               </div>
-              
+
               <p className={`text-sm text-subtle mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('editClassroom.subjectAreasHelper')}
               </p>
 
               {formData.domains.length === 0 && (
                 <div className="p-8 border-2 border-dashed border-border rounded-xl bg-muted/10">
-                  <p className={`text-subtle text-sm ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addAreaPrompt')}</p>
+                  <p className={`text-subtle text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('createClassroom.addAreaPrompt')}
+                  </p>
                 </div>
               )}
 
               <div className="grid gap-4">
                 {formData.domains.map((domain, domainIndex) => (
-                  <div key={domainIndex} className="space-y-4 p-5 border border-border rounded-xl bg-muted/5 shadow-sm">
+                  <div
+                    key={domainIndex}
+                    className="space-y-4 p-5 border border-border rounded-xl bg-muted/5 shadow-sm"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                         {domainIndex + 1}
@@ -452,15 +493,23 @@ export const EditClassroomDialog = ({
                     </div>
 
                     <div className="ps-11 space-y-3">
-                      <Label className={`text-xs font-bold text-primary uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.skills')}</Label>
+                      <Label
+                        className={`text-xs font-bold text-primary uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}
+                      >
+                        {t('createClassroom.skills')}
+                      </Label>
                       <div className="grid gap-2">
                         {domain.components.map((component, componentIndex) => (
                           <div key={componentIndex} className="flex items-center gap-2">
                             <div className="h-1.5 w-1.5 rounded-full bg-primary/30" />
                             <Input
-                              placeholder={t('createClassroom.skillPlaceholder', { number: componentIndex + 1 })}
+                              placeholder={t('createClassroom.skillPlaceholder', {
+                                number: componentIndex + 1,
+                              })}
                               value={component}
-                              onChange={(e) => updateComponent(domainIndex, componentIndex, e.target.value)}
+                              onChange={(e) =>
+                                updateComponent(domainIndex, componentIndex, e.target.value)
+                              }
                               className="flex-1 rounded-lg h-9 text-sm"
                               autoDirection
                             />
@@ -494,14 +543,22 @@ export const EditClassroomDialog = ({
 
             {/* Materials Section */}
             <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-              <div className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div
+                className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}
+              >
                 <FileText className="h-5 w-5" />
-                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.courseMaterials')}</h3>
+                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t('createClassroom.courseMaterials')}
+                </h3>
               </div>
 
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <Label className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.uploadPdf')}</Label>
+                  <Label
+                    className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('createClassroom.uploadPdf')}
+                  </Label>
                   <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <input
                       id="pdf-upload"
@@ -531,14 +588,20 @@ export const EditClassroomDialog = ({
                         t('createClassroom.chooseFile')
                       )}
                     </Button>
-                    <span className={`text-sm text-subtle truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <span
+                      className={`text-sm text-subtle truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
                       {selectedFileName || t('createClassroom.noFileChosen')}
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.addLink')}</Label>
+                  <Label
+                    className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('createClassroom.addLink')}
+                  </Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder={t('createClassroom.linkPlaceholder')}
@@ -567,7 +630,10 @@ export const EditClassroomDialog = ({
               {formData.materials.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {formData.materials.map((material, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border shadow-sm group">
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border shadow-sm group"
+                    >
                       <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary">
                         {material.type === 'pdf' ? (
                           <Upload className="h-4 w-4" />
@@ -575,13 +641,17 @@ export const EditClassroomDialog = ({
                           <LinkIcon className="h-4 w-4" />
                         )}
                       </div>
-                      <span className="flex-1 text-sm truncate font-bold text-foreground">{material.name}</span>
+                      <span className="flex-1 text-sm truncate font-bold text-foreground">
+                        {material.name}
+                      </span>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => void openOrDownloadMaterial(material, COURSE_MATERIALS_BUCKET)}
+                          onClick={() =>
+                            void openOrDownloadMaterial(material, COURSE_MATERIALS_BUCKET)
+                          }
                           className="h-8 w-8 text-muted-foreground hover:text-primary"
                           title={t('common.view')}
                         >
@@ -606,8 +676,14 @@ export const EditClassroomDialog = ({
             {/* Outcomes & Challenges */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Label className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.learningOutcomes')}</Label>
+                <div
+                  className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
+                >
+                  <Label
+                    className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('createClassroom.learningOutcomes')}
+                  </Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -633,8 +709,14 @@ export const EditClassroomDialog = ({
               </div>
 
               <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Label className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}>{t('createClassroom.keyChallenges')}</Label>
+                <div
+                  className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
+                >
+                  <Label
+                    className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('createClassroom.keyChallenges')}
+                  </Label>
                   <Button
                     type="button"
                     variant="ghost"

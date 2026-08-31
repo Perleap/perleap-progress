@@ -4,6 +4,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import {
   loadVerifyEnv,
+  isRemoteVerifyTarget,
   makeRunId,
   parseArgs,
   fail,
@@ -50,6 +51,12 @@ function runNpmSoft(script, extraArgs = []) {
 
 const studentFeatures = featureIds.filter((id) => getFeature(id)?.role === 'student');
 const teacherFeatures = featureIds.filter((id) => getFeature(id)?.role === 'teacher');
+const onboardingStudentFeatures = featureIds.filter(
+  (id) => getFeature(id)?.role === 'onboarding-student',
+);
+const onboardingTeacherFeatures = featureIds.filter(
+  (id) => getFeature(id)?.role === 'onboarding-teacher',
+);
 const adminFeatures = featureIds.filter((id) => getFeature(id)?.role === 'admin');
 const anonymousFeatures = featureIds.filter((id) => getFeature(id)?.role === 'anonymous');
 const unknown = featureIds.filter((id) => !getFeature(id));
@@ -57,8 +64,18 @@ if (unknown.length) {
   fail(`Unknown feature ids in suite: ${unknown.join(', ')}`);
 }
 
+const remote = isRemoteVerifyTarget(env.VERIFY_BASE_URL);
+if (remote) {
+  console.log(`verify-perleap: remote target ${env.VERIFY_BASE_URL} — skipping local dev server`);
+}
+
 runNpm('verify:seed');
-runNpm('verify:launch');
+if (onboardingStudentFeatures.length || onboardingTeacherFeatures.length) {
+  runNpm('verify:seed-onboarding');
+}
+if (!remote) {
+  runNpm('verify:launch');
+}
 runNpm('verify:doctor');
 
 const suiteEvidenceDir = evidenceDirForRun(runId);
@@ -98,6 +115,22 @@ if (teacherFeatures.length) {
   }
 }
 
+if (onboardingStudentFeatures.length) {
+  runNpm('verify:reset-onboarding', ['--role', 'student']);
+  runNpm('verify:login-onboarding', ['--role', 'student']);
+  for (const id of onboardingStudentFeatures) {
+    runFeature(id);
+  }
+}
+
+if (onboardingTeacherFeatures.length) {
+  runNpm('verify:reset-onboarding', ['--role', 'teacher']);
+  runNpm('verify:login-onboarding', ['--role', 'teacher']);
+  for (const id of onboardingTeacherFeatures) {
+    runFeature(id);
+  }
+}
+
 if (adminFeatures.length) {
   runNpm('verify:login', ['--role', 'admin']);
   for (const id of adminFeatures) {
@@ -118,7 +151,7 @@ const manifest = {
 
 fs.writeFileSync(path.join(suiteEvidenceDir, 'suite-manifest.json'), JSON.stringify(manifest, null, 2));
 
-if (env.VERIFY_KEEP_OPEN !== '1') {
+if (!remote && env.VERIFY_KEEP_OPEN !== '1') {
   runNpm('verify:cleanup');
 }
 

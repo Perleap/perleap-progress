@@ -1,6 +1,6 @@
 /**
  * Session State Management
- * 
+ *
  * Tracks signup progress to prevent confusion between:
  * - Active signup flow (user just registered, going through onboarding)
  * - Truly stuck users (old session, missing role metadata)
@@ -17,7 +17,6 @@ export const markSignupInProgress = (): void => {
   try {
     sessionStorage.setItem(SIGNUP_IN_PROGRESS_KEY, 'true');
     sessionStorage.setItem(SIGNUP_TIMESTAMP_KEY, Date.now().toString());
-    console.log('✅ Signup marked as in progress');
   } catch (error) {
     console.error('Failed to mark signup in progress:', error);
   }
@@ -31,7 +30,6 @@ export const markSignupComplete = (): void => {
   try {
     sessionStorage.removeItem(SIGNUP_IN_PROGRESS_KEY);
     sessionStorage.removeItem(SIGNUP_TIMESTAMP_KEY);
-    console.log('✅ Signup marked as complete');
   } catch (error) {
     console.error('Failed to mark signup complete:', error);
   }
@@ -46,7 +44,7 @@ export const markSignupComplete = (): void => {
 export const isSignupInProgress = (): boolean => {
   try {
     const inProgress = sessionStorage.getItem(SIGNUP_IN_PROGRESS_KEY) === 'true';
-    
+
     if (!inProgress) {
       return false;
     }
@@ -57,7 +55,7 @@ export const isSignupInProgress = (): boolean => {
       const signupTime = parseInt(timestamp);
       const now = Date.now();
       const thirtyMinutes = 30 * 60 * 1000;
-      
+
       if (now - signupTime > thirtyMinutes) {
         console.warn('⚠️ Signup timed out (30+ minutes), clearing flags');
         markSignupComplete();
@@ -80,7 +78,6 @@ export const clearAllSignupState = (): void => {
   try {
     sessionStorage.removeItem(SIGNUP_IN_PROGRESS_KEY);
     sessionStorage.removeItem(SIGNUP_TIMESTAMP_KEY);
-    console.log('🗑️ Cleared all signup state');
   } catch (error) {
     console.error('Failed to clear signup state:', error);
   }
@@ -102,8 +99,7 @@ export const getSignupDuration = (): number | null => {
     }
 
     return Date.now() - parseInt(timestamp);
-  } catch (error) {
+  } catch {
     return null;
   }
 };
-

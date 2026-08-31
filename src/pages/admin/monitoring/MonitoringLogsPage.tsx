@@ -1,5 +1,7 @@
 import { MonitoringLogsContent } from '@/components/features/admin';
 
-export default function MonitoringLogsPage() {
+const MonitoringLogsPage = () => {
   return <MonitoringLogsContent />;
-}
+};
+
+export default MonitoringLogsPage;

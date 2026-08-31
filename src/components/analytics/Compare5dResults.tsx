@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import type { Compare5dNarrativeContext } from '@/lib/analyticsCompare5d/types';
+import type { FiveDDimensionKey, FiveDScores, FiveDQedMeasures } from '@/types/models';
 import { CompareSide5dNarrativeBlock } from '@/components/analytics/Analytics5dNarrativeBlocks';
 import {
   Table,
@@ -8,8 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Compare5dNarrativeContext } from '@/lib/analyticsCompare5d/types';
-import type { FiveDDimensionKey, FiveDScores, FiveDQedMeasures } from '@/types/models';
 
 type Lang = 'en' | 'he';
 
@@ -17,7 +17,7 @@ type Lang = 'en' | 'he';
 function compareTableDisplayValue(
   dimension: FiveDDimensionKey,
   scores: FiveDScores,
-  qed?: FiveDQedMeasures | null,
+  qed?: FiveDQedMeasures | null
 ): number | null {
   const dev = qed?.[dimension]?.development;
   if (dev != null) return dev;
@@ -36,7 +36,7 @@ function formatCompareTableDelta(a: number | null, b: number | null): string {
   return `${d >= 0 ? '+' : ''}${d}`;
 }
 
-export function Compare5dResults({
+export const Compare5dResults = ({
   classroomId,
   labelA,
   labelB,
@@ -66,7 +66,7 @@ export function Compare5dResults({
   narrativeIdPrefix: string;
   language: Lang;
   isRTL: boolean;
-}) {
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -87,9 +87,7 @@ export function Compare5dResults({
               const b = compareTableDisplayValue(dim, scoresB, qedB);
               return (
                 <TableRow key={dim}>
-                  <TableCell className="font-medium">
-                    {t(`dimensions.${dim}.label`)}
-                  </TableCell>
+                  <TableCell className="font-medium">{t(`dimensions.${dim}.label`)}</TableCell>
                   <TableCell className="text-center tabular-nums">
                     {formatCompareTableValue(a)}
                   </TableCell>
@@ -145,4 +143,4 @@ export function Compare5dResults({
       </div>
     </>
   );
-}
+};

@@ -1,13 +1,14 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -60,14 +61,14 @@ export interface DateTimePickerProps {
   dir?: 'ltr' | 'rtl';
 }
 
-export function DateTimePicker({
+export const DateTimePicker = ({
   value,
   onChange,
   placeholder,
   className,
   disabled,
   dir,
-}: DateTimePickerProps) {
+}: DateTimePickerProps) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const parsed = useMemo(() => parseDatetimeLocal(value), [value]);
@@ -151,9 +152,17 @@ export function DateTimePicker({
             defaultMonth={selectedDate}
           />
           <div className="space-y-2 border-t border-border pt-3 px-1">
-            <Label className="text-xs font-medium text-muted-foreground">{t('datetimePicker.time')}</Label>
+            <Label className="text-xs font-medium text-muted-foreground">
+              {t('datetimePicker.time')}
+            </Label>
             <div className="flex gap-2 items-center">
-              <Select value={hour} onValueChange={setHour}>
+              <Select
+                value={hour}
+                onValueChange={(v: string | null) => {
+                  if (v == null) return;
+                  setHour(v);
+                }}
+              >
                 <SelectTrigger className="h-9 rounded-lg flex-1 min-w-0" dir={dir}>
                   <SelectValue />
                 </SelectTrigger>
@@ -166,7 +175,13 @@ export function DateTimePicker({
                 </SelectContent>
               </Select>
               <span className="text-muted-foreground shrink-0">:</span>
-              <Select value={minute} onValueChange={setMinute}>
+              <Select
+                value={minute}
+                onValueChange={(v: string | null) => {
+                  if (v == null) return;
+                  setMinute(v);
+                }}
+              >
                 <SelectTrigger className="h-9 rounded-lg flex-1 min-w-0" dir={dir}>
                   <SelectValue />
                 </SelectTrigger>
@@ -182,14 +197,32 @@ export function DateTimePicker({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2 pb-2 px-2">
             <div className={cn('flex gap-1', dir === 'rtl' && 'flex-row-reverse')}>
-              <Button type="button" variant="ghost" size="sm" className="rounded-full text-xs" onClick={clear}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-xs"
+                onClick={clear}
+              >
                 {t('datetimePicker.clear')}
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="rounded-full text-xs" onClick={setToday}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-xs"
+                onClick={setToday}
+              >
                 {t('datetimePicker.today')}
               </Button>
             </div>
-            <Button type="button" size="sm" className="rounded-full" disabled={!selectedDate} onClick={apply}>
+            <Button
+              type="button"
+              size="sm"
+              className="rounded-full"
+              disabled={!selectedDate}
+              onClick={apply}
+            >
               {t('datetimePicker.apply')}
             </Button>
           </div>
@@ -197,4 +230,4 @@ export function DateTimePicker({
       </PopoverContent>
     </Popover>
   );
-}
+};

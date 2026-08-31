@@ -1,14 +1,3 @@
-import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
 import {
   Plus,
   Trash2,
@@ -20,24 +9,24 @@ import {
   Calendar,
   Target,
   FileText,
-  Maximize2,
-  Minimize2,
-  Sparkles,
-  Loader2,
   Pencil,
   Lock,
   Unlock,
 } from 'lucide-react';
-import { DatePicker } from '@/components/ui/date-picker';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { WizardData, WizardSectionData } from '../CreateClassroomWizard';
+import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
+import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 interface OutlineBuilderStepProps {
   data: WizardData;
@@ -104,10 +93,13 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
     setSelectedIndex(target);
   };
 
-  const updateSection = (index: number, partial: Partial<WizardSectionData>) => {
-    const updated = sections.map((s, i) => (i === index ? { ...s, ...partial } : s));
-    onChange({ sections: updated });
-  };
+  const updateSection = useCallback(
+    (index: number, partial: Partial<WizardSectionData>) => {
+      const updated = sections.map((s, i) => (i === index ? { ...s, ...partial } : s));
+      onChange({ sections: updated });
+    },
+    [sections, onChange]
+  );
 
   const addObjective = () => {
     if (selected) {
@@ -124,7 +116,9 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
 
   const removeObjective = (objIndex: number) => {
     if (!selected) return;
-    updateSection(selectedIndex, { objectives: selected.objectives.filter((_, i) => i !== objIndex) });
+    updateSection(selectedIndex, {
+      objectives: selected.objectives.filter((_, i) => i !== objIndex),
+    });
   };
 
   const handleRewrite = useCallback(
@@ -147,17 +141,25 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
         setRewritingField(null);
       }
     },
-    [selected?.tempId, selectedIndex, language, t],
+    [selected?.tempId, selectedIndex, language, t, updateSection]
   );
 
   return (
     <div className="flex gap-6 min-h-[500px]">
       {/* Left Sidebar — Section List */}
       <div className={cn('w-72 flex-shrink-0 flex flex-col', isRTL && 'order-2')}>
-        <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
           <h3 className="font-bold text-foreground">{t('syllabus.sections.title')}</h3>
           {sections.length > 0 && (
-            <Button type="button" variant="outline" size="sm" onClick={addSection} className="rounded-full gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addSection}
+              className="rounded-full gap-1"
+            >
               <Plus className="h-3.5 w-3.5" /> {t('syllabus.sections.add')}
             </Button>
           )}
@@ -193,10 +195,26 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(index, -1); }} disabled={index === 0} className="p-0.5 hover:text-primary disabled:opacity-30">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveSection(index, -1);
+                      }}
+                      disabled={index === 0}
+                      className="p-0.5 hover:text-primary disabled:opacity-30"
+                    >
                       <ChevronUp className="h-3.5 w-3.5" />
                     </button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(index, 1); }} disabled={index === sections.length - 1} className="p-0.5 hover:text-primary disabled:opacity-30">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveSection(index, 1);
+                      }}
+                      disabled={index === sections.length - 1}
+                      className="p-0.5 hover:text-primary disabled:opacity-30"
+                    >
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -216,10 +234,22 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                 {selected.title || `${structureLabel} ${selectedIndex + 1}`}
               </h3>
               <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <Button type="button" variant="ghost" size="sm" onClick={() => duplicateSection(selectedIndex)} className="text-muted-foreground hover:text-foreground rounded-full gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => duplicateSection(selectedIndex)}
+                  className="text-muted-foreground hover:text-foreground rounded-full gap-1"
+                >
                   <Copy className="h-3.5 w-3.5" /> {t('syllabus.sections.duplicate')}
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => removeSection(selectedIndex)} className="text-muted-foreground hover:text-destructive rounded-full gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeSection(selectedIndex)}
+                  className="text-muted-foreground hover:text-destructive rounded-full gap-1"
+                >
                   <Trash2 className="h-3.5 w-3.5" /> {t('syllabus.sections.delete')}
                 </Button>
               </div>
@@ -228,8 +258,11 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
             <div className="space-y-5 p-5 rounded-xl border border-border bg-card shadow-sm">
               {/* Title */}
               <div className="space-y-2">
-                <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                  <BookOpen className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.sectionTitle')}
+                <Label
+                  className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                >
+                  <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                  {t('syllabus.sections.sectionTitle')}
                 </Label>
                 <Input
                   value={selected.title}
@@ -242,8 +275,11 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
 
               {/* Description */}
               <div className="space-y-2">
-                <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.description')}
+                <Label
+                  className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                >
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                  {t('syllabus.sections.description')}
                 </Label>
                 <ExpandableTextarea
                   value={selected.description}
@@ -257,39 +293,72 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
               </div>
 
               <div className="space-y-2">
-                <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.content', 'Content')}
+                <Label
+                  className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                >
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                  {t('syllabus.sections.content', 'Content')}
                 </Label>
                 <RichTextEditor
                   content={selected.content || ''}
                   onChange={(html) => updateSection(selectedIndex, { content: html })}
-                  placeholder={t('syllabus.sections.contentPlaceholder', 'Add lesson content, instructions, materials...')}
+                  placeholder={t(
+                    'syllabus.sections.contentPlaceholder',
+                    'Add lesson content, instructions, materials...'
+                  )}
                 />
               </div>
 
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.startDate')}
+                  <Label
+                    className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                    {t('syllabus.sections.startDate')}
                   </Label>
-                  <DatePicker value={selected.startDate} onChange={(v) => updateSection(selectedIndex, { startDate: v })} placeholder={t('syllabus.sections.startDate')} className="rounded-xl h-9" />
+                  <DatePicker
+                    value={selected.startDate}
+                    onChange={(v) => updateSection(selectedIndex, { startDate: v })}
+                    placeholder={t('syllabus.sections.startDate')}
+                    className="rounded-xl h-9"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.endDate')}
+                  <Label
+                    className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                    {t('syllabus.sections.endDate')}
                   </Label>
-                  <DatePicker value={selected.endDate} onChange={(v) => updateSection(selectedIndex, { endDate: v })} placeholder={t('syllabus.sections.endDate')} className="rounded-xl h-9" />
+                  <DatePicker
+                    value={selected.endDate}
+                    onChange={(v) => updateSection(selectedIndex, { endDate: v })}
+                    placeholder={t('syllabus.sections.endDate')}
+                    className="rounded-xl h-9"
+                  />
                 </div>
               </div>
 
               {/* Objectives */}
               <div className="space-y-3">
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Label className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-                    <Target className="h-3.5 w-3.5 text-muted-foreground" /> {t('syllabus.sections.objectives')}
+                <div
+                  className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
+                >
+                  <Label
+                    className={`text-sm font-medium flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+                  >
+                    <Target className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                    {t('syllabus.sections.objectives')}
                   </Label>
-                  <Button type="button" variant="ghost" size="sm" onClick={addObjective} className="text-primary h-7 text-xs">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={addObjective}
+                    className="text-primary h-7 text-xs"
+                  >
                     <Plus className="h-3 w-3 me-1" /> {t('syllabus.sections.add')}
                   </Button>
                 </div>
@@ -305,7 +374,11 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                         autoDirection
                       />
                       {selected.objectives.length > 1 && (
-                        <button type="button" onClick={() => removeObjective(oi)} className="text-muted-foreground hover:text-destructive p-1">
+                        <button
+                          type="button"
+                          onClick={() => removeObjective(oi)}
+                          className="text-muted-foreground hover:text-destructive p-1"
+                        >
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
@@ -315,7 +388,9 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
               </div>
 
               {data.release_mode === 'manual' && (
-                <div className={`flex items-center justify-between gap-3 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div
+                  className={`flex items-center justify-between gap-3 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}
+                >
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                     {t('syllabus.sections.manualLock')}
@@ -326,7 +401,8 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
                     size="sm"
                     className={cn(
                       'rounded-full gap-1.5 h-8',
-                      selected.is_locked && 'border-destructive/40 text-destructive hover:bg-destructive/10',
+                      selected.is_locked &&
+                        'border-destructive/40 text-destructive hover:bg-destructive/10'
                     )}
                     onClick={() => updateSection(selectedIndex, { is_locked: !selected.is_locked })}
                   >
@@ -351,7 +427,9 @@ export const OutlineBuilderStep = ({ data, onChange, isRTL }: OutlineBuilderStep
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
               <BookOpen className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-2">{t('syllabus.wizard.buildOutline')}</h3>
+            <h3 className="text-lg font-bold text-foreground mb-2">
+              {t('syllabus.wizard.buildOutline')}
+            </h3>
             <p className="text-muted-foreground text-sm max-w-md mb-6">
               {t('syllabus.wizard.buildOutlineDesc')}
             </p>

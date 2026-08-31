@@ -1,15 +1,22 @@
-import { useState, useMemo, useEffect, useCallback, type RefObject } from 'react';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  type RefObject,
+  type ComponentProps,
+} from 'react';
+import type { DbAssignmentType } from '@/types/models';
 import { AssignmentTypeIntroDialog } from '@/components/features/assignment/AssignmentTypeIntroDialog';
+import { SUBMISSION_STATUS } from '@/config/constants';
 import { useAssignmentConversationHasMessages } from '@/hooks/queries';
-import { getSeenAssignmentTypes, markAssignmentTypeIntroSeen } from '@/lib/assignmentTypeIntroStorage';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import {
-  getTaskUnderstandingChoice,
-  markTaskUnderstanding,
-} from '@/lib/taskUnderstandingStorage';
-import { SUBMISSION_STATUS } from '@/config/constants';
-import type { DbAssignmentType } from '@/types/models';
-import type { ComponentProps } from 'react';
+  getSeenAssignmentTypes,
+  markAssignmentTypeIntroSeen,
+} from '@/lib/assignmentTypeIntroStorage';
+import { getTaskUnderstandingChoice, markTaskUnderstanding } from '@/lib/taskUnderstandingStorage';
 
 type IntroAssignment = {
   type: string;
@@ -58,12 +65,12 @@ export function useAssignmentDetailIntro({
 
   const shouldShowAssignmentTypeIntro = Boolean(
     !isTeacherTry &&
-      userId &&
-      assignment &&
-      submission &&
-      !hasFeedback &&
-      submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
-      !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType),
+    userId &&
+    assignment &&
+    submission &&
+    !hasFeedback &&
+    submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
+    !seenAssignmentIntroTypes.has(assignment.type as DbAssignmentType)
   );
 
   const storedTaskUnderstandingChoice = useMemo(() => {
@@ -77,19 +84,18 @@ export function useAssignmentDetailIntro({
 
   const taskUnderstandingEligible = Boolean(
     !isTeacherTry &&
-      userId &&
-      assignment &&
-      submission &&
-      !hasFeedback &&
-      submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
-      storedTaskUnderstandingChoice === null &&
-      conversationQueryReady &&
-      conversationHasMessages === false,
+    userId &&
+    assignment &&
+    submission &&
+    !hasFeedback &&
+    submission.status === SUBMISSION_STATUS.IN_PROGRESS &&
+    storedTaskUnderstandingChoice === null &&
+    conversationQueryReady &&
+    conversationHasMessages === false
   );
 
   const promptEnabled = assignment?.show_task_understanding_prompt !== false;
-  const shouldShowIntroWizard =
-    promptEnabled && taskUnderstandingEligible && !isStudentTaskLoading;
+  const shouldShowIntroWizard = promptEnabled && taskUnderstandingEligible && !isStudentTaskLoading;
 
   useEffect(() => {
     if (shouldShowIntroWizard) {
@@ -122,17 +128,17 @@ export function useAssignmentDetailIntro({
         setCompanionScrollTick((n) => n + 1);
       }
     },
-    [userId, submission?.id, assignment],
+    [userId, submission?.id, assignment]
   );
 
   const chatInitAllowed = Boolean(
     isTeacherTry ||
-      !submission ||
-      hasFeedback ||
-      submission.status !== SUBMISSION_STATUS.IN_PROGRESS ||
-      assignment?.show_task_understanding_prompt === false ||
-      storedTaskUnderstandingChoice !== null ||
-      (conversationQueryReady && conversationHasMessages === true),
+    !submission ||
+    hasFeedback ||
+    submission.status !== SUBMISSION_STATUS.IN_PROGRESS ||
+    assignment?.show_task_understanding_prompt === false ||
+    storedTaskUnderstandingChoice !== null ||
+    (conversationQueryReady && conversationHasMessages === true)
   );
 
   const initialGreetingMode: 'default' | 'explain_task' =
@@ -145,7 +151,13 @@ export function useAssignmentDetailIntro({
       companionChatAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     return () => cancelAnimationFrame(frameId);
-  }, [assignment?.type, storedTaskUnderstandingChoice, companionScrollTick, companionChatAnchorRef]);
+  }, [
+    assignment,
+    assignment?.type,
+    storedTaskUnderstandingChoice,
+    companionScrollTick,
+    companionChatAnchorRef,
+  ]);
 
   return {
     introWizardOpen,
@@ -174,7 +186,7 @@ export type AssignmentDetailIntroBlockProps = {
   clipboardTracking?: ComponentProps<typeof AssignmentTypeIntroDialog>['clipboardTracking'];
 };
 
-export function AssignmentDetailIntroBlock({
+export const AssignmentDetailIntroBlock = ({
   assignment,
   open,
   onOpenChange,
@@ -184,7 +196,7 @@ export function AssignmentDetailIntroBlock({
   onTypeStepComplete,
   onTaskConfirm,
   clipboardTracking,
-}: AssignmentDetailIntroBlockProps) {
+}: AssignmentDetailIntroBlockProps) => {
   return (
     <AssignmentTypeIntroDialog
       open={open}
@@ -199,4 +211,4 @@ export function AssignmentDetailIntroBlock({
       clipboardTracking={clipboardTracking}
     />
   );
-}
+};

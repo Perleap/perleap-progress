@@ -1,18 +1,28 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Loader2, RefreshCw, Lock, ChevronRight } from 'lucide-react';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
+import type { DbAssignmentType } from '@/types/models';
+import type { AssignmentLinkState } from '@/types/navigation';
+import type { AssignmentCompletionTone } from '@/types/submission';
 import {
-  completeSubmission,
-  submitWithBackgroundAiFeedback,
-  startNewSubmissionAttempt,
-} from '@/services/submissionService';
-import { ensureStudentFacingTask } from '@/services/assignmentService';
-import { getAssignmentLanguage } from '@/utils/languageDetection';
+  AssignmentDetailIntroBlock,
+  useAssignmentDetailIntro,
+} from '@/components/features/assignment/AssignmentDetailIntroBlock';
+import {
+  AssignmentDetailBackBar,
+  AssignmentDetailLayout,
+  useAssignmentDetailNav,
+} from '@/components/features/assignment/AssignmentDetailLayout';
+import { AssignmentDetailMaterialsPanel } from '@/components/features/assignment/AssignmentDetailMaterialsPanel';
+import { AssignmentDetailSubmissionRouter } from '@/components/features/assignment/AssignmentDetailSubmissionRouter';
+import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   assignmentFlowCompleteKeys,
   assignmentKeys,
@@ -23,42 +33,32 @@ import {
   useModuleFlowSteps,
 } from '@/hooks/queries';
 import { notificationKeys } from '@/hooks/queries/useNotificationQueries';
-import { getUnreadNotifications, markAsRead } from '@/lib/notificationService';
+import { useAssignmentClipboardTracking } from '@/hooks/useAssignmentClipboardTracking';
+import { useNuanceTracking } from '@/hooks/useNuanceTracking';
+import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
+import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+import {
+  pickEligiblePriorSubmissionIds,
+  readAssignmentContextCarryover,
+  writeAssignmentContextCarryover,
+} from '@/lib/assignmentContextCarryover';
+import { studentModuleFlowStepOptions, type AssignmentRow } from '@/lib/moduleFlow';
 import {
   getFirstNavigableInSection,
   getNextInSectionAfterAssignment,
   getNextSectionId,
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
-import { studentModuleFlowStepOptions, type AssignmentRow } from '@/lib/moduleFlow';
-import { Loader2, RefreshCw, Lock, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
-import { useNuanceTracking } from '@/hooks/useNuanceTracking';
-import { useAssignmentClipboardTracking } from '@/hooks/useAssignmentClipboardTracking';
-import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
-import type { AssignmentLinkState } from '@/types/navigation';
-import type { AssignmentCompletionTone } from '@/types/submission';
+import { getUnreadNotifications, markAsRead } from '@/lib/notificationService';
 import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
-import { canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+import { ensureStudentFacingTask } from '@/services/assignmentService';
 import {
-  AssignmentDetailBackBar,
-  AssignmentDetailLayout,
-  useAssignmentDetailNav,
-} from '@/components/features/assignment/AssignmentDetailLayout';
-import {
-  AssignmentDetailIntroBlock,
-  useAssignmentDetailIntro,
-} from '@/components/features/assignment/AssignmentDetailIntroBlock';
-import { AssignmentDetailMaterialsPanel } from '@/components/features/assignment/AssignmentDetailMaterialsPanel';
-import { AssignmentDetailSubmissionRouter } from '@/components/features/assignment/AssignmentDetailSubmissionRouter';
-import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
-import {
-  pickEligiblePriorSubmissionIds,
-  readAssignmentContextCarryover,
-  writeAssignmentContextCarryover,
-} from '@/lib/assignmentContextCarryover';
-import type { DbAssignmentType } from '@/types/models';
+  completeSubmission,
+  submitWithBackgroundAiFeedback,
+  startNewSubmissionAttempt,
+} from '@/services/submissionService';
+import { getAssignmentLanguage } from '@/utils/languageDetection';
 
 export type AssignmentDetailContentProps = {
   assignmentId: string;
@@ -66,11 +66,11 @@ export type AssignmentDetailContentProps = {
   teacherRouteClassroomId?: string;
 };
 
-export function AssignmentDetailContent({
+export const AssignmentDetailContent = ({
   assignmentId,
   isTeacherTry,
   teacherRouteClassroomId,
-}: AssignmentDetailContentProps) {
+}: AssignmentDetailContentProps) => {
   const { t } = useTranslation();
   const { language: uiLanguage = 'en', isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -93,7 +93,7 @@ export function AssignmentDetailContent({
       });
       const ids = list
         .filter(
-          (n) => n.type === 'assignment_new_attempt' && n.metadata?.assignment_id === assignmentId,
+          (n) => n.type === 'assignment_new_attempt' && n.metadata?.assignment_id === assignmentId
         )
         .map((n) => n.id);
       for (const id of ids) {
@@ -108,18 +108,19 @@ export function AssignmentDetailContent({
     };
   }, [isTeacherTry, assignmentId, user?.id, queryClient]);
 
-  const { data: assignmentData, isLoading: loading, refetch } = useStudentAssignmentDetails(
-    assignmentId || undefined,
-    { isTeacherTry },
-  );
+  const {
+    data: assignmentData,
+    isLoading: loading,
+    refetch,
+  } = useStudentAssignmentDetails(assignmentId || undefined, { isTeacherTry });
 
   const needsAutoStudentTask = Boolean(
     !isTeacherTry &&
-      !loading &&
-      assignmentId &&
-      user &&
-      assignmentData &&
-      !String(assignmentData.student_facing_task ?? '').trim(),
+    !loading &&
+    assignmentId &&
+    user &&
+    assignmentData &&
+    !String(assignmentData.student_facing_task ?? '').trim()
   );
   const {
     data: autoStudentTaskResult,
@@ -152,8 +153,8 @@ export function AssignmentDetailContent({
 
   const isStudentTaskLoading = Boolean(
     needsAutoStudentTask &&
-      !resolvedStudentFacingTask &&
-      (isAutoFillingTaskCard || isAutoFillingTaskFetching),
+    !resolvedStudentFacingTask &&
+    (isAutoFillingTaskCard || isAutoFillingTaskFetching)
   );
   const classroomId = assignmentData?.classroom_id;
   const { data: classroomForNav } = useClassroom(classroomId);
@@ -177,12 +178,12 @@ export function AssignmentDetailContent({
   const sectionFlow = useStudentSectionModuleFlow(
     assignmentData?.classroom_id,
     assignmentData?.syllabus_section_id ?? undefined,
-    user?.id,
+    user?.id
   );
 
   const nextSectionIdForNav = useMemo(
     () => getNextSectionId(syllabusForNav?.sections, assignmentData?.syllabus_section_id),
-    [syllabusForNav?.sections, assignmentData?.syllabus_section_id],
+    [syllabusForNav?.sections, assignmentData?.syllabus_section_id]
   );
 
   const { data: nextSectionFlowSteps = [] } = useModuleFlowSteps(nextSectionIdForNav);
@@ -195,7 +196,10 @@ export function AssignmentDetailContent({
       computed: sectionFlow.computed,
       assignmentId: assignmentData.id,
     });
-    const nextModId = getNextSectionId(syllabusForNav?.sections, assignmentData.syllabus_section_id);
+    const nextModId = getNextSectionId(
+      syllabusForNav?.sections,
+      assignmentData.syllabus_section_id
+    );
     const firstNext =
       nextModId && syllabusForNav
         ? getFirstNavigableInSection({
@@ -204,7 +208,7 @@ export function AssignmentDetailContent({
             assignments: sectionFlow.assignments as AssignmentRow[],
             persistedSteps: nextSectionFlowSteps,
             flowStepOptions: studentModuleFlowStepOptions(
-              sectionFlow.assignments as Array<{ id: string; type?: string | null }>,
+              sectionFlow.assignments as Array<{ id: string; type?: string | null }>
             ),
           })
         : null;
@@ -248,7 +252,7 @@ export function AssignmentDetailContent({
         });
       }
     },
-    [classroomId, navigate, isTeacherTry, teacherRouteClassroomId],
+    [classroomId, navigate, isTeacherTry, teacherRouteClassroomId]
   );
 
   const goCurriculum = useCallback(() => {
@@ -273,19 +277,19 @@ export function AssignmentDetailContent({
     };
     if (sectionFlow.usePersistedFlow) {
       const idx = sectionFlow.orderedPersisted.findIndex(
-        (s) => s.step_kind === 'assignment' && s.assignment_id === aid,
+        (s) => s.step_kind === 'assignment' && s.assignment_id === aid
       );
       if (idx < 0) return false;
       return !canAccessPersistedStep(
         sectionFlow.orderedPersisted,
         idx,
         sectionFlow.ctx,
-        accessMeta,
+        accessMeta
       );
     }
     if (sectionFlow.computed.length > 0) {
       const idx = sectionFlow.computed.findIndex(
-        (c) => c.kind === 'assignment' && c.assignment_id === aid,
+        (c) => c.kind === 'assignment' && c.assignment_id === aid
       );
       if (idx < 0) return false;
       return !canAccessComputedStep(sectionFlow.computed, idx, sectionFlow.ctx, accessMeta);
@@ -300,7 +304,8 @@ export function AssignmentDetailContent({
     | { allAttempts: unknown[]; canRetry: boolean }
     | undefined;
   const canRetry = submissionContext?.canRetry ?? false;
-  const attemptMode = (assignment as { attempt_mode?: string } | undefined)?.attempt_mode ?? 'single';
+  const attemptMode =
+    (assignment as { attempt_mode?: string } | undefined)?.attempt_mode ?? 'single';
 
   const chatPriorSubmissionIds = useMemo(() => {
     if (isTeacherTry || !user?.id || !assignmentData?.id || !assignmentData.classroom_id) {
@@ -313,7 +318,7 @@ export function AssignmentDetailContent({
       stored,
       user.id,
       assignmentData.classroom_id,
-      assignmentData.id,
+      assignmentData.id
     );
     const inSession = new Set(fromSession);
     const ids = [...fromSession];
@@ -422,7 +427,7 @@ export function AssignmentDetailContent({
       assignmentData?.classroom_id,
       assignmentData?.submission?.id,
       t,
-    ],
+    ]
   );
 
   const handleStartNewAttempt = async () => {
@@ -479,13 +484,15 @@ export function AssignmentDetailContent({
         }
 
         const language = getAssignmentLanguage(assignment.instructions, uiLanguage);
-        const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback({
-          submissionId: submission.id,
-          studentId: user.id,
-          assignmentId: assignment.id,
-          language,
-          completeOptions: flowFlag,
-        });
+        const { error: submitError, evaluationInvokeFailed } = await submitWithBackgroundAiFeedback(
+          {
+            submissionId: submission.id,
+            studentId: user.id,
+            assignmentId: assignment.id,
+            language,
+            completeOptions: flowFlag,
+          }
+        );
 
         if (submitError) {
           console.error('Error completing submission:', submitError);
@@ -495,7 +502,7 @@ export function AssignmentDetailContent({
             toast.warning(t('assignmentDetail.errors.generatingFeedbackButCompleted'));
           }
           await handleAssignmentCompleted(
-            showAiFeedbackToStudents ? 'activityCompleted' : 'awaitingTeacher',
+            showAiFeedbackToStudents ? 'activityCompleted' : 'awaitingTeacher'
           );
         }
       }
@@ -512,7 +519,7 @@ export function AssignmentDetailContent({
     );
   }
 
-  if (!assignmentData) {
+  if (!assignmentData || !assignment) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-muted-foreground">Assignment not found or failed to load.</div>
@@ -749,14 +756,14 @@ export function AssignmentDetailContent({
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() =>
-                        navigateToFlowTarget(assignmentFlowContinue.nextIn!, {
+                      onClick={() => {
+                        const nextIn = assignmentFlowContinue.nextIn;
+                        if (!nextIn) return;
+                        navigateToFlowTarget(nextIn, {
                           priorSubmissionId:
-                            assignmentFlowContinue.nextIn!.kind === 'assignment'
-                              ? submission.id
-                              : undefined,
-                        })
-                      }
+                            nextIn.kind === 'assignment' ? submission.id : undefined,
+                        });
+                      }}
                     >
                       {assignmentFlowContinue.nextIn.kind === 'assignment'
                         ? t('assignmentDetail.continue')
@@ -769,14 +776,14 @@ export function AssignmentDetailContent({
                       type="button"
                       variant="outline"
                       className="gap-1 bg-background"
-                      onClick={() =>
-                        navigateToFlowTarget(assignmentFlowContinue.firstNext!, {
+                      onClick={() => {
+                        const firstNext = assignmentFlowContinue.firstNext;
+                        if (!firstNext) return;
+                        navigateToFlowTarget(firstNext, {
                           priorSubmissionId:
-                            assignmentFlowContinue.firstNext!.kind === 'assignment'
-                              ? submission.id
-                              : undefined,
-                        })
-                      }
+                            firstNext.kind === 'assignment' ? submission.id : undefined,
+                        });
+                      }}
                     >
                       {t('assignmentDetail.continueNextModule')}
                       <ChevronRight className="h-4 w-4" />
@@ -818,4 +825,4 @@ export function AssignmentDetailContent({
       </div>
     </AssignmentDetailLayout>
   );
-}
+};

@@ -1,18 +1,6 @@
-import { useMemo, type ReactNode, type RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Download, FileDown, Loader2, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  PILOT_DIMENSION_KEYS,
-  PILOT_READINESS_VALUES,
-  type PilotParticipantRow,
-  type PilotReportStaticCopy,
-} from '@/lib/pilotReport/types';
-import {
-  buildCohortOutcome,
-  formatCompletionPercent,
-} from '@/lib/pilotReport/buildPilotReportData';
-import { buildPieChartSvg, READINESS_PIE_COLORS, type PieChartSegment } from '@/lib/pilotReport/buildPieChartSvg';
+import { useMemo, type ReactNode, type Ref, type RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BADGE_SIZE_PX,
   BLUE,
@@ -20,8 +8,24 @@ import {
   badgeCircleStyle,
   readinessPillStyle,
 } from './pilotReportViewUtils';
+import { Button } from '@/components/ui/button';
+import {
+  buildPieChartSvg,
+  READINESS_PIE_COLORS,
+  type PieChartSegment,
+} from '@/lib/pilotReport/buildPieChartSvg';
+import {
+  formatCompletionPercent,
+  type buildCohortOutcome,
+} from '@/lib/pilotReport/buildPilotReportData';
+import {
+  PILOT_DIMENSION_KEYS,
+  PILOT_READINESS_VALUES,
+  type PilotParticipantRow,
+  type PilotReportStaticCopy,
+} from '@/lib/pilotReport/types';
 
-export function SectionBar({ num, title }: { num?: string; title: string }) {
+export const SectionBar = ({ num, title }: { num?: string; title: string }) => {
   return (
     <div
       className="text-center text-sm font-bold text-white py-2.5 px-4 tracking-wide"
@@ -31,9 +35,9 @@ export function SectionBar({ num, title }: { num?: string; title: string }) {
       {title}
     </div>
   );
-}
+};
 
-export function SectionNote({ children }: { children: React.ReactNode }) {
+export const SectionNote = ({ children }: { children: React.ReactNode }) => {
   return (
     <p
       className="text-xs px-4 py-2 border-b"
@@ -42,9 +46,9 @@ export function SectionNote({ children }: { children: React.ReactNode }) {
       {children}
     </p>
   );
-}
+};
 
-export function MethodologyLegend({ staticCopy }: { staticCopy: PilotReportStaticCopy }) {
+export const MethodologyLegend = ({ staticCopy }: { staticCopy: PilotReportStaticCopy }) => {
   return (
     <section>
       <SectionBar title={staticCopy.sectionMethodology} />
@@ -62,9 +66,9 @@ export function MethodologyLegend({ staticCopy }: { staticCopy: PilotReportStati
       </div>
     </section>
   );
-}
+};
 
-export function ReadinessPieChart({
+export const ReadinessPieChart = ({
   cohort,
   staticCopy,
   notAssessedCount,
@@ -72,7 +76,7 @@ export function ReadinessPieChart({
   cohort: ReturnType<typeof buildCohortOutcome>;
   staticCopy: PilotReportStaticCopy;
   notAssessedCount: number;
-}) {
+}) => {
   const svg = useMemo(() => {
     const segments: PieChartSegment[] = PILOT_READINESS_VALUES.map((key) => ({
       label: staticCopy.readinessLabels[key],
@@ -101,21 +105,21 @@ export function ReadinessPieChart({
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
-}
+};
 
-export function ParticipantCardBadges({
+export const ParticipantCardBadges = ({
   participant,
   staticCopy,
 }: {
   participant: PilotParticipantRow & { rank: number };
   staticCopy: PilotReportStaticCopy;
-}) {
+}) => {
   const readinessLabel = participant.readiness
     ? staticCopy.readinessLabels[participant.readiness]
     : staticCopy.noData;
   const completionPct = formatCompletionPercent(
     participant.completedInScope,
-    participant.assignmentsInScope,
+    participant.assignmentsInScope
   );
 
   return (
@@ -159,15 +163,15 @@ export function ParticipantCardBadges({
       </div>
     </div>
   );
-}
+};
 
-export function AppendixSummaryGrid({
+export const AppendixSummaryGrid = ({
   participant,
   staticCopy,
 }: {
   participant: PilotParticipantRow;
   staticCopy: PilotReportStaticCopy;
-}) {
+}) => {
   const columns: { variant: keyof typeof SUMMARY_COLUMN_STYLES; label: string; text: string }[] = [
     {
       variant: 'strength',
@@ -213,15 +217,15 @@ export function AppendixSummaryGrid({
       })}
     </div>
   );
-}
+};
 
-export function MiniDimensionBars({
+export const MiniDimensionBars = ({
   dimensions,
   labels,
 }: {
   dimensions: NonNullable<PilotParticipantRow['dimensions']>;
   labels: Record<(typeof PILOT_DIMENSION_KEYS)[number], string>;
-}) {
+}) => {
   return (
     <div className="space-y-1.5 my-2">
       {PILOT_DIMENSION_KEYS.map((key) => (
@@ -229,7 +233,10 @@ export function MiniDimensionBars({
           <span className="w-36 shrink-0 text-[0.65rem] font-semibold" style={{ color: BLUE.dark }}>
             {labels[key]}
           </span>
-          <div className="flex-1 h-2 rounded-sm overflow-hidden" style={{ backgroundColor: '#dde8f4' }}>
+          <div
+            className="flex-1 h-2 rounded-sm overflow-hidden"
+            style={{ backgroundColor: '#dde8f4' }}
+          >
             <div
               className="h-full rounded-sm"
               style={{
@@ -245,7 +252,7 @@ export function MiniDimensionBars({
       ))}
     </div>
   );
-}
+};
 
 type PilotReportToolbarProps = {
   onBack: () => void;
@@ -258,7 +265,7 @@ type PilotReportToolbarProps = {
   canExportPdf: boolean;
 };
 
-export function PilotReportToolbar({
+export const PilotReportToolbar = ({
   onBack,
   onRegenerate,
   onExportPdf,
@@ -267,7 +274,7 @@ export function PilotReportToolbar({
   isExportingPdf,
   isReady,
   canExportPdf,
-}: PilotReportToolbarProps) {
+}: PilotReportToolbarProps) => {
   const { t } = useTranslation();
 
   return (
@@ -319,7 +326,7 @@ export function PilotReportToolbar({
       </div>
     </div>
   );
-}
+};
 
 type PilotReportGenerationErrorPanelProps = {
   toolbar: ReactNode;
@@ -327,15 +334,19 @@ type PilotReportGenerationErrorPanelProps = {
   onRegenerate: () => void;
 };
 
-export function PilotReportGenerationErrorPanel({
+export const PilotReportGenerationErrorPanel = ({
   toolbar,
   isRTL,
   onRegenerate,
-}: PilotReportGenerationErrorPanelProps) {
+}: PilotReportGenerationErrorPanelProps) => {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#eef2f7' }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: '#eef2f7' }}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       {toolbar}
       <div className="flex-1 flex items-center justify-center px-4 py-16">
         <div
@@ -354,7 +365,7 @@ export function PilotReportGenerationErrorPanel({
       </div>
     </div>
   );
-}
+};
 
 type PilotReportGenerationLoadingPanelProps = {
   toolbar: ReactNode;
@@ -362,15 +373,19 @@ type PilotReportGenerationLoadingPanelProps = {
   progressMessage: string;
 };
 
-export function PilotReportGenerationLoadingPanel({
+export const PilotReportGenerationLoadingPanel = ({
   toolbar,
   isRTL,
   progressMessage,
-}: PilotReportGenerationLoadingPanelProps) {
+}: PilotReportGenerationLoadingPanelProps) => {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#eef2f7' }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: '#eef2f7' }}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       {toolbar}
       <div className="flex-1 flex items-center justify-center px-4 py-16">
         <div
@@ -395,7 +410,7 @@ export function PilotReportGenerationLoadingPanel({
       </div>
     </div>
   );
-}
+};
 
 type PilotReportDocumentProps = {
   reportDocRef: RefObject<HTMLDivElement | null>;
@@ -412,7 +427,7 @@ type PilotReportDocumentProps = {
   generatedAtDisplay: string;
 };
 
-export function PilotReportDocument({
+export const PilotReportDocument = ({
   reportDocRef,
   staticCopy,
   classroomName,
@@ -425,12 +440,12 @@ export function PilotReportDocument({
   rankedAppendix,
   reportId,
   generatedAtDisplay,
-}: PilotReportDocumentProps) {
+}: PilotReportDocumentProps) => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div
         id="pilot-report-doc"
-        ref={reportDocRef}
+        ref={reportDocRef as Ref<HTMLDivElement>}
         className="bg-white border shadow-sm"
         style={{ borderColor: BLUE.border }}
       >
@@ -479,14 +494,20 @@ export function PilotReportDocument({
             staticCopy={staticCopy}
             notAssessedCount={notAssessedCount}
           />
-          <p className="text-sm px-4 py-2.5 border-b text-slate-700" style={{ borderColor: BLUE.border }}>
+          <p
+            className="text-sm px-4 py-2.5 border-b text-slate-700"
+            style={{ borderColor: BLUE.border }}
+          >
             <span className="font-semibold" style={{ color: BLUE.dark }}>
               {staticCopy.cohortParticipants}:
             </span>{' '}
             {cohort.participantsAssessed} of {cohort.participantsTotal}
           </p>
           {roleFitLine ? (
-            <p className="text-sm px-4 py-2.5 border-b text-slate-700" style={{ borderColor: BLUE.border }}>
+            <p
+              className="text-sm px-4 py-2.5 border-b text-slate-700"
+              style={{ borderColor: BLUE.border }}
+            >
               <span className="font-semibold" style={{ color: BLUE.dark }}>
                 {staticCopy.cohortRoleFitDistribution}:
               </span>{' '}
@@ -515,10 +536,16 @@ export function PilotReportDocument({
                   </div>
                   {p.dimensions ? (
                     <div className="mt-2">
-                      <p className="text-[0.65rem] font-bold uppercase tracking-wide mb-1" style={{ color: BLUE.dark }}>
+                      <p
+                        className="text-[0.65rem] font-bold uppercase tracking-wide mb-1"
+                        style={{ color: BLUE.dark }}
+                      >
                         {staticCopy.appendixObservedSignals}
                       </p>
-                      <MiniDimensionBars dimensions={p.dimensions} labels={staticCopy.dimensionLabels} />
+                      <MiniDimensionBars
+                        dimensions={p.dimensions}
+                        labels={staticCopy.dimensionLabels}
+                      />
                     </div>
                   ) : null}
                   <AppendixSummaryGrid participant={p} staticCopy={staticCopy} />
@@ -540,4 +567,4 @@ export function PilotReportDocument({
       </div>
     </div>
   );
-}
+};

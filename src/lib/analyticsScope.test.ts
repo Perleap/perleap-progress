@@ -15,14 +15,14 @@ const sampleAssignments: AnalyticsAssignmentRef[] = [
 
 describe('getAllowedAssignmentIds', () => {
   it('returns all ids when both filters are all', () => {
-    expect(
-      getAllowedAssignmentIds(sampleAssignments, 'all', 'all').sort(),
-    ).toEqual(['a1', 'a2', 'u1'].sort());
+    expect(getAllowedAssignmentIds(sampleAssignments, 'all', 'all').sort()).toEqual(
+      ['a1', 'a2', 'u1'].sort()
+    );
   });
   it('returns section subset', () => {
-    expect(
-      getAllowedAssignmentIds(sampleAssignments, 'm1', 'all').sort(),
-    ).toEqual(['a1', 'a2'].sort());
+    expect(getAllowedAssignmentIds(sampleAssignments, 'm1', 'all').sort()).toEqual(
+      ['a1', 'a2'].sort()
+    );
   });
   it('returns unplaced', () => {
     expect(getAllowedAssignmentIds(sampleAssignments, 'unplaced', 'all')).toEqual(['u1']);
@@ -37,9 +37,30 @@ describe('getAllowedAssignmentIds', () => {
 
 describe('computeAnalyticsKpiDisplay', () => {
   const mixedAssignments: AnalyticsAssignmentRef[] = [
-    { id: 'pub1', title: 'Published 1', syllabusSectionId: 'm1', status: 'published', active: true, deletedAt: null },
-    { id: 'pub2', title: 'Published 2', syllabusSectionId: 'm1', status: 'published', active: true, deletedAt: null },
-    { id: 'draft', title: 'Draft', syllabusSectionId: 'm1', status: 'draft', active: true, deletedAt: null },
+    {
+      id: 'pub1',
+      title: 'Published 1',
+      syllabusSectionId: 'm1',
+      status: 'published',
+      active: true,
+      deletedAt: null,
+    },
+    {
+      id: 'pub2',
+      title: 'Published 2',
+      syllabusSectionId: 'm1',
+      status: 'published',
+      active: true,
+      deletedAt: null,
+    },
+    {
+      id: 'draft',
+      title: 'Draft',
+      syllabusSectionId: 'm1',
+      status: 'draft',
+      active: true,
+      deletedAt: null,
+    },
   ];
 
   it('counts only reportable assignments and feedback in the default (all) view', () => {
@@ -99,10 +120,38 @@ describe('computeAnalyticsKpiDisplay', () => {
 
 describe('filterReportableAssignments', () => {
   const mixed: AnalyticsAssignmentRef[] = [
-    { id: 'pub', title: 'Published', syllabusSectionId: null, status: 'published', active: true, deletedAt: null },
-    { id: 'draft', title: 'Draft', syllabusSectionId: null, status: 'draft', active: true, deletedAt: null },
-    { id: 'arch', title: 'Archived', syllabusSectionId: null, status: 'archived', active: true, deletedAt: null },
-    { id: 'del', title: 'Deleted', syllabusSectionId: null, status: 'published', active: false, deletedAt: '2026-01-01' },
+    {
+      id: 'pub',
+      title: 'Published',
+      syllabusSectionId: null,
+      status: 'published',
+      active: true,
+      deletedAt: null,
+    },
+    {
+      id: 'draft',
+      title: 'Draft',
+      syllabusSectionId: null,
+      status: 'draft',
+      active: true,
+      deletedAt: null,
+    },
+    {
+      id: 'arch',
+      title: 'Archived',
+      syllabusSectionId: null,
+      status: 'archived',
+      active: true,
+      deletedAt: null,
+    },
+    {
+      id: 'del',
+      title: 'Deleted',
+      syllabusSectionId: null,
+      status: 'published',
+      active: false,
+      deletedAt: '2026-01-01',
+    },
   ];
 
   it('keeps only published, active, non-deleted assignments', () => {
@@ -116,15 +165,7 @@ describe('filterReportableAssignments', () => {
 
 describe('getClassroomAverage5D', () => {
   it('returns null for empty allowed set', () => {
-    const result = getClassroomAverage5D(
-      [],
-      [],
-      sampleAssignments,
-      'm1',
-      'missing',
-      'all',
-      [],
-    );
+    const result = getClassroomAverage5D([], [], sampleAssignments, 'm1', 'missing', 'all', []);
     expect(result).toBeNull();
   });
 });

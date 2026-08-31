@@ -8,7 +8,7 @@ function flowResourceStep(
   id: string,
   sectionId: string,
   resourceId: string,
-  order = 0,
+  order = 0
 ): ModuleFlowStep {
   return {
     id,
@@ -26,7 +26,7 @@ function flowAssignmentStep(
   id: string,
   sectionId: string,
   assignmentId: string,
-  order = 0,
+  order = 0
 ): ModuleFlowStep {
   return {
     id,
@@ -69,10 +69,17 @@ describe('isSectionActivityFlowFullyComplete', () => {
     const r = lessonResource('res-1', sid);
     const step = flowResourceStep('step-1', sid, r.id);
     expect(
-      isSectionActivityFlowFullyComplete(sid, [step], [r], [], {
-        progressByStep: { 'step-1': true },
-        assignmentDoneMap: {},
-      }, refNow),
+      isSectionActivityFlowFullyComplete(
+        sid,
+        [step],
+        [r],
+        [],
+        {
+          progressByStep: { 'step-1': true },
+          assignmentDoneMap: {},
+        },
+        refNow
+      )
     ).toBe(true);
   });
 
@@ -88,10 +95,17 @@ describe('isSectionActivityFlowFullyComplete', () => {
     const stepA = flowAssignmentStep('step-a', sid, 'a1', 1);
     const assigns = [{ id: 'a1', syllabus_section_id: sid, due_at: null }];
     expect(
-      isSectionActivityFlowFullyComplete(sid, [stepR, stepA], [r], assigns, {
-        progressByStep: {},
-        assignmentDoneMap: { a1: true },
-      }, refNow),
+      isSectionActivityFlowFullyComplete(
+        sid,
+        [stepR, stepA],
+        [r],
+        assigns,
+        {
+          progressByStep: {},
+          assignmentDoneMap: { a1: true },
+        },
+        refNow
+      )
     ).toBe(true);
   });
 
@@ -103,25 +117,37 @@ describe('isSectionActivityFlowFullyComplete', () => {
     const steps = [stepR, stepA1, stepA2];
     const ctx = { progressByStep: {}, assignmentDoneMap: { a1: false, a2: true } };
     expect(persistedStepDone(stepR, steps, 0, ctx)).toBe(false);
-    expect(
-      isSectionActivityFlowFullyComplete(sid, steps, [r], [], ctx, refNow),
-    ).toBe(false);
+    expect(isSectionActivityFlowFullyComplete(sid, steps, [r], [], ctx, refNow)).toBe(false);
   });
 
   it('persisted path: assignment step follows assignmentDoneMap', () => {
     const step = flowAssignmentStep('step-1', sid, 'a1', 0);
     const assigns = [{ id: 'a1', syllabus_section_id: sid, due_at: null }];
     expect(
-      isSectionActivityFlowFullyComplete(sid, [step], [], assigns, {
-        progressByStep: {},
-        assignmentDoneMap: { a1: false },
-      }, refNow),
+      isSectionActivityFlowFullyComplete(
+        sid,
+        [step],
+        [],
+        assigns,
+        {
+          progressByStep: {},
+          assignmentDoneMap: { a1: false },
+        },
+        refNow
+      )
     ).toBe(false);
     expect(
-      isSectionActivityFlowFullyComplete(sid, [step], [], assigns, {
-        progressByStep: {},
-        assignmentDoneMap: { a1: true },
-      }, refNow),
+      isSectionActivityFlowFullyComplete(
+        sid,
+        [step],
+        [],
+        assigns,
+        {
+          progressByStep: {},
+          assignmentDoneMap: { a1: true },
+        },
+        refNow
+      )
     ).toBe(true);
   });
 
@@ -133,8 +159,8 @@ describe('isSectionActivityFlowFullyComplete', () => {
         [],
         [{ id: 'a1', syllabus_section_id: sid, due_at: null }],
         { progressByStep: {}, assignmentDoneMap: { a1: true } },
-        refNow,
-      ),
+        refNow
+      )
     ).toBe(true);
     expect(
       isSectionActivityFlowFullyComplete(
@@ -143,8 +169,8 @@ describe('isSectionActivityFlowFullyComplete', () => {
         [],
         [{ id: 'a1', syllabus_section_id: sid, due_at: null }],
         { progressByStep: {}, assignmentDoneMap: { a1: false } },
-        refNow,
-      ),
+        refNow
+      )
     ).toBe(false);
   });
 
@@ -171,8 +197,8 @@ describe('isSectionActivityFlowFullyComplete', () => {
           assignmentDoneMap: {},
           assignmentHasSubmissionRowMap: {},
         },
-        afterDue,
-      ),
+        afterDue
+      )
     ).toBe(true);
   });
 
@@ -196,8 +222,8 @@ describe('isSectionActivityFlowFullyComplete', () => {
           assignmentDoneMap: {},
           assignmentHasSubmissionRowMap: {},
         },
-        afterDue,
-      ),
+        afterDue
+      )
     ).toBe(true);
   });
 });

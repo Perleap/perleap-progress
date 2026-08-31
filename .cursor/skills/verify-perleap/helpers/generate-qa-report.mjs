@@ -24,9 +24,9 @@ const TRACK_COVERAGE = {
     'student-open-test-mode',
     'student-complete-chat',
   ],
-  'G Live session': [],
+  'G Live session': ['teacher-live-session-open'],
   'H Settings': ['student-settings-profile', 'teacher-settings-profile'],
-  'I Onboarding': [],
+  'I Onboarding': ['student-onboarding-complete', 'teacher-onboarding-complete'],
   'J Planner': ['teacher-planner-load'],
   'K Analytics': ['teacher-classroom-analytics-tab'],
   'L Auth & admin': ['auth-page-load', 'admin-ai-prompts', 'admin-monitoring-overview'],
@@ -66,7 +66,9 @@ function statusBadge(ok) {
 }
 
 function buildHtml(ctx) {
-  const { runId, runDir, unit, i18n, suite, startedAt, finishedAt } = ctx;
+  const { runId, runDir, unit, i18n, suite, startedAt, finishedAt, meta } = ctx;
+  const targetLabel = meta?.target ?? suite?.baseURL ?? '—';
+  const profileLabel = meta?.verifyProfile ?? meta?.verifyTarget ?? 'local';
   const featureResults = suite?.results ?? [];
   const featureStatus = new Map(featureResults.map((r) => [r.featureId, r.status === 'ok']));
 
@@ -148,7 +150,7 @@ function buildHtml(ctx) {
 </head>
 <body>
   <h1>Refactor QA Report</h1>
-  <p class="meta">Run <code>${escapeHtml(runId)}</code> · ${escapeHtml(startedAt)} → ${escapeHtml(finishedAt)}</p>
+  <p class="meta">Run <code>${escapeHtml(runId)}</code> · Target <code>${escapeHtml(targetLabel)}</code> (${escapeHtml(profileLabel)}) · ${escapeHtml(startedAt)} → ${escapeHtml(finishedAt)}</p>
 
   <div class="summary ${allOk ? 'pass' : 'fail'}">
     <strong>${allOk ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'}</strong>
@@ -190,8 +192,6 @@ function buildHtml(ctx) {
   <section>
     <h2>Manual-only gaps</h2>
     <ul>
-      <li>Track G — Live session (AI/audio)</li>
-      <li>Track I — Full onboarding wizard (profile mutation)</li>
       <li>Track K — Lesson brief / pilot report deep flows</li>
       <li>Hebrew RTL view-mode strings</li>
     </ul>
@@ -220,6 +220,7 @@ function main() {
     unit,
     i18n,
     suite,
+    meta,
     startedAt: meta.startedAt ?? '—',
     finishedAt: meta.finishedAt ?? new Date().toISOString(),
   });

@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
-import { DashboardLayout } from '@/components/layouts';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/useAuth';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useTeacherProfile, useUpdateTeacherProfile } from '@/hooks/queries';
+import {
+  TeacherSettingsNotificationsSection,
+  type TeacherNotificationSettings,
+} from '@/components/features/settings/TeacherSettingsNotificationsSection';
 import {
   TeacherSettingsProfileSection,
   type TeacherSettingsProfileState,
@@ -19,12 +16,15 @@ import {
   TeacherSettingsTeachingPreferencesSection,
   type TeacherSettingsQuestionsState,
 } from '@/components/features/settings/TeacherSettingsTeachingPreferencesSection';
-import {
-  TeacherSettingsNotificationsSection,
-  type TeacherNotificationSettings,
-} from '@/components/features/settings/TeacherSettingsNotificationsSection';
+import { DashboardLayout } from '@/components/layouts';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { useTeacherProfile, useUpdateTeacherProfile } from '@/hooks/queries';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
-export function TeacherSettingsContent() {
+export const TeacherSettingsContent = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
@@ -67,21 +67,20 @@ export function TeacherSettingsContent() {
       setProfile({
         full_name: profileData.full_name || '',
         avatar_url: profileData.avatar_url || null,
-        phone_number: (profileData as any).phone_number || '',
-        subjects: (profileData as any).subjects || [],
-        years_experience: (profileData as any).years_experience || null,
-        student_education_level: (profileData as any).student_education_level || '',
+        phone_number: profileData.phone_number || '',
+        subjects: profileData.subjects || [],
+        years_experience: profileData.years_experience || null,
+        student_education_level: profileData.student_education_level || '',
       });
 
       setQuestions({
-        teaching_goals: (profileData as any).teaching_goals || '',
-        style_notes: (profileData as any).style_notes || '',
-        teaching_examples: (profileData as any).teaching_examples || '',
-        sample_explanation: (profileData as any).sample_explanation || '',
+        teaching_goals: profileData.teaching_goals || '',
+        style_notes: profileData.style_notes || '',
+        teaching_examples: profileData.teaching_examples || '',
+        sample_explanation: profileData.sample_explanation || '',
       });
     } else if (!loading && user) {
       if (sessionStorage.getItem('is_deleting_account') === 'true') {
-        console.log('ℹ️ TeacherSettings: Account deletion in progress, skipping onboarding redirect');
         return;
       }
 
@@ -153,7 +152,7 @@ export function TeacherSettingsContent() {
         subjects: profile.subjects,
         years_experience: profile.years_experience,
         student_education_level: profile.student_education_level,
-      } as any);
+      });
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -173,7 +172,7 @@ export function TeacherSettingsContent() {
         style_notes: questions.style_notes,
         teaching_examples: questions.teaching_examples,
         sample_explanation: questions.sample_explanation,
-      } as any);
+      });
       toast.success(t('settings.success.saved'));
     } catch (error) {
       console.error('Error updating questions:', error);
@@ -203,7 +202,11 @@ export function TeacherSettingsContent() {
         dir={isRTL ? 'rtl' : 'ltr'}
         style={{ direction: isRTL ? 'rtl' : 'ltr' }}
       >
-        <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => setSearchParams({ tab: val })}
+          className="space-y-6"
+        >
           <TabsContent value="profile" className="space-y-6">
             <TeacherSettingsProfileSection
               isRTL={isRTL}
@@ -246,4 +249,4 @@ export function TeacherSettingsContent() {
       />
     </DashboardLayout>
   );
-}
+};

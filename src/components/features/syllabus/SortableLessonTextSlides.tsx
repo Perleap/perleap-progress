@@ -1,4 +1,3 @@
-import { useLayoutEffect, useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -10,6 +9,7 @@ import {
   type DraggableAttributes,
   type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -18,29 +18,39 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { GripVertical, Trash2 } from 'lucide-react';
+import { useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
-import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
 import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
+import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
 import { cn } from '@/lib/utils';
 
-function SortableSlideRow({
+const SortableSlideRow = ({
   id,
   children,
 }: {
   id: string;
   children: (args: {
-    dragProps: { attributes: DraggableAttributes; listeners: DraggableSyntheticListeners | undefined };
+    dragProps: {
+      attributes: DraggableAttributes;
+      listeners: DraggableSyntheticListeners | undefined;
+    };
     isDragging: boolean;
   }) => React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef, transform: rawTransform, transition, isDragging } =
-    useSortable({ id });
-  const transform = rawTransform && isDragging ? { ...rawTransform, scaleX: 1, scaleY: 1 } : rawTransform;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform: rawTransform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  const transform =
+    rawTransform && isDragging ? { ...rawTransform, scaleX: 1, scaleY: 1 } : rawTransform;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? undefined : transition,
@@ -50,7 +60,7 @@ function SortableSlideRow({
       {children({ dragProps: { attributes, listeners }, isDragging })}
     </li>
   );
-}
+};
 
 export interface SortableLessonTextSlidesProps {
   blockId: string;
@@ -67,7 +77,7 @@ export interface SortableLessonTextSlidesProps {
 /**
  * Nested vertical sortable list for a single text block's slides; stable row ids for dnd-kit.
  */
-export function SortableLessonTextSlides({
+export const SortableLessonTextSlides = ({
   blockId,
   slides,
   isRTL,
@@ -77,7 +87,7 @@ export function SortableLessonTextSlides({
   onUpdateSlide,
   onRemoveSlide,
   onRephraseBlock,
-}: SortableLessonTextSlidesProps) {
+}: SortableLessonTextSlidesProps) => {
   const { t } = useTranslation();
   const [rowIds, setRowIds] = useState(() => slides.map(() => crypto.randomUUID()));
 
@@ -87,10 +97,7 @@ export function SortableLessonTextSlides({
       if (slides.length > prev.length) {
         return [
           ...prev,
-          ...Array.from(
-            { length: slides.length - prev.length },
-            () => crypto.randomUUID(),
-          ),
+          ...Array.from({ length: slides.length - prev.length }, () => crypto.randomUUID()),
         ];
       }
       return prev.slice(0, slides.length);
@@ -134,7 +141,7 @@ export function SortableLessonTextSlides({
                       size="sm"
                       className={cn(
                         'border-border/60 bg-muted/5 shadow-sm transition-shadow',
-                        isDragging && 'ring-2 ring-primary/40 shadow-lg',
+                        isDragging && 'ring-2 ring-primary/40 shadow-lg'
                       )}
                     >
                       <CardContent className="p-3 sm:p-3">
@@ -145,7 +152,7 @@ export function SortableLessonTextSlides({
                             size="icon"
                             className={cn(
                               'mt-0.5 h-9 w-9 shrink-0 touch-none text-muted-foreground',
-                              disabled && 'pointer-events-none opacity-50',
+                              disabled && 'pointer-events-none opacity-50'
                             )}
                             aria-label={t('classroomDetail.activities.textSlides.dragSlide')}
                             {...dragProps.attributes}
@@ -157,7 +164,7 @@ export function SortableLessonTextSlides({
                             <div
                               className={cn(
                                 'flex flex-wrap items-center justify-between gap-2',
-                                isRTL && 'flex-row-reverse',
+                                isRTL && 'flex-row-reverse'
                               )}
                             >
                               <span className="text-xs font-medium text-muted-foreground">
@@ -179,7 +186,7 @@ export function SortableLessonTextSlides({
                             </div>
                             <div
                               className={cn(
-                                rephrasingBlockId === blockId && slideIdx === 0 && 'opacity-90',
+                                rephrasingBlockId === blockId && slideIdx === 0 && 'opacity-90'
                               )}
                             >
                               <RichTextEditor
@@ -190,9 +197,7 @@ export function SortableLessonTextSlides({
                                 disabled={disabled || rephrasingBlockId === blockId}
                                 dir={isRTL ? 'rtl' : 'ltr'}
                                 onRewrite={
-                                  slideIdx === 0
-                                    ? () => void onRephraseBlock(blockId)
-                                    : undefined
+                                  slideIdx === 0 ? () => void onRephraseBlock(blockId) : undefined
                                 }
                                 isRewriting={rephrasingBlockId === blockId && slideIdx === 0}
                               />
@@ -210,4 +215,4 @@ export function SortableLessonTextSlides({
       </div>
     </DndContext>
   );
-}
+};

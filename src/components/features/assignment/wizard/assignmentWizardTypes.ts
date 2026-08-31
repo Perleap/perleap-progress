@@ -1,5 +1,5 @@
-import type { Database } from '@/integrations/supabase/types';
 import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
+import type { Database } from '@/integrations/supabase/types';
 import type { HardSkillPair } from '@/lib/hardSkillsFormat';
 import type { CourseMaterial } from '@/types/models';
 

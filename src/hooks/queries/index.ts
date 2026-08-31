@@ -74,14 +74,8 @@ export {
 } from './useProfileQueries';
 
 // Analytics Queries
-export {
-  analyticsKeys,
-  useClassroomAnalytics,
-} from './useAnalyticsQueries';
-export {
-  analytics5dNarrativeKeys,
-  useAnalytics5dNarrative,
-} from './useAnalytics5dNarrative';
+export { analyticsKeys, useClassroomAnalytics } from './useAnalyticsQueries';
+export { analytics5dNarrativeKeys, useAnalytics5dNarrative } from './useAnalytics5dNarrative';
 export {
   pilotReportKeys,
   usePilotReportSnapshot,
@@ -91,17 +85,10 @@ export {
 } from './usePilotReportQueries';
 
 // Activity Queries
-export {
-  activityKeys,
-  useRecentActivity,
-} from './useActivityQueries';
+export { activityKeys, useRecentActivity } from './useActivityQueries';
 
 // Calendar Queries
-export {
-  calendarKeys,
-  useTeacherCalendarData,
-  useStudentCalendarData,
-} from './useCalendarQueries';
+export { calendarKeys, useTeacherCalendarData, useStudentCalendarData } from './useCalendarQueries';
 
 // Notification Queries
 export {
@@ -122,11 +109,7 @@ export {
 } from './useTestQueries';
 
 // Nuance Queries
-export {
-  nuanceKeys,
-  useNuanceInsights,
-  useNuanceUnderstandingCueEvents,
-} from './useNuanceQueries';
+export { nuanceKeys, useNuanceInsights, useNuanceUnderstandingCueEvents } from './useNuanceQueries';
 
 export type {
   NuanceMetric,
@@ -143,10 +126,7 @@ export {
   formatWatchPercent,
 } from './useVideoWatchQueries';
 
-export type {
-  VideoWatchProgressRow,
-  VideoEngagementSummary,
-} from './useVideoWatchQueries';
+export type { VideoWatchProgressRow, VideoEngagementSummary } from './useVideoWatchQueries';
 
 // Syllabus Queries
 export {
@@ -216,12 +196,3 @@ export {
 } from './useModuleFlowQueries';
 
 export { syncModuleFlowToResolvedDisplayForSection } from './moduleFlowSync';
-
-
-
-
-
-
-
-
-

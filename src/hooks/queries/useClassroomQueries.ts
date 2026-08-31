@@ -4,8 +4,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Classroom } from '@/types';
 import { useAuth } from '@/contexts/useAuth';
-import { isAppAdminRole } from '@/utils/role';
 import {
   getTeacherClassrooms,
   getStudentClassrooms,
@@ -17,7 +17,7 @@ import {
   joinClassroom,
   softDeleteClassroom,
 } from '@/services/classroomService';
-import type { Classroom } from '@/types';
+import { isAppAdminRole } from '@/utils/role';
 
 // Query Keys
 export const classroomKeys = {
@@ -42,7 +42,9 @@ export const useClassrooms = (role: 'teacher' | 'student') => {
       if (!user) throw new Error('User not authenticated');
       const { data, error } =
         role === 'teacher'
-          ? await getTeacherClassrooms(user.id, { allClassroomsForAdmin: isAppAdminRole(user.user_metadata?.role) })
+          ? await getTeacherClassrooms(user.id, {
+              allClassroomsForAdmin: isAppAdminRole(user.user_metadata?.role),
+            })
           : await getStudentClassrooms(user.id);
       if (error) throw error;
       return data || [];
@@ -159,13 +161,7 @@ export const useJoinClassroom = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      classroomId,
-      studentId,
-    }: {
-      classroomId: string;
-      studentId: string;
-    }) => {
+    mutationFn: async ({ classroomId, studentId }: { classroomId: string; studentId: string }) => {
       const { data, error } = await joinClassroom(classroomId, studentId);
       if (error) throw error;
       return data;
@@ -201,11 +197,3 @@ export const useSoftDeleteClassroom = () => {
     },
   });
 };
-
-
-
-
-
-
-
-

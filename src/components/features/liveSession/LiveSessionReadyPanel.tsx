@@ -1,13 +1,13 @@
+import { Clock } from 'lucide-react';
 import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import type { LiveSession } from '@/types/liveSession';
 import {
   LiveSessionAudioPlayback,
   type LiveSessionAudioPlaybackHandle,
 } from '@/components/features/liveSession/LiveSessionAudioPlayback';
-import type { LiveSession } from '@/types/liveSession';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 function formatTime(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -26,7 +26,7 @@ export type LiveSessionReadyPanelProps = {
 export const LiveSessionReadyPanel = forwardRef<
   LiveSessionAudioPlaybackHandle,
   LiveSessionReadyPanelProps
->(function LiveSessionReadyPanel({ session, audioStoragePaths, isRTL, onSeek }, ref) {
+>(({ session, audioStoragePaths, isRTL, onSeek }, ref) => {
   const { t } = useTranslation();
 
   return (
@@ -72,7 +72,7 @@ export const LiveSessionReadyPanel = forwardRef<
                 onClick={() => onSeek(ts.time)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-start text-sm hover:bg-muted',
-                  isRTL && 'flex-row-reverse text-end',
+                  isRTL && 'flex-row-reverse text-end'
                 )}
               >
                 <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-primary">

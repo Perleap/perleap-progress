@@ -2,8 +2,6 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/useAuth';
 import { useEnrollInClassroom } from '@/hooks/queries';
 
@@ -25,7 +25,7 @@ export type JoinClassroomDialogProps = {
 function mapJoinErrorMessage(
   message: string,
   inviteCode: string,
-  t: (key: string, options?: Record<string, string>) => string,
+  t: (key: string, options?: Record<string, string>) => string
 ): string {
   const lower = message.toLowerCase();
   if (lower.includes('already enrolled')) {
@@ -37,12 +37,12 @@ function mapJoinErrorMessage(
   return t('studentDashboard.errors.unexpected');
 }
 
-export function JoinClassroomDialog({
+export const JoinClassroomDialog = ({
   open,
   onOpenChange,
   onJoined,
   trigger,
-}: JoinClassroomDialogProps) {
+}: JoinClassroomDialogProps) => {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
   const enrollMutation = useEnrollInClassroom();
@@ -73,7 +73,8 @@ export function JoinClassroomDialog({
         onJoined?.({ classroomId: result.classroomId, classroomName });
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : t('studentDashboard.errors.unexpected');
+      const message =
+        error instanceof Error ? error.message : t('studentDashboard.errors.unexpected');
       toast.error(mapJoinErrorMessage(message, trimmedCode, t));
     }
   };
@@ -90,7 +91,10 @@ export function JoinClassroomDialog({
         </DialogHeader>
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="join-classroom-invite-code" className="text-base font-medium text-foreground">
+            <Label
+              htmlFor="join-classroom-invite-code"
+              className="text-base font-medium text-foreground"
+            >
               {t('studentDashboard.joinClassroom.inviteCode')}
             </Label>
             <Input
@@ -115,4 +119,4 @@ export function JoinClassroomDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

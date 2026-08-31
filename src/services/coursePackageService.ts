@@ -1,9 +1,8 @@
 /**
  * Export / import course packages (perleap.course): portable v1, merge-safe v2, merge + full replace imports.
  */
-import { supabase, handleSupabaseError } from '@/api/client';
 import type { ApiError } from '@/types';
-import type { Classroom } from '@/types/models';
+import type { CreateAssignmentInput } from '@/types/api.types';
 import type {
   CoursePackageClassroomV1,
   CoursePackageActivityV1,
@@ -12,17 +11,37 @@ import type {
   PerleapCoursePackageV1,
   PerleapCoursePackageV2,
 } from '@/types/coursePackage';
-import type { CreateAssignmentInput } from '@/types/api.types';
+import type { Classroom } from '@/types/models';
 import type {
   Syllabus,
   SyllabusPolicy,
   SyllabusPolicyType,
   SyllabusStructureType,
+  AssignmentModuleActivityInput,
 } from '@/types/syllabus';
+import { supabase, handleSupabaseError } from '@/api/client';
+import { omitOptionalActivityListFields } from '@/lib/activityListOptionalColumns';
+import {
+  buildCoursePackageV1,
+  buildCoursePackageV2,
+  type BuildCoursePackageInput,
+} from '@/lib/coursePackage/buildCoursePackage';
+import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
 import { normalizeReleaseMode } from '@/lib/releaseMode';
-import { buildCoursePackageV1, buildCoursePackageV2 } from '@/lib/coursePackage/buildCoursePackage';
-import type { BuildCoursePackageInput } from '@/lib/coursePackage/buildCoursePackage';
+import { setAssignmentLinkedActivities } from '@/services/assignmentModuleActivityService';
+import {
+  getClassroomAssignments,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment,
+} from '@/services/assignmentService';
 import { getClassroomById, createClassroom, updateClassroom } from '@/services/classroomService';
+import {
+  getModuleFlowStepsBySections,
+  replaceModuleFlowSteps,
+  type FlowStepInput,
+} from '@/services/moduleFlowService';
+import { createSectionResource } from '@/services/syllabusResourceService';
 import {
   getSyllabusByClassroom,
   createSyllabus,
@@ -31,22 +50,6 @@ import {
   deleteSyllabusSection,
   deleteGradingCategory,
 } from '@/services/syllabusService';
-import {
-  getClassroomAssignments,
-  createAssignment,
-  updateAssignment,
-  deleteAssignment,
-} from '@/services/assignmentService';
-import {
-  getModuleFlowStepsBySections,
-  replaceModuleFlowSteps,
-  type FlowStepInput,
-} from '@/services/moduleFlowService';
-import { omitOptionalActivityListFields } from '@/lib/activityListOptionalColumns';
-import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
-import { createSectionResource } from '@/services/syllabusResourceService';
-import { setAssignmentLinkedActivities } from '@/services/assignmentModuleActivityService';
-import type { AssignmentModuleActivityInput } from '@/types/syllabus';
 
 export type CoursePackageExportVariant = 'v1_portable' | 'v2_merge';
 
@@ -101,7 +104,7 @@ export async function gatherCourseExportData(
       }
     }
     const input: BuildCoursePackageInput = {
-      classroom: classroom as Record<string, unknown>,
+      classroom: classroom as unknown as Record<string, unknown>,
       syllabus,
       assignments: assignments as unknown as Array<Record<string, unknown>>,
       moduleFlowSteps: moduleFlowSteps ?? [],
@@ -115,8 +118,11 @@ export async function gatherCourseExportData(
 }
 export async function buildExportPackageForClassroom(
   classroomId: string,
-  options?: { restrictToTeacherId?: string; variant?: CoursePackageExportVariant },
-): Promise<{ data: PerleapCoursePackageV1 | PerleapCoursePackageV2 | null; error: ApiError | null }> {
+  options?: { restrictToTeacherId?: string; variant?: CoursePackageExportVariant }
+): Promise<{
+  data: PerleapCoursePackageV1 | PerleapCoursePackageV2 | null;
+  error: ApiError | null;
+}> {
   const { data, error } = await gatherCourseExportData(classroomId, options);
   if (error) return { data: null, error };
   if (!data) return { data: null, error: { message: 'No export data' } };
@@ -270,7 +276,8 @@ export async function applyCoursePackageContentToClassroom(
         type: normalizeAssignmentTypeForImport(a.type),
         due_at: a.due_at,
         status: a.status,
-        target_dimensions: a.target_dimensions as unknown as CreateAssignmentInput['target_dimensions'],
+        target_dimensions:
+          a.target_dimensions as unknown as CreateAssignmentInput['target_dimensions'],
         personalization_flag: a.personalization_flag,
         enable_ai_feedback: a.enable_ai_feedback !== false,
         auto_publish_ai_feedback: a.auto_publish_ai_feedback,
@@ -568,7 +575,7 @@ async function insertActivityFromPackage(
       mime_type: act.mime_type,
       file_size: act.file_size,
       estimated_duration_minutes: act.estimated_duration_minutes,
-    }),
+    })
   );
   if (error) return { id: null, error };
   return { id: data?.id ?? null, error: null };

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Flag, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,14 +18,14 @@ type AiContentFlagButtonProps = {
   className?: string;
 };
 
-export function AiContentFlagButton({
+export const AiContentFlagButton = ({
   contentType,
   contentExcerpt,
   opikTraceId,
   assignmentId,
   submissionId,
   className,
-}: AiContentFlagButtonProps) {
+}: AiContentFlagButtonProps) => {
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,7 +80,7 @@ export function AiContentFlagButton({
       )}
     </Button>
   );
-}
+};
 
 export function readOpikTraceId(raw: unknown, key: string): string | undefined {
   if (!raw || typeof raw !== 'object') return undefined;

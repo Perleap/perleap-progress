@@ -6,10 +6,7 @@ export interface McqScoreResult {
   isExactMatch: boolean;
 }
 
-export function parseOptionIds(
-  value: unknown,
-  legacySingleId?: string | null,
-): string[] {
+export function parseOptionIds(value: unknown, legacySingleId?: string | null): string[] {
   if (Array.isArray(value)) {
     return value.filter((id): id is string => typeof id === 'string' && id.length > 0);
   }

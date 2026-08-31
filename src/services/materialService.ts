@@ -30,17 +30,14 @@ export function materialStorageBucket(material: CourseMaterial): string | null {
   return null;
 }
 
-export function resolveMaterialBucket(
-  material: CourseMaterial,
-  defaultBucket: string,
-): string {
+export function resolveMaterialBucket(material: CourseMaterial, defaultBucket: string): string {
   if (material.type === 'link') return defaultBucket;
   return materialStorageBucket(material) ?? defaultBucket;
 }
 
 export async function resolveMaterialBlobUrl(
   material: CourseMaterial,
-  bucket: string,
+  bucket: string
 ): Promise<AuthenticatedBlobUrl | null> {
   if (material.type === 'link') {
     const link = material.url?.trim();
@@ -52,7 +49,7 @@ export async function resolveMaterialBlobUrl(
 
 export async function downloadMaterialFile(
   material: CourseMaterial,
-  bucket: string,
+  bucket: string
 ): Promise<Blob | null> {
   if (material.type === 'link') return null;
   const path = material.file_path?.trim();
@@ -62,7 +59,7 @@ export async function downloadMaterialFile(
 
 export async function openOrDownloadMaterial(
   material: CourseMaterial,
-  bucket: string,
+  bucket: string
 ): Promise<boolean> {
   const resolvedBucket = resolveMaterialBucket(material, bucket);
   if (material.type === 'link') {
@@ -98,15 +95,14 @@ export function isPdfUploadFile(file: File): boolean {
 export function parseCourseMaterials(materialsData: unknown): CourseMaterial[] {
   if (!materialsData) return [];
   try {
-    const materials =
-      typeof materialsData === 'string' ? JSON.parse(materialsData) : materialsData;
+    const materials = typeof materialsData === 'string' ? JSON.parse(materialsData) : materialsData;
     if (!Array.isArray(materials)) return [];
     return materials.filter(
       (m): m is CourseMaterial =>
         m != null &&
         typeof m === 'object' &&
         typeof (m as CourseMaterial).name === 'string' &&
-        ((m as CourseMaterial).type === 'pdf' || (m as CourseMaterial).type === 'link'),
+        ((m as CourseMaterial).type === 'pdf' || (m as CourseMaterial).type === 'link')
     );
   } catch {
     return [];

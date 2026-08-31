@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
+import { RefreshCw, Undo2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,17 +13,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-import { RefreshCw, Undo2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { useEvaluationRefreshProcessing } from '@/contexts/EvaluationRefreshProcessingContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   estimateRefreshDurationSeconds,
   formatEta,
   getEligibleRefreshMeta,
 } from '@/lib/evaluationRefreshEstimate';
+import { cn } from '@/lib/utils';
 
 interface RegenerateScoresButtonProps {
   classroomId: string;
@@ -36,7 +36,11 @@ type UndoResponse = {
   error?: string;
 };
 
-export function RegenerateScoresButton({ classroomId, onComplete, compact = false }: RegenerateScoresButtonProps) {
+export const RegenerateScoresButton = ({
+  classroomId,
+  onComplete,
+  compact = false,
+}: RegenerateScoresButtonProps) => {
   const { t } = useTranslation();
   const { isRefreshing, startRefresh } = useEvaluationRefreshProcessing();
   const [undoLoading, setUndoLoading] = useState(false);
@@ -148,7 +152,7 @@ export function RegenerateScoresButton({ classroomId, onComplete, compact = fals
     try {
       const { data, error } = await supabase.functions.invoke<UndoResponse>(
         'undo-evaluation-refresh',
-        { body: { classroomId } },
+        { body: { classroomId } }
       );
 
       if (error) {
@@ -180,13 +184,9 @@ export function RegenerateScoresButton({ classroomId, onComplete, compact = fals
   };
 
   const confirmEstimate =
-    eligibleStudents != null &&
-    eligibleStudents > 0 &&
-    eligibleSubmissions != null
+    eligibleStudents != null && eligibleStudents > 0 && eligibleSubmissions != null
       ? t('analytics.refreshProgress.confirmEstimate', {
-          time: formatEta(
-            estimateRefreshDurationSeconds(eligibleStudents, eligibleSubmissions),
-          ),
+          time: formatEta(estimateRefreshDurationSeconds(eligibleStudents, eligibleSubmissions)),
           count: eligibleStudents,
         })
       : null;
@@ -202,10 +202,7 @@ export function RegenerateScoresButton({ classroomId, onComplete, compact = fals
           onClick={() => setConfirmOpen(true)}
           disabled={isRefreshing || undoLoading || !!hasRunningJob}
         >
-          <RefreshCw
-            className={cn('h-4 w-4 me-1.5', isRefreshing && 'animate-spin')}
-            aria-hidden
-          />
+          <RefreshCw className={cn('h-4 w-4 me-1.5', isRefreshing && 'animate-spin')} aria-hidden />
           {isRefreshing
             ? t('analytics.regeneratingScores')
             : compact
@@ -222,10 +219,7 @@ export function RegenerateScoresButton({ classroomId, onComplete, compact = fals
             onClick={() => void undoRefresh()}
             disabled={isRefreshing || undoLoading}
           >
-            <Undo2
-              className={cn('h-4 w-4 me-1.5', undoLoading && 'animate-pulse')}
-              aria-hidden
-            />
+            <Undo2 className={cn('h-4 w-4 me-1.5', undoLoading && 'animate-pulse')} aria-hidden />
             {undoLoading ? t('analytics.undoingRefresh') : t('analytics.undoRefresh')}
           </Button>
         ) : null}
@@ -255,4 +249,4 @@ export function RegenerateScoresButton({ classroomId, onComplete, compact = fals
       </AlertDialog>
     </>
   );
-}
+};

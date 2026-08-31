@@ -1,14 +1,18 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import type { StudentAlert, AlertLevel } from '@/types/alerts';
-import { ALERT_TYPE_LABELS, ALERT_LEVEL_COLORS } from '@/types/alerts';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import SafeMathMarkdown from './SafeMathMarkdown';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  ALERT_LEVEL_COLORS,
+  ALERT_TYPE_LABELS,
+  type AlertLevel,
+  type StudentAlert,
+} from '@/types/alerts';
 
 interface WellbeingAlertCardProps {
   alerts: StudentAlert[];
@@ -16,11 +20,11 @@ interface WellbeingAlertCardProps {
   onAcknowledge?: () => void;
 }
 
-export function WellbeingAlertCard({
+export const WellbeingAlertCard = ({
   alerts,
   studentName,
   onAcknowledge,
-}: WellbeingAlertCardProps) {
+}: WellbeingAlertCardProps) => {
   const { t } = useTranslation();
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
 
@@ -50,7 +54,7 @@ export function WellbeingAlertCard({
     current.ai_analysis.length > best.ai_analysis.length ? current : best
   ).ai_analysis;
 
-  const handleAcknowledge = async (alertId: string) => {
+  const _handleAcknowledge = async (alertId: string) => {
     setAcknowledging(alertId);
     try {
       const {
@@ -69,7 +73,7 @@ export function WellbeingAlertCard({
 
       toast.success(t('wellbeing.success'));
       onAcknowledge?.();
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('wellbeing.error'));
     } finally {
       setAcknowledging(null);
@@ -97,7 +101,7 @@ export function WellbeingAlertCard({
 
       toast.success(t('wellbeing.successAll'));
       onAcknowledge?.();
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('wellbeing.errorAll'));
     } finally {
       setAcknowledging(null);
@@ -175,8 +179,14 @@ export function WellbeingAlertCard({
               <h4 className="font-semibold text-sm mb-2 text-foreground">Concerning Messages:</h4>
               <div className="space-y-2">
                 {allTriggeredMessages.map((msg, idx) => (
-                  <div key={idx} className="bg-destructive/10 border-l-4 border-destructive p-3 text-sm">
-                    <SafeMathMarkdown content={`"${msg.content}"`} className="text-foreground font-medium mb-1" />
+                  <div
+                    key={idx}
+                    className="bg-destructive/10 border-l-4 border-destructive p-3 text-sm"
+                  >
+                    <SafeMathMarkdown
+                      content={`"${msg.content}"`}
+                      className="text-foreground font-medium mb-1"
+                    />
                     <p className="text-destructive text-xs italic">{msg.reason}</p>
                   </div>
                 ))}
@@ -220,4 +230,4 @@ export function WellbeingAlertCard({
       </CardContent>
     </Card>
   );
-}
+};

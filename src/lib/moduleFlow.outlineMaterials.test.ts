@@ -21,7 +21,7 @@ function row(
   id: string,
   resource_type: SectionResource['resource_type'],
   order_index: number,
-  extra?: Partial<SectionResource>,
+  extra?: Partial<SectionResource>
 ): SectionResource {
   return { ...base, id, resource_type, order_index, ...extra } as SectionResource;
 }
@@ -52,7 +52,7 @@ describe('outline material helpers', () => {
   it('filterOutlineMaterialResources omits drafts when excludeDrafts', () => {
     const out = filterOutlineMaterialResources(
       [row('x', 'link', 0, { status: 'draft' }), row('y', 'link', 1, { status: 'published' })],
-      { excludeDrafts: true },
+      { excludeDrafts: true }
     );
     expect(out.map((r) => r.id)).toEqual(['y']);
   });

@@ -1,13 +1,13 @@
 import * as React from 'react';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClassroomSidebar } from './ClassroomSidebar';
-import { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from '@/config/classroomSections';
-import { usePageTransition } from '@/hooks/useGsapAnimations';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { USER_ROLES } from '@/config/constants';
+import { ClassroomSidebar } from './ClassroomSidebar';
 import { FloatingShellActions } from './FloatingShellActions';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { TEACHER_CLASSROOM_SECTIONS, STUDENT_CLASSROOM_SECTIONS } from '@/config/classroomSections';
+import { USER_ROLES } from '@/config/constants';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { usePageTransition } from '@/hooks/useGsapAnimations';
 
 interface ClassroomLayoutProps {
   children: React.ReactNode;
@@ -26,7 +26,7 @@ interface ClassroomLayoutProps {
   onBack?: () => void;
 }
 
-export function ClassroomLayout({
+export const ClassroomLayout = ({
   children,
   classroomName,
   classroomSubject,
@@ -35,7 +35,7 @@ export function ClassroomLayout({
   customSections,
   hideGlobalNav = false,
   onBack,
-}: ClassroomLayoutProps) {
+}: ClassroomLayoutProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
@@ -88,4 +88,4 @@ export function ClassroomLayout({
       </SidebarInset>
     </SidebarProvider>
   );
-}
+};

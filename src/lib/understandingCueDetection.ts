@@ -69,7 +69,11 @@ export function detectUnderstandingCue(text: string): UnderstandingCueResult {
     return { hit: false, reasonCodes: [], localeHint: 'unknown' };
   }
 
-  const locale: UnderstandingCueLocale = isMostlyHebrew(t) ? 'he' : HEBREWS_CHAR_RE.test(t) ? 'he' : 'en';
+  const locale: UnderstandingCueLocale = isMostlyHebrew(t)
+    ? 'he'
+    : HEBREWS_CHAR_RE.test(t)
+      ? 'he'
+      : 'en';
   const reasonCodes: string[] = [];
 
   for (const re of STRONG_PATTERNS_EN) {
@@ -92,7 +96,9 @@ export function detectUnderstandingCue(text: string): UnderstandingCueResult {
   const weakCount = reasonCodes.filter((c) => c.endsWith('weak')).length;
   const wordCount = t.split(/\s+/).length;
   const hit =
-    hasStrong || weakCount >= 2 || (weakCount === 1 && t.length < 50 && (/\?/.test(t) || wordCount <= 8));
+    hasStrong ||
+    weakCount >= 2 ||
+    (weakCount === 1 && t.length < 50 && (/\?/.test(t) || wordCount <= 8));
 
   const deduped = [...new Set(reasonCodes)];
   if (!hit) {
@@ -103,7 +109,11 @@ export function detectUnderstandingCue(text: string): UnderstandingCueResult {
   }
   // Long messages: need strong to reduce false positives
   if (hasStrong) {
-    return { hit, reasonCodes: deduped.filter((c) => c.includes('strong')).slice(0, 4), localeHint: locale };
+    return {
+      hit,
+      reasonCodes: deduped.filter((c) => c.includes('strong')).slice(0, 4),
+      localeHint: locale,
+    };
   }
   return { hit: false, reasonCodes: [], localeHint: locale };
 }

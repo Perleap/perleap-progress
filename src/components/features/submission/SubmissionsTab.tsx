@@ -1,15 +1,3 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import {
   FileText,
   Download,
@@ -24,8 +12,33 @@ import {
   Rows3,
   Table2,
   Calendar,
+  type LucideIcon,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import type { SubmissionDetailLocationState } from '@/types/navigation';
+import {
+  SubmissionCard,
+  formatSubmissionAssignmentTitle,
+  SubmissionClipboardActivityBadge,
+  SubmissionFlaggedSentencesBadge,
+  type SubmissionCardVariant,
+} from '@/components/SubmissionCard';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -34,23 +47,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  SubmissionCard,
-  formatSubmissionAssignmentTitle,
-  SubmissionClipboardActivityBadge,
-  SubmissionFlaggedSentencesBadge,
-  type SubmissionCardVariant,
-} from './SubmissionCard';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
 import { useEnrichedClassroomSubmissions, useSyllabus } from '@/hooks/queries';
-import { cn } from '@/lib/utils';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
 import { exportClassroomStudentWorkJson } from '@/lib/submissionExport';
-import { DatePicker } from '@/components/ui/date-picker';
 import {
   applySubmissionFiltersToSearchParams,
   clearSubmissionFilterSearchParams,
@@ -58,7 +58,7 @@ import {
   readSubmissionFiltersFromSearchParams,
   type SubmissionFiltersSnapshot,
 } from '@/lib/submissionFilterUrl';
-import type { SubmissionDetailLocationState } from '@/types/navigation';
+import { cn } from '@/lib/utils';
 
 interface SubmissionsTabProps {
   classroomId: string;
@@ -66,13 +66,7 @@ interface SubmissionsTabProps {
   initialAssignmentFilterId?: string;
 }
 
-export type SubmissionViewMode =
-  | 'grid'
-  | 'compact'
-  | 'list'
-  | 'detailed'
-  | 'table'
-  | 'timeline';
+export type SubmissionViewMode = 'grid' | 'compact' | 'list' | 'detailed' | 'table' | 'timeline';
 
 const VIEW_MODE_ICONS: Record<SubmissionViewMode, LucideIcon> = {
   list: List,
@@ -91,7 +85,7 @@ function capitalizeLatinFirstLetter(s: string) {
   return s;
 }
 
-export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: SubmissionsTabProps) {
+export const SubmissionsTab = ({ classroomId, initialAssignmentFilterId }: SubmissionsTabProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -115,7 +109,8 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const [viewMode, setViewMode] = useState<SubmissionViewMode>(defaults.view);
   const [exporting, setExporting] = useState(false);
 
-  const { data: submissions = [], isLoading: loading } = useEnrichedClassroomSubmissions(classroomId);
+  const { data: submissions = [], isLoading: loading } =
+    useEnrichedClassroomSubmissions(classroomId);
   const { data: syllabus } = useSyllabus(classroomId);
 
   const submissionReturnTo = `${location.pathname}${location.search}`;
@@ -126,7 +121,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
         state: { returnTo: submissionReturnTo } satisfies SubmissionDetailLocationState,
       });
     },
-    [navigate, submissionReturnTo],
+    [navigate, submissionReturnTo]
   );
 
   const applyFilters = useCallback(
@@ -149,7 +144,9 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
       setEndDate(next.to);
       setSearchQuery(next.q);
       setViewMode(next.view);
-      setSearchParams((prev) => applySubmissionFiltersToSearchParams(prev, next), { replace: true });
+      setSearchParams((prev) => applySubmissionFiltersToSearchParams(prev, next), {
+        replace: true,
+      });
     },
     [
       endDate,
@@ -161,7 +158,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
       setSearchParams,
       startDate,
       viewMode,
-    ],
+    ]
   );
 
   useEffect(() => {
@@ -197,7 +194,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const moduleIds = useMemo(() => new Set(modules.map((m) => m.id)), [modules]);
   const allAssignmentIds = useMemo(
     () => new Set(submissions.map((s) => s.assignment_id)),
-    [submissions],
+    [submissions]
   );
   const allStudentIds = useMemo(() => new Set(submissions.map((s) => s.student_id)), [submissions]);
 
@@ -229,14 +226,17 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const assignmentsForSelect = useMemo(() => {
     return Array.from(
       new Map(
-        submissionsAfterModule.map((s) => [s.assignment_id, { id: s.assignment_id, title: s.assignment_title }]),
-      ).values(),
+        submissionsAfterModule.map((s) => [
+          s.assignment_id,
+          { id: s.assignment_id, title: s.assignment_title },
+        ])
+      ).values()
     );
   }, [submissionsAfterModule]);
 
   const assignmentIdsForSelect = useMemo(
     () => new Set(assignmentsForSelect.map((a) => a.id)),
-    [assignmentsForSelect],
+    [assignmentsForSelect]
   );
 
   /** Submissions matching module + assignment scope. */
@@ -252,14 +252,14 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
         submissionsAfterModuleAndAssignment.map((s) => [
           s.student_id,
           { id: s.student_id, name: s.student_name },
-        ]),
-      ).values(),
+        ])
+      ).values()
     );
   }, [submissionsAfterModuleAndAssignment]);
 
   const studentIdsForSelect = useMemo(
     () => new Set(studentsForSelect.map((s) => s.id)),
-    [studentsForSelect],
+    [studentsForSelect]
   );
 
   useEffect(() => {
@@ -274,7 +274,14 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     if (selectedStudent !== 'all' && !studentIdsForSelect.has(selectedStudent)) {
       applyFilters({ student: 'all' });
     }
-  }, [loading, selectedAssignment, selectedModule, studentIdsForSelect, selectedStudent, applyFilters]);
+  }, [
+    loading,
+    selectedAssignment,
+    selectedModule,
+    studentIdsForSelect,
+    selectedStudent,
+    applyFilters,
+  ]);
 
   /** Rows per (student, assignment) — used to hide #1 when only one attempt exists. */
   const attemptCountByStudentAssignment = useMemo(() => {
@@ -290,7 +297,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const filteredSubmissions = useMemo(() => {
     // Use selectedStatus for filtering
     const effectiveStatus = selectedStatus;
-    
+
     let filtered = [...submissions];
 
     if (selectedStudent !== 'all') {
@@ -312,14 +319,14 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     }
 
     if (startDate) {
-      filtered = filtered.filter(s => new Date(s.submitted_at) >= new Date(startDate));
+      filtered = filtered.filter((s) => new Date(s.submitted_at) >= new Date(startDate));
     }
 
     if (endDate) {
       // Add one day to include the end date fully
       const end = new Date(endDate);
       end.setDate(end.getDate() + 1);
-      filtered = filtered.filter(s => new Date(s.submitted_at) < end);
+      filtered = filtered.filter((s) => new Date(s.submitted_at) < end);
     }
 
     if (searchQuery.trim()) {
@@ -334,15 +341,23 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
     }
 
     return filtered;
-  }, [submissions, selectedStudent, selectedAssignment, selectedModule, selectedStatus, searchQuery, startDate, endDate]);
+  }, [
+    submissions,
+    selectedStudent,
+    selectedAssignment,
+    selectedModule,
+    selectedStatus,
+    searchQuery,
+    startDate,
+    endDate,
+  ]);
 
   const timelineSubmissions = useMemo(
     () =>
       [...filteredSubmissions].sort(
-        (a, b) =>
-          new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime(),
+        (a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
       ),
-    [filteredSubmissions],
+    [filteredSubmissions]
   );
 
   const cardVariantForView = useMemo((): SubmissionCardVariant => {
@@ -369,21 +384,21 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   ].filter(Boolean).length;
 
   /** Status + date only — drives "More filters" trigger badge/highlight (scope filters stay visible above). */
-  const secondaryFiltersCount = [
-    selectedStatus !== 'all',
-    startDate !== '',
-    endDate !== '',
-  ].filter(Boolean).length;
+  const secondaryFiltersCount = [selectedStatus !== 'all', startDate !== '', endDate !== ''].filter(
+    Boolean
+  ).length;
 
   const clearFilters = () => {
     applyFilters(defaultSubmissionFilters());
   };
 
-  const handleModuleChange = (module: string) => {
+  const handleModuleChange = (module: string | null) => {
+    if (module == null) return;
     applyFilters({ module, assignment: 'all', student: 'all' });
   };
 
-  const handleAssignmentChange = (assignment: string) => {
+  const handleAssignmentChange = (assignment: string | null) => {
+    if (assignment == null) return;
     applyFilters({ assignment });
   };
 
@@ -405,17 +420,26 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
   const viewModeDisplayLabel = capitalizeLatinFirstLetter(t(`submissionsTab.view.${viewMode}`));
 
   if (loading && submissions.length === 0) {
-    return <div className="text-center py-12 text-muted-foreground animate-pulse">{t('common.loading')}</div>;
+    return (
+      <div className="text-center py-12 text-muted-foreground animate-pulse">
+        {t('common.loading')}
+      </div>
+    );
   }
 
   if (submissions.length === 0) {
     return (
       <Card className="rounded-xl border-dashed border-2 border-border bg-muted/20">
-        <CardContent className="flex flex-col items-center justify-center py-16 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
+        <CardContent
+          className="flex flex-col items-center justify-center py-16 text-center"
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
           <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center shadow-sm mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className={`text-xl font-bold text-foreground mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <h3
+            className={`text-xl font-bold text-foreground mb-2 ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('submissionsTab.noSubmissionsYet')}
           </h3>
           <p className={`text-muted-foreground max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -462,7 +486,11 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                         </span>
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'} align="start">
+                    <SelectContent
+                      className="rounded-xl bg-card border-border"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                      align="start"
+                    >
                       <SelectItem value="list">
                         <List className="h-4 w-4" />
                         <span>{capitalizeLatinFirstLetter(t('submissionsTab.view.list'))}</span>
@@ -510,14 +538,26 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
               {/* Scope filters: module → assignment → student (always visible) */}
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-3 md:gap-x-8 lg:gap-x-10 pt-1 border-t border-border/60">
                 <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                  <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.module')}</label>
+                  <label
+                    className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('submissionsTab.module')}
+                  </label>
                   <Select value={selectedModule} onValueChange={handleModuleChange}>
-                    <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectTrigger
+                      className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
                       <SelectValue>
-                        {selectedModule === 'all' ? t('submissionsTab.allModules') : modules.find((m) => m.id === selectedModule)?.title}
+                        {selectedModule === 'all'
+                          ? t('submissionsTab.allModules')
+                          : modules.find((m) => m.id === selectedModule)?.title}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectContent
+                      className="rounded-xl bg-card border-border"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
                       <SelectItem value="all">{t('submissionsTab.allModules')}</SelectItem>
                       {modules.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
@@ -529,16 +569,26 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 </div>
 
                 <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                  <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.assignment')}</label>
+                  <label
+                    className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('submissionsTab.assignment')}
+                  </label>
                   <Select value={selectedAssignment} onValueChange={handleAssignmentChange}>
-                    <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectTrigger
+                      className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
                       <SelectValue>
                         {selectedAssignment === 'all'
                           ? t('submissionsTab.allAssignments')
                           : assignmentsForSelect.find((a) => a.id === selectedAssignment)?.title}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectContent
+                      className="rounded-xl bg-card border-border"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
                       <SelectItem value="all">{t('submissionsTab.allAssignments')}</SelectItem>
                       {assignmentsForSelect.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
@@ -550,16 +600,32 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 </div>
 
                 <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                  <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.student')}</label>
-                  <Select value={selectedStudent} onValueChange={(student) => applyFilters({ student })}>
-                    <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <label
+                    className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}
+                  >
+                    {t('common.student')}
+                  </label>
+                  <Select
+                    value={selectedStudent}
+                    onValueChange={(student: string | null) => {
+                      if (student == null) return;
+                      applyFilters({ student });
+                    }}
+                  >
+                    <SelectTrigger
+                      className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
                       <SelectValue>
                         {selectedStudent === 'all'
                           ? t('submissionsTab.allStudents')
                           : studentsForSelect.find((s) => s.id === selectedStudent)?.name}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <SelectContent
+                      className="rounded-xl bg-card border-border"
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
                       <SelectItem value="all">{t('submissionsTab.allStudents')}</SelectItem>
                       {studentsForSelect.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
@@ -574,29 +640,65 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
               <CollapsibleContent className="overflow-hidden">
                 <div className="pt-3 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6 sm:gap-y-3 md:gap-x-8 lg:gap-x-10 border-t border-border/60 mt-1">
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[160px]">
-                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('common.status')}</label>
-                    <Select value={selectedStatus} onValueChange={(status) => applyFilters({ status })}>
-                      <SelectTrigger className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <label
+                      className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
+                      {t('common.status')}
+                    </label>
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={(status: string | null) => {
+                        if (status == null) return;
+                        applyFilters({ status });
+                      }}
+                    >
+                      <SelectTrigger
+                        className="rounded-xl h-10 min-w-[160px] border-border bg-muted/30 text-sm text-foreground"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
                         <SelectValue>
-                          {selectedStatus === 'all' ? t('submissionsTab.allStatuses') : (selectedStatus === 'in_progress' ? t('submissionsTab.inProgress') : t('submissionCard.completed'))}
+                          {selectedStatus === 'all'
+                            ? t('submissionsTab.allStatuses')
+                            : selectedStatus === 'in_progress'
+                              ? t('submissionsTab.inProgress')
+                              : t('submissionCard.completed')}
                         </SelectValue>
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl bg-card border-border" dir={isRTL ? 'rtl' : 'ltr'}>
+                      <SelectContent
+                        className="rounded-xl bg-card border-border"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                      >
                         <SelectItem value="all">{t('submissionsTab.allStatuses')}</SelectItem>
                         <SelectItem value="completed">{t('common.completed')}</SelectItem>
-                        <SelectItem value="in_progress">{t('submissionsTab.inProgress')}</SelectItem>
+                        <SelectItem value="in_progress">
+                          {t('submissionsTab.inProgress')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0 sm:min-w-[280px] sm:max-w-[340px]">
-                    <label className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}>{t('submissionsTab.dateRange')}</label>
+                    <label
+                      className={`text-xs font-medium text-muted-foreground ms-1 block ${isRTL ? 'text-right' : 'text-left'}`}
+                    >
+                      {t('submissionsTab.dateRange')}
+                    </label>
                     <div className="flex gap-4 sm:gap-5">
                       <div className="relative flex-1 min-w-0">
-                        <DatePicker value={startDate} onChange={(from) => applyFilters({ from })} placeholder={t('submissionsTab.from', 'From')} className="rounded-xl h-10 border-border bg-muted/30 text-xs" />
+                        <DatePicker
+                          value={startDate}
+                          onChange={(from) => applyFilters({ from })}
+                          placeholder={t('submissionsTab.from', 'From')}
+                          className="rounded-xl h-10 border-border bg-muted/30 text-xs"
+                        />
                       </div>
                       <div className="relative flex-1 min-w-0">
-                        <DatePicker value={endDate} onChange={(to) => applyFilters({ to })} placeholder={t('submissionsTab.to', 'To')} className="rounded-xl h-10 border-border bg-muted/30 text-xs" />
+                        <DatePicker
+                          value={endDate}
+                          onChange={(to) => applyFilters({ to })}
+                          placeholder={t('submissionsTab.to', 'To')}
+                          className="rounded-xl h-10 border-border bg-muted/30 text-xs"
+                        />
                       </div>
                     </div>
                   </div>
@@ -605,13 +707,13 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                     <div
                       className={cn(
                         'space-y-1.5 w-full min-w-0 sm:w-auto sm:shrink-0',
-                        isRTL ? 'sm:me-auto' : 'sm:ms-auto',
+                        isRTL ? 'sm:me-auto' : 'sm:ms-auto'
                       )}
                     >
                       <label
                         className={cn(
                           'text-xs font-medium text-muted-foreground ms-1 block invisible select-none',
-                          isRTL ? 'text-right' : 'text-left',
+                          isRTL ? 'text-right' : 'text-left'
                         )}
                         aria-hidden
                       >
@@ -647,7 +749,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 className={cn(
                   'absolute bottom-3 end-3 z-10 h-9 w-9 shrink-0 rounded-full border border-border bg-background text-foreground shadow-sm hover:bg-muted/80',
                   (isFiltersOpen || secondaryFiltersCount > 0) &&
-                    'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15',
+                    'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15'
                 )}
               >
                 {isFiltersOpen ? (
@@ -663,11 +765,16 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
 
       {filteredSubmissions.length === 0 ? (
         <Card className="rounded-xl border-dashed border-2 border-border bg-muted/20">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center" dir={isRTL ? 'rtl' : 'ltr'}>
+          <CardContent
+            className="flex flex-col items-center justify-center py-12 text-center"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
             <div className="w-12 h-12 bg-card rounded-full flex items-center justify-center shadow-sm mb-3">
               <Search className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className={`text-lg font-bold text-foreground mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <h3
+              className={`text-lg font-bold text-foreground mb-1 ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('submissionsTab.noMatches')}
             </h3>
             <p className={`text-muted-foreground ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -694,14 +801,17 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 <TableHead className="text-start">{t('submissionsTab.tableChatFlow')}</TableHead>
                 <TableHead className="text-start">{t('submissionsTab.tableSubmitted')}</TableHead>
                 <TableHead className="text-start">{t('submissionsTab.tableMessages')}</TableHead>
-                <TableHead className="text-start min-w-[140px]">{t('submissionsTab.tableFeedback')}</TableHead>
+                <TableHead className="text-start min-w-[140px]">
+                  {t('submissionsTab.tableFeedback')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredSubmissions.map((submission) => {
                 const pending = submission.id.startsWith('pending-');
                 const msgCount = submission.conversation_context?.length ?? 0;
-                const assignmentType = (submission as { assignment_type?: string | null }).assignment_type;
+                const assignmentType = (submission as { assignment_type?: string | null })
+                  .assignment_type;
                 const chatFlowLabel = (() => {
                   if (pending) return '—';
                   if (!isChatLikeAssignmentType(assignmentType)) return '—';
@@ -713,9 +823,12 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 })();
                 let feedbackText: string;
                 const submitted = !pending && submission.status === 'completed';
-                const teacherTry = !pending && Boolean((submission as { is_teacher_attempt?: boolean }).is_teacher_attempt);
+                const teacherTry =
+                  !pending &&
+                  Boolean((submission as { is_teacher_attempt?: boolean }).is_teacher_attempt);
                 const flaggedCount =
-                  (submission as { chat_sentence_flag_count?: number }).chat_sentence_flag_count ?? 0;
+                  (submission as { chat_sentence_flag_count?: number }).chat_sentence_flag_count ??
+                  0;
                 const clipboardHasCopy =
                   (submission as { clipboard_has_copy?: boolean }).clipboard_has_copy ?? false;
                 const clipboardHasPaste =
@@ -745,10 +858,14 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                       {formatSubmissionAssignmentTitle(
                         submission.assignment_title,
                         submission.attempt_number,
-                        attemptCountByStudentAssignment.get(`${submission.student_id}:${submission.assignment_id}`) ?? 1,
+                        attemptCountByStudentAssignment.get(
+                          `${submission.student_id}:${submission.assignment_id}`
+                        ) ?? 1
                       )}
                     </TableCell>
-                    <TableCell className="text-start align-middle">{submission.student_name}</TableCell>
+                    <TableCell className="text-start align-middle">
+                      {submission.student_name}
+                    </TableCell>
                     <TableCell className="align-middle">
                       <div className="flex flex-wrap items-center justify-end gap-1">
                         <SubmissionFlaggedSentencesBadge
@@ -775,7 +892,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                             'rounded-full px-2 py-0.5 font-medium text-[10px]',
                             submitted
                               ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
-                              : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
+                              : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400'
                           )}
                         >
                           {pending
@@ -823,7 +940,9 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
                 variant="detailed"
                 onOpen={openSubmission}
                 submissionAttemptCount={
-                  attemptCountByStudentAssignment.get(`${submission.student_id}:${submission.assignment_id}`) ?? 1
+                  attemptCountByStudentAssignment.get(
+                    `${submission.student_id}:${submission.assignment_id}`
+                  ) ?? 1
                 }
               />
             </div>
@@ -837,7 +956,7 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
               'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2',
             viewMode === 'list' &&
               'grid w-full min-w-0 grid-cols-1 gap-2 auto-rows-auto justify-items-stretch',
-            viewMode === 'detailed' && 'grid grid-cols-1 lg:grid-cols-2 gap-6',
+            viewMode === 'detailed' && 'grid grid-cols-1 lg:grid-cols-2 gap-6'
           )}
         >
           {filteredSubmissions.map((submission) => (
@@ -847,7 +966,9 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
               variant={cardVariantForView}
               onOpen={openSubmission}
               submissionAttemptCount={
-                attemptCountByStudentAssignment.get(`${submission.student_id}:${submission.assignment_id}`) ?? 1
+                attemptCountByStudentAssignment.get(
+                  `${submission.student_id}:${submission.assignment_id}`
+                ) ?? 1
               }
             />
           ))}
@@ -855,4 +976,4 @@ export function SubmissionsTab({ classroomId, initialAssignmentFilterId }: Submi
       )}
     </div>
   );
-}
+};

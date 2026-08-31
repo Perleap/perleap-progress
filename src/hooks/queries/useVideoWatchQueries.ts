@@ -47,7 +47,7 @@ export function formatWatchPercent(row: VideoWatchProgressRow): string {
 function resolveVideoTitle(
   resourceTitle: string,
   lessonBlockId: string | null,
-  lessonContent: unknown,
+  lessonContent: unknown
 ): string {
   if (!lessonBlockId) return resourceTitle;
   const parsed = parseLessonContent(lessonContent);
@@ -81,7 +81,7 @@ export function useVideoWatchAnalytics(classroomId: string | undefined) {
       if (resourcesError) throw resourcesError;
 
       const resourceMeta = new Map(
-        (resources ?? []).map((r) => [r.id, { title: r.title, lesson_content: r.lesson_content }]),
+        (resources ?? []).map((r) => [r.id, { title: r.title, lesson_content: r.lesson_content }])
       );
 
       const grouped = new Map<string, VideoWatchProgressRow[]>();
@@ -101,7 +101,7 @@ export function useVideoWatchAnalytics(classroomId: string | undefined) {
         const title = resolveVideoTitle(
           meta?.title ?? resourceId,
           lessonBlockId,
-          meta?.lesson_content,
+          meta?.lesson_content
         );
 
         const totalPlays = rows.reduce((sum, r) => sum + r.play_count, 0);
@@ -109,7 +109,9 @@ export function useVideoWatchAnalytics(classroomId: string | undefined) {
         const uniqueViewers = rows.length;
         const avgCompletionPct =
           rows.length > 0
-            ? Math.round(rows.reduce((sum, r) => sum + getVideoWatchCompletionPct(r), 0) / rows.length)
+            ? Math.round(
+                rows.reduce((sum, r) => sum + getVideoWatchCompletionPct(r), 0) / rows.length
+              )
             : 0;
 
         summaries.push({

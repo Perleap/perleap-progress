@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/useAuth';
-import { getTeacherClassrooms, getStudentClassrooms } from '@/services';
 import type { Classroom, ApiError } from '@/types';
 import { USER_ROLES } from '@/config/constants';
+import { useAuth } from '@/contexts/useAuth';
+import { getTeacherClassrooms, getStudentClassrooms } from '@/services';
 
 interface UseClassroomsResult {
   classrooms: Classroom[];
@@ -48,7 +48,7 @@ export const useClassrooms = (role: 'teacher' | 'student'): UseClassroomsResult 
     }
 
     setLoading(false);
-  }, [user?.id, role]);
+  }, [user, role]);
 
   useEffect(() => {
     fetchClassrooms();

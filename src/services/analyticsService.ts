@@ -3,7 +3,6 @@
  * Handles analytics and 5D scores operations
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
 import type { Json } from '@/integrations/supabase/types';
 import type {
   FiveDSnapshot,
@@ -12,6 +11,7 @@ import type {
   ClassroomAnalytics,
   ApiError,
 } from '@/types';
+import { supabase, handleSupabaseError } from '@/api/client';
 import { SNAPSHOT_SOURCES, DEFAULT_SCORE } from '@/config/constants';
 
 /**
@@ -179,7 +179,7 @@ export const getClassroomAnalytics = async (
       .eq('classroom_id', classroomId);
 
     const assignmentCount = assignments?.length || 0;
-    const assignmentIds = assignments?.map(a => a.id) || [];
+    const assignmentIds = assignments?.map((a) => a.id) || [];
 
     // 3. Get enrollments with student profiles in bulk
     const { data: enrollments } = await supabase
@@ -201,15 +201,13 @@ export const getClassroomAnalytics = async (
       };
     }
 
-    const studentIds = enrollments.map(e => e.student_id);
-
     // 4. Fetch all submissions for these assignments in bulk
     const { data: allSubmissions } = await supabase
       .from('submissions')
       .select('id, student_id, assignment_id, status')
       .in('assignment_id', assignmentIds);
 
-    const submissionIds = allSubmissions?.map(s => s.id) || [];
+    const submissionIds = allSubmissions?.map((s) => s.id) || [];
 
     // 5. Fetch all 5D snapshots for these submissions in bulk
     const { data: allSnapshots } = await supabase
@@ -231,19 +229,21 @@ export const getClassroomAnalytics = async (
     const { data: allFeedback } = await feedbackQuery;
 
     // 7. Process data into student analytics
-    const studentAnalytics: StudentAnalytics[] = enrollments.map(enrollment => {
+    const studentAnalytics: StudentAnalytics[] = enrollments.map((enrollment) => {
       const studentId = enrollment.student_id;
-      const profile = (enrollment as any).student_profiles;
+      const profile = (enrollment as { student_profiles?: { full_name?: string } | null })
+        .student_profiles;
       const fullName = profile?.full_name || 'Unknown';
 
       // Filter snapshots for this student
-      const studentSnapshots = allSnapshots?.filter(s => s.user_id === studentId) || [];
-      const averageScores = studentSnapshots.length > 0 
-        ? calculateAverageScores(studentSnapshots as any)
-        : null;
+      const studentSnapshots = allSnapshots?.filter((s) => s.user_id === studentId) || [];
+      const averageScores =
+        studentSnapshots.length > 0
+          ? calculateAverageScores(studentSnapshots as unknown as FiveDSnapshot[])
+          : null;
 
       // Filter feedback for this student
-      const studentFeedback = allFeedback?.filter(f => f.student_id === studentId) || [];
+      const studentFeedback = allFeedback?.filter((f) => f.student_id === studentId) || [];
 
       return {
         id: studentId,
@@ -305,7 +305,7 @@ export const regenerateClassroomScores = async (
   classroomId: string
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
-    const { data, error } = await supabase.functions.invoke('regenerate-scores', {
+    const { error } = await supabase.functions.invoke('regenerate-scores', {
       body: { classroomId },
     });
 

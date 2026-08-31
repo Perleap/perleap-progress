@@ -79,7 +79,7 @@ describe('buildParticipantRow', () => {
       completedInScope: 5,
       assignmentsInScope: 6,
       assessment: {
-        dimensions: assessedParticipant.dimensions!,
+        dimensions: assessedParticipant.dimensions as PilotDimensionScores,
         readiness: 'ready',
         roleFit: 'builder',
         keyStrength: 'Strong builds.',
@@ -157,7 +157,7 @@ describe('fillRecommendationFallback', () => {
   it('fills the count placeholders', () => {
     const out = fillRecommendationFallback(
       '{{ready}} ready, {{coachOrTraining}} need coaching/training, {{redirect}} redirect.',
-      { ready: 3, coach: 2, redirect: 1, not_ready: 1 },
+      { ready: 3, coach: 2, redirect: 1, not_ready: 1 }
     );
     expect(out).toBe('3 ready, 3 need coaching/training, 1 redirect.');
   });
@@ -181,7 +181,7 @@ describe('computeEffectiveRankScore', () => {
         placementPriority: 7,
         completedInScope: 1,
         assignmentsInScope: 6,
-      }),
+      })
     ).toBeCloseTo(7 / 6);
     expect(
       computeEffectiveRankScore({
@@ -189,14 +189,12 @@ describe('computeEffectiveRankScore', () => {
         placementPriority: 6,
         completedInScope: 5,
         assignmentsInScope: 6,
-      }),
+      })
     ).toBeCloseTo(5);
   });
 
   it('returns 0 when placementPriority is missing', () => {
-    expect(
-      computeEffectiveRankScore({ ...assessedParticipant, placementPriority: null }),
-    ).toBe(0);
+    expect(computeEffectiveRankScore({ ...assessedParticipant, placementPriority: null })).toBe(0);
   });
 });
 
@@ -338,7 +336,7 @@ describe('buildRoleFitDistributionLine', () => {
   it('includes only non-zero role-fit counts', () => {
     const line = buildRoleFitDistributionLine(
       { builder: 2, analyst: 0, champion: 1, enablement: 0, training: 0 },
-      testStaticCopy.roleFitLabels,
+      testStaticCopy.roleFitLabels
     );
     expect(line).toContain('Builder / implementer: 2');
     expect(line).toContain('Platform champion: 1');

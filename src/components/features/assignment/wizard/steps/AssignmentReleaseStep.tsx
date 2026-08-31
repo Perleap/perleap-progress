@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -7,10 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
 import { isArtifactAssignmentType } from '@/lib/artifactAssignmentTypes';
+import { cn } from '@/lib/utils';
 
 interface AssignmentReleaseStepProps {
   formData: AssignmentWizardFormData;
@@ -18,7 +18,7 @@ interface AssignmentReleaseStepProps {
   isRTL: boolean;
 }
 
-function YesNoSelect({
+const YesNoSelect = ({
   id,
   value,
   onChange,
@@ -30,7 +30,7 @@ function YesNoSelect({
   onChange: (value: boolean) => void;
   disabled?: boolean;
   isRTL: boolean;
-}) {
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -41,10 +41,7 @@ function YesNoSelect({
     >
       <SelectTrigger
         id={id}
-        className={cn(
-          'h-9 w-full min-w-0 rounded-lg text-sm',
-          isRTL ? 'text-right' : 'text-left',
-        )}
+        className={cn('h-9 w-full min-w-0 rounded-lg text-sm', isRTL ? 'text-right' : 'text-left')}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <SelectValue>{value ? t('common.yes') : t('common.no')}</SelectValue>
@@ -59,9 +56,13 @@ function YesNoSelect({
       </SelectContent>
     </Select>
   );
-}
+};
 
-export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: AssignmentReleaseStepProps) {
+export const AssignmentReleaseStep = ({
+  formData,
+  onFormChange,
+  isRTL,
+}: AssignmentReleaseStepProps) => {
   const { t } = useTranslation();
   const showFeedbackDisabled = !formData.enable_ai_feedback;
 
@@ -99,7 +100,7 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
                 id="wiz_publication_status"
                 className={cn(
                   'h-9 w-full min-w-0 rounded-lg text-sm',
-                  isRTL ? 'text-right' : 'text-left',
+                  isRTL ? 'text-right' : 'text-left'
                 )}
                 dir={isRTL ? 'rtl' : 'ltr'}
               >
@@ -122,7 +123,7 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
           <p
             className={cn(
               'max-w-[24rem] text-muted-foreground text-xs leading-snug',
-              isRTL ? 'text-right' : 'text-left',
+              isRTL ? 'text-right' : 'text-left'
             )}
           >
             {t('createAssignment.metadata.publicationStatusHelper')}
@@ -156,7 +157,7 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
           <p
             className={cn(
               'text-muted-foreground text-xs leading-relaxed',
-              isRTL ? 'text-right' : 'text-left',
+              isRTL ? 'text-right' : 'text-left'
             )}
           >
             {t('createAssignment.metadata.aiFeedbackHelper')}
@@ -187,7 +188,7 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
           <p
             className={cn(
               'text-muted-foreground text-xs leading-relaxed',
-              isRTL ? 'text-right' : 'text-left',
+              isRTL ? 'text-right' : 'text-left'
             )}
           >
             {t('createAssignment.metadata.showFeedbackHelper')}
@@ -196,7 +197,7 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
             <p
               className={cn(
                 'text-muted-foreground text-xs leading-relaxed',
-                isRTL ? 'text-right' : 'text-left',
+                isRTL ? 'text-right' : 'text-left'
               )}
             >
               {t('createAssignment.metadata.artifactFeedbackHint')}
@@ -227,7 +228,7 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
           <p
             className={cn(
               'text-muted-foreground text-xs leading-relaxed',
-              isRTL ? 'text-right' : 'text-left',
+              isRTL ? 'text-right' : 'text-left'
             )}
           >
             {t('createAssignment.taskUnderstandingPrompt.helper')}
@@ -236,4 +237,4 @@ export function AssignmentReleaseStep({ formData, onFormChange, isRTL }: Assignm
       </CardContent>
     </Card>
   );
-}
+};

@@ -9,9 +9,9 @@ import type {
   Classroom,
   FiveDScores,
   FiveDQedMeasures,
-  Message,
   Submission,
   TeacherProfile,
+  TeacherProfileDisplay,
   StudentProfile,
 } from './models';
 
@@ -53,7 +53,7 @@ export interface AssignmentWithClassroom extends Assignment {
   classrooms: {
     name: string;
     teacher_id?: string;
-    teacher_profiles?: TeacherProfile | null;
+    teacher_profiles?: TeacherProfileDisplay | null;
   };
   submissions?: Submission[];
 }
@@ -222,7 +222,9 @@ export function isMergeFailureContext(v: unknown): v is MergeFailureContext {
   return typeof o.phase === 'string';
 }
 
-export function getMergeFailureFromApiError(err: ApiError | null | undefined): MergeFailureContext | null {
+export function getMergeFailureFromApiError(
+  err: ApiError | null | undefined
+): MergeFailureContext | null {
   if (!err?.details || typeof err.details !== 'object') return null;
   const d = err.details as Record<string, unknown>;
   const m = d.merge;

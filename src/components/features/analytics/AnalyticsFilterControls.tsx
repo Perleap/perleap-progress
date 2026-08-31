@@ -1,3 +1,10 @@
+import { Users, BookOpen, LayoutGrid } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type {
+  AnalyticsAssignmentRef,
+  AnalyticsModuleRef,
+  AnalyticsModuleFilter,
+} from '@/lib/analyticsScope';
 import {
   Select,
   SelectContent,
@@ -5,14 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Users, BookOpen, LayoutGrid } from 'lucide-react';
-import type {
-  AnalyticsAssignmentRef,
-  AnalyticsModuleRef,
-  AnalyticsModuleFilter,
-} from '@/lib/analyticsScope';
 
 export interface AnalyticsFilterControlsProps {
   allStudents: { id: string; name: string }[];
@@ -32,7 +32,7 @@ export interface AnalyticsFilterControlsProps {
 }
 
 /** Shared module + student + assignment selects for analytics and nuance cards (same layout and copy). */
-export function AnalyticsFilterControls({
+export const AnalyticsFilterControls = ({
   allStudents,
   assignments,
   modules,
@@ -46,7 +46,7 @@ export function AnalyticsFilterControls({
   onAssignmentChange,
   allAssignmentsInScopeLabel,
   allModulesLabel,
-}: AnalyticsFilterControlsProps) {
+}: AnalyticsFilterControlsProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
 
@@ -59,7 +59,10 @@ export function AnalyticsFilterControls({
           <LayoutGrid className="h-4 w-4" />
           {moduleFilterLabel}
         </label>
-        <Select value={selectedModule} onValueChange={(v) => onModuleChange(v as AnalyticsModuleFilter)}>
+        <Select
+          value={selectedModule}
+          onValueChange={(v) => onModuleChange(v as AnalyticsModuleFilter)}
+        >
           <SelectTrigger
             className={`h-12 w-full rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground sm:min-w-[220px]`}
             dir={isRTL ? 'rtl' : 'ltr'}
@@ -72,7 +75,10 @@ export function AnalyticsFilterControls({
                   : modules.find((m) => m.id === selectedModule)?.title}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
+          <SelectContent
+            className="rounded-lg border-border bg-card p-1"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
             <SelectItem value="all" className="rounded-xl cursor-pointer">
               {allModulesLabel}
             </SelectItem>
@@ -97,7 +103,13 @@ export function AnalyticsFilterControls({
           <Users className="h-4 w-4" />
           {t('analytics.filterByStudent')}
         </label>
-        <Select value={selectedStudent} onValueChange={onStudentChange}>
+        <Select
+          value={selectedStudent}
+          onValueChange={(value: string | null) => {
+            if (value == null) return;
+            onStudentChange(value);
+          }}
+        >
           <SelectTrigger
             className={`h-12 w-full rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground sm:min-w-[220px]`}
             dir={isRTL ? 'rtl' : 'ltr'}
@@ -108,7 +120,10 @@ export function AnalyticsFilterControls({
                 : allStudents.find((s) => s.id === selectedStudent)?.name}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
+          <SelectContent
+            className="rounded-lg border-border bg-card p-1"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
             <SelectItem value="all" className="rounded-xl cursor-pointer">
               {t('analytics.allStudents')}
             </SelectItem>
@@ -127,7 +142,13 @@ export function AnalyticsFilterControls({
           <BookOpen className="h-4 w-4" />
           {t('analytics.filterByAssignment')}
         </label>
-        <Select value={selectedAssignment} onValueChange={onAssignmentChange}>
+        <Select
+          value={selectedAssignment}
+          onValueChange={(value: string | null) => {
+            if (value == null) return;
+            onAssignmentChange(value);
+          }}
+        >
           <SelectTrigger
             className={`h-12 w-full rounded-lg border-border bg-muted/30 focus:bg-card focus:ring-2 focus:ring-ring/20 transition-all ${isRTL ? 'text-right' : 'text-left'} text-foreground sm:min-w-[220px]`}
             dir={isRTL ? 'rtl' : 'ltr'}
@@ -138,7 +159,10 @@ export function AnalyticsFilterControls({
                 : assignments.find((a) => a.id === selectedAssignment)?.title}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent className="rounded-lg border-border bg-card p-1" dir={isRTL ? 'rtl' : 'ltr'}>
+          <SelectContent
+            className="rounded-lg border-border bg-card p-1"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
             <SelectItem value="all" className="rounded-xl cursor-pointer">
               {allAssignmentsInScopeLabel}
             </SelectItem>
@@ -152,4 +176,4 @@ export function AnalyticsFilterControls({
       </div>
     </div>
   );
-}
+};

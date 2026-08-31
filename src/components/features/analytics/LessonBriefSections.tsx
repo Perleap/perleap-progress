@@ -1,8 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Download, FileDown, Loader2 } from 'lucide-react';
-import { FiveDChart } from '@/components/FiveDChart';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import {
   DIMENSION_ORDER,
   STATUS_I18N_KEY,
@@ -10,6 +7,9 @@ import {
   type ClassPriorityInsight,
   type StudentReportRow,
 } from './lessonBriefReportUtils';
+import { FiveDChart } from '@/components/FiveDChart';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 type LessonBriefToolbarProps = {
   isGenerating: boolean;
@@ -19,13 +19,13 @@ type LessonBriefToolbarProps = {
   onDownloadHtml: () => void;
 };
 
-export function LessonBriefToolbar({
+export const LessonBriefToolbar = ({
   isGenerating,
   isExportingPdf,
   onBack,
   onExportPdf,
   onDownloadHtml,
-}: LessonBriefToolbarProps) {
+}: LessonBriefToolbarProps) => {
   const { t } = useTranslation();
 
   return (
@@ -65,7 +65,7 @@ export function LessonBriefToolbar({
       </div>
     </div>
   );
-}
+};
 
 type LessonBriefCoverSectionProps = {
   classroomName: string | undefined;
@@ -77,7 +77,7 @@ type LessonBriefCoverSectionProps = {
   assignmentsInScope: number;
 };
 
-export function LessonBriefCoverSection({
+export const LessonBriefCoverSection = ({
   classroomName,
   generatedAt,
   exportFilterSummary,
@@ -85,7 +85,7 @@ export function LessonBriefCoverSection({
   totalSubmissions,
   averageSubmissionsPerStudent,
   assignmentsInScope,
-}: LessonBriefCoverSectionProps) {
+}: LessonBriefCoverSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -143,15 +143,15 @@ export function LessonBriefCoverSection({
       </div>
     </section>
   );
-}
+};
 
 type LessonBriefTeachingPrioritiesSectionProps = {
   classPriorityInsights: ClassPriorityInsight[];
 };
 
-export function LessonBriefTeachingPrioritiesSection({
+export const LessonBriefTeachingPrioritiesSection = ({
   classPriorityInsights,
-}: LessonBriefTeachingPrioritiesSectionProps) {
+}: LessonBriefTeachingPrioritiesSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -174,13 +174,15 @@ export function LessonBriefTeachingPrioritiesSection({
       </div>
     </section>
   );
-}
+};
 
 type LessonBriefStudentTableSectionProps = {
   studentRows: StudentReportRow[];
 };
 
-export function LessonBriefStudentTableSection({ studentRows }: LessonBriefStudentTableSectionProps) {
+export const LessonBriefStudentTableSection = ({
+  studentRows,
+}: LessonBriefStudentTableSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -190,7 +192,9 @@ export function LessonBriefStudentTableSection({ studentRows }: LessonBriefStude
           <h2 className="text-2xl font-semibold text-slate-900">
             {t('analytics.lessonBrief.studentTableTitle')}
           </h2>
-          <p className="text-sm text-slate-600">{t('analytics.lessonBrief.studentTableDescription')}</p>
+          <p className="text-sm text-slate-600">
+            {t('analytics.lessonBrief.studentTableDescription')}
+          </p>
         </div>
       </div>
 
@@ -200,9 +204,15 @@ export function LessonBriefStudentTableSection({ studentRows }: LessonBriefStude
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-4 py-3 font-semibold">{t('analytics.lessonBrief.columnStudent')}</th>
-                  <th className="px-4 py-3 font-semibold">{t('analytics.lessonBrief.columnProgress')}</th>
-                  <th className="px-4 py-3 font-semibold">{t('analytics.lessonBrief.column5dScores')}</th>
+                  <th className="px-4 py-3 font-semibold">
+                    {t('analytics.lessonBrief.columnStudent')}
+                  </th>
+                  <th className="px-4 py-3 font-semibold">
+                    {t('analytics.lessonBrief.columnProgress')}
+                  </th>
+                  <th className="px-4 py-3 font-semibold">
+                    {t('analytics.lessonBrief.column5dScores')}
+                  </th>
                   <th className="px-4 py-3 font-semibold">
                     {t('analytics.lessonBrief.columnLowestDimension')}
                   </th>
@@ -216,19 +226,27 @@ export function LessonBriefStudentTableSection({ studentRows }: LessonBriefStude
                       {student.completedInScope} / {student.assignmentsInScope}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      {student.scores ? (
-                        <span className="text-xs leading-relaxed">
-                          {DIMENSION_ORDER.map((dimension) => (
-                            <span key={dimension}>
-                              {t(`dimensions.${dimension}.abbrev`)}:
-                              {safeScore(student.scores![dimension]).toFixed(1)}
-                              {dimension !== 'action' ? ' · ' : ''}
+                      {(() => {
+                        const scores = student.scores;
+                        if (!scores) {
+                          return (
+                            <span className="text-slate-400">
+                              {t('analytics.lessonBrief.dash')}
                             </span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">{t('analytics.lessonBrief.dash')}</span>
-                      )}
+                          );
+                        }
+                        return (
+                          <span className="text-xs leading-relaxed">
+                            {DIMENSION_ORDER.map((dimension) => (
+                              <span key={dimension}>
+                                {t(`dimensions.${dimension}.abbrev`)}:
+                                {safeScore(scores[dimension]).toFixed(1)}
+                                {dimension !== 'action' ? ' · ' : ''}
+                              </span>
+                            ))}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {student.weakestDimension
@@ -244,17 +262,17 @@ export function LessonBriefStudentTableSection({ studentRows }: LessonBriefStude
       </Card>
     </section>
   );
-}
+};
 
 type LessonBriefCoachingCardsSectionProps = {
   isGenerating: boolean;
   studentRows: StudentReportRow[];
 };
 
-export function LessonBriefCoachingCardsSection({
+export const LessonBriefCoachingCardsSection = ({
   isGenerating,
   studentRows,
-}: LessonBriefCoachingCardsSectionProps) {
+}: LessonBriefCoachingCardsSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -361,9 +379,9 @@ export function LessonBriefCoachingCardsSection({
         ))}
     </section>
   );
-}
+};
 
-export function LessonBriefFooterDisclaimer() {
+export const LessonBriefFooterDisclaimer = () => {
   const { t } = useTranslation();
 
   return (
@@ -371,4 +389,4 @@ export function LessonBriefFooterDisclaimer() {
       {t('analytics.lessonBrief.footerDisclaimer')}
     </div>
   );
-}
+};

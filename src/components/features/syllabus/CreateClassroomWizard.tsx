@@ -1,23 +1,14 @@
-import { useState, useCallback, useRef } from 'react';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/integrations/supabase/types';
-import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Loader2, Upload } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-
-import { WizardStepIndicator, type WizardStep } from './WizardStepIndicator';
+import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { CourseBasicsStep } from './steps/CourseBasicsStep';
-import { SyllabusSetupStep } from './steps/SyllabusSetupStep';
 import { OutlineBuilderStep } from './steps/OutlineBuilderStep';
 import { ReviewStep } from './steps/ReviewStep';
+import { SyllabusSetupStep } from './steps/SyllabusSetupStep';
+import { WizardStepIndicator, type WizardStep } from './WizardStepIndicator';
+import type { Json } from '@/integrations/supabase/types';
 import type { Domain, CourseMaterial } from '@/types/models';
 import type {
   SyllabusStructureType,
@@ -27,13 +18,18 @@ import type {
   ProvisionBundleResourceItem,
   SyllabusStatus,
 } from '@/types/syllabus';
-import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useProvisionSyllabusBundle } from '@/hooks/queries';
-import { useQueryClient } from '@tanstack/react-query';
 import { classroomKeys } from '@/hooks/queries/useClassroomQueries';
-import { importCoursePackageV1 } from '@/services/coursePackageService';
-import { packageForNewClassroomFromAny } from '@/services/coursePackageNewImportUtils';
+import { supabase } from '@/integrations/supabase/client';
 import { parseCoursePackageJson } from '@/lib/coursePackage/validateCoursePackage';
+import { runSyllabusPublishedSideEffects } from '@/lib/syllabusPublishSideEffects';
+import { packageForNewClassroomFromAny } from '@/services/coursePackageNewImportUtils';
+import { importCoursePackageV1 } from '@/services/coursePackageService';
 
 // ---------------------------------------------------------------------------
 // Wizard Data Shape
@@ -43,8 +39,8 @@ export interface WizardResourceItem {
   id: string;
   type: 'link' | 'file';
   title: string;
-  url: string;        // URL for links, object-URL preview for local files
-  file?: File;        // present only for local file uploads
+  url: string; // URL for links, object-URL preview for local files
+  file?: File; // present only for local file uploads
 }
 
 export interface WizardSectionData {
@@ -256,7 +252,9 @@ export const CreateClassroomWizard = ({
       if (wizardData.includeSyllabus) {
         const bundleStatus: SyllabusStatus = 'published';
         try {
-          const sectionResourceItems: ProvisionBundleResourceItem[][] = wizardData.sections.map(() => []);
+          const sectionResourceItems: ProvisionBundleResourceItem[][] = wizardData.sections.map(
+            () => []
+          );
 
           const provisioned = await provisionBundle.mutateAsync({
             classroom_id: classroom.id,
@@ -305,14 +303,16 @@ export const CreateClassroomWizard = ({
 
       // 5. Log activity
       try {
-        await supabase.from('activity_events' as any).insert([{
-          teacher_id: user.id,
-          type: 'create',
-          entity_type: 'classroom',
-          entity_id: classroom.id,
-          title: `Created classroom: ${wizardData.courseTitle || 'New Classroom'}`,
-          route: `/teacher/classroom/${classroom.id}`,
-        }]);
+        await supabase.from('activity_events').insert([
+          {
+            teacher_id: user.id,
+            type: 'create',
+            entity_type: 'classroom',
+            entity_id: classroom.id,
+            title: `Created classroom: ${wizardData.courseTitle || 'New Classroom'}`,
+            route: `/teacher/classroom/${classroom.id}`,
+          },
+        ]);
       } catch {
         // non-critical
       }
@@ -325,15 +325,21 @@ export const CreateClassroomWizard = ({
       onOpenChange(false);
       onSuccess(classroom.id);
       resetWizard();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create classroom');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create classroom');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) resetWizard(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        onOpenChange(val);
+        if (!val) resetWizard();
+      }}
+    >
       <DialogContent
         dir={isRTL ? 'rtl' : 'ltr'}
         className="sm:max-w-6xl w-[95vw] max-h-[92vh] h-[92vh] p-0 overflow-hidden rounded-xl border-none shadow-2xl bg-background flex flex-col"
@@ -341,7 +347,9 @@ export const CreateClassroomWizard = ({
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border bg-gradient-to-br from-muted/20 to-transparent flex-shrink-0">
-          <h2 className={`text-2xl font-bold tracking-tight text-foreground mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <h2
+            className={`text-2xl font-bold tracking-tight text-foreground mb-4 ${isRTL ? 'text-right' : 'text-left'}`}
+          >
             {t('createClassroom.title', 'Create Classroom')}
           </h2>
 
@@ -371,48 +379,29 @@ export const CreateClassroomWizard = ({
                 ? t('createClassroom.importFromFileBusy')
                 : t('createClassroom.importFromFile')}
             </Button>
-            <p className={`text-xs text-muted-foreground max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
+            <p
+              className={`text-xs text-muted-foreground max-w-md ${isRTL ? 'text-right' : 'text-left'}`}
+            >
               {t('createClassroom.importWizardHint')}
             </p>
           </div>
 
-          <WizardStepIndicator
-            steps={effectiveSteps}
-            currentStep={currentStep}
-            isRTL={isRTL}
-          />
+          <WizardStepIndicator steps={effectiveSteps} currentStep={currentStep} isRTL={isRTL} />
         </div>
 
         {/* Body */}
         <ScrollArea className="flex-1 min-h-0">
           <div className="px-6 py-6">
             {currentStep === 0 && (
-              <CourseBasicsStep
-                data={wizardData}
-                onChange={updateWizardData}
-                isRTL={isRTL}
-              />
+              <CourseBasicsStep data={wizardData} onChange={updateWizardData} isRTL={isRTL} />
             )}
             {currentStep === 1 && (
-              <SyllabusSetupStep
-                data={wizardData}
-                onChange={updateWizardData}
-                isRTL={isRTL}
-              />
+              <SyllabusSetupStep data={wizardData} onChange={updateWizardData} isRTL={isRTL} />
             )}
             {currentStep === 2 && (
-              <OutlineBuilderStep
-                data={wizardData}
-                onChange={updateWizardData}
-                isRTL={isRTL}
-              />
+              <OutlineBuilderStep data={wizardData} onChange={updateWizardData} isRTL={isRTL} />
             )}
-            {currentStep === 3 && (
-              <ReviewStep
-                data={wizardData}
-                isRTL={isRTL}
-              />
-            )}
+            {currentStep === 3 && <ReviewStep data={wizardData} isRTL={isRTL} />}
           </div>
         </ScrollArea>
 
@@ -438,7 +427,10 @@ export const CreateClassroomWizard = ({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => { onOpenChange(false); resetWizard(); }}
+                onClick={() => {
+                  onOpenChange(false);
+                  resetWizard();
+                }}
                 disabled={wizardBusy}
                 className="rounded-full"
               >

@@ -18,15 +18,25 @@ describe('selectBestSubmissionIdForAggregate', () => {
     expect(
       selectBestSubmissionIdForAggregate(
         [{ id: 'a', attempt_number: 1, status: 'in_progress', submitted_at: null }],
-        new Map(),
-      ),
+        new Map()
+      )
     ).toBeNull();
   });
 
   it('picks higher-rated submission', () => {
     const attempts = [
-      { id: 's1', attempt_number: 1, status: 'completed' as const, submitted_at: '2025-01-01T00:00:00Z' },
-      { id: 's2', attempt_number: 2, status: 'completed' as const, submitted_at: '2025-01-02T00:00:00Z' },
+      {
+        id: 's1',
+        attempt_number: 1,
+        status: 'completed' as const,
+        submitted_at: '2025-01-01T00:00:00Z',
+      },
+      {
+        id: 's2',
+        attempt_number: 2,
+        status: 'completed' as const,
+        submitted_at: '2025-01-02T00:00:00Z',
+      },
     ];
     const map = new Map([
       ['s1', { scores: { ...base, vision: 4 } }],
@@ -37,8 +47,18 @@ describe('selectBestSubmissionIdForAggregate', () => {
 
   it('breaks ties with lower attempt_number', () => {
     const attempts = [
-      { id: 's1', attempt_number: 1, status: 'completed' as const, submitted_at: '2025-01-01T00:00:00Z' },
-      { id: 's2', attempt_number: 2, status: 'completed' as const, submitted_at: '2025-01-02T00:00:00Z' },
+      {
+        id: 's1',
+        attempt_number: 1,
+        status: 'completed' as const,
+        submitted_at: '2025-01-01T00:00:00Z',
+      },
+      {
+        id: 's2',
+        attempt_number: 2,
+        status: 'completed' as const,
+        submitted_at: '2025-01-02T00:00:00Z',
+      },
     ];
     const map = new Map([
       ['s1', { scores: { ...base } }],
@@ -49,8 +69,18 @@ describe('selectBestSubmissionIdForAggregate', () => {
 
   it('with no ratings, picks latest completed', () => {
     const attempts = [
-      { id: 's1', attempt_number: 1, status: 'completed' as const, submitted_at: '2025-01-01T00:00:00Z' },
-      { id: 's2', attempt_number: 2, status: 'completed' as const, submitted_at: '2025-01-03T00:00:00Z' },
+      {
+        id: 's1',
+        attempt_number: 1,
+        status: 'completed' as const,
+        submitted_at: '2025-01-01T00:00:00Z',
+      },
+      {
+        id: 's2',
+        attempt_number: 2,
+        status: 'completed' as const,
+        submitted_at: '2025-01-03T00:00:00Z',
+      },
     ];
     const map = new Map<string, { scores: unknown } | null | undefined>();
     expect(selectBestSubmissionIdForAggregate(attempts, map)).toBe('s2');

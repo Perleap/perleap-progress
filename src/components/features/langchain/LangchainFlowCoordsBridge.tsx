@@ -1,5 +1,5 @@
-import { useEffect, type MutableRefObject } from 'react';
 import { useReactFlow, type ReactFlowInstance, type XYPosition } from '@xyflow/react';
+import { useEffect, type MutableRefObject } from 'react';
 
 export type FlowCoordsBridge = {
   screenToFlowPosition: (position: XYPosition) => XYPosition;
@@ -7,11 +7,11 @@ export type FlowCoordsBridge = {
 };
 
 /** Syncs live React Flow coordinate helpers for drop handlers outside the flow store subtree. */
-export function LangchainFlowCoordsBridge({
+export const LangchainFlowCoordsBridge = ({
   bridgeRef,
 }: {
   bridgeRef: MutableRefObject<FlowCoordsBridge | null>;
-}) {
+}) => {
   const { screenToFlowPosition, getViewport } = useReactFlow();
 
   useEffect(() => {
@@ -22,4 +22,4 @@ export function LangchainFlowCoordsBridge({
   }, [bridgeRef, screenToFlowPosition, getViewport]);
 
   return null;
-}
+};

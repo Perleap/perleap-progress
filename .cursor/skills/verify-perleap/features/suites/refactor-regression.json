@@ -24,6 +24,9 @@
   "teacher-classroom-submissions-tab",
   "teacher-classroom-analytics-tab",
   "teacher-submission-detail",
+  "teacher-live-session-open",
+  "student-onboarding-complete",
+  "teacher-onboarding-complete",
   "admin-ai-prompts",
   "admin-monitoring-overview"
 ]

@@ -15,18 +15,15 @@ type PerleapLogoProps = {
 };
 
 /** Brand mark; SVG is default (same file as the favicon). */
-export function PerleapLogo({ className, title, variant = 'svg' }: PerleapLogoProps) {
+export const PerleapLogo = ({ className, title, variant = 'svg' }: PerleapLogoProps) => {
   return (
     <img
       src={LOGO_SRC[variant]}
       alt={title ?? ''}
-      className={cn(
-        'shrink-0 aspect-square rounded-full object-cover object-center',
-        className
-      )}
+      className={cn('shrink-0 aspect-square rounded-full object-cover object-center', className)}
       aria-hidden={title ? undefined : true}
       loading="eager"
       decoding="async"
     />
   );
-}
+};

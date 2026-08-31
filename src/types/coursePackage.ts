@@ -148,14 +148,20 @@ export type CoursePackageGradingCategoryV2 = {
 export type CoursePackageActivityV2 = CoursePackageActivityV1 & { id?: string };
 
 /** Prerequisites to existing UUID sections; `prerequisites_merge_keys` reference other sections' `local_id` (for rows without UUID yet). */
-export type CoursePackageSectionV2 = Omit<CoursePackageSectionV1, 'prerequisites_local_ids' | 'activities'> & {
+export type CoursePackageSectionV2 = Omit<
+  CoursePackageSectionV1,
+  'prerequisites_local_ids' | 'activities'
+> & {
   id?: string;
   prerequisites_section_ids: string[];
   prerequisites_merge_keys?: string[];
   activities: CoursePackageActivityV2[];
 };
 
-export type CoursePackageSyllabusV2 = Omit<CoursePackageSyllabusV1, 'grading_categories' | 'sections'> & {
+export type CoursePackageSyllabusV2 = Omit<
+  CoursePackageSyllabusV1,
+  'grading_categories' | 'sections'
+> & {
   id: string;
   grading_categories: CoursePackageGradingCategoryV2[];
   sections: CoursePackageSectionV2[];
@@ -193,6 +199,8 @@ export type PerleapCoursePackageV2 = {
 
 export type PerleapCoursePackageAny = PerleapCoursePackageV1 | PerleapCoursePackageV2;
 
-export function isPerleapCoursePackageV2(pkg: PerleapCoursePackageAny): pkg is PerleapCoursePackageV2 {
+export function isPerleapCoursePackageV2(
+  pkg: PerleapCoursePackageAny
+): pkg is PerleapCoursePackageV2 {
   return pkg.version === COURSE_PACKAGE_VERSION_V2;
 }

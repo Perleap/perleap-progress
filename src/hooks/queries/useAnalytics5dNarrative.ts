@@ -34,7 +34,7 @@ export const analytics5dNarrativeKeys = {
 
 export function useAnalytics5dNarrative(
   input: Analytics5dNarrativeInput | null,
-  options: { enabled: boolean; narrativeId: string },
+  options: { enabled: boolean; narrativeId: string }
 ) {
   return useQuery<Analytics5dNarrativeResult>({
     queryKey: input
@@ -42,7 +42,13 @@ export function useAnalytics5dNarrative(
       : ['analytics5dNarrative', 'disabled', options.narrativeId],
     queryFn: async () => {
       if (!input) {
-        return { explanations: null, scopeSummary: null, strengths: [], weaknesses: [], nextSteps: [] };
+        return {
+          explanations: null,
+          scopeSummary: null,
+          strengths: [],
+          weaknesses: [],
+          nextSteps: [],
+        };
       }
       return invokeExplainAnalytics5d(input);
     },

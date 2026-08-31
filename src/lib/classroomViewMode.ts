@@ -4,7 +4,7 @@ export type ClassroomViewMode = 'grid' | 'list' | 'compact' | 'detailed' | 'tabl
 
 export function formatClassroomDate(
   dateString: string | null | undefined,
-  options?: { format?: 'short' | 'long'; unavailable?: string },
+  options?: { format?: 'short' | 'long'; unavailable?: string }
 ): string {
   const format = options?.format ?? 'short';
   const unavailable = options?.unavailable ?? 'N/A';

@@ -1,12 +1,42 @@
-import { supabase } from '@/integrations/supabase/client';
+import type { Database, Json } from '@/integrations/supabase/types';
 import type {
   Notification,
   NotificationType,
   NotificationMetadata,
-  NotificationInsert,
   CreateNotificationInput,
   NotificationWithProfile,
 } from '@/types/notifications';
+import { supabase } from '@/integrations/supabase/client';
+
+type NotificationDbInsert = Database['public']['Tables']['notifications']['Insert'];
+
+function actorIdFromMetadata(metadata: NotificationMetadata | undefined): string | null {
+  if (!metadata) return null;
+  if (typeof metadata.student_id === 'string') return metadata.student_id;
+  if (typeof metadata.teacher_id === 'string') return metadata.teacher_id;
+  return null;
+}
+
+function toNotificationInsert(
+  userId: string,
+  type: NotificationType,
+  title: string,
+  message: string,
+  link: string | undefined,
+  metadata: NotificationMetadata | undefined,
+  actorId?: string
+): NotificationDbInsert {
+  return {
+    user_id: userId,
+    type,
+    title,
+    message,
+    link: link ?? null,
+    metadata: (metadata ?? {}) as unknown as Json,
+    is_read: false,
+    actor_id: actorId ?? actorIdFromMetadata(metadata) ?? null,
+  };
+}
 
 /**
  * Create a new notification for a user
@@ -21,38 +51,22 @@ export async function createNotification(
   metadata?: NotificationMetadata,
   actorId?: string
 ): Promise<Notification> {
-  try {
-    const insertData: any = {
-      user_id: userId,
-      type,
-      title,
-      message,
-      link: link || null,
-      metadata: metadata || {},
-      is_read: false,
-      actor_id: actorId || (metadata as any)?.student_id || (metadata as any)?.teacher_id || null,
-    };
+  const insertData = toNotificationInsert(userId, type, title, message, link, metadata, actorId);
 
-    // If we're in the browser and have a session, ensure actor_id is set
-    if (!insertData.actor_id) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.id) {
-        insertData.actor_id = session.user.id;
-      }
+  if (!insertData.actor_id) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      insertData.actor_id = session.user.id;
     }
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return data as Notification;
-  } catch (error) {
-    throw error;
   }
+
+  const { data, error } = await supabase.from('notifications').insert(insertData).select().single();
+
+  if (error) throw error;
+
+  return data as Notification;
 }
 
 /**
@@ -62,29 +76,32 @@ export async function createNotification(
 export async function createBulkNotifications(
   notifications: (CreateNotificationInput & { actorId?: string })[]
 ): Promise<Notification[]> {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const currentUserId = session?.user?.id;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const currentUserId = session?.user?.id;
 
-    const insertData: any[] = notifications.map((n) => ({
-      user_id: n.userId,
-      type: n.type,
-      title: n.title,
-      message: n.message,
-      link: n.link || null,
-      metadata: n.metadata || {},
-      is_read: false,
-      actor_id: n.actorId || (n.metadata as any)?.student_id || (n.metadata as any)?.teacher_id || currentUserId || null,
-    }));
+  const insertData: NotificationDbInsert[] = notifications.map((n) => {
+    const row = toNotificationInsert(
+      n.userId,
+      n.type,
+      n.title,
+      n.message,
+      n.link,
+      n.metadata,
+      n.actorId
+    );
+    if (!row.actor_id && currentUserId) {
+      row.actor_id = currentUserId;
+    }
+    return row;
+  });
 
-    const { data, error } = await supabase.from('notifications').insert(insertData).select();
+  const { data, error } = await supabase.from('notifications').insert(insertData).select();
 
-    if (error) throw error;
+  if (error) throw error;
 
-    return data as Notification[];
-  } catch (error) {
-    throw error;
-  }
+  return data as Notification[];
 }
 
 /**
@@ -103,7 +120,7 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
     if (!notifications || notifications.length === 0) return [];
 
     return await enrichNotificationsWithProfiles(notifications as unknown as Notification[]);
-  } catch (error) {
+  } catch {
     return [];
   }
 }
@@ -127,7 +144,7 @@ export async function getAllNotifications(
     if (!notifications || notifications.length === 0) return [];
 
     return await enrichNotificationsWithProfiles(notifications as unknown as Notification[]);
-  } catch (error) {
+  } catch {
     return [];
   }
 }
@@ -135,19 +152,21 @@ export async function getAllNotifications(
 /**
  * Internal helper to enrich notifications with user profiles (student or teacher)
  */
-async function enrichNotificationsWithProfiles(notifications: Notification[]): Promise<NotificationWithProfile[]> {
-  // Get actor IDs from both actor_id column and metadata fallbacks
-  const actorIds = [...new Set(notifications.map(n => 
-    n.actor_id || 
-    (n.metadata as any)?.student_id || 
-    (n.metadata as any)?.teacher_id
-  ).filter(Boolean))] as string[];
-  
+async function enrichNotificationsWithProfiles(
+  notifications: Notification[]
+): Promise<NotificationWithProfile[]> {
+  const actorIds = [
+    ...new Set(
+      notifications
+        .map((n) => n.actor_id ?? actorIdFromMetadata(n.metadata ?? undefined))
+        .filter(Boolean)
+    ),
+  ] as string[];
+
   if (actorIds.length === 0) {
     return notifications as NotificationWithProfile[];
   }
 
-  // Fetch from both student and teacher profiles in parallel
   const [studentProfiles, teacherProfiles] = await Promise.all([
     supabase
       .from('student_profiles')
@@ -156,25 +175,24 @@ async function enrichNotificationsWithProfiles(notifications: Notification[]): P
     supabase
       .from('teacher_profiles')
       .select('user_id, full_name, avatar_url')
-      .in('user_id', actorIds)
+      .in('user_id', actorIds),
   ]);
 
-  const profileMap = new Map<string, { full_name: string, avatar_url: string | null }>();
-  
-  studentProfiles.data?.forEach(p => profileMap.set(p.user_id, p));
-  teacherProfiles.data?.forEach(p => profileMap.set(p.user_id, p));
+  const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
 
-  return notifications.map(n => {
-    const actorId = n.actor_id || (n.metadata as any)?.student_id || (n.metadata as any)?.teacher_id;
+  studentProfiles.data?.forEach((p) => profileMap.set(p.user_id, p));
+  teacherProfiles.data?.forEach((p) => profileMap.set(p.user_id, p));
+
+  return notifications.map((n) => {
+    const actorId = n.actor_id ?? actorIdFromMetadata(n.metadata ?? undefined);
     const profile = actorId ? profileMap.get(actorId) : null;
-    
+
     return {
       ...n,
-      actor_profile: profile || null
+      actor_profile: profile || null,
     };
   });
 }
-
 
 /**
  * Get count of unread notifications for a user
@@ -190,7 +208,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     if (error) return 0;
 
     return count || 0;
-  } catch (error) {
+  } catch {
     return 0;
   }
 }
@@ -208,7 +226,7 @@ export async function markAsRead(notificationId: string): Promise<boolean> {
     if (error) throw error;
 
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -227,7 +245,7 @@ export async function markAllAsRead(userId: string): Promise<boolean> {
     if (error) throw error;
 
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -254,7 +272,7 @@ export async function deleteOldNotifications(
     if (error) throw error;
 
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -269,8 +287,8 @@ export async function deleteOldNotifications(
  * });
  */
 export function subscribeToNotifications(
-  userId: string,
-  callback: (notification: Notification) => void
+  _userId: string,
+  _callback: (notification: Notification) => void
 ): () => void {
   // Placeholder for future real-time implementation
   // Will use supabase.channel().on('postgres_changes', ...).subscribe()

@@ -2,8 +2,8 @@
  * Plain-text bundle of selected module activities for teacher-side AI (e.g. rephrase instructions).
  * Keep extraction rules and caps in sync with supabase/functions/_shared/assignmentContext.ts
  */
-import { getLessonTextBlockBodiesForContext } from '@/lib/lessonContent';
 import type { LessonTextBlockV1, SectionResource } from '@/types/syllabus';
+import { getLessonTextBlockBodiesForContext } from '@/lib/lessonContent';
 
 const MAX_TOTAL_CHARS = 12_000;
 const MAX_PER_ITEM_CHARS = 4_000;
@@ -14,29 +14,20 @@ function truncate(s: string, max: number): string {
 }
 
 function stripHtmlLite(s: string): string {
-  return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return s
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 type ResourceRow = Pick<
   SectionResource,
-  | 'id'
-  | 'title'
-  | 'resource_type'
-  | 'url'
-  | 'body_text'
-  | 'summary'
-  | 'status'
-  | 'lesson_content'
+  'id' | 'title' | 'resource_type' | 'url' | 'body_text' | 'summary' | 'status' | 'lesson_content'
 >;
 
 function bodyFromLessonRow(r: ResourceRow): string {
   const lc = r.lesson_content;
-  if (
-    lc &&
-    typeof lc === 'object' &&
-    lc.version === 1 &&
-    Array.isArray(lc.blocks)
-  ) {
+  if (lc && typeof lc === 'object' && lc.version === 1 && Array.isArray(lc.blocks)) {
     const pieces: string[] = [];
     for (const b of lc.blocks) {
       if (b.type === 'text' && typeof b.body === 'string') {
@@ -81,7 +72,7 @@ function bodyFromResource(r: ResourceRow): string {
  */
 export function buildModuleContextTextFromSyllabusResources(
   orderedResourceIds: string[],
-  resources: SectionResource[],
+  resources: SectionResource[]
 ): string {
   if (!orderedResourceIds.length || !resources.length) return '';
 

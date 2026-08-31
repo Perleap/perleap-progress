@@ -2,7 +2,7 @@
 export async function runPool<T, R>(
   items: T[],
   concurrency: number,
-  worker: (item: T, index: number) => Promise<R>,
+  worker: (item: T, index: number) => Promise<R>
 ): Promise<R[]> {
   if (items.length === 0) return [];
   const results: R[] = new Array(items.length);
@@ -13,7 +13,9 @@ export async function runPool<T, R>(
     for (;;) {
       const i = nextIndex++;
       if (i >= items.length) return;
-      results[i] = await worker(items[i]!, i);
+      const item = items[i];
+      if (item === undefined) return;
+      results[i] = await worker(item, i);
     }
   }
 

@@ -1,6 +1,12 @@
 import { GitCompare } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Compare5dMode, Compare5dStudentRow } from '@/lib/analyticsCompare5d/types';
+import type {
+  AnalyticsModuleFilter,
+  AnalyticsAssignmentRef,
+  AnalyticsModuleRef,
+} from '@/lib/analyticsScope';
 import { Compare5dResults } from '@/components/analytics/Compare5dResults';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -11,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AnalyticsModuleFilter } from '@/lib/analyticsScope';
 import {
   assignmentsInCompareScope,
   buildCompare5dScopeSummary,
@@ -20,8 +25,6 @@ import {
   resolveCompare5dSide,
   sideOptionsForCompare5dMode,
 } from '@/lib/analyticsCompare5d/resolveCompare5dSide';
-import type { Compare5dMode, Compare5dStudentRow } from '@/lib/analyticsCompare5d/types';
-import type { AnalyticsAssignmentRef, AnalyticsModuleRef } from '@/lib/analyticsScope';
 
 type Lang = 'en' | 'he';
 
@@ -39,7 +42,7 @@ export type AnalyticsCompare5dCardProps = {
   sectionTitleResolver: (syllabusSectionId: string | null) => string;
 };
 
-export function AnalyticsCompare5dCard({
+export const AnalyticsCompare5dCard = ({
   classroomId,
   modules,
   assignments,
@@ -51,12 +54,12 @@ export function AnalyticsCompare5dCard({
   rawSubmissions,
   rawSnapshots,
   sectionTitleResolver,
-}: AnalyticsCompare5dCardProps) {
+}: AnalyticsCompare5dCardProps) => {
   const { t } = useTranslation();
 
   const availability = useMemo(
     () => compare5dModeAvailability(modules, showUnplaced, students, assignments),
-    [modules, showUnplaced, students, assignments],
+    [modules, showUnplaced, students, assignments]
   );
 
   const initialMode = defaultCompare5dMode(availability);
@@ -83,17 +86,17 @@ export function AnalyticsCompare5dCard({
       if (id === 'unplaced') return t('analytics.unplacedAssignments');
       return modules.find((m) => m.id === id)?.title ?? id;
     },
-    [modules, t],
+    [modules, t]
   );
 
   const labelForStudent = useCallback(
     (id: string) => students.find((s) => s.id === id)?.fullName ?? id,
-    [students],
+    [students]
   );
 
   const labelForAssignment = useCallback(
     (id: string) => assignments.find((a) => a.id === id)?.title ?? id,
-    [assignments],
+    [assignments]
   );
 
   const labelForScopeModule = useMemo(() => {
@@ -120,21 +123,13 @@ export function AnalyticsCompare5dCard({
       assignments,
       modules,
       showUnplaced,
-      compareScopeModule,
+      compareScopeModule
     );
     return raw.map((o) => ({
       id: o.id,
       label: o.label === '__unplaced__' ? t('analytics.unplacedAssignments') : o.label,
     }));
-  }, [
-    compareMode,
-    students,
-    assignments,
-    modules,
-    showUnplaced,
-    compareScopeModule,
-    t,
-  ]);
+  }, [compareMode, students, assignments, modules, showUnplaced, compareScopeModule, t]);
 
   const labelForSide = useCallback(
     (id: string) => {
@@ -144,12 +139,12 @@ export function AnalyticsCompare5dCard({
       if (compareMode === 'students') return labelForStudent(id);
       return labelForAssignment(id);
     },
-    [sideOptions, compareMode, labelForSection, labelForStudent, labelForAssignment],
+    [sideOptions, compareMode, labelForSection, labelForStudent, labelForAssignment]
   );
 
   const scopedAssignments = useMemo(
     () => assignmentsInCompareScope(assignments, compareScopeModule),
-    [assignments, compareScopeModule],
+    [assignments, compareScopeModule]
   );
 
   const onModeChange = (mode: Compare5dMode) => {
@@ -197,7 +192,7 @@ export function AnalyticsCompare5dCard({
       labelForAssignment,
       compareScopeModule,
       compareScopeAssignment,
-    ],
+    ]
   );
 
   const sideA = useMemo(
@@ -207,7 +202,7 @@ export function AnalyticsCompare5dCard({
         mode: compareMode,
         sideId: compareSideA,
       }),
-    [resolveInput, compareMode, compareSideA],
+    [resolveInput, compareMode, compareSideA]
   );
 
   const sideB = useMemo(
@@ -217,7 +212,7 @@ export function AnalyticsCompare5dCard({
         mode: compareMode,
         sideId: compareSideB,
       }),
-    [resolveInput, compareMode, compareSideB],
+    [resolveInput, compareMode, compareSideB]
   );
 
   const scopeSummary = useMemo(
@@ -231,7 +226,7 @@ export function AnalyticsCompare5dCard({
         t('analytics.unplacedAssignments'),
         t('analytics.allAssignments'),
         t('analytics.allAssignmentsInScope'),
-        modules,
+        modules
       ),
     [
       compareMode,
@@ -241,7 +236,7 @@ export function AnalyticsCompare5dCard({
       allModulesLabel,
       modules,
       t,
-    ],
+    ]
   );
 
   const filterSummary = useMemo(() => {
@@ -268,11 +263,9 @@ export function AnalyticsCompare5dCard({
   if (!showCard) return null;
 
   const canShowResults =
-    compareSideA &&
-    compareSideB &&
-    compareSideA !== compareSideB &&
-    sideA.scores &&
-    sideB.scores;
+    compareSideA && compareSideB && compareSideA !== compareSideB && sideA.scores && sideB.scores;
+  const compareScoresA = sideA.scores;
+  const compareScoresB = sideB.scores;
 
   return (
     <Card
@@ -299,10 +292,7 @@ export function AnalyticsCompare5dCard({
           >
             {t('analytics.compareBy')}
           </span>
-          <Tabs
-            value={compareMode}
-            onValueChange={(v) => onModeChange(v as Compare5dMode)}
-          >
+          <Tabs value={compareMode} onValueChange={(v) => onModeChange(v as Compare5dMode)}>
             <TabsList className="flex flex-wrap h-auto gap-1">
               {availability.sections ? (
                 <TabsTrigger value="sections">{t('analytics.compareModeSections')}</TabsTrigger>
@@ -361,7 +351,10 @@ export function AnalyticsCompare5dCard({
                 </span>
                 <Select
                   value={compareScopeAssignment}
-                  onValueChange={(v) => onScopeAssignmentChange(v)}
+                  onValueChange={(v: string | null) => {
+                    if (v == null) return;
+                    onScopeAssignmentChange(v);
+                  }}
                 >
                   <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
                     <SelectValue>{labelForScopeAssignment}</SelectValue>
@@ -393,7 +386,10 @@ export function AnalyticsCompare5dCard({
             </span>
             <Select
               value={compareSideA || '_none_'}
-              onValueChange={(v) => setCompareSideA(v === '_none_' ? '' : v)}
+              onValueChange={(v: string | null) => {
+                if (v == null) return;
+                setCompareSideA(v === '_none_' ? '' : v);
+              }}
             >
               <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
                 <SelectValue placeholder={t('analytics.compareSelectItem')}>
@@ -418,7 +414,10 @@ export function AnalyticsCompare5dCard({
             </span>
             <Select
               value={compareSideB || '_none_'}
-              onValueChange={(v) => setCompareSideB(v === '_none_' ? '' : v)}
+              onValueChange={(v: string | null) => {
+                if (v == null) return;
+                setCompareSideB(v === '_none_' ? '' : v);
+              }}
             >
               <SelectTrigger className="h-11 rounded-lg" dir={isRTL ? 'rtl' : 'ltr'}>
                 <SelectValue placeholder={t('analytics.compareSelectItem')}>
@@ -452,13 +451,13 @@ export function AnalyticsCompare5dCard({
           </p>
         ) : null}
 
-        {canShowResults ? (
+        {canShowResults && compareScoresA && compareScoresB ? (
           <Compare5dResults
             classroomId={classroomId}
             labelA={sideA.label}
             labelB={sideB.label}
-            scoresA={sideA.scores!}
-            scoresB={sideB.scores!}
+            scoresA={compareScoresA}
+            scoresB={compareScoresB}
             qedA={sideA.qed}
             qedB={sideB.qed}
             evidenceA={sideA.evidence}
@@ -473,4 +472,4 @@ export function AnalyticsCompare5dCard({
       </CardContent>
     </Card>
   );
-}
+};

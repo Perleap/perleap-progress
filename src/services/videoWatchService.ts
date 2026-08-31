@@ -1,5 +1,5 @@
-import { supabase } from '@/api/client';
 import type { VideoWatchTrackingContext } from '@/types/videoWatch';
+import { supabase } from '@/api/client';
 
 export interface VideoWatchFlushPayload {
   resourceId: string;
@@ -22,12 +22,10 @@ supabase.auth.onAuthStateChange((_event, session) => {
   cachedAccessToken = session?.access_token ?? null;
 });
 
-export async function upsertVideoWatchProgress(
-  payload: VideoWatchFlushPayload,
-): Promise<void> {
+export async function upsertVideoWatchProgress(payload: VideoWatchFlushPayload): Promise<void> {
   const { error } = await supabase.rpc('upsert_video_watch_progress', {
     p_resource_id: payload.resourceId,
-    p_lesson_block_id: payload.lessonBlockId ?? null,
+    p_lesson_block_id: payload.lessonBlockId ?? '',
     p_classroom_id: payload.classroomId,
     p_play_count_delta: payload.playCountDelta,
     p_watch_seconds_delta: payload.watchSecondsDelta,
@@ -72,7 +70,7 @@ export function flushVideoWatchProgressBeacon(payload: VideoWatchFlushPayload): 
     },
     body: JSON.stringify({
       p_resource_id: payload.resourceId,
-      p_lesson_block_id: payload.lessonBlockId ?? null,
+      p_lesson_block_id: payload.lessonBlockId ?? '',
       p_classroom_id: payload.classroomId,
       p_play_count_delta: payload.playCountDelta,
       p_watch_seconds_delta: payload.watchSecondsDelta,
@@ -94,7 +92,7 @@ export function buildVideoWatchPayload(
     lastPositionSeconds: number;
     durationSeconds: number;
     completionCountDelta: number;
-  },
+  }
 ): VideoWatchFlushPayload {
   return {
     resourceId: tracking.resourceId,

@@ -1,12 +1,8 @@
+import { ChevronDown, Video } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Video } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Table,
   TableBody,
@@ -15,12 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 import {
   formatWatchPercent,
   useVideoWatchAnalytics,
   type VideoEngagementSummary,
 } from '@/hooks/queries/useVideoWatchQueries';
+import { cn } from '@/lib/utils';
 
 interface VideoEngagementPanelProps {
   classroomId: string;
@@ -28,7 +24,7 @@ interface VideoEngagementPanelProps {
   isRTL?: boolean;
 }
 
-function VideoSummaryCard({
+const VideoSummaryCard = ({
   item,
   studentsById,
   isRTL,
@@ -36,7 +32,7 @@ function VideoSummaryCard({
   item: VideoEngagementSummary;
   studentsById: Map<string, string>;
   isRTL?: boolean;
-}) {
+}) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -46,7 +42,7 @@ function VideoSummaryCard({
         <CollapsibleTrigger
           className={cn(
             'flex w-full items-center justify-between gap-3 px-4 py-3 text-start hover:bg-muted/30 transition-colors',
-            isRTL && 'flex-row-reverse text-end',
+            isRTL && 'flex-row-reverse text-end'
           )}
         >
           <div className="min-w-0 flex-1">
@@ -63,7 +59,7 @@ function VideoSummaryCard({
           <ChevronDown
             className={cn(
               'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-              open && 'rotate-180',
+              open && 'rotate-180'
             )}
           />
         </CollapsibleTrigger>
@@ -114,20 +110,17 @@ function VideoSummaryCard({
       </div>
     </Collapsible>
   );
-}
+};
 
-export function VideoEngagementPanel({
+export const VideoEngagementPanel = ({
   classroomId,
   students,
   isRTL = false,
-}: VideoEngagementPanelProps) {
+}: VideoEngagementPanelProps) => {
   const { t } = useTranslation();
   const { data = [], isLoading } = useVideoWatchAnalytics(classroomId);
 
-  const studentsById = useMemo(
-    () => new Map(students.map((s) => [s.id, s.name])),
-    [students],
-  );
+  const studentsById = useMemo(() => new Map(students.map((s) => [s.id, s.name])), [students]);
 
   return (
     <Card
@@ -138,7 +131,7 @@ export function VideoEngagementPanel({
         <CardTitle
           className={cn(
             'flex items-center gap-3 text-lg font-bold text-foreground',
-            isRTL ? 'text-right flex-row-reverse' : 'text-left',
+            isRTL ? 'text-right flex-row-reverse' : 'text-left'
           )}
         >
           <div className="p-2 bg-primary/10 rounded-lg shrink-0">
@@ -168,4 +161,4 @@ export function VideoEngagementPanel({
       </CardContent>
     </Card>
   );
-}
+};

@@ -1,23 +1,23 @@
+import { Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TeacherOnboardingStepProps } from './teacherOnboardingTypes';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload } from 'lucide-react';
-import type { TeacherOnboardingStepProps } from './teacherOnboardingTypes';
 
 export type TeacherOnboardingStep1SectionProps = TeacherOnboardingStepProps & {
   avatarPreview: string;
   onAvatarChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-export function TeacherOnboardingStep1Section({
+export const TeacherOnboardingStep1Section = ({
   isRTL,
   formData,
   onFormDataChange,
   avatarPreview,
   onAvatarChange,
-}: TeacherOnboardingStep1SectionProps) {
+}: TeacherOnboardingStep1SectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -131,13 +131,13 @@ export function TeacherOnboardingStep1Section({
       </div>
     </div>
   );
-}
+};
 
-export function TeacherOnboardingStep2Section({
+export const TeacherOnboardingStep2Section = ({
   isRTL,
   formData,
   onFormDataChange,
-}: TeacherOnboardingStepProps) {
+}: TeacherOnboardingStepProps) => {
   const { t } = useTranslation();
 
   return (
@@ -153,7 +153,9 @@ export function TeacherOnboardingStep2Section({
           autoDirection
           dir={isRTL ? 'rtl' : 'ltr'}
         />
-        <p className="text-xs text-muted-foreground">{t('teacherOnboarding.step2.teachingGoalsHelp')}</p>
+        <p className="text-xs text-muted-foreground">
+          {t('teacherOnboarding.step2.teachingGoalsHelp')}
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -167,11 +169,15 @@ export function TeacherOnboardingStep2Section({
           autoDirection
           dir={isRTL ? 'rtl' : 'ltr'}
         />
-        <p className="text-xs text-muted-foreground">{t('teacherOnboarding.step2.teachingStyleHelp')}</p>
+        <p className="text-xs text-muted-foreground">
+          {t('teacherOnboarding.step2.teachingStyleHelp')}
+        </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="teachingExample">{t('teacherOnboarding.step2.teachingExampleQuestion')}</Label>
+        <Label htmlFor="teachingExample">
+          {t('teacherOnboarding.step2.teachingExampleQuestion')}
+        </Label>
         <Textarea
           id="teachingExample"
           placeholder={t('teacherOnboarding.step2.teachingExamplePlaceholder')}
@@ -181,11 +187,15 @@ export function TeacherOnboardingStep2Section({
           autoDirection
           dir={isRTL ? 'rtl' : 'ltr'}
         />
-        <p className="text-xs text-muted-foreground">{t('teacherOnboarding.step2.teachingExampleHelp')}</p>
+        <p className="text-xs text-muted-foreground">
+          {t('teacherOnboarding.step2.teachingExampleHelp')}
+        </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="additionalNotes">{t('teacherOnboarding.step2.additionalNotesQuestion')}</Label>
+        <Label htmlFor="additionalNotes">
+          {t('teacherOnboarding.step2.additionalNotesQuestion')}
+        </Label>
         <Textarea
           id="additionalNotes"
           placeholder={t('teacherOnboarding.step2.additionalNotesPlaceholder')}
@@ -198,4 +208,4 @@ export function TeacherOnboardingStep2Section({
       </div>
     </div>
   );
-}
+};

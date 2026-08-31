@@ -38,7 +38,7 @@ export interface NuanceEvent {
 const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH_SIZE = 50;
 
-let eventQueue: NuanceEvent[] = [];
+const eventQueue: NuanceEvent[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let isFlushing = false;
 
@@ -79,7 +79,7 @@ async function flushQueue(): Promise<void> {
       student_id: uid,
     }));
 
-    const { error } = await supabase.from('student_nuance_events').insert(rows as any);
+    const { error } = await supabase.from('student_nuance_events').insert(rows as never);
 
     if (error) {
       console.error('[Nuance] Failed to flush events:', error.message);
@@ -102,7 +102,7 @@ export function trackNuanceEvent(event: NuanceEvent): void {
     // eslint-disable-next-line no-console -- dev-only: confirm event reached queue before batch insert
     console.debug(
       '[Nuance] understanding_cue in client queue (→ POST student_nuance_events on flush, ~5s or unload)',
-      { assignment_id: event.assignment_id, metadata: event.metadata },
+      { assignment_id: event.assignment_id, metadata: event.metadata }
     );
   }
   eventQueue.push({

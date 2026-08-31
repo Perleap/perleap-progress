@@ -3,7 +3,6 @@
  * Handles all submission-related operations
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
 import type { Database } from '@/integrations/supabase/types';
 import type {
   Submission,
@@ -16,23 +15,24 @@ import type {
   FeedbackResponse,
   Message,
 } from '@/types';
+import { supabase, handleSupabaseError } from '@/api/client';
 import { SUBMISSION_STATUS, EVALUATION_STATUS, type EvaluationStatus } from '@/config/constants';
+import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
+import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
+import { rehydrateMessages } from '@/lib/conversationMessages';
 import { createNotification } from '@/lib/notificationService';
+import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
 import { parseEdgeFunctionErrorMessage } from '@/services/assignmentService';
+import { enrichConversationMessagesWithAttachmentPaths } from '@/services/submissionFileService';
 
 export const studentAssignmentDetailLink = (
   assignmentId: string,
-  submissionId?: string | null,
+  submissionId?: string | null
 ): string => {
   const base = `/student/assignment/${assignmentId}`;
   if (!submissionId) return base;
   return `${base}?submission=${encodeURIComponent(submissionId)}`;
 };
-import { rehydrateMessages } from '@/lib/conversationMessages';
-import { enrichConversationMessagesWithAttachmentPaths } from '@/services/submissionFileService';
-import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
-import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
-import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
 
 export type StudentSubmissionContext = {
   submission: Submission | null;
@@ -46,11 +46,59 @@ export type SubmissionContextAssignment = Pick<
   'id' | 'attempt_mode' | 'due_at' | 'status'
 >;
 
+type SubmissionStatus = Database['public']['Enums']['submission_status'];
+
+export type FullSubmissionDetails = Submission & {
+  assignments: {
+    id: string;
+    title: string;
+    instructions: string;
+    classroom_id: string;
+    due_at: string | null;
+    type: string;
+    enable_ai_feedback: boolean;
+    auto_publish_ai_feedback: boolean;
+    student_facing_task: string | null;
+    opik_trace_ids: Database['public']['Tables']['assignments']['Row']['opik_trace_ids'];
+    classrooms: {
+      name: string;
+      teacher_id: string;
+    };
+  };
+  student_profiles: { full_name: string; avatar_url: string | null } | null;
+  student_name: string;
+  student_avatar_url: string | undefined;
+  feedback: AssignmentFeedback | null;
+  alerts: Database['public']['Tables']['student_alerts']['Row'][];
+};
+
+export type EnrichedClassroomSubmission = {
+  id: string;
+  submitted_at: string;
+  student_id: string;
+  assignment_id: string;
+  status: 'in_progress' | 'completed' | 'submitted';
+  attempt_number: number;
+  conversation_complete_at_submit: boolean | null;
+  is_teacher_attempt: boolean;
+  student_name: string;
+  student_avatar_url: string | undefined;
+  assignment_title: string;
+  assignment_type: string | null;
+  syllabus_section_id: string | null;
+  has_feedback: boolean;
+  teacher_feedback: string | null | undefined;
+  conversation_context: Message[];
+  chat_sentence_flag_count: number;
+  clipboard_has_copy: boolean;
+  clipboard_has_paste: boolean;
+};
+
 async function insertSubmissionRow(
   assignmentId: string,
   studentId: string,
   attemptNumber: number,
-  opts?: { isTeacherAttempt?: boolean },
+  opts?: { isTeacherAttempt?: boolean }
 ): Promise<{ data: Submission | null; error: ApiError | null }> {
   const { data: newSubmission, error: createError } = await supabase
     .from('submissions')
@@ -59,7 +107,7 @@ async function insertSubmissionRow(
         assignment_id: assignmentId,
         student_id: studentId,
         attempt_number: attemptNumber,
-        status: SUBMISSION_STATUS.IN_PROGRESS as any,
+        status: SUBMISSION_STATUS.IN_PROGRESS as SubmissionStatus,
         started_at: new Date().toISOString(),
         ...(opts?.isTeacherAttempt ? { is_teacher_attempt: true } : {}),
       },
@@ -71,7 +119,7 @@ async function insertSubmissionRow(
     return { data: null, error: handleSupabaseError(createError) };
   }
 
-  return { data: newSubmission as any as Submission, error: null };
+  return { data: newSubmission as unknown as Submission, error: null };
 }
 
 /**
@@ -82,7 +130,7 @@ export const getStudentSubmissionContext = async (
   assignmentId: string,
   studentId: string,
   opts?: { isTeacherTry?: boolean; preferredSubmissionId?: string },
-  prefetchedAssignment?: SubmissionContextAssignment | null,
+  prefetchedAssignment?: SubmissionContextAssignment | null
 ): Promise<{ data: StudentSubmissionContext; error: ApiError | null }> => {
   try {
     let assignment: SubmissionContextAssignment | null = prefetchedAssignment ?? null;
@@ -127,7 +175,7 @@ export const getStudentSubmissionContext = async (
     if (opts?.isTeacherTry !== true && opts?.preferredSubmissionId) {
       const preferred = list.find((s) => s.id === opts.preferredSubmissionId);
       if (preferred) {
-        const retry = canRetryAfterCompleting(assignment as any, now);
+        const retry = canRetryAfterCompleting(assignment, now);
         return {
           data: {
             submission: preferred,
@@ -141,7 +189,7 @@ export const getStudentSubmissionContext = async (
 
     if (opts?.isTeacherTry === true) {
       const teacherAttempts = list.filter(
-        (s) => (s as { is_teacher_attempt?: boolean }).is_teacher_attempt,
+        (s) => (s as { is_teacher_attempt?: boolean }).is_teacher_attempt
       );
 
       let inProgress = teacherAttempts.find((s) => s.status === SUBMISSION_STATUS.IN_PROGRESS);
@@ -160,7 +208,7 @@ export const getStudentSubmissionContext = async (
       }
 
       if (inProgress) {
-        const allAttempts = teacherAttempts.some((s) => s.id === inProgress!.id)
+        const allAttempts = teacherAttempts.some((s) => s.id === inProgress.id)
           ? teacherAttempts
           : [...teacherAttempts, inProgress];
         return {
@@ -181,10 +229,13 @@ export const getStudentSubmissionContext = async (
         assignmentId,
         studentId,
         nextNum,
-        { isTeacherAttempt: true },
+        { isTeacherAttempt: true }
       );
       if (insErr || !created) {
-        return { data: { submission: null, allAttempts: teacherAttempts, canRetry: false }, error: insErr };
+        return {
+          data: { submission: null, allAttempts: teacherAttempts, canRetry: false },
+          error: insErr,
+        };
       }
       return {
         data: {
@@ -209,7 +260,7 @@ export const getStudentSubmissionContext = async (
     }
 
     if (list.length === 0) {
-      const allowFirst = canStartFirstAttempt(assignment as any, now);
+      const allowFirst = canStartFirstAttempt(assignment, now);
       if (!allowFirst) {
         return {
           data: { submission: null, allAttempts: [], canRetry: false },
@@ -219,7 +270,7 @@ export const getStudentSubmissionContext = async (
       const { data: created, error: insErr } = await insertSubmissionRow(
         assignmentId,
         studentId,
-        1,
+        1
       );
       if (insErr || !created) {
         return { data: { submission: null, allAttempts: [], canRetry: false }, error: insErr };
@@ -240,11 +291,11 @@ export const getStudentSubmissionContext = async (
     /** If rows exist but none matched `completed` (e.g. legacy status), still surface the latest attempt. */
     if (!latestCompleted && list.length > 0) {
       latestCompleted = [...list].sort(
-        (a, b) => (b.attempt_number ?? 0) - (a.attempt_number ?? 0),
+        (a, b) => (b.attempt_number ?? 0) - (a.attempt_number ?? 0)
       )[0];
     }
 
-    const retry = canRetryAfterCompleting(assignment as any, now);
+    const retry = canRetryAfterCompleting(assignment, now);
     return {
       data: {
         submission: latestCompleted ?? null,
@@ -264,7 +315,7 @@ export const getStudentSubmissionContext = async (
 export const startNewSubmissionAttempt = async (
   assignmentId: string,
   studentId: string,
-  opts?: { isTeacherAttempt?: boolean },
+  opts?: { isTeacherAttempt?: boolean }
 ): Promise<{ data: Submission | null; error: ApiError | null }> => {
   try {
     const { data: assignment, error: assignErr } = await supabase
@@ -279,7 +330,7 @@ export const startNewSubmissionAttempt = async (
     }
 
     const now = new Date();
-    if (!canRetryAfterCompleting(assignment as any, now)) {
+    if (!canRetryAfterCompleting(assignment, now)) {
       return {
         data: null,
         error: {
@@ -324,7 +375,7 @@ export const startNewSubmissionAttempt = async (
  * Lightweight poll for evaluation pipeline status (one row, two columns).
  */
 export const getSubmissionEvaluationStatus = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ data: EvaluationStatus | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -348,7 +399,7 @@ export const getSubmissionEvaluationStatus = async (
 export const getOrCreateSubmission = async (
   assignmentId: string,
   studentId: string,
-  opts?: { isTeacherTry?: boolean },
+  opts?: { isTeacherTry?: boolean }
 ): Promise<{ data: Submission | null; error: ApiError | null }> => {
   const { data, error } = await getStudentSubmissionContext(assignmentId, studentId, opts);
   if (error) return { data: null, error };
@@ -360,25 +411,23 @@ export const getOrCreateSubmission = async (
  */
 export const getFullSubmissionDetails = async (
   submissionId: string
-): Promise<{ data: any | null; error: ApiError | null }> => {
+): Promise<{ data: FullSubmissionDetails | null; error: ApiError | null }> => {
   try {
     const { data: submission, error: subError } = await supabase
       .from('submissions')
-      .select(`
+      .select(
+        `
         *,
         assignments(id, title, instructions, classroom_id, due_at, type, enable_ai_feedback, auto_publish_ai_feedback, student_facing_task, opik_trace_ids, classrooms(name, teacher_id))
-      `)
+      `
+      )
       .eq('id', submissionId)
       .single();
 
     if (subError) throw subError;
     if (!submission) return { data: null, error: null };
 
-    const [
-      { data: feedback },
-      { data: alerts },
-      profileMap,
-    ] = await Promise.all([
+    const [{ data: feedback }, { data: alerts }, profileMap] = await Promise.all([
       supabase
         .from('assignment_feedback')
         .select('*')
@@ -399,14 +448,12 @@ export const getFullSubmissionDetails = async (
     return {
       data: {
         ...submission,
-        student_profiles: prof
-          ? { full_name: prof.full_name, avatar_url: prof.avatar_url }
-          : null,
+        student_profiles: prof ? { full_name: prof.full_name, avatar_url: prof.avatar_url } : null,
         student_name: prof?.full_name || '',
         student_avatar_url: prof?.avatar_url,
-        feedback: feedback || null,
+        feedback: (feedback as unknown as AssignmentFeedback | null) || null,
         alerts: alerts || [],
-      },
+      } as unknown as FullSubmissionDetails,
       error: null,
     };
   } catch (error) {
@@ -449,7 +496,7 @@ export const getAssignmentConversationMessages = async (
  * Whether a submission has any persisted chat messages (task-understanding / intro gating).
  */
 export const assignmentConversationHasMessages = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ data: boolean; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -463,9 +510,7 @@ export const assignmentConversationHasMessages = async (
     }
 
     return {
-      data: Boolean(
-        data?.messages && Array.isArray(data.messages) && data.messages.length > 0,
-      ),
+      data: Boolean(data?.messages && Array.isArray(data.messages) && data.messages.length > 0),
       error: null,
     };
   } catch (error) {
@@ -505,7 +550,7 @@ export type ClassroomSubmissionForWorkExport = {
  * Submissions in a classroom with work fields needed for bulk student-work export.
  */
 export const getClassroomSubmissionsForWorkExport = async (
-  classroomId: string,
+  classroomId: string
 ): Promise<{ data: ClassroomSubmissionForWorkExport[] | null; error: ApiError | null }> => {
   try {
     const { data: assignments, error: assignError } = await supabase
@@ -522,7 +567,7 @@ export const getClassroomSubmissionsForWorkExport = async (
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
       .select(
-        'id, student_id, assignment_id, status, submitted_at, attempt_number, text_body, file_url, file_urls, artifact_transcript',
+        'id, student_id, assignment_id, status, submitted_at, attempt_number, text_body, file_url, file_urls, artifact_transcript'
       )
       .in('assignment_id', assignmentIds)
       .order('submitted_at', { ascending: false });
@@ -532,7 +577,7 @@ export const getClassroomSubmissionsForWorkExport = async (
 
     const profileByUserId = await resolveUserDisplayProfiles(
       supabase,
-      submissions.map((s) => s.student_id),
+      submissions.map((s) => s.student_id)
     );
 
     const rows: ClassroomSubmissionForWorkExport[] = submissions.map((sub) => {
@@ -566,7 +611,7 @@ export const getClassroomSubmissionsForWorkExport = async (
  * Bulk-load chat messages for many submissions (teacher RLS applies).
  */
 export const getBulkAssignmentConversationMessages = async (
-  submissionIds: string[],
+  submissionIds: string[]
 ): Promise<{ data: Map<string, Message[]> | null; error: ApiError | null }> => {
   if (submissionIds.length === 0) {
     return { data: new Map(), error: null };
@@ -608,7 +653,7 @@ export type BulkTestWorkData = {
  */
 export const getBulkTestWorkData = async (
   assignmentIds: string[],
-  submissionIds: string[],
+  submissionIds: string[]
 ): Promise<{ data: BulkTestWorkData | null; error: ApiError | null }> => {
   const questionsByAssignmentId = new Map<string, Record<string, unknown>[]>();
   const responsesBySubmissionId = new Map<string, Record<string, unknown>[]>();
@@ -661,7 +706,8 @@ export const getBulkTestWorkData = async (
   }
 };
 
-export type AssignmentChatSentenceFlag = Database['public']['Tables']['assignment_chat_sentence_flags']['Row'];
+export type AssignmentChatSentenceFlag =
+  Database['public']['Tables']['assignment_chat_sentence_flags']['Row'];
 
 export type AssignmentClipboardEvent =
   Database['public']['Tables']['assignment_clipboard_events']['Row'];
@@ -700,7 +746,7 @@ export const getAssignmentChatSentenceFlags = async (
  * Copy/paste events recorded during student assignment work (teacher + student RLS).
  */
 export const getAssignmentClipboardEvents = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ data: AssignmentClipboardEvent[] | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -796,13 +842,13 @@ export const reportTeacherAiContentFlag = async (params: {
  */
 export const getEnrichedClassroomSubmissions = async (
   classroomId: string
-): Promise<{ data: any[] | null; error: ApiError | null }> => {
+): Promise<{ data: EnrichedClassroomSubmission[] | null; error: ApiError | null }> => {
   try {
     // 1. Get all assignments in this classroom with their assigned student profile if any
     const { data: assignments, error: assignError } = await supabase
       .from('assignments')
       .select(
-        'id, title, type, created_at, assigned_student_id, status, syllabus_section_id, student_profiles(user_id, full_name, avatar_url)',
+        'id, title, type, created_at, assigned_student_id, status, syllabus_section_id, student_profiles(user_id, full_name, avatar_url)'
       )
       .eq('classroom_id', classroomId);
 
@@ -814,7 +860,8 @@ export const getEnrichedClassroomSubmissions = async (
     // 2. Get all submissions with student profiles
     const { data: submissions, error: subError } = await supabase
       .from('submissions')
-      .select(`
+      .select(
+        `
         id, 
         submitted_at, 
         student_id, 
@@ -823,7 +870,8 @@ export const getEnrichedClassroomSubmissions = async (
         attempt_number,
         conversation_complete_at_submit,
         is_teacher_attempt
-      `)
+      `
+      )
       .in('assignment_id', assignmentIds)
       .order('submitted_at', { ascending: false });
 
@@ -831,7 +879,7 @@ export const getEnrichedClassroomSubmissions = async (
 
     const profileByUserId = await resolveUserDisplayProfiles(
       supabase,
-      (submissions || []).map((s) => s.student_id),
+      (submissions || []).map((s) => s.student_id)
     );
 
     const submissionIds = (submissions || []).map((s) => s.id);
@@ -875,18 +923,20 @@ export const getEnrichedClassroomSubmissions = async (
 
     // 4. Combine data
     const feedbackMap = new Map(feedback?.map((f) => [f.submission_id, f]) || []);
-    const submissionMap = new Set(submissions?.map(s => `${s.assignment_id}-${s.student_id}`) || []);
+    const submissionMap = new Set(
+      submissions?.map((s) => `${s.assignment_id}-${s.student_id}`) || []
+    );
 
-    const enriched = (submissions || []).map((sub) => {
+    const enriched: EnrichedClassroomSubmission[] = (submissions || []).map((sub) => {
       const fb = feedbackMap.get(sub.id);
       const studentProfile = profileByUserId.get(sub.student_id);
-      const assignment = assignments.find(a => a.id === sub.assignment_id);
+      const assignment = assignments.find((a) => a.id === sub.assignment_id);
       const assignmentType = (assignment as { type?: string } | undefined)?.type;
 
       return {
         ...sub,
         student_name: studentProfile?.full_name || 'Unknown',
-        student_avatar_url: studentProfile?.avatar_url,
+        student_avatar_url: studentProfile?.avatar_url ?? undefined,
         assignment_title: assignment?.title || 'Unknown Assignment',
         assignment_type: assignmentType ?? null,
         syllabus_section_id: assignment?.syllabus_section_id ?? null,
@@ -900,27 +950,36 @@ export const getEnrichedClassroomSubmissions = async (
     });
 
     // 5. Add pending assignments (assigned to specific students but not yet started)
-    assignments.forEach(assign => {
-      if (assign.status === 'published' && assign.assigned_student_id && !submissionMap.has(`${assign.id}-${assign.assigned_student_id}`)) {
+    assignments.forEach((assign) => {
+      if (
+        assign.status === 'published' &&
+        assign.assigned_student_id &&
+        !submissionMap.has(`${assign.id}-${assign.assigned_student_id}`)
+      ) {
         const profile = assign.student_profiles;
         const studentProfile = Array.isArray(profile) ? profile[0] : profile;
 
         if (studentProfile) {
-          const pendingSub: any = {
+          const pendingSub: EnrichedClassroomSubmission = {
             id: `pending-${assign.id}-${assign.assigned_student_id}`,
             submitted_at: assign.created_at,
             student_id: assign.assigned_student_id,
             assignment_id: assign.id,
             status: 'in_progress',
+            attempt_number: 1,
+            conversation_complete_at_submit: null,
             student_name: studentProfile.full_name || 'Unknown',
             student_avatar_url: studentProfile.avatar_url,
             assignment_title: assign.title,
-            assignment_type: (assign as { type?: string }).type ?? null,
+            assignment_type: assign.type ?? null,
             syllabus_section_id: assign.syllabus_section_id ?? null,
             has_feedback: false,
             teacher_feedback: null,
             conversation_context: [],
             is_teacher_attempt: false,
+            chat_sentence_flag_count: 0,
+            clipboard_has_copy: false,
+            clipboard_has_paste: false,
           };
           enriched.push(pendingSub);
         }
@@ -928,7 +987,9 @@ export const getEnrichedClassroomSubmissions = async (
     });
 
     // Sort by date (submitted_at or created_at for pending)
-    enriched.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+    enriched.sort(
+      (a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+    );
 
     return { data: enriched, error: null };
   } catch (error) {
@@ -979,7 +1040,7 @@ export const getSubmissionById = async (
         : null,
     };
 
-    return { data: merged as any as SubmissionWithDetails, error: null };
+    return { data: merged as unknown as SubmissionWithDetails, error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -1013,7 +1074,7 @@ export const getClassroomSubmissions = async (
       `
       )
       .in('assignment_id', assignmentIds)
-      .eq('status', SUBMISSION_STATUS.COMPLETED as any)
+      .eq('status', SUBMISSION_STATUS.COMPLETED as SubmissionStatus)
       .order('submitted_at', { ascending: false });
 
     if (error) {
@@ -1023,7 +1084,7 @@ export const getClassroomSubmissions = async (
     const rows = data || [];
     const profileMap = await resolveUserDisplayProfiles(
       supabase,
-      rows.map((r) => (r as { student_id: string }).student_id),
+      rows.map((r) => (r as { student_id: string }).student_id)
     );
     const merged = rows.map((r) => {
       const sid = (r as { student_id: string }).student_id;
@@ -1041,7 +1102,7 @@ export const getClassroomSubmissions = async (
       };
     });
 
-    return { data: merged as any as SubmissionWithDetails[], error: null };
+    return { data: merged as unknown as SubmissionWithDetails[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -1104,22 +1165,21 @@ export const streamChatMessage = async (
   error: ApiError | null;
 }> => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) throw new Error('No active session');
 
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/perleap-chat`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream, application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ ...request, stream: true }),
-      }
-    );
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/perleap-chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream, application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ ...request, stream: true }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1201,7 +1261,7 @@ export const streamChatMessage = async (
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
-      
+
       // Multi-layered JSON Safety Filter:
       // Catch chunks that are pure JSON or contain JSON blocks
       if (chunk.trim().startsWith('{') || chunk.trim().includes('{"message":')) {
@@ -1218,7 +1278,7 @@ export const streamChatMessage = async (
               continue;
             }
           }
-          
+
           // 2. Regex fallback for specifically the message property
           const match = chunk.match(/"message"\s*:\s*"([^"]+)"/);
           if (match && match[1]) {
@@ -1226,11 +1286,11 @@ export const streamChatMessage = async (
             emission.feed(cleanMsg, track);
             continue;
           }
-        } catch (e) {
+        } catch {
           // Not valid JSON or parsing failed, continue as normal
         }
       }
-      
+
       if (chunk.includes('__CONVERSATION_END__')) {
         endSignal = true;
         const cleanChunk = chunk.replace('__CONVERSATION_END__', '');
@@ -1245,7 +1305,8 @@ export const streamChatMessage = async (
     emission.end(track);
 
     const upperContent = fullContent.toUpperCase();
-    let shouldEnd = endSignal || emission.getShouldEnd() || hasConversationCompleteMarker(fullContent);
+    let shouldEnd =
+      endSignal || emission.getShouldEnd() || hasConversationCompleteMarker(fullContent);
 
     if (!shouldEnd) {
       const semanticPhrases = [
@@ -1255,11 +1316,11 @@ export const streamChatMessage = async (
         'COMPLETED THE ASSIGNMENT',
         'FINISHED THE ASSIGNMENT',
         'YOU HAVE COMPLETED ALL',
-        'YOU\'VE COMPLETED ALL',
+        "YOU'VE COMPLETED ALL",
         'SUCCESSFULLY ANSWERED ALL',
         'ACTIVITY IS COMPLETE',
         'YES, WE ARE DONE',
-        'WE\'VE ACTUALLY COMPLETED ALL',
+        "WE'VE ACTUALLY COMPLETED ALL",
         'JOB ON COMPLETING THE TASKS',
         'COMPLETING THE TASKS',
         'DONE WITH THE TASKS',
@@ -1267,15 +1328,15 @@ export const streamChatMessage = async (
         'FINISHED THE ACTIVITY',
         'COMPLETED THE ACTIVITY',
         'YOU HAVE FINISHED',
-        'YOU\'VE FINISHED',
+        "YOU'VE FINISHED",
         'ALL TASKS ARE COMPLETE',
         'סיימנו את המשימה',
         'השלמת את כל המשימות',
         'כל הכבוד על סיום המטלה',
         'סיימת את המטלה',
-        'סיימת את הפעילות'
+        'סיימת את הפעילות',
       ];
-      shouldEnd = semanticPhrases.some(phrase => upperContent.includes(phrase));
+      shouldEnd = semanticPhrases.some((phrase) => upperContent.includes(phrase));
     }
 
     return { data: { shouldEnd, debug: undefined }, error: null };
@@ -1309,7 +1370,7 @@ export const generateFeedback = async (
  * Queue AI feedback generation in the background (returns after edge function accepts the job).
  */
 export const requestBackgroundFeedback = async (
-  request: FeedbackRequest,
+  request: FeedbackRequest
 ): Promise<{ data: { accepted?: boolean } | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.functions.invoke('generate-feedback', {
@@ -1328,7 +1389,7 @@ export const requestBackgroundFeedback = async (
 
 export const markEvaluationStatus = async (
   submissionId: string,
-  status: EvaluationStatus,
+  status: EvaluationStatus
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
     const { error } = await supabase
@@ -1394,7 +1455,7 @@ export const completeSubmission = async (
     conversationCompleteAtSubmit?: boolean | null;
     /** Set evaluation_status=pending when AI feedback will run asynchronously after submit. */
     aiEvaluationPending?: boolean;
-  },
+  }
 ): Promise<{ success: boolean; error: ApiError | null }> => {
   try {
     const submittedAt = new Date().toISOString();
@@ -1497,10 +1558,16 @@ export const updateAssignmentFeedbackText = async (params: {
       const tf = teacher_feedback;
       const sf = student_feedback;
       let textChanged = false;
-      if (tf !== undefined && normalizeFeedbackString(tf) !== normalizeFeedbackString(n.previousTeacher)) {
+      if (
+        tf !== undefined &&
+        normalizeFeedbackString(tf) !== normalizeFeedbackString(n.previousTeacher)
+      ) {
         textChanged = true;
       }
-      if (sf !== undefined && normalizeFeedbackString(sf) !== normalizeFeedbackString(n.previousStudent)) {
+      if (
+        sf !== undefined &&
+        normalizeFeedbackString(sf) !== normalizeFeedbackString(n.previousStudent)
+      ) {
         textChanged = true;
       }
       if (textChanged) {
@@ -1517,7 +1584,7 @@ export const updateAssignmentFeedbackText = async (params: {
               submission_id: submissionId,
               feedback_updated: true,
             },
-            n.teacherId ?? undefined,
+            n.teacherId ?? undefined
           );
         } catch (notifErr) {
           return { success: false, error: handleSupabaseError(notifErr) };
@@ -1580,7 +1647,7 @@ export const releaseAiFeedbackToStudent = async (params: {
             assignment_title: assignmentTitle,
             submission_id: submissionId,
           },
-          teacherId ?? undefined,
+          teacherId ?? undefined
         );
       } catch (notifErr) {
         return { success: false, error: handleSupabaseError(notifErr) };
@@ -1602,7 +1669,7 @@ export type SubmissionTeacherPrivateNoteEntry = {
 };
 
 export const listSubmissionTeacherPrivateNoteEntries = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{
   data: SubmissionTeacherPrivateNoteEntry[] | null;
   error: ApiError | null;
@@ -1641,7 +1708,7 @@ export const createSubmissionTeacherPrivateNoteEntry = async (params: {
 
 /** Teacher or app admin: insert a new in_progress attempt; prior submission rows stay. */
 export const teacherResetStudentAssignmentProgress = async (
-  submissionId: string,
+  submissionId: string
 ): Promise<{ data: string | null; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase.rpc('teacher_reset_student_assignment_progress', {
@@ -1679,12 +1746,11 @@ export type GenerateFollowupAssignmentResult = {
  * Calls `generate-followup-assignment` edge function for teacher follow-up assignment drafts.
  */
 export async function generateFollowupAssignment(
-  input: GenerateFollowupAssignmentInput,
+  input: GenerateFollowupAssignmentInput
 ): Promise<GenerateFollowupAssignmentResult> {
-  const { data, error } = await supabase.functions.invoke<GenerateFollowupAssignmentResult & { error?: string; opikTraceId?: string }>(
-    'generate-followup-assignment',
-    { body: input },
-  );
+  const { data, error } = await supabase.functions.invoke<
+    GenerateFollowupAssignmentResult & { error?: string; opikTraceId?: string }
+  >('generate-followup-assignment', { body: input });
 
   if (error) {
     const serverMsg = await parseEdgeFunctionErrorMessage(error);

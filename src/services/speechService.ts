@@ -14,18 +14,23 @@ import { inferAudioExtension } from '@/lib/audioFormat';
  */
 export const synthesizeSpeech = async (text: string, voice: string = 'onyx'): Promise<string> => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     // Using fetch directly is more reliable for binary data (Blobs) than supabase.functions.invoke
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ text, voice }),
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ text, voice }),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -34,7 +39,7 @@ export const synthesizeSpeech = async (text: string, voice: string = 'onyx'): Pr
 
     const blob = await response.blob();
     if (blob.size === 0) throw new Error('Received empty audio blob');
-    
+
     return URL.createObjectURL(blob);
   } catch (error) {
     console.error('Error synthesizing speech:', error);
@@ -55,21 +60,26 @@ export const transcribeAudio = async (audioBlob: Blob, language?: string): Promi
     }
 
     const ext = await inferAudioExtension(audioBlob);
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const formData = new FormData();
     formData.append('file', audioBlob, `audio.${ext}`);
     if (language) {
       formData.append('language', language);
     }
 
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/speech-to-text`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: formData,
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/speech-to-text`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: formData,
+      }
+    );
 
     const data = await response.json().catch(() => ({}));
 

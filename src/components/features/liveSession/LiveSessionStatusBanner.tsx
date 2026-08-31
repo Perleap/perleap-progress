@@ -1,8 +1,9 @@
-import { useTranslation } from 'react-i18next';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { LiveSession } from '@/types/liveSession';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import type { LiveSession } from '@/types/liveSession';
 
 export const LIVE_SESSION_PROCESSING_STATUSES = new Set(['extracted', 'transcribing']);
 
@@ -18,13 +19,13 @@ export type LiveSessionStatusBannerProps = {
   onRetry: () => void | Promise<void>;
 };
 
-export function LiveSessionStatusBanner({
+export const LiveSessionStatusBanner = ({
   session,
   isProcessing,
   isFailed,
   hasUploadedAudio,
   onRetry,
-}: LiveSessionStatusBannerProps) {
+}: LiveSessionStatusBannerProps) => {
   const { t } = useTranslation();
 
   if (!isProcessing && !isFailed) return null;
@@ -72,4 +73,4 @@ export function LiveSessionStatusBanner({
       ) : null}
     </>
   );
-}
+};

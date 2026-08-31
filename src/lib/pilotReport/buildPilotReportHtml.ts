@@ -1,17 +1,17 @@
 import { buildPieChartSvg, READINESS_PIE_COLORS, type PieChartSegment } from './buildPieChartSvg';
 import {
+  buildRoleFitDistributionLine,
+  countNotAssessed,
+  formatCompletionPercent,
+  rankParticipantsForAppendix,
+} from './buildPilotReportData';
+import {
   PILOT_DIMENSION_KEYS,
   PILOT_READINESS_VALUES,
   type PilotParticipantRow,
   type PilotReportData,
   type PilotReportStaticCopy,
 } from './types';
-import {
-  buildRoleFitDistributionLine,
-  countNotAssessed,
-  formatCompletionPercent,
-  rankParticipantsForAppendix,
-} from './buildPilotReportData';
 
 const BLUE = {
   primary: '#3369B7',
@@ -281,11 +281,12 @@ const INLINE_CSS = `
 
 function buildParticipantSignalsHtml(
   p: PilotParticipantRow,
-  staticCopy: PilotReportStaticCopy,
+  staticCopy: PilotReportStaticCopy
 ): string {
-  if (!p.dimensions) return '';
+  const dims = p.dimensions;
+  if (!dims) return '';
   const rows = PILOT_DIMENSION_KEYS.map((key) => {
-    const value = p.dimensions![key];
+    const value = dims[key];
     const pct = Math.max(0, Math.min(100, value));
     const label = escapeHtml(staticCopy.dimensionLabels[key]);
     return `<div class="signal-row">
@@ -297,12 +298,15 @@ function buildParticipantSignalsHtml(
   return rows;
 }
 
-function buildScopeFactsHtml(meta: PilotReportData['meta'], staticCopy: PilotReportStaticCopy): string {
+function buildScopeFactsHtml(
+  meta: PilotReportData['meta'],
+  staticCopy: PilotReportStaticCopy
+): string {
   const lines: string[] = [];
   if (meta.pilotDateRange) lines.push(meta.pilotDateRange);
   lines.push(
     `${staticCopy.labelAssignmentsInScope}: ${meta.assignmentsInScope}`,
-    `${staticCopy.labelCohortSize}: ${meta.cohortSize}`,
+    `${staticCopy.labelCohortSize}: ${meta.cohortSize}`
   );
   return `<p class="scope-facts">${lines.map((l) => escapeHtml(l)).join('<br>')}</p>`;
 }
@@ -322,14 +326,10 @@ function buildLegendHtml(staticCopy: PilotReportStaticCopy): string {
 
 function buildCardBadgesHtml(
   p: PilotParticipantRow & { rank: number },
-  staticCopy: PilotReportStaticCopy,
+  staticCopy: PilotReportStaticCopy
 ): string {
-  const readinessLabel = p.readiness
-    ? staticCopy.readinessLabels[p.readiness]
-    : staticCopy.noData;
-  const readinessClass = p.readiness
-    ? readinessBadgeClass(p.readiness)
-    : 'card-badge-neutral';
+  const readinessLabel = p.readiness ? staticCopy.readinessLabels[p.readiness] : staticCopy.noData;
+  const readinessClass = p.readiness ? readinessBadgeClass(p.readiness) : 'card-badge-neutral';
   const completionPct = formatCompletionPercent(p.completedInScope, p.assignmentsInScope);
   return `<div class="card-badges">
   <div class="card-badge card-badge-readiness ${readinessClass}">${escapeHtml(readinessLabel)}</div>
@@ -340,7 +340,7 @@ function buildCardBadgesHtml(
 
 function buildAppendixSummaryGridHtml(
   p: PilotParticipantRow,
-  staticCopy: PilotReportStaticCopy,
+  staticCopy: PilotReportStaticCopy
 ): string {
   const cols: [string, string, string][] = [
     ['appendix-summary-col-strength', staticCopy.colStrength, p.keyStrength || staticCopy.noData],
@@ -350,7 +350,7 @@ function buildAppendixSummaryGridHtml(
   const colHtml = cols
     .map(
       ([className, label, text]) =>
-        `<div class="appendix-summary-col ${className}"><h5>${escapeHtml(label)}</h5><p>${escapeHtml(text)}</p></div>`,
+        `<div class="appendix-summary-col ${className}"><h5>${escapeHtml(label)}</h5><p>${escapeHtml(text)}</p></div>`
     )
     .join('');
   return `<div class="appendix-summary-grid">${colHtml}</div>`;
@@ -359,7 +359,7 @@ function buildAppendixSummaryGridHtml(
 function buildReadinessPieChart(
   cohort: PilotReportData['cohort'],
   staticCopy: PilotReportStaticCopy,
-  notAssessedCount: number,
+  notAssessedCount: number
 ): string {
   const segments: PieChartSegment[] = PILOT_READINESS_VALUES.map((key) => ({
     label: staticCopy.readinessLabels[key],

@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Radar,
   RadarChart as RechartsRadarChart,
@@ -7,18 +9,12 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { DIMENSION_CONFIG, QED_LAYER_CONFIG } from '@/config/constants';
 import type { FiveDDimensionKey, FiveDScores, FiveDQedMeasures } from '@/types/models';
-import { FIVE_D_DIMENSION_KEYS } from '@/lib/fiveDScores';
-import {
-  getLayerChartValue,
-  hasDualLayerQedData,
-  type QedLayerKey,
-} from '@/lib/qedMeasures';
-import { useTranslation } from 'react-i18next';
-import { useEffect, useMemo, useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { DIMENSION_CONFIG, QED_LAYER_CONFIG } from '@/config/constants';
+import { FIVE_D_DIMENSION_KEYS } from '@/lib/fiveDScores';
+import { getLayerChartValue, hasDualLayerQedData, type QedLayerKey } from '@/lib/qedMeasures';
 
 interface RadarChartProps {
   scores: FiveDScores;
@@ -65,10 +61,7 @@ const CustomTooltip = ({
   if (!active || !payload?.length) return null;
 
   const point = payload[0].payload;
-  const blurb =
-    point.next ||
-    point.explanation ||
-    t(`dimensions.${point.dimension}.description`);
+  const blurb = point.next || point.explanation || t(`dimensions.${point.dimension}.description`);
 
   return (
     <div className="bg-background border border-border rounded-lg shadow-lg p-3 max-w-xs z-50">
@@ -115,7 +108,11 @@ const CustomTooltip = ({
   );
 };
 
-function layerOpacity(layer: QedLayerKey, hoveredLayer: QedLayerKey | null, visible: boolean): number {
+function layerOpacity(
+  layer: QedLayerKey,
+  hoveredLayer: QedLayerKey | null,
+  visible: boolean
+): number {
   if (!visible) return 0;
   if (hoveredLayer === null) return 1;
   return hoveredLayer === layer ? 1 : 0.25;
@@ -146,7 +143,12 @@ export const RadarChart = ({
   const data: ChartPoint[] = useMemo(
     () =>
       FIVE_D_DIMENSION_KEYS.map((dimension) => {
-        const devChart = getLayerChartValue(qedMeasures, dimension, 'development', scores[dimension]);
+        const devChart = getLayerChartValue(
+          qedMeasures,
+          dimension,
+          'development',
+          scores[dimension]
+        );
         const motChart = getLayerChartValue(qedMeasures, dimension, 'motivation', null);
         const dimQed = qedMeasures?.[dimension];
         return {
@@ -162,7 +164,7 @@ export const RadarChart = ({
           scoreRaw: scores[dimension],
         };
       }),
-    [scores, qedMeasures, explanations, t],
+    [scores, qedMeasures, explanations, t]
   );
 
   const visibleLayers = useMemo(() => {
@@ -323,7 +325,8 @@ export const RadarChart = ({
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           {FIVE_D_DIMENSION_KEYS.map((dimension) => {
             const config = DIMENSION_CONFIG[dimension];
-            const point = data.find((d) => d.dimension === dimension)!;
+            const point = data.find((d) => d.dimension === dimension);
+            if (!point) return null;
             const explanation = explanations?.[dimension];
             const isHovered = hoveredDimension === dimension;
 
@@ -332,7 +335,9 @@ export const RadarChart = ({
                 key={dimension}
                 className={`flex items-start gap-3 p-3 rounded-lg transition-all duration-200 cursor-pointer ${isHovered ? 'bg-card shadow-md scale-105 ring-1' : 'bg-muted/30'}`}
                 style={
-                  { '--tw-ring-color': isHovered ? config.color : 'transparent' } as React.CSSProperties
+                  {
+                    '--tw-ring-color': isHovered ? config.color : 'transparent',
+                  } as React.CSSProperties
                 }
                 onMouseEnter={() => setHoveredDimension(dimension)}
                 onMouseLeave={() => setHoveredDimension(null)}

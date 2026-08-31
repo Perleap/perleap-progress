@@ -10,7 +10,7 @@ import prettier from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'supabase/functions'] },
+  { ignores: ['dist', 'node_modules', 'supabase/functions', 'public/ffmpeg/**'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -64,6 +64,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { 
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
       }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',

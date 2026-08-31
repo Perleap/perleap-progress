@@ -1,26 +1,26 @@
+import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/useAuth';
-import { Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { markSignupComplete } from '@/utils/sessionState';
 import {
   TeacherOnboardingStep1Section,
   TeacherOnboardingStep2Section,
 } from './TeacherOnboardingStepSections';
 import type { TeacherOnboardingFormData } from './teacherOnboardingTypes';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   cleanupOrphanedProfilesByEmail,
   insertTeacherOnboardingProfile,
   uploadOnboardingAvatar,
 } from '@/services/onboardingService';
+import { markSignupComplete } from '@/utils/sessionState';
 
-export function TeacherOnboardingContent() {
+export const TeacherOnboardingContent = () => {
   const { t } = useTranslation();
   const { isRTL, language = 'en' } = useLanguage();
   const { user, refreshProfile } = useAuth();
@@ -88,7 +88,7 @@ export function TeacherOnboardingContent() {
         user.email,
         formData,
         language,
-        avatarPath,
+        avatarPath
       );
 
       if (error) {
@@ -101,26 +101,31 @@ export function TeacherOnboardingContent() {
 
       toast.success(t('teacherOnboarding.success.profileCreated'));
       navigate('/teacher/dashboard', { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string };
       console.error('Teacher onboarding error:', error);
 
-      if (error.message?.includes('already has a student profile')) {
+      if (err.message?.includes('already has a student profile')) {
         toast.error(
           t('teacherOnboarding.errors.alreadyHasStudentProfile') ||
-            'You already have a student account. You cannot create a teacher account.',
+            'You already have a student account. You cannot create a teacher account.'
         );
         setTimeout(() => navigate('/student/dashboard'), 2000);
-      } else if (error.code === '23505') {
+      } else if (err.code === '23505') {
         toast.error(t('teacherOnboarding.errors.profileExists'));
         setTimeout(() => navigate('/teacher/dashboard'), 2000);
-      } else if (error.code === '42703') {
-        console.error('Database schema mismatch - column does not exist:', error);
-        toast.error('Database error: Some fields are not configured properly. Please contact support.');
-      } else if (error.message?.includes('violates not-null constraint')) {
-        console.error('Missing required field:', error);
+      } else if (err.code === '42703') {
+        console.error('Database schema mismatch - column does not exist:', err);
+        toast.error(
+          'Database error: Some fields are not configured properly. Please contact support.'
+        );
+      } else if (err.message?.includes('violates not-null constraint')) {
+        console.error('Missing required field:', err);
         toast.error('Please fill in all required fields.');
       } else {
-        toast.error(error.message || t('teacherOnboarding.errors.createProfile'));
+        toast.error(
+          error instanceof Error ? error.message : t('teacherOnboarding.errors.createProfile')
+        );
       }
     } finally {
       setLoading(false);
@@ -207,4 +212,4 @@ export function TeacherOnboardingContent() {
       </Card>
     </div>
   );
-}
+};

@@ -72,8 +72,8 @@ describe('compare5dModeAvailability', () => {
         ],
         false,
         students,
-        assignments,
-      ).sections,
+        assignments
+      ).sections
     ).toBe(true);
   });
 
@@ -85,7 +85,7 @@ describe('compare5dModeAvailability', () => {
       ],
       false,
       students,
-      assignments,
+      assignments
     );
     expect(defaultCompare5dMode(avail)).toBe('sections');
   });
@@ -93,10 +93,11 @@ describe('compare5dModeAvailability', () => {
 
 describe('assignmentsInCompareScope', () => {
   it('filters assignments by section', () => {
-    expect(assignmentsInCompareScope(assignments, 'm1').map((a) => a.id).sort()).toEqual([
-      'a1',
-      'a2',
-    ]);
+    expect(
+      assignmentsInCompareScope(assignments, 'm1')
+        .map((a) => a.id)
+        .sort()
+    ).toEqual(['a1', 'a2']);
   });
 });
 

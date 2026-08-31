@@ -1,5 +1,5 @@
-import { splitAssistantMessageIntoSentences } from '@/lib/chatDisplay';
 import type { ClipboardSourceKind } from '@/services/clipboardEventService';
+import { splitAssistantMessageIntoSentences } from '@/lib/chatDisplay';
 
 export interface ResolvedClipboardCopy {
   copiedText: string;
@@ -46,7 +46,7 @@ function parseSourceKind(raw: string | null): ClipboardSourceKind {
 function resolveAssistantSentence(
   messageIndex: number,
   copiedText: string,
-  zoneEl: HTMLElement,
+  zoneEl: HTMLElement
 ): Pick<ResolvedClipboardCopy, 'sentenceIndex' | 'sentenceText'> {
   const rawContent = zoneEl.getAttribute('data-clipboard-message-content') ?? copiedText;
   const sentences = splitAssistantMessageIntoSentences(rawContent);
@@ -78,7 +78,7 @@ function resolveAssistantSentence(
  * Resolve a copy event from the current selection within a marked assignment workspace.
  */
 export function resolveClipboardCopyFromSelection(
-  root: HTMLElement | null,
+  root: HTMLElement | null
 ): ResolvedClipboardCopy | null {
   const selection = typeof window !== 'undefined' ? window.getSelection() : null;
   if (!selection || selection.isCollapsed) return null;
@@ -111,7 +111,7 @@ export function resolveClipboardCopyFromSelection(
     const { sentenceIndex, sentenceText } = resolveAssistantSentence(
       base.messageIndex,
       copiedText,
-      zoneEl,
+      zoneEl
     );
     return { ...base, sentenceIndex, sentenceText };
   }

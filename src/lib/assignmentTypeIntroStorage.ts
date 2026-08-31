@@ -1,5 +1,5 @@
-import { Constants } from '@/integrations/supabase/types';
 import type { DbAssignmentType } from '@/types/models';
+import { Constants } from '@/integrations/supabase/types';
 
 const VALID_TYPES = new Set<string>(Constants.public.Enums.assignment_type);
 

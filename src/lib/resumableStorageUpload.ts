@@ -24,7 +24,7 @@ export async function uploadFileResumable(
   bucketName: string,
   objectName: string,
   file: File,
-  options?: ResumableUploadOptions,
+  options?: ResumableUploadOptions
 ): Promise<void> {
   const onProgress = options?.onProgress;
   const signal = options?.signal;
@@ -48,12 +48,14 @@ export async function uploadFileResumable(
 
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
+  const accessToken = session.access_token;
+
   await new Promise<void>((resolve, reject) => {
     const upload = new tus.Upload(file, {
       endpoint: getResumableEndpoint(),
       retryDelays: [0, 3000, 5000, 10000, 20000],
       headers: {
-        authorization: `Bearer ${session!.access_token}`,
+        authorization: `Bearer ${accessToken}`,
         ...(anonKey ? { apikey: anonKey } : {}),
         'x-upsert': 'false',
       },
@@ -98,7 +100,8 @@ export async function uploadFileResumable(
         return;
       }
       if (previousUploads.length > 0) {
-        upload.resumeFromPreviousUpload(previousUploads[0]!);
+        const previous = previousUploads[0];
+        if (previous) upload.resumeFromPreviousUpload(previous);
       }
       upload.start();
     });

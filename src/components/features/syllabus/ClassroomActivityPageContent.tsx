@@ -1,14 +1,17 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 import { Loader2, Lock } from 'lucide-react';
-import { useAuth } from '@/contexts/useAuth';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from 'react-router-dom';
+import type { ActivityLinkState } from '@/types/navigation';
+import type { SectionResource } from '@/types/syllabus';
 import { ClassroomActivityContent } from '@/components/features/syllabus/ClassroomActivityContent';
 import {
   ClassroomActivityNavShell,
   useClassroomActivityNav,
 } from '@/components/features/syllabus/ClassroomActivityNav';
+import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   useClassroom,
   useSyllabus,
@@ -16,23 +19,20 @@ import {
   useModuleFlowSteps,
   useClassroomAssignments,
 } from '@/hooks/queries';
+import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import {
   getOrderedActivityCenterFlowSteps,
   studentModuleFlowStepOptions,
   type AssignmentRow,
 } from '@/lib/moduleFlow';
-import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
 import { canAccessPersistedStep } from '@/lib/moduleFlowStudent';
-import type { SectionResource } from '@/types/syllabus';
-import type { ActivityLinkState } from '@/types/navigation';
-import { useMemo } from 'react';
 import { isAppAdminRole } from '@/utils/role';
 
 type Role = 'teacher' | 'student';
 
 function resourceBelongsToSyllabus(
   resource: SectionResource | null | undefined,
-  syllabus: { sections: { id: string }[] } | null | undefined,
+  syllabus: { sections: { id: string }[] } | null | undefined
 ): boolean {
   if (!resource || !syllabus?.sections?.length) return false;
   return syllabus.sections.some((s) => s.id === resource.section_id);
@@ -44,18 +44,19 @@ export type ClassroomActivityPageContentProps = {
   resourceId: string;
 };
 
-export function ClassroomActivityPageContent({
+export const ClassroomActivityPageContent = ({
   role,
   classroomId,
   resourceId,
-}: ClassroomActivityPageContentProps) {
+}: ClassroomActivityPageContentProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { isRTL } = useLanguage();
 
-  const returnClassroomSection = (location.state as ActivityLinkState | null)?.returnClassroomSection;
+  const returnClassroomSection = (location.state as ActivityLinkState | null)
+    ?.returnClassroomSection;
 
   const { data: classroom, isLoading: loadingClass } = useClassroom(classroomId);
   const { data: syllabus, isLoading: loadingSyl } = useSyllabus(classroomId);
@@ -73,36 +74,37 @@ export function ClassroomActivityPageContent({
   const { data: flowSteps = [] } = useModuleFlowSteps(resource?.section_id);
 
   const sectionResources = useMemo(
-    () => (resource?.section_id ? syllabus?.section_resources?.[resource.section_id] ?? [] : []),
-    [syllabus?.section_resources, resource?.section_id],
+    () => (resource?.section_id ? (syllabus?.section_resources?.[resource.section_id] ?? []) : []),
+    [syllabus?.section_resources, resource?.section_id]
   );
 
   const studentFlowOpts = useMemo(
     () =>
       role === 'student'
-        ? studentModuleFlowStepOptions(classroomAssignments as Array<{ id: string; type?: string | null }>)
+        ? studentModuleFlowStepOptions(
+            classroomAssignments as Array<{ id: string; type?: string | null }>
+          )
         : undefined,
-    [role, classroomAssignments],
+    [role, classroomAssignments]
   );
 
   const orderedFlowSteps = useMemo(
     () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources, studentFlowOpts),
-    [flowSteps, sectionResources, studentFlowOpts],
+    [flowSteps, sectionResources, studentFlowOpts]
   );
 
   const flowStepForResource = useMemo(
     () => flowSteps.find((s) => s.step_kind === 'resource' && s.activity_list_id === resource?.id),
-    [flowSteps, resource?.id],
+    [flowSteps, resource?.id]
   );
 
   const sectionFlow = useStudentSectionModuleFlow(
     classroomId,
     resource?.section_id,
-    role === 'student' ? user?.id : undefined,
+    role === 'student' ? user?.id : undefined
   );
 
-  const isTeacherTryPreview =
-    role === 'teacher' && location.pathname.includes('/try/activity/');
+  const isTeacherTryPreview = role === 'teacher' && location.pathname.includes('/try/activity/');
 
   const valid = resourceBelongsToSyllabus(resource ?? null, syllabus ?? null);
   const isTeacherView =
@@ -116,7 +118,7 @@ export function ClassroomActivityPageContent({
       isStudentView && flowStepForResource && orderedFlowSteps.length > 0
         ? orderedFlowSteps.findIndex((s) => s.id === flowStepForResource.id)
         : -1,
-    [isStudentView, flowStepForResource, orderedFlowSteps],
+    [isStudentView, flowStepForResource, orderedFlowSteps]
   );
 
   const loading =
@@ -211,4 +213,4 @@ export function ClassroomActivityPageContent({
       />
     </ClassroomActivityNavShell>
   );
-}
+};

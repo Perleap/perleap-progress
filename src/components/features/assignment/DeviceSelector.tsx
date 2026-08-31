@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RefreshCw } from 'lucide-react';
 
 export const NO_AUDIO = '__no_audio__';
 
@@ -48,7 +48,7 @@ interface DeviceSelectorProps {
   className?: string;
 }
 
-export function DeviceSelector({ value, onChange, className }: DeviceSelectorProps) {
+export const DeviceSelector = ({ value, onChange, className }: DeviceSelectorProps) => {
   const { t } = useTranslation();
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
@@ -98,25 +98,28 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
     });
   }, [videoDevices, audioDevices, onChange]);
 
-  const labelFor = (d: MediaDeviceInfo, index: number, kind: 'video' | 'audio') => {
-    if (d.label?.trim()) return d.label.trim();
-    return kind === 'video'
-      ? `${t('assignmentDetail.presentation.selectCamera')} ${index + 1}`
-      : `${t('assignmentDetail.presentation.selectMicrophone')} ${index + 1}`;
-  };
+  const labelFor = useCallback(
+    (d: MediaDeviceInfo, index: number, kind: 'video' | 'audio') => {
+      if (d.label?.trim()) return d.label.trim();
+      return kind === 'video'
+        ? `${t('assignmentDetail.presentation.selectCamera')} ${index + 1}`
+        : `${t('assignmentDetail.presentation.selectMicrophone')} ${index + 1}`;
+    },
+    [t]
+  );
 
   const videoDisplayLabel = useMemo(() => {
     const d = videoDevices.find((x) => x.deviceId === value.videoDeviceId);
     if (!d) return '';
     return labelFor(d, videoDevices.indexOf(d), 'video');
-  }, [videoDevices, value.videoDeviceId, t]);
+  }, [videoDevices, value.videoDeviceId, labelFor]);
 
   const micDisplayLabel = useMemo(() => {
     if (value.audioDeviceId === NO_AUDIO) return t('assignmentDetail.presentation.noAudio');
     const d = audioDevices.find((x) => x.deviceId === value.audioDeviceId);
     if (!d) return '';
     return labelFor(d, audioDevices.indexOf(d), 'audio');
-  }, [audioDevices, value.audioDeviceId, t]);
+  }, [audioDevices, value.audioDeviceId, labelFor, t]);
 
   return (
     <div className={className}>
@@ -125,7 +128,10 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
           <Label className="text-xs">{t('assignmentDetail.presentation.selectCamera')}</Label>
           <Select
             value={value.videoDeviceId || videoDevices[0]?.deviceId || ''}
-            onValueChange={(videoDeviceId) => onChange({ ...value, videoDeviceId })}
+            onValueChange={(videoDeviceId: string | null) => {
+              if (videoDeviceId == null) return;
+              onChange({ ...value, videoDeviceId });
+            }}
           >
             <SelectTrigger className="w-full min-w-0 max-w-full">
               <SelectValue
@@ -138,7 +144,9 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
             <SelectContent>
               {videoDevices.map((d, i) => (
                 <SelectItem key={d.deviceId} value={d.deviceId}>
-                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">{labelFor(d, i, 'video')}</span>
+                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">
+                    {labelFor(d, i, 'video')}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -150,7 +158,10 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
           <Select
             value={value.audioDeviceId}
             onValueChange={(audioDeviceId) =>
-              onChange({ ...value, audioDeviceId: audioDeviceId as DeviceSelection['audioDeviceId'] })
+              onChange({
+                ...value,
+                audioDeviceId: audioDeviceId as DeviceSelection['audioDeviceId'],
+              })
             }
           >
             <SelectTrigger className="w-full min-w-0 max-w-full">
@@ -165,7 +176,9 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
               <SelectItem value={NO_AUDIO}>{t('assignmentDetail.presentation.noAudio')}</SelectItem>
               {audioDevices.map((d, i) => (
                 <SelectItem key={d.deviceId} value={d.deviceId}>
-                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">{labelFor(d, i, 'audio')}</span>
+                  <span className="truncate block max-w-[min(100vw-4rem,320px)]">
+                    {labelFor(d, i, 'audio')}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -185,4 +198,4 @@ export function DeviceSelector({ value, onChange, className }: DeviceSelectorPro
       </div>
     </div>
   );
-}
+};

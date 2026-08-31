@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import type { Assignment, AssignmentWithClassroom, ApiError } from '@/types';
 import { useAuth } from '@/contexts/useAuth';
 import { getClassroomAssignments, getStudentAssignments } from '@/services';
-import type { Assignment, AssignmentWithClassroom, ApiError } from '@/types';
 
 interface UseAssignmentsResult {
   assignments: Assignment[] | AssignmentWithClassroom[];
@@ -82,7 +82,7 @@ export const useStudentAssignments = (): UseAssignmentsResult => {
     }
 
     setLoading(false);
-  }, [user?.id]);
+  }, [user]);
 
   useEffect(() => {
     fetchAssignments();

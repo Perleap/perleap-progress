@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Calendar, Views, type View } from 'react-big-calendar';
+import { useTranslation } from 'react-i18next';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './planner-calendar.css';
-import { Card, CardContent } from '@/components/ui/card';
 import { PlannerCalendarEventChip, plannerLocalizer } from './plannerCalendarSetup';
-import type { PlannerCalendarEvent } from './plannerTypes';
-import { pickContrastForegroundHex } from './plannerTypes';
+import { pickContrastForegroundHex, type PlannerCalendarEvent } from './plannerTypes';
+import { Card, CardContent } from '@/components/ui/card';
 
 export type PlannerCalendarPanelProps = {
   culture: string;
@@ -23,7 +22,7 @@ export type PlannerCalendarPanelProps = {
   onSelectEvent: (event: PlannerCalendarEvent) => void;
 };
 
-export function PlannerCalendarPanel({
+export const PlannerCalendarPanel = ({
   culture,
   isRTL,
   events,
@@ -36,7 +35,7 @@ export function PlannerCalendarPanel({
   onDateChange,
   onSelectSlot,
   onSelectEvent,
-}: PlannerCalendarPanelProps) {
+}: PlannerCalendarPanelProps) => {
   const { t } = useTranslation();
   const calendarComponents = useMemo(() => ({ event: PlannerCalendarEventChip }), []);
 
@@ -92,4 +91,4 @@ export function PlannerCalendarPanel({
       </CardContent>
     </Card>
   );
-}
+};

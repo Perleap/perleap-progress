@@ -1,10 +1,25 @@
-import { Target, FileText, X, Upload, Link as LinkIcon, Plus, Eye, Loader2, RefreshCw, BookOpen } from 'lucide-react';
+import {
+  Target,
+  FileText,
+  X,
+  Upload,
+  Link as LinkIcon,
+  Plus,
+  Eye,
+  Loader2,
+  RefreshCw,
+  BookOpen,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
+import type { CourseMaterial } from '@/types/models';
+import type { SectionResource } from '@/types/syllabus';
+import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -12,14 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { pairKey } from '@/lib/hardSkillsFormat';
+import { cn } from '@/lib/utils';
 import { openOrDownloadMaterial, resolveMaterialBucket } from '@/services/materialService';
 import { ASSIGNMENT_MATERIALS_BUCKET } from '@/utils/storageUrls';
-import { ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
-import type { CourseMaterial } from '@/types/models';
-import type { SectionResource } from '@/types/syllabus';
-import type { AssignmentWizardFormData } from '../assignmentWizardTypes';
 
 const MAX_HARD_SKILLS = 5;
 
@@ -51,7 +62,7 @@ interface AssignmentSkillsMaterialsStepProps {
   onRetrySuggestHardSkills?: () => void;
 }
 
-export function AssignmentSkillsMaterialsStep({
+export const AssignmentSkillsMaterialsStep = ({
   formData,
   onFormChange,
   isRTL,
@@ -75,14 +86,16 @@ export function AssignmentSkillsMaterialsStep({
   hardSkillsSuggestionStatus = 'idle',
   hardSkillsSuggestionSource = null,
   onRetrySuggestHardSkills,
-}: AssignmentSkillsMaterialsStepProps) {
+}: AssignmentSkillsMaterialsStepProps) => {
   const { t } = useTranslation();
   const atCap = formData.hard_skills.length >= MAX_HARD_SKILLS;
 
   return (
     <div className="space-y-8">
       <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-        <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
           <Target className="h-5 w-5" />
           <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('createAssignment.subjectAreaAndSkills')}
@@ -90,14 +103,16 @@ export function AssignmentSkillsMaterialsStep({
         </div>
 
         <p className={`text-sm text-subtle mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
-          {isEditMode ? t('editAssignment.subjectAreasHelper') : t('createAssignment.subjectAreasHelper')}
+          {isEditMode
+            ? t('editAssignment.subjectAreasHelper')
+            : t('createAssignment.subjectAreasHelper')}
         </p>
 
         {hardSkillsSuggestionStatus === 'loading' && (
           <div
             className={cn(
               'flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground',
-              isRTL ? 'flex-row-reverse' : '',
+              isRTL ? 'flex-row-reverse' : ''
             )}
           >
             <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
@@ -108,10 +123,12 @@ export function AssignmentSkillsMaterialsStep({
           <div
             className={cn(
               'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm',
-              isRTL ? 'flex-row-reverse' : '',
+              isRTL ? 'flex-row-reverse' : ''
             )}
           >
-            <span className="text-destructive">{t('createAssignment.hardSkillsSuggestion.error')}</span>
+            <span className="text-destructive">
+              {t('createAssignment.hardSkillsSuggestion.error')}
+            </span>
             {onRetrySuggestHardSkills ? (
               <Button
                 type="button"
@@ -145,7 +162,8 @@ export function AssignmentSkillsMaterialsStep({
             <div className="space-y-2">
               <Select
                 value={selectedDomain}
-                onValueChange={(value) => {
+                onValueChange={(value: string | null) => {
+                  if (value == null) return;
                   onSelectedDomainChange(value);
                   onFormChange((prev) => ({ ...prev, hard_skill_domain: value }));
                   const domain = classroomDomains.find((d) => d.name === value);
@@ -158,11 +176,17 @@ export function AssignmentSkillsMaterialsStep({
                   className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`}
                   dir={isRTL ? 'rtl' : 'ltr'}
                 >
-                  <SelectValue>{selectedDomain || t('createAssignment.selectFromDomains')}</SelectValue>
+                  <SelectValue>
+                    {selectedDomain || t('createAssignment.selectFromDomains')}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                   {classroomDomains.map((domain, index) => (
-                    <SelectItem key={index} value={domain.name} className={isRTL ? 'text-right' : 'text-left'}>
+                    <SelectItem
+                      key={index}
+                      value={domain.name}
+                      className={isRTL ? 'text-right' : 'text-left'}
+                    >
                       {domain.name}
                     </SelectItem>
                   ))}
@@ -195,11 +219,13 @@ export function AssignmentSkillsMaterialsStep({
           {selectedDomain && availableComponents.length > 0 && !atCap && (
             <div className="space-y-2">
               <Select
-                onValueChange={(value: string) => {
+                onValueChange={(value: string | null) => {
+                  if (value == null) return;
                   const next = { domain: selectedDomain, skill: value };
                   onFormChange((prev) => {
                     const keys = new Set(prev.hard_skills.map(pairKey));
-                    if (keys.has(pairKey(next)) || prev.hard_skills.length >= MAX_HARD_SKILLS) return prev;
+                    if (keys.has(pairKey(next)) || prev.hard_skills.length >= MAX_HARD_SKILLS)
+                      return prev;
                     return { ...prev, hard_skills: [...prev.hard_skills, next] };
                   });
                 }}
@@ -208,11 +234,17 @@ export function AssignmentSkillsMaterialsStep({
                   className={`rounded-xl bg-background h-11 ${isRTL ? 'text-right' : 'text-left'}`}
                   dir={isRTL ? 'rtl' : 'ltr'}
                 >
-                  <SelectValue>{t('createAssignment.selectFromSkills', { domain: selectedDomain })}</SelectValue>
+                  <SelectValue>
+                    {t('createAssignment.selectFromSkills', { domain: selectedDomain })}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                   {availableComponents.map((component, index) => (
-                    <SelectItem key={index} value={component} className={isRTL ? 'text-right' : 'text-left'}>
+                    <SelectItem
+                      key={index}
+                      value={component}
+                      className={isRTL ? 'text-right' : 'text-left'}
+                    >
                       {component}
                     </SelectItem>
                   ))}
@@ -223,9 +255,15 @@ export function AssignmentSkillsMaterialsStep({
 
           <div className="space-y-2">
             {formData.hard_skills.map((pair, index) => (
-              <div key={index} className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : '')}>
+              <div
+                key={index}
+                className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : '')}
+              >
                 {pair.domain.trim() ? (
-                  <Badge variant="secondary" className="max-w-[40%] shrink-0 truncate text-xs font-normal">
+                  <Badge
+                    variant="secondary"
+                    className="max-w-[40%] shrink-0 truncate text-xs font-normal"
+                  >
                     {pair.domain}
                   </Badge>
                 ) : null}
@@ -235,7 +273,9 @@ export function AssignmentSkillsMaterialsStep({
                     const v = e.target.value;
                     onFormChange((prev) => {
                       const next = [...prev.hard_skills];
-                      next[index] = { ...next[index]!, skill: v };
+                      const existing = next[index];
+                      if (!existing) return prev;
+                      next[index] = { ...existing, skill: v };
                       return { ...prev, hard_skills: next };
                     });
                   }}
@@ -286,7 +326,9 @@ export function AssignmentSkillsMaterialsStep({
       </div>
 
       <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-        <div className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
           <FileText className="h-5 w-5" />
           <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
             {t('createAssignment.assignmentOnlyMaterials')}
@@ -298,7 +340,9 @@ export function AssignmentSkillsMaterialsStep({
 
         {moduleOutlineResources.length > 0 && (
           <div className="space-y-3 rounded-xl border border-dashed border-border bg-muted/5 p-4">
-            <div className={`flex items-center gap-2 text-muted-foreground ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div
+              className={`flex items-center gap-2 text-muted-foreground ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
               <BookOpen className="h-4 w-4 shrink-0" />
               <Label className={`text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
                 {t('createAssignment.moduleSharedResources')}
@@ -325,7 +369,7 @@ export function AssignmentSkillsMaterialsStep({
             <div
               className={cn(
                 'border border-border rounded-xl p-4 max-h-40 overflow-y-auto space-y-2 shadow-inner',
-                isEditMode ? 'bg-background' : 'bg-muted/5',
+                isEditMode ? 'bg-background' : 'bg-muted/5'
               )}
             >
               {classroomMaterials.map((material, index) => (
@@ -341,11 +385,17 @@ export function AssignmentSkillsMaterialsStep({
                   >
                     {material.type === 'pdf' ? (
                       <Upload
-                        className={cn('h-3 w-3 flex-shrink-0', isEditMode ? 'text-primary' : 'text-muted-foreground')}
+                        className={cn(
+                          'h-3 w-3 flex-shrink-0',
+                          isEditMode ? 'text-primary' : 'text-muted-foreground'
+                        )}
                       />
                     ) : (
                       <LinkIcon
-                        className={cn('h-3 w-3 flex-shrink-0', isEditMode ? 'text-primary' : 'text-muted-foreground')}
+                        className={cn(
+                          'h-3 w-3 flex-shrink-0',
+                          isEditMode ? 'text-primary' : 'text-muted-foreground'
+                        )}
                       />
                     )}
                     <span className="truncate">{material.name}</span>
@@ -421,7 +471,11 @@ export function AssignmentSkillsMaterialsStep({
                 className={`flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border shadow-sm group ${isRTL ? 'flex-row-reverse' : ''}`}
               >
                 <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary">
-                  {material.type === 'pdf' ? <Upload className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
+                  {material.type === 'pdf' ? (
+                    <Upload className="h-4 w-4" />
+                  ) : (
+                    <LinkIcon className="h-4 w-4" />
+                  )}
                 </div>
                 <span
                   className={`flex-1 text-sm truncate font-bold text-foreground ${isRTL ? 'text-right' : 'text-left'}`}
@@ -437,7 +491,10 @@ export function AssignmentSkillsMaterialsStep({
                     onClick={() =>
                       void openOrDownloadMaterial(
                         material as CourseMaterial,
-                        resolveMaterialBucket(material as CourseMaterial, ASSIGNMENT_MATERIALS_BUCKET),
+                        resolveMaterialBucket(
+                          material as CourseMaterial,
+                          ASSIGNMENT_MATERIALS_BUCKET
+                        )
                       )
                     }
                     className="h-8 w-8 text-muted-foreground hover:text-primary"
@@ -462,4 +519,4 @@ export function AssignmentSkillsMaterialsStep({
       </div>
     </div>
   );
-}
+};

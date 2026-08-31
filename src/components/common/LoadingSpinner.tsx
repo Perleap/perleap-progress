@@ -3,9 +3,9 @@
  * GSAP-powered loading state component
  */
 
-import { useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
 import gsap from 'gsap';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface LoadingSpinnerProps {
   text?: string;
@@ -16,10 +16,10 @@ interface LoadingSpinnerProps {
 /**
  * Display a GSAP-animated loading spinner with optional text
  */
-export const LoadingSpinner = ({ 
-  text = 'Loading...', 
+export const LoadingSpinner = ({
+  text = 'Loading...',
   className = '',
-  size = 'md'
+  size = 'md',
 }: LoadingSpinnerProps) => {
   const spinnerRef = useRef<SVGSVGElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -31,9 +31,11 @@ export const LoadingSpinner = ({
   };
 
   useEffect(() => {
-    if (spinnerRef.current) {
-      // GSAP spin animation
-      gsap.to(spinnerRef.current, {
+    const spinner = spinnerRef.current;
+    const text = textRef.current;
+
+    if (spinner) {
+      gsap.to(spinner, {
         rotation: 360,
         duration: 1,
         repeat: -1,
@@ -42,9 +44,8 @@ export const LoadingSpinner = ({
       });
     }
 
-    if (textRef.current) {
-      // Subtle pulse on text
-      gsap.to(textRef.current, {
+    if (text) {
+      gsap.to(text, {
         opacity: 0.6,
         duration: 0.8,
         repeat: -1,
@@ -54,19 +55,19 @@ export const LoadingSpinner = ({
     }
 
     return () => {
-      if (spinnerRef.current) {
-        gsap.killTweensOf(spinnerRef.current);
-      }
-      if (textRef.current) {
-        gsap.killTweensOf(textRef.current);
-      }
+      if (spinner) gsap.killTweensOf(spinner);
+      if (text) gsap.killTweensOf(text);
     };
   }, []);
 
   return (
     <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
       <Loader2 ref={spinnerRef} className={`${sizeClasses[size]} text-primary mb-2`} />
-      {text && <p ref={textRef} className="text-muted-foreground">{text}</p>}
+      {text && (
+        <p ref={textRef} className="text-muted-foreground">
+          {text}
+        </p>
+      )}
     </div>
   );
 };

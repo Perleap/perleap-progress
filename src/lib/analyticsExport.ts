@@ -71,7 +71,7 @@ export function buildClassroomAnalyticsCsv(input: {
     lines.push(header.map(escapeCsvField).join(','));
     for (const row of input.perStudentRows) {
       lines.push(
-        csvRow([row.name, ...DIMS.map((d) => formatFiveDScoreForStableKey(row.scores[d]))]),
+        csvRow([row.name, ...DIMS.map((d) => formatFiveDScoreForStableKey(row.scores[d]))])
       );
     }
   }

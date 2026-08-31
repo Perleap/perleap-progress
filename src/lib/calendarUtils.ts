@@ -57,11 +57,11 @@ export const getActiveClassroomsForDate = (
  * @param assignments - Array of assignments
  * @returns Filtered assignments
  */
-export const getAssignmentsForDate = <T extends { due_at: string }>(
+export const getAssignmentsForDate = <T extends { due_at: string | null }>(
   date: Date,
   assignments: T[]
 ): T[] => {
-  return assignments.filter((a) => isSameDay(new Date(a.due_at), date));
+  return assignments.filter((a) => a.due_at != null && isSameDay(new Date(a.due_at), date));
 };
 
 /**

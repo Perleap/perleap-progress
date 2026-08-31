@@ -1,5 +1,5 @@
-import type { i18n as I18nInstance, TFunction } from 'i18next';
 import type { DbAssignmentType } from '@/types/models';
+import type { i18n as I18nInstance, TFunction } from 'i18next';
 
 export type AssignmentTypeIntroContent = {
   title: string;
@@ -10,7 +10,7 @@ export type AssignmentTypeIntroContent = {
 export function getAssignmentTypeIntroContent(
   assignmentType: DbAssignmentType,
   t: TFunction,
-  i18n: I18nInstance,
+  i18n: I18nInstance
 ): AssignmentTypeIntroContent {
   const titleKey = `assignmentTypeIntro.${assignmentType}.title`;
   const bodyKey = `assignmentTypeIntro.${assignmentType}.body`;

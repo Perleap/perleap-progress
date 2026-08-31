@@ -1,5 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
 import { USER_ROLES } from '@/config/constants';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Inserts a row in admin_audit_log. No-ops for non-admins. Failures are logged only.

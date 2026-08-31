@@ -1,10 +1,10 @@
-import { cn } from '@/lib/utils';
 import { ContentBlockShell } from './ContentBlockShell';
 import { lessonActivityColumnClass } from './readingLayout';
+import { cn } from '@/lib/utils';
 
 export type ContentImagePresentation = 'reading' | 'embedded' | 'compact';
 
-export function ContentImageBlock({
+export const ContentImageBlock = ({
   src,
   alt,
   caption,
@@ -16,7 +16,7 @@ export function ContentImageBlock({
   caption?: string | null;
   presentation: ContentImagePresentation;
   className?: string;
-}) {
+}) => {
   const img = (
     <img
       src={src}
@@ -30,14 +30,18 @@ export function ContentImageBlock({
     <>
       <div className="bg-muted/10">{img}</div>
       {caption?.trim() ? (
-        <p className="border-t border-border/40 px-4 py-2.5 text-sm text-muted-foreground">{caption.trim()}</p>
+        <p className="border-t border-border/40 px-4 py-2.5 text-sm text-muted-foreground">
+          {caption.trim()}
+        </p>
       ) : null}
     </>
   );
 
   if (presentation === 'compact') {
     return (
-      <div className={cn('overflow-hidden rounded-lg ring-1 ring-border/45 bg-muted/10', className)}>
+      <div
+        className={cn('overflow-hidden rounded-lg ring-1 ring-border/45 bg-muted/10', className)}
+      >
         {body}
       </div>
     );
@@ -58,4 +62,4 @@ export function ContentImageBlock({
       {body}
     </ContentBlockShell>
   );
-}
+};

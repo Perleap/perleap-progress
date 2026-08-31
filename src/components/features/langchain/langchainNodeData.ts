@@ -114,7 +114,9 @@ export function isLangchainNodeType(t: string | undefined): t is LangchainNodeTy
   );
 }
 
-export function defaultDataForLangchainNodeType(type: LangchainNodeType): LangchainNodeDataByType[LangchainNodeType] {
+export function defaultDataForLangchainNodeType(
+  type: LangchainNodeType
+): LangchainNodeDataByType[LangchainNodeType] {
   const label = DEFAULT_LABELS[type];
   switch (type) {
     case 'inputNode':
@@ -174,8 +176,7 @@ function normalizeLegacyNodeForFlow(node: Node, type: string): Node {
       ? (node.data as Record<string, unknown>)
       : {};
 
-  const baseLabel =
-    typeof raw.label === 'string' && raw.label.trim() ? String(raw.label) : type;
+  const baseLabel = typeof raw.label === 'string' && raw.label.trim() ? String(raw.label) : type;
   const prefix = LEGACY_TYPE_PREFIX[type] ?? 'Legacy';
   const systemPrompt = legacyTextFromRaw(type, raw);
 
@@ -209,7 +210,10 @@ export function normalizeLangchainNodeForFlow(node: Node): Node {
   return normalizeLegacyNodeForFlow(merged, String(type));
 }
 
-export function parsePipelineJson(text: string | null | undefined): { nodes: Node[]; edges: Edge[] } {
+export function parsePipelineJson(text: string | null | undefined): {
+  nodes: Node[];
+  edges: Edge[];
+} {
   if (!text || !text.trim()) return { nodes: [], edges: [] };
   try {
     const parsed = JSON.parse(text) as unknown;
@@ -253,13 +257,9 @@ export function serializePipeline(nodes: Node[], edges: Edge[]): string {
 
 export function hasPathFromStartToOutput(nodes: Node[], edges: Edge[]): boolean {
   const startIds = new Set(
-    nodes
-      .filter((n) => n.type === 'inputNode' || n.type === 'triggerNode')
-      .map((n) => n.id)
+    nodes.filter((n) => n.type === 'inputNode' || n.type === 'triggerNode').map((n) => n.id)
   );
-  const outputIds = new Set(
-    nodes.filter((n) => n.type === 'outputNode').map((n) => n.id)
-  );
+  const outputIds = new Set(nodes.filter((n) => n.type === 'outputNode').map((n) => n.id));
   if (startIds.size === 0 || outputIds.size === 0) return false;
 
   const adj = new Map<string, string[]>();
@@ -274,7 +274,8 @@ export function hasPathFromStartToOutput(nodes: Node[], edges: Edge[]): boolean 
     const seen = new Set<string>([start]);
     const q = [start];
     while (q.length) {
-      const u = q.pop()!;
+      const u = q.pop();
+      if (u === undefined) break;
       if (outputIds.has(u)) return true;
       for (const v of adj.get(u) ?? []) {
         if (!seen.has(v)) {

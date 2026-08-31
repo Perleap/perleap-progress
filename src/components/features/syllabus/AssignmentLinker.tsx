@@ -1,7 +1,11 @@
+import { Link2, Unlink, FileText } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { SyllabusSection, GradingCategory } from '@/types/syllabus';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -9,11 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { Link2, Unlink, FileText } from 'lucide-react';
 import { useLinkAssignment, useUnlinkAssignment } from '@/hooks/queries';
-import { useTranslation } from 'react-i18next';
-import type { SyllabusSection, GradingCategory } from '@/types/syllabus';
 
 interface AssignmentLinkerProps {
   classroomId: string;
@@ -74,27 +74,43 @@ export const AssignmentLinker = ({
     <div className="space-y-6">
       {/* Unlinked Assignments */}
       <div>
-        <h4 className={`font-bold text-foreground mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
+        <h4
+          className={`font-bold text-foreground mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+        >
           <FileText className="h-4 w-4 text-muted-foreground" />
           {t('syllabus.unlinkedAssignments', 'Unlinked Assignments')}
-          <Badge variant="secondary" className="rounded-full text-xs">{unlinkedAssignments.length}</Badge>
+          <Badge variant="secondary" className="rounded-full text-xs">
+            {unlinkedAssignments.length}
+          </Badge>
         </h4>
 
         {unlinkedAssignments.length === 0 ? (
           <Card className="rounded-xl border-dashed border-2 border-border bg-muted/10">
             <CardContent className="py-8 text-center">
-              <p className="text-sm text-muted-foreground">{t('syllabus.allLinked', 'All assignments are linked to sections.')}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('syllabus.allLinked', 'All assignments are linked to sections.')}
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-2">
             {unlinkedAssignments.map((assignment) => (
-              <div key={assignment.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card shadow-sm">
+              <div
+                key={assignment.id}
+                className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card shadow-sm"
+              >
                 <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-                  <span className="text-sm font-medium text-foreground block truncate">{assignment.title}</span>
+                  <span className="text-sm font-medium text-foreground block truncate">
+                    {assignment.title}
+                  </span>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <Badge variant="outline" className="rounded-full text-[10px]">{assignment.type}</Badge>
-                    <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'} className="rounded-full text-[10px]">
+                    <Badge variant="outline" className="rounded-full text-[10px]">
+                      {assignment.type}
+                    </Badge>
+                    <Badge
+                      variant={assignment.status === 'published' ? 'default' : 'secondary'}
+                      className="rounded-full text-[10px]"
+                    >
                       {assignment.status}
                     </Badge>
                   </div>
@@ -113,7 +129,9 @@ export const AssignmentLinker = ({
                         className="h-8 min-w-[10.5rem] max-w-[14rem] text-xs rounded-full px-2.5 gap-1 border-dashed"
                       >
                         <Link2 className="h-3 w-3 shrink-0" />
-                        <SelectValue placeholder={t('syllabus.linkToSectionShort', 'Link to section...')} />
+                        <SelectValue
+                          placeholder={t('syllabus.linkToSectionShort', 'Link to section...')}
+                        />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl" dir={isRTL ? 'rtl' : 'ltr'}>
                         {sections.map((s) => (
@@ -125,7 +143,9 @@ export const AssignmentLinker = ({
                     </Select>
                   </div>
                 ) : (
-                  <span className="text-xs text-muted-foreground">{t('syllabus.noSectionsToLink', 'No sections to link to')}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('syllabus.noSectionsToLink', 'No sections to link to')}
+                  </span>
                 )}
               </div>
             ))}
@@ -136,32 +156,49 @@ export const AssignmentLinker = ({
       {/* Linked Assignments by Section */}
       {sections.length > 0 && (
         <div>
-          <h4 className={`font-bold text-foreground mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
+          <h4
+            className={`font-bold text-foreground mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse text-right' : ''}`}
+          >
             <Link2 className="h-4 w-4 text-muted-foreground" />
             {t('syllabus.linkedAssignments', 'Linked Assignments')}
-            <Badge variant="secondary" className="rounded-full text-xs">{linkedAssignments.length}</Badge>
+            <Badge variant="secondary" className="rounded-full text-xs">
+              {linkedAssignments.length}
+            </Badge>
           </h4>
 
           {sections.map((section) => {
-            const sectionAssignments = linkedAssignments.filter((a) => a.syllabus_section_id === section.id);
+            const sectionAssignments = linkedAssignments.filter(
+              (a) => a.syllabus_section_id === section.id
+            );
             if (sectionAssignments.length === 0) return null;
 
             return (
               <div key={section.id} className="mb-4">
-                <h5 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <h5
+                  className={`text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ${isRTL ? 'text-right' : 'text-left'}`}
+                >
                   {section.title}
                 </h5>
                 <div className="space-y-1.5">
                   {sectionAssignments.map((assignment) => {
                     const catName = getCategoryName(assignment.grading_category_id);
                     return (
-                      <div key={assignment.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 group">
-                        <span className={`flex-1 text-sm font-medium text-foreground truncate ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <div
+                        key={assignment.id}
+                        className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 group"
+                      >
+                        <span
+                          className={`flex-1 text-sm font-medium text-foreground truncate ${isRTL ? 'text-right' : 'text-left'}`}
+                        >
                           {assignment.title}
                         </span>
-                        <Badge variant="outline" className="rounded-full text-[10px]">{assignment.type}</Badge>
+                        <Badge variant="outline" className="rounded-full text-[10px]">
+                          {assignment.type}
+                        </Badge>
                         {catName && (
-                          <Badge variant="secondary" className="rounded-full text-[10px]">{catName}</Badge>
+                          <Badge variant="secondary" className="rounded-full text-[10px]">
+                            {catName}
+                          </Badge>
                         )}
                         <Button
                           variant="ghost"
@@ -183,7 +220,9 @@ export const AssignmentLinker = ({
           {linkedAssignments.length === 0 && (
             <Card className="rounded-xl border-dashed border-2 border-border bg-muted/10">
               <CardContent className="py-8 text-center">
-                <p className="text-sm text-muted-foreground">{t('syllabus.noLinkedYet', 'No assignments linked to sections yet.')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('syllabus.noLinkedYet', 'No assignments linked to sections yet.')}
+                </p>
               </CardContent>
             </Card>
           )}

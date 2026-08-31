@@ -15,7 +15,7 @@ export function isFiveDScoreAssessed(v: number | null | undefined): v is number 
 
 /** Dimensions with numeric scores, in stable display order. */
 export function getAssessedFiveDDimensions(
-  scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined,
+  scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined
 ): (keyof FiveDScores)[] {
   if (!scores) return [];
   return FIVE_D_DIMENSION_KEYS.filter((key) => isFiveDScoreAssessed(scores[key]));
@@ -23,7 +23,7 @@ export function getAssessedFiveDDimensions(
 
 /** Mean of non-null dimension values. */
 export function meanNonNullFiveDScores(
-  scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined,
+  scores: Partial<FiveDScores> | Record<string, number | null | undefined> | null | undefined
 ): number | null {
   if (!scores) return null;
   let sum = 0;
@@ -40,7 +40,7 @@ export function meanNonNullFiveDScores(
 
 /** Per-dimension average across snapshots, skipping null/missing values per dimension. */
 export function averageFiveDScoresAcrossSnapshots(
-  snapshots: Array<{ scores: Partial<FiveDScores> | Record<string, number | null> }>,
+  snapshots: Array<{ scores: Partial<FiveDScores> | Record<string, number | null> }>
 ): FiveDScores | null {
   if (snapshots.length === 0) return null;
 
@@ -94,10 +94,7 @@ export function formatFiveDScoreForStableKey(v: number | null): string {
 }
 
 /** UI-safe score label (null / missing dimensions show em dash). */
-export function formatFiveDScoreDisplay(
-  v: number | null | undefined,
-  decimals = 1,
-): string {
+export function formatFiveDScoreDisplay(v: number | null | undefined, decimals = 1): string {
   return isFiveDScoreAssessed(v) ? v.toFixed(decimals) : '—';
 }
 
@@ -110,7 +107,7 @@ export function stableFiveDScoresKey(scores: FiveDScores | null | undefined): st
 /** Chart-safe numeric value (null dimensions render as 0). */
 export function fiveDScoreForChart(
   scores: Partial<FiveDScores> | null | undefined,
-  key: keyof FiveDScores,
+  key: keyof FiveDScores
 ): number {
   const v = scores?.[key];
   return isFiveDScoreAssessed(v) ? v : 0;
@@ -119,14 +116,9 @@ export function fiveDScoreForChart(
 export function formatFiveDScoreDelta(
   a: number | null | undefined,
   b: number | null | undefined,
-  decimals = 2,
+  decimals = 2
 ): string {
-  if (
-    typeof a !== 'number' ||
-    Number.isNaN(a) ||
-    typeof b !== 'number' ||
-    Number.isNaN(b)
-  ) {
+  if (typeof a !== 'number' || Number.isNaN(a) || typeof b !== 'number' || Number.isNaN(b)) {
     return '—';
   }
   const d = b - a;

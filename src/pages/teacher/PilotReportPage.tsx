@@ -1,5 +1,7 @@
 import { PilotReportContent } from '@/components/features/analytics';
 
-export default function PilotReportPage() {
+const PilotReportPage = () => {
   return <PilotReportContent />;
-}
+};
+
+export default PilotReportPage;

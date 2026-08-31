@@ -2,17 +2,14 @@
  * Assignment ↔ module activity (section_resource) links for AI context and UX.
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
 import type { ApiError } from '@/types';
-import type {
-  AssignmentModuleActivity,
-  AssignmentModuleActivityInput,
-} from '@/types/syllabus';
+import type { AssignmentModuleActivity, AssignmentModuleActivityInput } from '@/types/syllabus';
+import { supabase, handleSupabaseError } from '@/api/client';
 
 const TABLE = 'assignment_module_activities' as const;
 
 export async function getLinkedActivitiesForAssignment(
-  assignmentId: string,
+  assignmentId: string
 ): Promise<{ data: AssignmentModuleActivity[] | null; error: ApiError | null }> {
   try {
     const { data, error } = await supabase
@@ -29,7 +26,7 @@ export async function getLinkedActivitiesForAssignment(
 }
 
 export async function getSectionResourceIdsForSectionInOrder(
-  sectionId: string,
+  sectionId: string
 ): Promise<{ data: string[] | null; error: ApiError | null }> {
   try {
     const { data, error } = await supabase
@@ -51,7 +48,7 @@ export async function getSectionResourceIdsForSectionInOrder(
  */
 async function validateLinksBelongToSection(
   sectionId: string,
-  items: AssignmentModuleActivityInput[],
+  items: AssignmentModuleActivityInput[]
 ): Promise<{ ok: boolean; error: ApiError | null }> {
   if (items.length === 0) return { ok: true, error: null };
   const ids = items.map((i) => i.activity_list_id);
@@ -81,7 +78,7 @@ async function validateLinksBelongToSection(
 export async function setAssignmentLinkedActivities(
   assignmentId: string,
   syllabusSectionId: string | null,
-  items: AssignmentModuleActivityInput[],
+  items: AssignmentModuleActivityInput[]
 ): Promise<{ error: ApiError | null }> {
   try {
     if (!syllabusSectionId) {
@@ -123,7 +120,7 @@ export async function setAssignmentLinkedActivities(
  */
 export async function setDefaultLinksForAssignmentFromSection(
   assignmentId: string,
-  syllabusSectionId: string,
+  syllabusSectionId: string
 ): Promise<{ error: ApiError | null }> {
   const { data: ids, error } = await getSectionResourceIdsForSectionInOrder(syllabusSectionId);
   if (error) return { error };

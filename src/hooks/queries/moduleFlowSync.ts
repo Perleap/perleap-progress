@@ -2,23 +2,23 @@
  * Persist module_flow_steps to match resolveDisplayedModuleFlow (curriculum + student Activities).
  */
 
+import type { SyllabusWithSections } from '@/types/syllabus';
 import type { QueryClient } from '@tanstack/react-query';
 import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import { invalidateModuleFlowQueriesForSection } from '@/hooks/queries/useModuleFlowQueries';
+import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
 import {
   moduleFlowLocalStepsToFlowInput,
   resolveDisplayedModuleFlow,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
 import { getModuleFlowSteps, replaceModuleFlowSteps } from '@/services/moduleFlowService';
-import type { SyllabusWithSections } from '@/types/syllabus';
 
 export async function syncModuleFlowToResolvedDisplayForSection(
   queryClient: QueryClient,
   classroomId: string,
   sectionId: string,
-  options?: { ensureAssignmentIds?: string[] },
+  options?: { ensureAssignmentIds?: string[] }
 ): Promise<void> {
   await queryClient.refetchQueries({
     queryKey: assignmentKeys.classroomAssignmentLists(classroomId),
@@ -29,7 +29,7 @@ export async function syncModuleFlowToResolvedDisplayForSection(
     { id: string; syllabus_section_id?: string | null; due_at?: string | null }[]
   >(assignmentKeys.listByClassroom(classroomId, null));
   const syllabus = queryClient.getQueryData<SyllabusWithSections | null>(
-    syllabusKeys.byClassroom(classroomId),
+    syllabusKeys.byClassroom(classroomId)
   );
   const resources = syllabus?.section_resources?.[sectionId] ?? [];
   const { data: persisted, error: fetchErr } = await getModuleFlowSteps(sectionId);
@@ -41,14 +41,14 @@ export async function syncModuleFlowToResolvedDisplayForSection(
     sectionId,
     resources,
     assignments ?? [],
-    persisted ?? [],
+    persisted ?? []
   );
   const ensure = options?.ensureAssignmentIds?.filter(Boolean) ?? [];
   if (ensure.length > 0) {
     const present = new Set(
       localSteps
         .filter((s): s is { kind: 'assignment'; assignmentId: string } => s.kind === 'assignment')
-        .map((s) => s.assignmentId),
+        .map((s) => s.assignmentId)
     );
     for (const id of ensure) {
       if (!present.has(id)) {

@@ -1,16 +1,10 @@
+import { Settings, Moon, Sun, LogOut, Languages } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, type To } from 'react-router-dom';
+import { NotificationDropdown } from './common/NotificationDropdown';
+import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,15 +15,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Settings, Moon, Sun, LogOut, Languages } from 'lucide-react';
-import { useAuth } from '@/contexts/useAuth';
-import { useNavigate, type To } from 'react-router-dom';
-import { useNavigateBack } from '@/hooks/useNavigateBack';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from 'next-themes';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { NotificationDropdown } from './common/NotificationDropdown';
-import { TeacherAssistantTrigger } from '@/components/ai/TeacherAssistant';
+import { useAuth } from '@/contexts/useAuth';
+import { useNavigateBack } from '@/hooks/useNavigateBack';
+import { STUDENT_AVATARS_BUCKET, TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 interface DashboardHeaderProps {
   title: string;
@@ -41,14 +41,14 @@ interface DashboardHeaderProps {
   backFallbackTo?: To;
 }
 
-export function DashboardHeader({
+export const DashboardHeader = ({
   title,
   subtitle,
   userType,
   showBackButton = false,
   onBackClick,
   backFallbackTo,
-}: DashboardHeaderProps) {
+}: DashboardHeaderProps) => {
   const { user, signOut, profile: authProfile } = useAuth();
   const navigate = useNavigate();
   const navigateBackDefault = useNavigateBack(backFallbackTo ?? `/${userType}/dashboard`);
@@ -118,17 +118,24 @@ export function DashboardHeader({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-primary/10 hover:border-primary/20 transition-colors">
+              <Button
+                variant="ghost"
+                className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-primary/10 hover:border-primary/20 transition-colors"
+              >
                 <Avatar className="h-full w-full">
                   {profile.avatar_url && (
                     <SecureAvatarImage
                       src={profile.avatar_url}
-                      bucket={userType === 'teacher' ? TEACHER_AVATARS_BUCKET : STUDENT_AVATARS_BUCKET}
-                      alt={profile.full_name}
+                      bucket={
+                        userType === 'teacher' ? TEACHER_AVATARS_BUCKET : STUDENT_AVATARS_BUCKET
+                      }
+                      alt={profile.full_name ?? undefined}
                       className="object-cover"
                     />
                   )}
-                  <AvatarFallback className="bg-primary/5 text-primary font-medium">{getHeaderInitials()}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/5 text-primary font-medium">
+                    {getHeaderInitials()}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -158,7 +165,10 @@ export function DashboardHeader({
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem
+                onClick={() => setLogoutOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
                 <LogOut className="me-2 h-4 w-4" />
                 <span>{t('common.logout')}</span>
               </DropdownMenuItem>
@@ -189,4 +199,4 @@ export function DashboardHeader({
       </AlertDialog>
     </header>
   );
-}
+};

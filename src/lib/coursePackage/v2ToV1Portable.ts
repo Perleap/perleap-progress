@@ -2,17 +2,18 @@
  * Converts a merge-safe v2 package into portable v1 for create-classroom / full apply flows.
  */
 
-import type {
-  PerleapCoursePackageV1,
-  PerleapCoursePackageV2,
-  CoursePackageAssignmentActivityLinkV1,
-  CoursePackageAssignmentV1,
-  CoursePackageCourseV1,
-  CoursePackageModuleFlowStepV1,
-  CoursePackageSectionV1,
-  CoursePackageSyllabusV1,
+import {
+  COURSE_PACKAGE_FORMAT,
+  COURSE_PACKAGE_VERSION,
+  type PerleapCoursePackageV1,
+  type PerleapCoursePackageV2,
+  type CoursePackageAssignmentActivityLinkV1,
+  type CoursePackageAssignmentV1,
+  type CoursePackageCourseV1,
+  type CoursePackageModuleFlowStepV1,
+  type CoursePackageSectionV1,
+  type CoursePackageSyllabusV1,
 } from '@/types/coursePackage';
-import { COURSE_PACKAGE_FORMAT, COURSE_PACKAGE_VERSION } from '@/types/coursePackage';
 
 function sectionLocalId(index: number): string {
   return `sec_${index}`;
@@ -46,7 +47,7 @@ export function coursePackageV2ToV1Portable(pkg: PerleapCoursePackageV2): Perlea
     });
 
     const sectionsSorted = [...syl.sections].sort(
-      (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title),
+      (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title)
     );
     sectionsSorted.forEach((sec, si) => {
       const v1Local = sectionLocalId(si);
@@ -72,7 +73,7 @@ export function coursePackageV2ToV1Portable(pkg: PerleapCoursePackageV2): Perlea
       const prereqLocal = [...new Set([...fromUuids, ...fromKeys])];
 
       const activities_sorted = [...s.activities].sort(
-        (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title),
+        (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title)
       );
       const activities = activities_sorted.map((r, ai) => {
         const lid = activityLocalId(si, ai);
@@ -136,16 +137,16 @@ export function coursePackageV2ToV1Portable(pkg: PerleapCoursePackageV2): Perlea
 
   const exportAssignments: CoursePackageAssignmentV1[] = roster.map((a, i) => {
     const lid =
-      typeof a.local_id === 'string' && a.local_id.trim()
-        ? a.local_id
-        : assignmentLocalId(i);
+      typeof a.local_id === 'string' && a.local_id.trim() ? a.local_id : assignmentLocalId(i);
     if (a.id !== undefined && a.id !== null && String(a.id).trim())
       assignmentUuidToLocal.set(String(a.id), lid);
 
     const sectionRef =
-      a.syllabus_section_ref != null ? sectionUuidToLocal.get(a.syllabus_section_ref) ?? null : null;
+      a.syllabus_section_ref != null
+        ? (sectionUuidToLocal.get(a.syllabus_section_ref) ?? null)
+        : null;
     const gcRef =
-      a.grading_category_ref != null ? gcUuidToLocal.get(a.grading_category_ref) ?? null : null;
+      a.grading_category_ref != null ? (gcUuidToLocal.get(a.grading_category_ref) ?? null) : null;
 
     return {
       local_id: lid,
@@ -169,22 +170,21 @@ export function coursePackageV2ToV1Portable(pkg: PerleapCoursePackageV2): Perlea
     };
   });
 
-  const assignment_activity_links: CoursePackageAssignmentActivityLinkV1[][] = exportAssignments.map(
-    (_, i) => {
+  const assignment_activity_links: CoursePackageAssignmentActivityLinkV1[][] =
+    exportAssignments.map((_, i) => {
       const origLinks = pkg.course.assignment_activity_links[i] ?? [];
       return origLinks.map((l) => ({
         activity_ref: activityUuidToLocal.get(String(l.activity_ref)) ?? String(l.activity_ref),
         order_index: l.order_index,
         include_in_ai_context: l.include_in_ai_context,
       }));
-    },
-  );
+    });
 
   let module_flow_by_section: CoursePackageModuleFlowStepV1[][] | null = null;
   const flows = pkg.course.module_flow_by_section;
   if (syl && flows && flows.length === syl.sections.length) {
     const sectionsSorted = [...syl.sections].sort(
-      (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title),
+      (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title)
     );
     module_flow_by_section = sectionsSorted.map((_sec, si) => {
       const rawSteps = flows[si] ?? [];
@@ -193,9 +193,11 @@ export function coursePackageV2ToV1Portable(pkg: PerleapCoursePackageV2): Perlea
           order_index: ord,
           step_kind: st.step_kind,
           activity_ref:
-            st.activity_ref != null ? activityUuidToLocal.get(st.activity_ref) ?? null : null,
+            st.activity_ref != null ? (activityUuidToLocal.get(st.activity_ref) ?? null) : null,
           assignment_ref:
-            st.assignment_ref != null ? assignmentUuidToLocal.get(st.assignment_ref) ?? null : null,
+            st.assignment_ref != null
+              ? (assignmentUuidToLocal.get(st.assignment_ref) ?? null)
+              : null,
         };
         return step;
       });

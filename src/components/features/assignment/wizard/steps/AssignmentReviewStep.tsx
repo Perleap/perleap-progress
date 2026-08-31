@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next';
 import { Pencil, Sparkles, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { distinctDomains } from '@/lib/hardSkillsFormat';
-import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
+import { useTranslation } from 'react-i18next';
 import type { AssignmentWizardFormData, AssignmentWizardStepId } from '../assignmentWizardTypes';
 import type { TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
 import type { SyllabusWithSections } from '@/types/syllabus';
+import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { distinctDomains } from '@/lib/hardSkillsFormat';
+import { cn } from '@/lib/utils';
 
 interface AssignmentReviewStepProps {
   formData: AssignmentWizardFormData;
@@ -22,41 +22,36 @@ interface AssignmentReviewStepProps {
   generatingStudentTask: boolean;
 }
 
-function ReviewField({
-  label,
-  value,
-  isRTL,
-}: {
-  label: string;
-  value: string;
-  isRTL: boolean;
-}) {
+const ReviewField = ({ label, value, isRTL }: { label: string; value: string; isRTL: boolean }) => {
   return (
     <div
       className={cn(
         'grid gap-1 border-b border-border/60 pb-3 last:border-b-0 last:pb-0 sm:grid-cols-[minmax(7.5rem,32%)_1fr] sm:items-start sm:gap-x-6',
-        isRTL && 'sm:[direction:ltr]',
+        isRTL && 'sm:[direction:ltr]'
       )}
     >
       <dt
         className={cn(
           'text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
-          isRTL ? 'sm:text-end' : 'sm:text-start',
+          isRTL ? 'sm:text-end' : 'sm:text-start'
         )}
       >
         {label}
       </dt>
       <dd
-        className={cn('text-sm leading-relaxed text-foreground break-words', isRTL ? 'text-right sm:text-end' : 'text-left sm:text-start')}
+        className={cn(
+          'text-sm leading-relaxed text-foreground break-words',
+          isRTL ? 'text-right sm:text-end' : 'text-left sm:text-start'
+        )}
         dir="auto"
       >
         {value || '—'}
       </dd>
     </div>
   );
-}
+};
 
-export function AssignmentReviewStep({
+export const AssignmentReviewStep = ({
   formData,
   syllabus,
   syllabusSectionId,
@@ -66,7 +61,7 @@ export function AssignmentReviewStep({
   onStudentFacingTaskChange,
   onGenerateForStudents,
   generatingStudentTask,
-}: AssignmentReviewStepProps) {
+}: AssignmentReviewStepProps) => {
   const { t } = useTranslation();
 
   const sectionTitle =
@@ -128,7 +123,9 @@ export function AssignmentReviewStep({
         {
           label: t('createAssignment.metadata.publicationStatus'),
           value:
-            formData.status === 'draft' ? t('assignments.status.draft') : t('assignments.status.published'),
+            formData.status === 'draft'
+              ? t('assignments.status.draft')
+              : t('assignments.status.published'),
         },
         {
           label: t('createAssignment.metadata.aiFeedback'),
@@ -153,7 +150,7 @@ export function AssignmentReviewStep({
           value: (() => {
             const doms = distinctDomains(formData.hard_skills);
             if (doms.length > 1) return doms.join(', ');
-            if (doms.length === 1) return doms[0]!;
+            if (doms.length === 1) return doms[0] ?? '';
             return formData.hard_skill_domain?.trim() || '';
           })(),
         },
@@ -191,8 +188,12 @@ export function AssignmentReviewStep({
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-2" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className={cn('space-y-1', isRTL ? 'text-right' : 'text-left')}>
-        <h3 className="text-lg font-semibold tracking-tight text-foreground">{t('createAssignment.wizard.reviewTitle')}</h3>
-        <p className="text-sm text-muted-foreground">{t('createAssignment.wizard.reviewSubtitle')}</p>
+        <h3 className="text-lg font-semibold tracking-tight text-foreground">
+          {t('createAssignment.wizard.reviewTitle')}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {t('createAssignment.wizard.reviewSubtitle')}
+        </p>
       </div>
 
       <section
@@ -202,14 +203,16 @@ export function AssignmentReviewStep({
         <div
           className={cn(
             'flex flex-col gap-3 border-b border-border bg-muted/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between',
-            isRTL && 'sm:flex-row-reverse',
+            isRTL && 'sm:flex-row-reverse'
           )}
         >
           <div className="space-y-0.5">
             <h4 className="text-sm font-semibold text-foreground">
               {t('createAssignment.wizard.studentFacingTitle')}
             </h4>
-            <p className="text-xs text-muted-foreground">{t('createAssignment.wizard.studentFacingHint')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('createAssignment.wizard.studentFacingHint')}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {studentFacingTraceId ? (
@@ -257,7 +260,7 @@ export function AssignmentReviewStep({
           <div
             className={cn(
               'flex items-center justify-between gap-3 border-b border-border bg-muted/25 px-4 py-3',
-              isRTL && 'flex-row-reverse',
+              isRTL && 'flex-row-reverse'
             )}
           >
             <h4 className="text-sm font-semibold text-foreground">
@@ -284,7 +287,7 @@ export function AssignmentReviewStep({
             <div
               className={cn(
                 'flex items-center gap-3 border-b border-border bg-muted/25 px-4 py-3',
-                isRTL ? 'flex-row-reverse justify-between' : 'justify-between',
+                isRTL ? 'flex-row-reverse justify-between' : 'justify-between'
               )}
             >
               <h4 className="text-sm font-semibold text-foreground">{section.title}</h4>
@@ -292,7 +295,10 @@ export function AssignmentReviewStep({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className={cn('h-8 gap-1.5 text-primary hover:text-primary', isRTL && 'flex-row-reverse')}
+                className={cn(
+                  'h-8 gap-1.5 text-primary hover:text-primary',
+                  isRTL && 'flex-row-reverse'
+                )}
                 onClick={() => onJumpToStep(section.step)}
               >
                 <Pencil className="h-3.5 w-3.5 opacity-80" />
@@ -301,7 +307,12 @@ export function AssignmentReviewStep({
             </div>
             <div className="space-y-3 px-4 py-4">
               {section.rows.map((row) => (
-                <ReviewField key={`${section.step}-${row.label}`} label={row.label} value={row.value} isRTL={isRTL} />
+                <ReviewField
+                  key={`${section.step}-${row.label}`}
+                  label={row.label}
+                  value={row.value}
+                  isRTL={isRTL}
+                />
               ))}
             </div>
           </section>
@@ -309,4 +320,4 @@ export function AssignmentReviewStep({
       </div>
     </div>
   );
-}
+};

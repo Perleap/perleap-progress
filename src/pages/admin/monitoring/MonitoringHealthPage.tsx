@@ -1,5 +1,7 @@
 import { MonitoringHealthContent } from '@/components/features/admin';
 
-export default function MonitoringHealthPage() {
+const MonitoringHealthPage = () => {
   return <MonitoringHealthContent />;
-}
+};
+
+export default MonitoringHealthPage;

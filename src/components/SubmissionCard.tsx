@@ -1,14 +1,15 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { Clock, Flag, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { isChatLikeAssignmentType } from '@/lib/assignmentChatLike';
+import { cn } from '@/lib/utils';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 interface ConversationMessage {
   role: 'user' | 'assistant';
@@ -36,14 +37,14 @@ export type SubmissionCardVariant = 'stack' | 'compact' | 'detailed' | 'list';
 export function formatSubmissionAssignmentTitle(
   assignmentTitle: string,
   attemptNumber: number | undefined,
-  submissionAttemptCount: number,
+  submissionAttemptCount: number
 ): string {
   if (typeof attemptNumber !== 'number') return assignmentTitle;
   if (submissionAttemptCount <= 1) return assignmentTitle;
   return `${assignmentTitle} #${attemptNumber}`;
 }
 
-export function SubmissionClipboardActivityBadge({
+export const SubmissionClipboardActivityBadge = ({
   hasCopy,
   hasPaste,
   className,
@@ -53,15 +54,16 @@ export function SubmissionClipboardActivityBadge({
   hasPaste: boolean;
   className?: string;
   size?: 'default' | 'compact';
-}) {
+}) => {
   const { t } = useTranslation();
   if (!hasCopy && !hasPaste) return null;
 
-  const label = hasCopy && hasPaste
-    ? t('submissionCard.clipboardBothBadge')
-    : hasCopy
-      ? t('submissionCard.clipboardCopiedBadge')
-      : t('submissionCard.clipboardPastedBadge');
+  const label =
+    hasCopy && hasPaste
+      ? t('submissionCard.clipboardBothBadge')
+      : hasCopy
+        ? t('submissionCard.clipboardCopiedBadge')
+        : t('submissionCard.clipboardPastedBadge');
 
   const compact = size === 'compact';
   return (
@@ -70,15 +72,15 @@ export function SubmissionClipboardActivityBadge({
       className={cn(
         'shrink-0 rounded-full border-amber-500/50 bg-amber-500/10 font-medium text-amber-800 dark:text-amber-200',
         compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-0.5 text-xs',
-        className,
+        className
       )}
     >
       {label}
     </Badge>
   );
-}
+};
 
-export function SubmissionFlaggedSentencesBadge({
+export const SubmissionFlaggedSentencesBadge = ({
   count,
   assignmentType,
   className,
@@ -88,7 +90,7 @@ export function SubmissionFlaggedSentencesBadge({
   assignmentType?: string | null;
   className?: string;
   size?: 'default' | 'compact';
-}) {
+}) => {
   const { t } = useTranslation();
   if (count <= 0 || !isChatLikeAssignmentType(assignmentType)) return null;
 
@@ -99,14 +101,14 @@ export function SubmissionFlaggedSentencesBadge({
       className={cn(
         'shrink-0 rounded-full border-rose-500/50 bg-rose-500/10 font-medium text-rose-800 dark:text-rose-200',
         compact ? 'gap-1 px-2 py-0.5 text-[10px]' : 'gap-1 px-2.5 py-0.5 text-xs',
-        className,
+        className
       )}
     >
       <Flag className={cn(compact ? 'h-2.5 w-2.5' : 'h-3 w-3')} aria-hidden />
       {t('submissionCard.flaggedSentencesBadge', { count })}
     </Badge>
   );
-}
+};
 
 interface SubmissionCardProps {
   submission: {
@@ -119,9 +121,9 @@ interface SubmissionCardProps {
     /** Chat assignments: set at submit. */
     conversation_complete_at_submit?: boolean | null;
     attempt_number?: number;
-    status: 'in_progress' | 'completed';
+    status: 'in_progress' | 'completed' | 'submitted';
     has_feedback: boolean;
-    teacher_feedback?: string;
+    teacher_feedback?: string | null;
     conversation_context?: ConversationMessage[];
     student_avatar_url?: string;
     is_teacher_attempt?: boolean | null;
@@ -139,12 +141,12 @@ interface SubmissionCardProps {
   onOpen?: (submissionId: string) => void;
 }
 
-export function SubmissionCard({
+export const SubmissionCard = ({
   submission,
   submissionAttemptCount = 1,
   variant = 'stack',
   onOpen,
-}: SubmissionCardProps) {
+}: SubmissionCardProps) => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -162,8 +164,11 @@ export function SubmissionCard({
   }, [submission.teacher_feedback, feedbackMaxLen]);
 
   const chatPreview = useMemo(
-    () => (isRich && chatPreviewMax > 0 ? lastChatSnippet(submission.conversation_context, chatPreviewMax) : ''),
-    [isRich, submission.conversation_context, chatPreviewMax],
+    () =>
+      isRich && chatPreviewMax > 0
+        ? lastChatSnippet(submission.conversation_context, chatPreviewMax)
+        : '',
+    [isRich, submission.conversation_context, chatPreviewMax]
   );
 
   const initials = submission.student_name
@@ -179,7 +184,7 @@ export function SubmissionCard({
   const displayAssignmentTitle = formatSubmissionAssignmentTitle(
     submission.assignment_title,
     submission.attempt_number,
-    submissionAttemptCount,
+    submissionAttemptCount
   );
 
   const avatarClass =
@@ -193,12 +198,12 @@ export function SubmissionCard({
     'font-bold text-foreground leading-snug line-clamp-2 min-w-0 flex-1',
     variant === 'detailed' && 'text-xl sm:text-2xl',
     variant === 'compact' && 'text-base',
-    variant === 'stack' && 'text-lg',
+    variant === 'stack' && 'text-lg'
   );
 
   const detailRowClass = cn(
     'flex items-start gap-2 text-muted-foreground',
-    isRich ? 'text-base' : 'text-sm',
+    isRich ? 'text-base' : 'text-sm'
   );
   const detailIconClass = cn('shrink-0', isRich ? 'h-4 w-4 mt-1' : 'h-4 w-4 mt-0.5');
 
@@ -207,14 +212,19 @@ export function SubmissionCard({
       <Avatar
         className={cn(
           avatarClass,
-          'shrink-0 rounded-full border-2 border-border shadow-sm overflow-hidden',
+          'shrink-0 rounded-full border-2 border-border shadow-sm overflow-hidden'
         )}
       >
-        <SecureAvatarImage src={submission.student_avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt="" className="h-full w-full object-cover" />
+        <SecureAvatarImage
+          src={submission.student_avatar_url}
+          bucket={STUDENT_AVATARS_BUCKET}
+          alt=""
+          className="h-full w-full object-cover"
+        />
         <AvatarFallback
           className={cn(
             'bg-primary/10 text-primary font-bold',
-            variant === 'compact' || variant === 'list' ? 'text-xs' : 'text-sm',
+            variant === 'compact' || variant === 'list' ? 'text-xs' : 'text-sm'
           )}
         >
           {initials}
@@ -224,7 +234,7 @@ export function SubmissionCard({
         className={cn(
           'font-medium text-foreground truncate',
           variant === 'list' && 'text-sm sm:text-base',
-          variant !== 'list' && (isRich ? 'text-base sm:text-lg' : 'text-base'),
+          variant !== 'list' && (isRich ? 'text-base sm:text-lg' : 'text-base')
         )}
       >
         {submission.student_name}
@@ -237,7 +247,7 @@ export function SubmissionCard({
       className={cn(
         'text-muted-foreground tabular-nums shrink-0',
         variant === 'list' && 'text-sm sm:text-base font-medium',
-        variant !== 'list' && (isRich ? 'text-sm sm:text-base' : 'text-sm'),
+        variant !== 'list' && (isRich ? 'text-sm sm:text-base' : 'text-sm')
       )}
       dateTime={submission.submitted_at}
     >
@@ -252,10 +262,14 @@ export function SubmissionCard({
         'shrink-0 rounded-full px-2.5 py-0.5 font-medium text-xs',
         isSubmitted
           ? 'bg-success/20 text-success dark:bg-success/30 dark:text-success-foreground'
-          : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
+          : 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400'
       )}
     >
-      {pending ? t('submissionCard.notStarted') : isSubmitted ? t('submissionCard.completed') : t('submissionCard.inProgress')}
+      {pending
+        ? t('submissionCard.notStarted')
+        : isSubmitted
+          ? t('submissionCard.completed')
+          : t('submissionCard.inProgress')}
     </Badge>
   );
 
@@ -282,7 +296,7 @@ export function SubmissionCard({
         'shrink-0 rounded-full px-2.5 py-0.5 font-medium text-xs',
         submission.conversation_complete_at_submit
           ? 'border-success/40 bg-success/10 text-success'
-          : 'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+          : 'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200'
       )}
     >
       {submission.conversation_complete_at_submit
@@ -318,58 +332,54 @@ export function SubmissionCard({
     </div>
   );
 
-  const detailsBlock =
-    showDetails && (
-      <div className={cn('w-full text-start space-y-2', isRich && 'space-y-3')}>
+  const detailsBlock = showDetails && (
+    <div className={cn('w-full text-start space-y-2', isRich && 'space-y-3')}>
+      <p className={detailRowClass}>
+        <Clock className={detailIconClass} aria-hidden />
+        <span className="leading-snug">
+          {new Date(submission.submitted_at).toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          })}
+        </span>
+      </p>
+      {!pending && (
         <p className={detailRowClass}>
-          <Clock className={detailIconClass} aria-hidden />
-          <span className="leading-snug">
-            {new Date(submission.submitted_at).toLocaleString(undefined, {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })}
-          </span>
+          <MessageSquare className={detailIconClass} aria-hidden />
+          <span>{t('submissionCard.chatMessages', { count: msgCount })}</span>
         </p>
-        {!pending && (
-          <p className={detailRowClass}>
-            <MessageSquare className={detailIconClass} aria-hidden />
-            <span>{t('submissionCard.chatMessages', { count: msgCount })}</span>
-          </p>
-        )}
-        {isRich && !pending && chatPreview && (
-          <p className={detailRowClass}>
-            <MessageSquare className={detailIconClass} aria-hidden />
-            <span>
-              <span className="font-medium text-foreground/90">{t('submissionCard.latestInChat')} </span>
-              <span className="line-clamp-4 text-foreground/80">{chatPreview}</span>
+      )}
+      {isRich && !pending && chatPreview && (
+        <p className={detailRowClass}>
+          <MessageSquare className={detailIconClass} aria-hidden />
+          <span>
+            <span className="font-medium text-foreground/90">
+              {t('submissionCard.latestInChat')}{' '}
             </span>
-          </p>
-        )}
-        <p
-          className={cn(
-            'leading-snug text-muted-foreground',
-            isRich ? 'text-base' : 'text-sm',
-          )}
-        >
-          <span className={cn('font-medium text-foreground', isRich && 'text-foreground')}>
-            {t('submissionCard.feedbackLabel')}{' '}
+            <span className="line-clamp-4 text-foreground/80">{chatPreview}</span>
           </span>
-          {pending ? (
-            <span>{t('submissionCard.notStarted')}</span>
-          ) : submission.has_feedback ? (
-            feedbackPreview ? (
-              <span className={cn('text-foreground/90', isRich ? 'line-clamp-6' : 'line-clamp-3')}>
-                {feedbackPreview}
-              </span>
-            ) : (
-              <span>{t('submissionCard.feedbackRecorded')}</span>
-            )
-          ) : (
-            <span>{t('submissionCard.awaitingFeedback')}</span>
-          )}
         </p>
-      </div>
-    );
+      )}
+      <p className={cn('leading-snug text-muted-foreground', isRich ? 'text-base' : 'text-sm')}>
+        <span className={cn('font-medium text-foreground', isRich && 'text-foreground')}>
+          {t('submissionCard.feedbackLabel')}{' '}
+        </span>
+        {pending ? (
+          <span>{t('submissionCard.notStarted')}</span>
+        ) : submission.has_feedback ? (
+          feedbackPreview ? (
+            <span className={cn('text-foreground/90', isRich ? 'line-clamp-6' : 'line-clamp-3')}>
+              {feedbackPreview}
+            </span>
+          ) : (
+            <span>{t('submissionCard.feedbackRecorded')}</span>
+          )
+        ) : (
+          <span>{t('submissionCard.awaitingFeedback')}</span>
+        )}
+      </p>
+    </div>
+  );
 
   const bottomRow = (
     <div className="flex w-full justify-between items-center gap-3">
@@ -383,11 +393,18 @@ export function SubmissionCard({
   const listAvatar = (
     <Avatar
       className={cn(
-        'h-10 w-10 shrink-0 rounded-full border-2 border-border bg-muted/40 shadow-sm overflow-hidden',
+        'h-10 w-10 shrink-0 rounded-full border-2 border-border bg-muted/40 shadow-sm overflow-hidden'
       )}
     >
-      <SecureAvatarImage src={submission.student_avatar_url} bucket={STUDENT_AVATARS_BUCKET} alt="" className="h-full w-full object-cover" />
-      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{initials}</AvatarFallback>
+      <SecureAvatarImage
+        src={submission.student_avatar_url}
+        bucket={STUDENT_AVATARS_BUCKET}
+        alt=""
+        className="h-full w-full object-cover"
+      />
+      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+        {initials}
+      </AvatarFallback>
     </Avatar>
   );
 
@@ -437,11 +454,12 @@ export function SubmissionCard({
         'disabled:opacity-60 disabled:pointer-events-none cursor-pointer disabled:cursor-not-allowed',
         isList &&
           'flex-none h-auto rounded-xl border border-border/80 bg-card p-4 shadow-sm hover:border-border hover:bg-muted/20 hover:shadow-md sm:p-4',
-        !isList && 'rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border',
+        !isList &&
+          'rounded-xl border-none shadow-sm hover:shadow-md transition-all bg-card ring-1 ring-border',
         isList && 'min-h-0',
         !isList && variant === 'compact' && 'gap-3 p-4 min-h-[280px]',
         !isList && variant === 'detailed' && 'gap-6 p-6 sm:p-8 min-h-[480px]',
-        !isList && variant === 'stack' && 'gap-4 p-5 sm:p-6 min-h-[400px]',
+        !isList && variant === 'stack' && 'gap-4 p-5 sm:p-6 min-h-[400px]'
       )}
     >
       {isList ? (
@@ -450,10 +468,13 @@ export function SubmissionCard({
         <>
           {topRow}
           {detailsBlock}
-          <div className={cn('flex-1 w-full', isRich ? 'min-h-[2rem]' : 'min-h-[3rem]')} aria-hidden />
+          <div
+            className={cn('flex-1 w-full', isRich ? 'min-h-[2rem]' : 'min-h-[3rem]')}
+            aria-hidden
+          />
           <div className="mt-auto w-full pt-1">{bottomRow}</div>
         </>
       )}
     </button>
   );
-}
+};

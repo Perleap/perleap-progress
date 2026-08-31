@@ -12,19 +12,19 @@ export interface StudentModuleOutlineRailProps {
 }
 
 /** Left column: numbered circle (or check) plus module progress %; no vertical connector line. */
-export function StudentModuleOutlineRail({
+export const StudentModuleOutlineRail = ({
   flowStepIndex,
   showFlowCheck,
   highlightInProgress,
   unlocked,
   isRTL,
   progressPercent,
-}: StudentModuleOutlineRailProps) {
+}: StudentModuleOutlineRailProps) => {
   return (
     <div
       className={cn(
         'flex w-12 shrink-0 flex-col items-center border-border/50 px-1 pt-2 pb-1.5',
-        isRTL ? 'border-s' : 'border-e',
+        isRTL ? 'border-s' : 'border-e'
       )}
       aria-hidden
     >
@@ -37,7 +37,7 @@ export function StudentModuleOutlineRail({
               !showFlowCheck &&
               unlocked &&
               'border-primary ring-2 ring-primary/25 ring-offset-2 ring-offset-card',
-            !unlocked && 'opacity-60',
+            !unlocked && 'opacity-60'
           )}
         >
           {showFlowCheck ? (
@@ -49,7 +49,7 @@ export function StudentModuleOutlineRail({
         <span
           className={cn(
             'text-[10px] font-medium tabular-nums leading-none text-muted-foreground',
-            !unlocked && 'opacity-60',
+            !unlocked && 'opacity-60'
           )}
         >
           {progressPercent}%
@@ -57,4 +57,4 @@ export function StudentModuleOutlineRail({
       </div>
     </div>
   );
-}
+};

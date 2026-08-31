@@ -1,14 +1,14 @@
+import { Loader2, Camera, Trash2 } from 'lucide-react';
 import { useRef } from 'react';
-import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { cn } from '@/lib/utils';
 import { TEACHER_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { Loader2, Camera, Trash2 } from 'lucide-react';
 
 export type TeacherSettingsProfileState = {
   full_name: string;
@@ -31,7 +31,7 @@ export type TeacherSettingsProfileSectionProps = {
   onDeleteAccount: () => void;
 };
 
-export function TeacherSettingsProfileSection({
+export const TeacherSettingsProfileSection = ({
   isRTL,
   userEmail,
   profile,
@@ -41,7 +41,7 @@ export function TeacherSettingsProfileSection({
   onPhotoUpload,
   onSaveProfile,
   onDeleteAccount,
-}: TeacherSettingsProfileSectionProps) {
+}: TeacherSettingsProfileSectionProps) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,10 +62,7 @@ export function TeacherSettingsProfileSection({
           <CardTitle>{t('settings.profile.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div
-            className="flex items-center gap-4"
-            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-          >
+          <div className="flex items-center gap-4" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
             <div className="relative">
               <Avatar className="h-20 w-20">
                 {profile.avatar_url ? (
@@ -101,7 +98,9 @@ export function TeacherSettingsProfileSection({
             <div className={cn(isRTL && 'text-right')}>
               <p className="text-sm font-medium">{profile.full_name || t('settings.noNameSet')}</p>
               <p className="text-sm text-muted-foreground">{userEmail}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t('settings.clickCameraUpload')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('settings.clickCameraUpload')}
+              </p>
             </div>
           </div>
 
@@ -214,11 +213,7 @@ export function TeacherSettingsProfileSection({
             <p className="text-sm font-medium">{t('settings.deleteAccount.title')}</p>
             <p className="text-sm text-muted-foreground">{t('settings.deleteAccountWarning')}</p>
           </div>
-          <Button
-            variant="destructive"
-            onClick={onDeleteAccount}
-            className="w-full sm:w-auto"
-          >
+          <Button variant="destructive" onClick={onDeleteAccount} className="w-full sm:w-auto">
             <Trash2 className="mr-2 h-4 w-4" />
             {t('settings.deleteAccountButton')}
           </Button>
@@ -226,4 +221,4 @@ export function TeacherSettingsProfileSection({
       </Card>
     </>
   );
-}
+};

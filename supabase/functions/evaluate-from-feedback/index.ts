@@ -24,6 +24,7 @@ import {
   authFailureToResponse,
   requireAuth,
 } from '../_shared/authorizeResource.ts';
+import { checkRateLimit, rateLimitFailureToResponse } from '../_shared/rateLimit.ts';
 
 
 async function clearPriorEvaluation(
@@ -47,6 +48,11 @@ serve(async (req) => {
     const auth = await requireAuth(req);
     if ('status' in auth) {
       return authFailureToResponse(auth, corsHeaders);
+    }
+
+    const rateLimit = await checkRateLimit(auth.user.id, 'evaluate-from-feedback');
+    if (rateLimit) {
+      return rateLimitFailureToResponse(rateLimit, corsHeaders);
     }
 
     const {

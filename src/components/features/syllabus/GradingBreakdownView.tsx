@@ -1,9 +1,9 @@
+import { GraduationCap } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { GradingCategory } from '@/types/syllabus';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { GraduationCap } from 'lucide-react';
-import type { GradingCategory } from '@/types/syllabus';
 
 interface GradingBreakdownViewProps {
   categories: GradingCategory[];
@@ -24,19 +24,18 @@ const COLORS = [
 export const GradingBreakdownView = ({ categories, isRTL = false }: GradingBreakdownViewProps) => {
   const { t } = useTranslation();
 
-  const totalWeight = useMemo(() =>
-    categories.reduce((sum, c) => sum + c.weight, 0),
-    [categories]
-  );
+  const totalWeight = useMemo(() => categories.reduce((sum, c) => sum + c.weight, 0), [categories]);
 
   if (categories.length === 0) return null;
 
   return (
     <div className="space-y-3">
-      <h4 className={cn(
-        'text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1',
-        isRTL && 'flex-row-reverse text-right'
-      )}>
+      <h4
+        className={cn(
+          'text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1',
+          isRTL && 'flex-row-reverse text-right'
+        )}
+      >
         <GraduationCap className="h-3 w-3" /> {t('syllabus.grading.breakdown')}
       </h4>
 
@@ -65,21 +64,29 @@ export const GradingBreakdownView = ({ categories, isRTL = false }: GradingBreak
                 key={cat.id}
                 className={cn('flex items-center gap-2', isRTL && 'flex-row-reverse')}
               >
-                <div className={cn('h-3 w-3 rounded-sm flex-shrink-0', COLORS[i % COLORS.length])} />
+                <div
+                  className={cn('h-3 w-3 rounded-sm flex-shrink-0', COLORS[i % COLORS.length])}
+                />
                 <div className={cn('flex-1 min-w-0', isRTL && 'text-right')}>
-                  <span className="text-xs font-medium text-foreground truncate block">{cat.name}</span>
+                  <span className="text-xs font-medium text-foreground truncate block">
+                    {cat.name}
+                  </span>
                 </div>
-                <span className="text-xs font-bold text-foreground tabular-nums flex-shrink-0">{cat.weight}%</span>
+                <span className="text-xs font-bold text-foreground tabular-nums flex-shrink-0">
+                  {cat.weight}%
+                </span>
               </div>
             ))}
           </div>
 
           {/* Total */}
           {totalWeight !== 100 && (
-            <p className={cn(
-              'text-[10px] text-orange-600 dark:text-orange-400',
-              isRTL && 'text-right'
-            )}>
+            <p
+              className={cn(
+                'text-[10px] text-orange-600 dark:text-orange-400',
+                isRTL && 'text-right'
+              )}
+            >
               {t('syllabus.grading.totalNote', { total: totalWeight })}
             </p>
           )}

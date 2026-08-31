@@ -16,7 +16,7 @@ type LiveSessionAudioPlaybackProps = {
 export const LiveSessionAudioPlayback = forwardRef<
   LiveSessionAudioPlaybackHandle,
   LiveSessionAudioPlaybackProps
->(function LiveSessionAudioPlayback({ storagePaths, durationSeconds }, ref) {
+>(({ storagePaths, durationSeconds }, ref) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [chunkUrls, setChunkUrls] = useState<string[]>([]);
   const [activeChunk, setActiveChunk] = useState(0);
@@ -29,7 +29,9 @@ export const LiveSessionAudioPlayback = forwardRef<
     let cancelled = false;
     const revokes: (() => void)[] = [];
     void (async () => {
-      const resolved = await Promise.all(storagePaths.map((path) => getLiveSessionAudioBlobUrl(path)));
+      const resolved = await Promise.all(
+        storagePaths.map((path) => getLiveSessionAudioBlobUrl(path))
+      );
       if (cancelled) {
         resolved.forEach((r) => r?.revoke());
         return;
@@ -60,7 +62,8 @@ export const LiveSessionAudioPlayback = forwardRef<
         const audio = document.createElement('audio');
         audio.preload = 'metadata';
         const duration = await new Promise<number>((resolve) => {
-          audio.onloadedmetadata = () => resolve(Number.isFinite(audio.duration) ? audio.duration : 0);
+          audio.onloadedmetadata = () =>
+            resolve(Number.isFinite(audio.duration) ? audio.duration : 0);
           audio.onerror = () => resolve(0);
           audio.src = url;
         });
@@ -93,8 +96,7 @@ export const LiveSessionAudioPlayback = forwardRef<
         return;
       }
 
-      const totalDuration =
-        chunkDurations.reduce((sum, d) => sum + d, 0) || durationSeconds || 0;
+      const totalDuration = chunkDurations.reduce((sum, d) => sum + d, 0) || durationSeconds || 0;
       const clamped = Math.max(0, Math.min(seconds, totalDuration));
 
       let targetChunk = 0;
@@ -113,7 +115,7 @@ export const LiveSessionAudioPlayback = forwardRef<
         void el.play().catch(() => {});
       });
     },
-    [chunkDurations, chunkStarts, durationSeconds, isMultiChunk],
+    [chunkDurations, chunkStarts, durationSeconds, isMultiChunk]
   );
 
   useImperativeHandle(ref, () => ({ seek }), [seek]);
@@ -130,7 +132,6 @@ export const LiveSessionAudioPlayback = forwardRef<
   }
 
   return (
-    // eslint-disable-next-line jsx-a11y/media-has-caption
     <audio
       ref={audioRef}
       src={chunkUrls[activeChunk]}

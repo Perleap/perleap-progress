@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export function RouteLoadingFallback() {
+export const RouteLoadingFallback = () => {
   const { t } = useTranslation();
 
   return (
@@ -10,4 +10,4 @@ export function RouteLoadingFallback() {
       <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
     </div>
   );
-}
+};

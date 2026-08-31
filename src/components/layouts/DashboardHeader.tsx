@@ -3,12 +3,12 @@
  * Header for dashboard pages with profile and actions
  */
 
-import { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
-import { useAuth } from '@/contexts/useAuth';
+import type { ReactNode } from 'react';
 import { ProfileAvatar } from '@/components/common/ProfileAvatar';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/useAuth';
 
 interface DashboardHeaderProps {
   title: string;

@@ -1,8 +1,8 @@
+import { Loader2 } from 'lucide-react';
 import { useAuthenticatedBlobUrl } from '@/hooks/useAuthenticatedBlobUrl';
 import { SUBMISSION_FILES_BUCKET } from '@/utils/storageUrls';
-import { Loader2 } from 'lucide-react';
 
-export function SubmissionStoragePreview({
+export const SubmissionStoragePreview = ({
   storedUrl,
   type,
   name,
@@ -14,11 +14,11 @@ export function SubmissionStoragePreview({
   name: string;
   content: string;
   zoomLevel?: number;
-}) {
+}) => {
   const { blobUrl, isLoading } = useAuthenticatedBlobUrl(
     SUBMISSION_FILES_BUCKET,
     storedUrl,
-    Boolean(storedUrl && type === 'image'),
+    Boolean(storedUrl && type === 'image')
   );
 
   if (type === 'image' && storedUrl) {
@@ -43,4 +43,4 @@ export function SubmissionStoragePreview({
   }
 
   return <pre className="whitespace-pre-wrap font-mono text-sm">{content}</pre>;
-}
+};

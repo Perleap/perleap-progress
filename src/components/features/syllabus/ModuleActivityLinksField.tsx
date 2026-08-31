@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { SectionResource, SyllabusWithSections } from '@/types/syllabus';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { SectionResource, SyllabusWithSections } from '@/types/syllabus';
 
 export interface ModuleActivityLinksFieldProps {
   syllabus: SyllabusWithSections | null | undefined;
@@ -19,14 +19,14 @@ export interface ModuleActivityLinksFieldProps {
  * Multi-select module activities to link to an assignment (AI + pedagogy).
  * Parent resets `value` when the syllabus module changes.
  */
-export function ModuleActivityLinksField({
+export const ModuleActivityLinksField = ({
   syllabus,
   syllabusSectionId,
   value,
   onChange,
   isRTL,
   disabled,
-}: ModuleActivityLinksFieldProps) {
+}: ModuleActivityLinksFieldProps) => {
   const { t } = useTranslation();
 
   const resources = useMemo((): SectionResource[] => {
@@ -52,7 +52,7 @@ export function ModuleActivityLinksField({
     <div
       className={cn(
         'rounded-lg border border-border bg-muted/20 p-3 space-y-2',
-        isRTL && 'text-right',
+        isRTL && 'text-right'
       )}
     >
       <Label className={cn('text-xs font-semibold text-foreground', isRTL && 'text-right')}>
@@ -61,7 +61,7 @@ export function ModuleActivityLinksField({
       <p className="text-[11px] text-muted-foreground leading-snug">
         {t(
           'syllabus.moduleActivities.linkHelper',
-          'Selected activities are included when the AI helps students with this assignment. Defaults to all activities in this module.',
+          'Selected activities are included when the AI helps students with this assignment. Defaults to all activities in this module.'
         )}
       </p>
       <ul className="space-y-2 pt-1">
@@ -85,4 +85,4 @@ export function ModuleActivityLinksField({
       </ul>
     </div>
   );
-}
+};

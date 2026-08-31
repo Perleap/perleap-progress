@@ -6,14 +6,15 @@
  * Imports never create submission rows: applyCoursePackageContentToClassroom only inserts syllabus/activities/assignments/module flow.
  */
 
-import type {
-  CoursePackageClassroomV1,
-  CoursePackageCourseV1,
-  PerleapCoursePackageAny,
-  PerleapCoursePackageV1,
-} from '@/types/coursePackage';
-import { COURSE_PACKAGE_VERSION, isPerleapCoursePackageV2 } from '@/types/coursePackage';
 import { coursePackageV2ToV1Portable } from '@/lib/coursePackage/v2ToV1Portable';
+import {
+  COURSE_PACKAGE_VERSION,
+  isPerleapCoursePackageV2,
+  type CoursePackageClassroomV1,
+  type CoursePackageCourseV1,
+  type PerleapCoursePackageAny,
+  type PerleapCoursePackageV1,
+} from '@/types/coursePackage';
 
 /** Malicious or legacy JSON may bolt on extra keys — never persist them downstream. */
 type ClassroomJson = CoursePackageClassroomV1 & { id?: string };
@@ -47,7 +48,9 @@ function strictPortableV1Envelope(pkg: PerleapCoursePackageV1): PerleapCoursePac
   };
 }
 
-export function packageForNewClassroomFromAny(pkg: PerleapCoursePackageAny): PerleapCoursePackageV1 {
+export function packageForNewClassroomFromAny(
+  pkg: PerleapCoursePackageAny
+): PerleapCoursePackageV1 {
   let v1: PerleapCoursePackageV1;
 
   if (isPerleapCoursePackageV2(pkg)) {

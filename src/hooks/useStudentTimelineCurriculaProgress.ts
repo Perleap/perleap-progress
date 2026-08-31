@@ -1,9 +1,5 @@
-import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ensureStudentWholeCourseCachesForClassroom,
-  type StudentWholeCourseClassroomResult,
-} from '@/lib/studentWholeCourseCaches';
+import { useMemo } from 'react';
 import {
   STUDENT_TIMELINE_CACHE_STALE_MS,
   STUDENT_TIMELINE_CACHE_GC_MS,
@@ -12,6 +8,10 @@ import {
   studentTimelineCurriculaKeys,
   invalidateStudentTimelineCurriculaQueries,
 } from '@/lib/studentTimelineCurriculaKeys';
+import {
+  ensureStudentWholeCourseCachesForClassroom,
+  type StudentWholeCourseClassroomResult,
+} from '@/lib/studentWholeCourseCaches';
 
 /** Max concurrent classroom pipelines (syllabus + assignments + flow + progress). */
 export const STUDENT_TIMELINE_CURRICULA_CONCURRENCY = 8;
@@ -21,7 +21,7 @@ export { studentTimelineCurriculaKeys, invalidateStudentTimelineCurriculaQueries
 async function mapWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
-  fn: (item: T) => Promise<R>,
+  fn: (item: T) => Promise<R>
 ): Promise<R[]> {
   if (items.length === 0) return [];
   const results: R[] = new Array(items.length);
@@ -49,7 +49,7 @@ export type StudentTimelineCurriculumProgressMap = Record<
 export function useStudentTimelineCurriculaProgress(
   studentId: string | undefined,
   classroomIds: string[],
-  enabled: boolean,
+  enabled: boolean
 ) {
   const queryClient = useQueryClient();
 
@@ -71,7 +71,7 @@ export function useStudentTimelineCurriculaProgress(
         ids,
         STUDENT_TIMELINE_CURRICULA_CONCURRENCY,
         (classroomId) =>
-          ensureStudentWholeCourseCachesForClassroom(queryClient, classroomId, studentId),
+          ensureStudentWholeCourseCachesForClassroom(queryClient, classroomId, studentId)
       );
       const map: StudentTimelineCurriculumProgressMap = {};
       for (const r of rows) {

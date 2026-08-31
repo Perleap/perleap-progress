@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import type { DbAssignmentType } from '@/types/models';
 import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssignmentTypeIntroContent } from '@/lib/assignmentTypeIntroContent';
 import { cn } from '@/lib/utils';
-import type { DbAssignmentType } from '@/types/models';
 
 type AssignmentTypeIntroContentProps = {
   assignmentType: DbAssignmentType;
@@ -12,12 +12,12 @@ type AssignmentTypeIntroContentProps = {
   variant?: 'dialog' | 'hint';
 };
 
-export function AssignmentTypeIntroContent({
+export const AssignmentTypeIntroContent = ({
   assignmentType,
   assignmentTitle,
   className,
   variant = 'dialog',
-}: AssignmentTypeIntroContentProps) {
+}: AssignmentTypeIntroContentProps) => {
   const { t, i18n } = useTranslation();
   const { isRTL } = useLanguage();
   const { title, body, tutorial } = getAssignmentTypeIntroContent(assignmentType, t, i18n);
@@ -32,22 +32,19 @@ export function AssignmentTypeIntroContent({
           {assignmentTitle?.trim() ? (
             <p className="text-muted-foreground text-sm font-normal">{assignmentTitle.trim()}</p>
           ) : null}
-          <DialogDescription
-            className={cn('leading-relaxed whitespace-pre-wrap', textAlign)}
-          >
+          <DialogDescription className={cn('leading-relaxed whitespace-pre-wrap', textAlign)}>
             {body}
           </DialogDescription>
         </DialogHeader>
 
-        <div className={cn('space-y-2 border-t border-border/60 pt-4', isRTL && 'text-end', textAlign)}>
+        <div
+          className={cn('space-y-2 border-t border-border/60 pt-4', isRTL && 'text-end', textAlign)}
+        >
           <h3 className="text-sm font-medium text-foreground">
             {t('assignmentTypeIntro.howToUseHeading')}
           </h3>
           <DialogDescription
-            className={cn(
-              'text-sm leading-relaxed whitespace-pre-wrap text-foreground',
-              textAlign,
-            )}
+            className={cn('text-sm leading-relaxed whitespace-pre-wrap text-foreground', textAlign)}
           >
             {tutorial}
           </DialogDescription>
@@ -57,10 +54,7 @@ export function AssignmentTypeIntroContent({
   }
 
   return (
-    <div
-      className={cn('space-y-3', textAlign, className)}
-      dir={isRTL ? 'rtl' : 'ltr'}
-    >
+    <div className={cn('space-y-3', textAlign, className)} dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <p className={cn('leading-relaxed whitespace-pre-wrap text-foreground', textAlign)}>
@@ -72,15 +66,10 @@ export function AssignmentTypeIntroContent({
         <h4 className="text-sm font-medium text-foreground">
           {t('assignmentTypeIntro.howToUseHeading')}
         </h4>
-        <p
-          className={cn(
-            'text-sm leading-relaxed whitespace-pre-wrap text-foreground',
-            textAlign,
-          )}
-        >
+        <p className={cn('text-sm leading-relaxed whitespace-pre-wrap text-foreground', textAlign)}>
           {tutorial}
         </p>
       </div>
     </div>
   );
-}
+};

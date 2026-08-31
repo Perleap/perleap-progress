@@ -1,16 +1,19 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, ChevronRight, ChevronDown } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/useAuth';
-import { cn } from '@/lib/utils';
+import type { SectionResource, SyllabusSection } from '@/types/syllabus';
 import { lessonActivityColumnClass } from '@/components/features/syllabus/content-blocks';
-import { ResolvedLessonResourceBody, ResourceViewer } from '@/components/features/syllabus/ResourceViewer';
+import {
+  ResolvedLessonResourceBody,
+  ResourceViewer,
+} from '@/components/features/syllabus/ResourceViewer';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useAuth } from '@/contexts/useAuth';
 import {
   useModuleFlowSteps,
   useMarkFlowStepComplete,
@@ -25,7 +28,7 @@ import {
   type AssignmentRow,
 } from '@/lib/moduleFlow';
 import { getFirstNavigableInSection, getNextSectionId } from '@/lib/moduleFlowNavigation';
-import type { SectionResource } from '@/types/syllabus';
+import { cn } from '@/lib/utils';
 
 type Role = 'teacher' | 'student';
 
@@ -38,11 +41,11 @@ export type ClassroomActivityContentProps = {
   isTeacherTryPreview: boolean;
   isStudentView: boolean;
   sectionResources: SectionResource[];
-  syllabusSections: { id: string }[] | undefined;
+  syllabusSections: SyllabusSection[] | undefined;
   syllabusSectionResources: Record<string, SectionResource[]> | undefined;
 };
 
-export function ClassroomActivityContent({
+export const ClassroomActivityContent = ({
   role,
   classroomId,
   resource,
@@ -53,7 +56,7 @@ export function ClassroomActivityContent({
   sectionResources,
   syllabusSections,
   syllabusSectionResources,
-}: ClassroomActivityContentProps) {
+}: ClassroomActivityContentProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -67,7 +70,7 @@ export function ClassroomActivityContent({
 
   const nextSectionId = useMemo(
     () => getNextSectionId(syllabusSections, resource.section_id),
-    [syllabusSections, resource.section_id],
+    [syllabusSections, resource.section_id]
   );
   const { data: nextSectionFlowSteps = [] } = useModuleFlowSteps(nextSectionId);
   const { data: classroomAssignments = [] } = useClassroomAssignments(classroomId);
@@ -75,9 +78,11 @@ export function ClassroomActivityContent({
   const studentFlowOpts = useMemo(
     () =>
       role === 'student'
-        ? studentModuleFlowStepOptions(classroomAssignments as Array<{ id: string; type?: string | null }>)
+        ? studentModuleFlowStepOptions(
+            classroomAssignments as Array<{ id: string; type?: string | null }>
+          )
         : undefined,
-    [role, classroomAssignments],
+    [role, classroomAssignments]
   );
 
   const firstInNextSection = useMemo(() => {
@@ -99,12 +104,12 @@ export function ClassroomActivityContent({
 
   const flowStepForResource = useMemo(
     () => flowSteps.find((s) => s.step_kind === 'resource' && s.activity_list_id === resource.id),
-    [flowSteps, resource.id],
+    [flowSteps, resource.id]
   );
 
   const orderedFlowSteps = useMemo(
     () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources, studentFlowOpts),
-    [flowSteps, sectionResources, studentFlowOpts],
+    [flowSteps, sectionResources, studentFlowOpts]
   );
 
   const unitOutlineMaterials = useMemo(
@@ -113,7 +118,7 @@ export function ClassroomActivityContent({
         excludeDrafts: role === 'student',
         excludeResourceId: resource.id,
       }),
-    [sectionResources, role, resource.id],
+    [sectionResources, role, resource.id]
   );
 
   const [unitMaterialsOpen, setUnitMaterialsOpen] = useState(false);
@@ -122,7 +127,7 @@ export function ClassroomActivityContent({
 
   const { data: progressByStep = {} } = useStudentModuleFlowProgressMap(
     role === 'student' ? user?.id : undefined,
-    flowStepIds,
+    flowStepIds
   );
 
   const nextFlowStep = useMemo(() => {
@@ -189,7 +194,7 @@ export function ClassroomActivityContent({
       {
         onSuccess: () => proceedAfterStepDone(),
         onError: () => toast.error(t('common.error')),
-      },
+      }
     );
   }, [
     role,
@@ -228,7 +233,9 @@ export function ClassroomActivityContent({
           </Badge>
         ) : null}
       </div>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{resource.title}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+        {resource.title}
+      </h1>
       {resource.summary ? (
         <p className="text-sm text-muted-foreground md:text-base">{resource.summary}</p>
       ) : null}
@@ -248,7 +255,7 @@ export function ClassroomActivityContent({
         className={cn(
           'flex min-h-0 flex-1 flex-col border-b border-border/60 pb-8',
           isLessonActivity ? 'gap-8' : 'gap-6',
-          isRTL && 'text-right',
+          isRTL && 'text-right'
         )}
       >
         {isLessonActivity ? (
@@ -288,7 +295,7 @@ export function ClassroomActivityContent({
             <CollapsibleTrigger
               className={cn(
                 'flex w-full items-center justify-between gap-2 border-b border-border/50 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
-                isRTL ? 'text-end' : 'text-start',
+                isRTL ? 'text-end' : 'text-start'
               )}
             >
               <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
@@ -297,7 +304,7 @@ export function ClassroomActivityContent({
               <ChevronDown
                 className={cn(
                   'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-                  unitMaterialsOpen && 'rotate-180',
+                  unitMaterialsOpen && 'rotate-180'
                 )}
                 aria-hidden
               />
@@ -317,7 +324,12 @@ export function ClassroomActivityContent({
       ) : null}
 
       {canMarkComplete ? (
-        <div className={cn('flex flex-wrap items-center gap-2', isRTL ? 'justify-start' : 'justify-end')}>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-2',
+            isRTL ? 'justify-start' : 'justify-end'
+          )}
+        >
           <Button
             type="button"
             variant="outline"
@@ -333,4 +345,4 @@ export function ClassroomActivityContent({
       ) : null}
     </>
   );
-}
+};

@@ -1,9 +1,9 @@
-import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 export type TeacherNotificationSettings = {
   submission_notifications: boolean;
@@ -19,17 +19,17 @@ export type TeacherSettingsNotificationsSectionProps = {
   onSave: () => void;
 };
 
-export function TeacherSettingsNotificationsSection({
+export const TeacherSettingsNotificationsSection = ({
   isRTL,
   notifications,
   onNotificationsChange,
   onSave,
-}: TeacherSettingsNotificationsSectionProps) {
+}: TeacherSettingsNotificationsSectionProps) => {
   const { t } = useTranslation();
 
   const setNotification = <K extends keyof TeacherNotificationSettings>(
     key: K,
-    value: TeacherNotificationSettings[K],
+    value: TeacherNotificationSettings[K]
   ) => {
     onNotificationsChange({ ...notifications, [key]: value });
   };
@@ -133,4 +133,4 @@ export function TeacherSettingsNotificationsSection({
       </CardContent>
     </Card>
   );
-}
+};

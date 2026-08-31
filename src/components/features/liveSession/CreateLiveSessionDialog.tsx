@@ -1,5 +1,10 @@
+import { Loader2, Upload, Video, Music } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { LiveSessionCreateProgress } from '@/components/features/liveSession/LiveSessionCreateProgress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,21 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, Video, Music } from 'lucide-react';
-import { LiveSessionCreateProgress } from '@/components/features/liveSession/LiveSessionCreateProgress';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLiveSessionProcessing } from '@/contexts/LiveSessionProcessingContext';
-import { LIVE_SESSION_TYPES, type LiveSessionType } from '@/types/liveSession';
 import {
   probeVideoFileForWarning,
   shouldShowLongRecordingWarning,
 } from '@/lib/liveSessionExtractAudio';
+import { cn } from '@/lib/utils';
+import { LIVE_SESSION_TYPES, type LiveSessionType } from '@/types/liveSession';
 
 interface CreateLiveSessionDialogProps {
   open: boolean;
@@ -34,14 +34,14 @@ interface CreateLiveSessionDialogProps {
   onCreated: (assignmentId: string) => void;
 }
 
-export function CreateLiveSessionDialog({
+export const CreateLiveSessionDialog = ({
   open,
   onOpenChange,
   classroomId,
   syllabusSectionId,
   onAssignmentCreated,
   onCreated,
-}: CreateLiveSessionDialogProps) {
+}: CreateLiveSessionDialogProps) => {
   const { t } = useTranslation();
   const { isRTL, language } = useLanguage();
   const { startJob, minimizeJob, activeJob, isRunning } = useLiveSessionProcessing();
@@ -56,8 +56,7 @@ export function CreateLiveSessionDialog({
     fileSizeMb: number;
   } | null>(null);
 
-  const isProcessingInDialog =
-    open && isRunning && activeJob !== null && !activeJob.minimized;
+  const isProcessingInDialog = open && isRunning && activeJob !== null && !activeJob.minimized;
 
   useEffect(() => {
     if (open && !isRunning) {
@@ -301,4 +300,4 @@ export function CreateLiveSessionDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

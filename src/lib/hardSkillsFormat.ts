@@ -21,7 +21,7 @@ function isPair(x: unknown): x is HardSkillPair {
 /** Parse raw DB or form value into normalized pairs */
 export function parseHardSkillsFromDb(
   raw: unknown,
-  fallbackDomain: string | null | undefined,
+  fallbackDomain: string | null | undefined
 ): HardSkillPair[] {
   let arr: unknown[] = [];
   if (raw == null) return [];
@@ -30,7 +30,10 @@ export function parseHardSkillsFromDb(
       const parsed = JSON.parse(raw);
       arr = Array.isArray(parsed) ? parsed : [];
     } catch {
-      arr = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      arr = raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
     }
   } else if (Array.isArray(raw)) {
     arr = raw;
@@ -70,14 +73,14 @@ export function distinctDomains(pairs: HardSkillPair[]): string[] {
 /** For hard_skill_domain column: single domain or null if none / multiple */
 export function deriveSingleDomainField(pairs: HardSkillPair[]): string | null {
   const d = distinctDomains(pairs);
-  if (d.length === 1) return d[0]!;
+  if (d.length === 1) return d[0] ?? null;
   return null;
 }
 
 /** Persisted DB value for assignments.hard_skill_domain */
 export function resolveHardSkillDomainForDb(
   pairs: HardSkillPair[],
-  manualDomain: string,
+  manualDomain: string
 ): string | null {
   const single = deriveSingleDomainField(pairs);
   if (single) return single;

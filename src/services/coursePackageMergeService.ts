@@ -10,9 +10,8 @@
  * - Grading categories: PATCH only if row exists for this syllabus; otherwise reject foreign syllabus or insert-by-id path.
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
+import type { Json } from '@/integrations/supabase/types';
 import type { ApiError, MergeFailureContext } from '@/types';
-import type { Classroom } from '@/types/models';
 import type {
   CoursePackageCourseV2,
   CoursePackageSectionV2,
@@ -20,14 +19,28 @@ import type {
   CoursePackageModuleFlowStepV2,
   PerleapCoursePackageV2,
 } from '@/types/coursePackage';
-import type { Syllabus, SyllabusStructureType, ResourceType, ActivityResourceStatus, LessonContentV1 } from '@/types/syllabus';
-import type { CreateSyllabusSectionInput } from '@/types/syllabus';
-import type { Json } from '@/integrations/supabase/types';
+import type { Classroom } from '@/types/models';
+import type {
+  Syllabus,
+  SyllabusStructureType,
+  ResourceType,
+  ActivityResourceStatus,
+  LessonContentV1,
+  CreateSyllabusSectionInput,
+  AssignmentModuleActivityInput,
+} from '@/types/syllabus';
+import { supabase, handleSupabaseError } from '@/api/client';
+import {
+  packageNeedsTypescriptCourseMerge,
+  shouldUseCoursePackageMergeRpc,
+} from '@/config/mergeCoursePackage';
 import { normalizeAssignmentTypeForImport } from '@/lib/coursePackage/normalizeAssignmentType';
 import { normalizeReleaseMode } from '@/lib/releaseMode';
-import { packageNeedsTypescriptCourseMerge, shouldUseCoursePackageMergeRpc } from '@/config/mergeCoursePackage';
-
+import { setAssignmentLinkedActivities } from '@/services/assignmentModuleActivityService';
+import { updateAssignment } from '@/services/assignmentService';
 import { getClassroomById, updateClassroom } from '@/services/classroomService';
+import { replaceModuleFlowSteps, type FlowStepInput } from '@/services/moduleFlowService';
+import { createSectionResource, updateSectionResource } from '@/services/syllabusResourceService';
 import {
   getSyllabusByClassroom,
   updateSyllabus,
@@ -36,11 +49,6 @@ import {
   unlinkAssignmentFromSection,
   createSyllabusSection,
 } from '@/services/syllabusService';
-import { updateAssignment } from '@/services/assignmentService';
-import { replaceModuleFlowSteps, type FlowStepInput } from '@/services/moduleFlowService';
-import { createSectionResource, updateSectionResource } from '@/services/syllabusResourceService';
-import { setAssignmentLinkedActivities } from '@/services/assignmentModuleActivityService';
-import type { AssignmentModuleActivityInput } from '@/types/syllabus';
 
 const MERGE_JSON_PREFIX = 'MERGE_JSON ';
 
@@ -52,13 +60,17 @@ function isUuid(s: string): boolean {
 function mergeFail(
   base: ApiError | string | null | undefined,
   ctx: Omit<MergeFailureContext, 'atomic'>,
-  atomic: boolean,
+  atomic: boolean
 ): ApiError {
-  const message =
-    typeof base === 'string' ? base : (base?.message ?? 'Merge failed');
-  const code = typeof base === 'object' && base && 'code' in base ? (base as ApiError).code : undefined;
+  const message = typeof base === 'string' ? base : (base?.message ?? 'Merge failed');
+  const code =
+    typeof base === 'object' && base && 'code' in base ? (base as ApiError).code : undefined;
   const prevDetails =
-    typeof base === 'object' && base && base.details && typeof base.details === 'object' && base.details !== null
+    typeof base === 'object' &&
+    base &&
+    base.details &&
+    typeof base.details === 'object' &&
+    base.details !== null
       ? (base.details as Record<string, unknown>)
       : {};
   return {
@@ -76,7 +88,10 @@ function parseMergeRpcError(err: unknown): ApiError {
   const msg = base.message ?? '';
   if (msg.startsWith(MERGE_JSON_PREFIX)) {
     try {
-      const parsed = JSON.parse(msg.slice(MERGE_JSON_PREFIX.length)) as Omit<MergeFailureContext, 'atomic'>;
+      const parsed = JSON.parse(msg.slice(MERGE_JSON_PREFIX.length)) as Omit<
+        MergeFailureContext,
+        'atomic'
+      >;
       if (parsed && typeof parsed.phase === 'string') {
         return {
           ...base,
@@ -90,12 +105,18 @@ function parseMergeRpcError(err: unknown): ApiError {
   return {
     ...base,
     details: {
-      merge: { phase: 'module_flow', humanLabel: 'RPC', atomic: true } satisfies MergeFailureContext,
+      merge: {
+        phase: 'module_flow',
+        humanLabel: 'RPC',
+        atomic: true,
+      } satisfies MergeFailureContext,
     },
   };
 }
 
-function packageClassroomToUpdateMerge(cc: CoursePackageClassroomV1): Parameters<typeof updateClassroom>[1] {
+function packageClassroomToUpdateMerge(
+  cc: CoursePackageClassroomV1
+): Parameters<typeof updateClassroom>[1] {
   const learningOutcomes = cc.learning_outcomes;
   const keyChallenges = cc.key_challenges;
   return {
@@ -164,7 +185,7 @@ async function assertGcBelongs(gcId: string, syllabusId: string): Promise<ApiErr
 
 async function assertActivityBelongsToSection(
   activityId: string,
-  sectionId: string,
+  sectionId: string
 ): Promise<ApiError | null> {
   const { data, error } = await supabase
     .from('activity_list')
@@ -182,7 +203,7 @@ async function assertActivityBelongsToSection(
 function sortSectionsCourse(course: CoursePackageCourseV2) {
   if (!course.syllabus) return [];
   return [...course.syllabus.sections].sort(
-    (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title),
+    (a, b) => a.order_index - b.order_index || a.title.localeCompare(b.title)
   );
 }
 
@@ -194,7 +215,7 @@ function sectionHumanLabel(sec: CoursePackageSectionV2, indexInPkg: number): str
 
 function resolveSectionDbId(
   sec: CoursePackageSectionV2,
-  insertedSectionIdByLocalId: Map<string, string>,
+  insertedSectionIdByLocalId: Map<string, string>
 ): string | null {
   const raw = typeof sec.id === 'string' ? sec.id.trim() : '';
   if (raw && isUuid(raw)) return raw;
@@ -210,9 +231,16 @@ async function mergeCoursePackageIntoClassroomRpc(params: {
   restrictToTeacherId?: string;
 }): Promise<{ data: { classroomId: string } | null; error: ApiError | null }> {
   const { classroomId, pkg, updateClassroomFromPackage, restrictToTeacherId } = params;
-  const { data: classroomRow, error: cErr } = await getClassroomById(classroomId, restrictToTeacherId);
+  const { data: classroomRow, error: cErr } = await getClassroomById(
+    classroomId,
+    restrictToTeacherId
+  );
   if (cErr) return { data: null, error: mergeFail(cErr, { phase: 'classroom_patch' }, true) };
-  if (!classroomRow) return { data: null, error: mergeFail('Classroom not found', { phase: 'classroom_patch' }, true) };
+  if (!classroomRow)
+    return {
+      data: null,
+      error: mergeFail('Classroom not found', { phase: 'classroom_patch' }, true),
+    };
 
   void classroomRow;
 
@@ -246,27 +274,36 @@ async function mergeCoursePackageIntoClassroomTs(params: {
               'This file was exported from another class. Create a new class from backup, or use merge only when the file matches this class.',
           },
           { phase: 'exported_from_guard' },
-          atomic,
+          atomic
         ),
       };
     }
 
-    const { data: classroomRow, error: cErr } = await getClassroomById(classroomId, restrictToTeacherId);
+    const { data: classroomRow, error: cErr } = await getClassroomById(
+      classroomId,
+      restrictToTeacherId
+    );
     if (cErr) return { data: null, error: mergeFail(cErr, { phase: 'classroom_patch' }, atomic) };
-    if (!classroomRow) return { data: null, error: mergeFail('Classroom not found', { phase: 'classroom_patch' }, atomic) };
+    if (!classroomRow)
+      return {
+        data: null,
+        error: mergeFail('Classroom not found', { phase: 'classroom_patch' }, atomic),
+      };
 
     void classroomRow;
 
     if (updateClassroomFromPackage) {
       const { error: upErr } = await updateClassroom(
         classroomId,
-        packageClassroomToUpdateMerge(pkg.course.classroom),
+        packageClassroomToUpdateMerge(pkg.course.classroom)
       );
-      if (upErr) return { data: null, error: mergeFail(upErr, { phase: 'classroom_patch' }, atomic) };
+      if (upErr)
+        return { data: null, error: mergeFail(upErr, { phase: 'classroom_patch' }, atomic) };
     }
 
     const { data: liveSyllabus, error: syllErr } = await getSyllabusByClassroom(classroomId);
-    if (syllErr) return { data: null, error: mergeFail(syllErr, { phase: 'syllabus_fetch' }, atomic) };
+    if (syllErr)
+      return { data: null, error: mergeFail(syllErr, { phase: 'syllabus_fetch' }, atomic) };
 
     const snap = pkg.course;
 
@@ -274,7 +311,11 @@ async function mergeCoursePackageIntoClassroomTs(params: {
       if (!liveSyllabus) {
         return {
           data: null,
-          error: mergeFail('This classroom has no syllabus to merge into.', { phase: 'syllabus_mismatch' }, atomic),
+          error: mergeFail(
+            'This classroom has no syllabus to merge into.',
+            { phase: 'syllabus_mismatch' },
+            atomic
+          ),
         };
       }
       if (liveSyllabus.id !== snap.syllabus.id) {
@@ -287,7 +328,7 @@ async function mergeCoursePackageIntoClassroomTs(params: {
               entityId: snap.syllabus.id,
               humanLabel: snap.syllabus.title,
             },
-            atomic,
+            atomic
           ),
         };
       }
@@ -307,7 +348,11 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         section_label_override: s.section_label_override ?? undefined,
         custom_settings: (s.custom_settings ?? {}) as Syllabus['custom_settings'],
       });
-      if (syUpErr) return { data: null, error: mergeFail(syUpErr, { phase: 'syllabus_patch', entityId: syId }, atomic) };
+      if (syUpErr)
+        return {
+          data: null,
+          error: mergeFail(syUpErr, { phase: 'syllabus_patch', entityId: syId }, atomic),
+        };
 
       for (let gi = 0; gi < s.grading_categories.length; gi++) {
         const gc = s.grading_categories[gi];
@@ -325,13 +370,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (cgUp)
             return {
               data: null,
-              error: mergeFail(handleSupabaseError(cgUp), {
-                phase: 'grading_categories',
-                indexInPkg: gi,
-                entity: 'grading_category',
-                entityId: gc.id,
-                humanLabel: gc.name,
-              }, atomic),
+              error: mergeFail(
+                handleSupabaseError(cgUp),
+                {
+                  phase: 'grading_categories',
+                  indexInPkg: gi,
+                  entity: 'grading_category',
+                  entityId: gc.id,
+                  humanLabel: gc.name,
+                },
+                atomic
+              ),
             };
         } else {
           const { data: gcConflict } = await supabase
@@ -343,13 +392,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (rowCf?.syllabus_id && rowCf.syllabus_id !== syId) {
             return {
               data: null,
-              error: mergeFail('Grading category id belongs to a different syllabus; refusing merge.', {
-                phase: 'grading_categories',
-                indexInPkg: gi,
-                entity: 'grading_category',
-                entityId: gc.id,
-                humanLabel: gc.name,
-              }, atomic),
+              error: mergeFail(
+                'Grading category id belongs to a different syllabus; refusing merge.',
+                {
+                  phase: 'grading_categories',
+                  indexInPkg: gi,
+                  entity: 'grading_category',
+                  entityId: gc.id,
+                  humanLabel: gc.name,
+                },
+                atomic
+              ),
             };
           }
           const { error: insCg } = await supabase.from('grading_categories').insert({
@@ -361,13 +414,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (insCg)
             return {
               data: null,
-              error: mergeFail(handleSupabaseError(insCg), {
-                phase: 'grading_categories',
-                indexInPkg: gi,
-                entity: 'grading_category',
-                entityId: gc.id,
-                humanLabel: gc.name,
-              }, atomic),
+              error: mergeFail(
+                handleSupabaseError(insCg),
+                {
+                  phase: 'grading_categories',
+                  indexInPkg: gi,
+                  entity: 'grading_category',
+                  entityId: gc.id,
+                  humanLabel: gc.name,
+                },
+                atomic
+              ),
             };
         }
       }
@@ -380,20 +437,24 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         const rawId = typeof sec.id === 'string' ? sec.id.trim() : '';
         if (!rawId || !isUuid(rawId)) continue;
 
-        const chk = await assertSectionBelongs(sec.id!, syId);
+        const chk = await assertSectionBelongs(rawId, syId);
         if (chk)
           return {
             data: null,
-            error: mergeFail(chk, {
-              phase: 'sections',
-              indexInPkg: si,
-              entity: 'section',
-              entityId: sec.id,
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              chk,
+              {
+                phase: 'sections',
+                indexInPkg: si,
+                entity: 'section',
+                entityId: sec.id,
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
 
-        const { error: secErr } = await updateSyllabusSection(sec.id!, {
+        const { error: secErr } = await updateSyllabusSection(rawId, {
           title: sec.title,
           description: sec.description ?? undefined,
           content: sec.content ?? undefined,
@@ -403,20 +464,25 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           objectives: sec.objectives ?? undefined,
           resources: sec.resources ?? undefined,
           notes: sec.notes ?? undefined,
-          completion_status:
-            sec.completion_status as Parameters<typeof updateSyllabusSection>[1]['completion_status'],
+          completion_status: sec.completion_status as Parameters<
+            typeof updateSyllabusSection
+          >[1]['completion_status'],
           is_locked: sec.is_locked,
         });
         if (secErr)
           return {
             data: null,
-            error: mergeFail(secErr, {
-              phase: 'sections',
-              indexInPkg: si,
-              entity: 'section',
-              entityId: sec.id,
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              secErr,
+              {
+                phase: 'sections',
+                indexInPkg: si,
+                entity: 'section',
+                entityId: sec.id,
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
       }
 
@@ -430,12 +496,16 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         if (!lk) {
           return {
             data: null,
-            error: mergeFail('Section missing id must include local_id.', {
-              phase: 'sections',
-              indexInPkg: si,
-              entity: 'section',
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              'Section missing id must include local_id.',
+              {
+                phase: 'sections',
+                indexInPkg: si,
+                entity: 'section',
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
         }
 
@@ -450,7 +520,8 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           objectives: (sec.objectives ?? []).filter((o) => o.trim()),
           resources: sec.resources,
           notes: sec.notes,
-          completion_status: sec.completion_status as CreateSyllabusSectionInput['completion_status'],
+          completion_status:
+            sec.completion_status as CreateSyllabusSectionInput['completion_status'],
           prerequisites: [],
           is_locked: sec.is_locked,
         };
@@ -459,12 +530,16 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         if (creErr || !created?.id)
           return {
             data: null,
-            error: mergeFail(creErr ?? { message: 'Failed to insert syllabus section' }, {
-              phase: 'sections',
-              indexInPkg: si,
-              entity: 'section',
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              creErr ?? { message: 'Failed to insert syllabus section' },
+              {
+                phase: 'sections',
+                indexInPkg: si,
+                entity: 'section',
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
         insertedSectionIdByLocalId.set(lk, created.id);
       }
@@ -476,13 +551,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         if (!secDb) {
           return {
             data: null,
-            error: mergeFail('Could not resolve section id for activity merge.', {
-              phase: 'activities',
-              indexInPkg: si,
-              entity: 'section',
-              entityId: sec.id,
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              'Could not resolve section id for activity merge.',
+              {
+                phase: 'activities',
+                indexInPkg: si,
+                entity: 'section',
+                entityId: sec.id,
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
         }
 
@@ -492,22 +571,28 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           const rawAid = typeof act.id === 'string' ? act.id.trim() : '';
 
           if (rawAid && isUuid(rawAid)) {
-            const chkA = await assertActivityBelongsToSection(act.id!, secDb);
+            const chkA = await assertActivityBelongsToSection(rawAid, secDb);
             if (chkA)
               return {
                 data: null,
-                error: mergeFail(chkA, {
-                  phase: 'activities',
-                  indexInPkg: si,
-                  entity: 'activity',
-                  entityId: act.id,
-                  humanLabel: act.title,
-                }, atomic),
+                error: mergeFail(
+                  chkA,
+                  {
+                    phase: 'activities',
+                    indexInPkg: si,
+                    entity: 'activity',
+                    entityId: act.id,
+                    humanLabel: act.title,
+                  },
+                  atomic
+                ),
               };
             /** Same columns as `merge_course_package_v2` activity UPDATE — do not PATCH denormalized file/url/text columns slim DB may omit (data lives in `lesson_content`). */
-            const { error: ua } = await updateSectionResource(act.id!, {
+            const { error: ua } = await updateSectionResource(rawAid, {
               title: act.title,
-              resource_type: act.resource_type as Parameters<typeof updateSectionResource>[1]['resource_type'],
+              resource_type: act.resource_type as Parameters<
+                typeof updateSectionResource
+              >[1]['resource_type'],
               order_index: act.order_index,
               status: act.status as Parameters<typeof updateSectionResource>[1]['status'],
               lesson_content: (act.lesson_content as unknown as LessonContentV1 | null) ?? null,
@@ -515,13 +600,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
             if (ua)
               return {
                 data: null,
-                error: mergeFail(ua, {
-                  phase: 'activities',
-                  indexInPkg: si,
-                  entity: 'activity',
-                  entityId: act.id,
-                  humanLabel: act.title,
-                }, atomic),
+                error: mergeFail(
+                  ua,
+                  {
+                    phase: 'activities',
+                    indexInPkg: si,
+                    entity: 'activity',
+                    entityId: act.id,
+                    humanLabel: act.title,
+                  },
+                  atomic
+                ),
               };
           } else {
             const { error: insA } = await createSectionResource({
@@ -542,12 +631,16 @@ async function mergeCoursePackageIntoClassroomTs(params: {
             if (insA)
               return {
                 data: null,
-                error: mergeFail(insA, {
-                  phase: 'activities',
-                  indexInPkg: si,
-                  entity: 'activity',
-                  humanLabel: act.title,
-                }, atomic),
+                error: mergeFail(
+                  insA,
+                  {
+                    phase: 'activities',
+                    indexInPkg: si,
+                    entity: 'activity',
+                    humanLabel: act.title,
+                  },
+                  atomic
+                ),
               };
           }
         }
@@ -570,13 +663,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (!dep) {
             return {
               data: null,
-              error: mergeFail(`Unknown prerequisite_merge_key: ${kk}`, {
-                phase: 'section_prerequisites',
-                indexInPkg: si,
-                entity: 'section',
-                entityId: typeof sec.id === 'string' ? sec.id : undefined,
-                humanLabel: sectionHumanLabel(sec, si),
-              }, atomic),
+              error: mergeFail(
+                `Unknown prerequisite_merge_key: ${kk}`,
+                {
+                  phase: 'section_prerequisites',
+                  indexInPkg: si,
+                  entity: 'section',
+                  entityId: typeof sec.id === 'string' ? sec.id : undefined,
+                  humanLabel: sectionHumanLabel(sec, si),
+                },
+                atomic
+              ),
             };
           }
           prereqUuids.push(dep);
@@ -586,13 +683,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         if (prErr)
           return {
             data: null,
-            error: mergeFail(prErr, {
-              phase: 'section_prerequisites',
-              indexInPkg: si,
-              entity: 'section',
-              entityId: typeof sec.id === 'string' ? sec.id : secDb,
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              prErr,
+              {
+                phase: 'section_prerequisites',
+                indexInPkg: si,
+                entity: 'section',
+                entityId: typeof sec.id === 'string' ? sec.id : secDb,
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
       }
     }
@@ -603,13 +704,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
       if (v)
         return {
           data: null,
-          error: mergeFail(v, {
-            phase: 'assignments',
-            indexInPkg: i,
-            entity: 'assignment',
-            entityId: String(a.id),
-            humanLabel: a.title,
-          }, atomic),
+          error: mergeFail(
+            v,
+            {
+              phase: 'assignments',
+              indexInPkg: i,
+              entity: 'assignment',
+              entityId: String(a.id),
+              humanLabel: a.title,
+            },
+            atomic
+          ),
         };
 
       const syIdSnap = snap.syllabus?.id ?? null;
@@ -634,39 +739,51 @@ async function mergeCoursePackageIntoClassroomTs(params: {
       if (ua)
         return {
           data: null,
-          error: mergeFail(ua, {
-            phase: 'assignments',
-            indexInPkg: i,
-            entity: 'assignment',
-            entityId: String(a.id),
-            humanLabel: a.title,
-          }, atomic),
+          error: mergeFail(
+            ua,
+            {
+              phase: 'assignments',
+              indexInPkg: i,
+              entity: 'assignment',
+              entityId: String(a.id),
+              humanLabel: a.title,
+            },
+            atomic
+          ),
         };
 
       if (a.syllabus_section_ref) {
         if (!syIdSnap) {
           return {
             data: null,
-            error: mergeFail('Assignment links to section but syllabus is missing in snapshot.', {
-              phase: 'assignments',
-              indexInPkg: i,
-              entity: 'assignment',
-              entityId: String(a.id),
-              humanLabel: a.title,
-            }, atomic),
+            error: mergeFail(
+              'Assignment links to section but syllabus is missing in snapshot.',
+              {
+                phase: 'assignments',
+                indexInPkg: i,
+                entity: 'assignment',
+                entityId: String(a.id),
+                humanLabel: a.title,
+              },
+              atomic
+            ),
           };
         }
         const chkS = await assertSectionBelongs(a.syllabus_section_ref, syIdSnap);
         if (chkS)
           return {
             data: null,
-            error: mergeFail(chkS, {
-              phase: 'assignments',
-              indexInPkg: i,
-              entity: 'assignment',
-              entityId: String(a.id),
-              humanLabel: a.title,
-            }, atomic),
+            error: mergeFail(
+              chkS,
+              {
+                phase: 'assignments',
+                indexInPkg: i,
+                entity: 'assignment',
+                entityId: String(a.id),
+                humanLabel: a.title,
+              },
+              atomic
+            ),
           };
 
         sectionResolved = a.syllabus_section_ref;
@@ -677,28 +794,40 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (chkG)
             return {
               data: null,
-              error: mergeFail(chkG, {
+              error: mergeFail(
+                chkG,
+                {
+                  phase: 'assignments',
+                  indexInPkg: i,
+                  entity: 'assignment',
+                  entityId: String(a.id),
+                  humanLabel: a.title,
+                },
+                atomic
+              ),
+            };
+          gcValidated = a.grading_category_ref;
+        }
+
+        const { error: lk } = await linkAssignmentToSection(
+          String(a.id),
+          a.syllabus_section_ref,
+          gcValidated
+        );
+        if (lk)
+          return {
+            data: null,
+            error: mergeFail(
+              lk,
+              {
                 phase: 'assignments',
                 indexInPkg: i,
                 entity: 'assignment',
                 entityId: String(a.id),
                 humanLabel: a.title,
-              }, atomic),
-            };
-          gcValidated = a.grading_category_ref;
-        }
-
-        const { error: lk } = await linkAssignmentToSection(String(a.id), a.syllabus_section_ref, gcValidated);
-        if (lk)
-          return {
-            data: null,
-            error: mergeFail(lk, {
-              phase: 'assignments',
-              indexInPkg: i,
-              entity: 'assignment',
-              entityId: String(a.id),
-              humanLabel: a.title,
-            }, atomic),
+              },
+              atomic
+            ),
           };
       } else {
         if (a.grading_category_ref && syIdSnap) {
@@ -706,13 +835,17 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (chkG)
             return {
               data: null,
-              error: mergeFail(chkG, {
-                phase: 'assignments',
-                indexInPkg: i,
-                entity: 'assignment',
-                entityId: String(a.id),
-                humanLabel: a.title,
-              }, atomic),
+              error: mergeFail(
+                chkG,
+                {
+                  phase: 'assignments',
+                  indexInPkg: i,
+                  entity: 'assignment',
+                  entityId: String(a.id),
+                  humanLabel: a.title,
+                },
+                atomic
+              ),
             };
           const { error: gb } = await supabase
             .from('assignments')
@@ -721,38 +854,50 @@ async function mergeCoursePackageIntoClassroomTs(params: {
           if (gb)
             return {
               data: null,
-              error: mergeFail(handleSupabaseError(gb), {
-                phase: 'assignments',
-                indexInPkg: i,
-                entity: 'assignment',
-                entityId: String(a.id),
-                humanLabel: a.title,
-              }, atomic),
+              error: mergeFail(
+                handleSupabaseError(gb),
+                {
+                  phase: 'assignments',
+                  indexInPkg: i,
+                  entity: 'assignment',
+                  entityId: String(a.id),
+                  humanLabel: a.title,
+                },
+                atomic
+              ),
             };
         }
         const { error: unL } = await unlinkAssignmentFromSection(String(a.id));
         if (unL)
           return {
             data: null,
-            error: mergeFail(unL, {
-              phase: 'assignments',
-              indexInPkg: i,
-              entity: 'assignment',
-              entityId: String(a.id),
-              humanLabel: a.title,
-            }, atomic),
+            error: mergeFail(
+              unL,
+              {
+                phase: 'assignments',
+                indexInPkg: i,
+                entity: 'assignment',
+                entityId: String(a.id),
+                humanLabel: a.title,
+              },
+              atomic
+            ),
           };
         const { error: clr } = await setAssignmentLinkedActivities(String(a.id), null, []);
         if (clr)
           return {
             data: null,
-            error: mergeFail(clr, {
-              phase: 'assignment_links',
-              indexInPkg: i,
-              entity: 'assignment',
-              entityId: String(a.id),
-              humanLabel: a.title,
-            }, atomic),
+            error: mergeFail(
+              clr,
+              {
+                phase: 'assignment_links',
+                indexInPkg: i,
+                entity: 'assignment',
+                entityId: String(a.id),
+                humanLabel: a.title,
+              },
+              atomic
+            ),
           };
       }
 
@@ -765,17 +910,25 @@ async function mergeCoursePackageIntoClassroomTs(params: {
             order_index: l.order_index,
             include_in_ai_context: l.include_in_ai_context,
           }));
-        const { error: lj } = await setAssignmentLinkedActivities(String(a.id), sectionResolved, inputs);
+        const { error: lj } = await setAssignmentLinkedActivities(
+          String(a.id),
+          sectionResolved,
+          inputs
+        );
         if (lj)
           return {
             data: null,
-            error: mergeFail(lj, {
-              phase: 'assignment_links',
-              indexInPkg: i,
-              entity: 'assignment',
-              entityId: String(a.id),
-              humanLabel: a.title,
-            }, atomic),
+            error: mergeFail(
+              lj,
+              {
+                phase: 'assignment_links',
+                indexInPkg: i,
+                entity: 'assignment',
+                entityId: String(a.id),
+                humanLabel: a.title,
+              },
+              atomic
+            ),
           };
       }
     }
@@ -789,49 +942,62 @@ async function mergeCoursePackageIntoClassroomTs(params: {
         if (!secDb) {
           return {
             data: null,
-            error: mergeFail('Could not resolve section for module flow.', {
-              phase: 'module_flow',
-              indexInPkg: si,
-              entity: 'section',
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              'Could not resolve section for module flow.',
+              {
+                phase: 'module_flow',
+                indexInPkg: si,
+                entity: 'section',
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
         }
         const rawSteps = flows[si] ?? [];
-        const steps: FlowStepInput[] = rawSteps.map((st: CoursePackageModuleFlowStepV2, ord: number) => {
-          if (st.step_kind === 'resource') {
+        const steps: FlowStepInput[] = rawSteps.map(
+          (st: CoursePackageModuleFlowStepV2, ord: number) => {
+            if (st.step_kind === 'resource') {
+              return {
+                order_index: ord,
+                step_kind: 'resource' as const,
+                activity_list_id: st.activity_ref ?? null,
+                assignment_id: null,
+              };
+            }
             return {
               order_index: ord,
-              step_kind: 'resource' as const,
-              activity_list_id: st.activity_ref ?? null,
-              assignment_id: null,
+              step_kind: 'assignment' as const,
+              activity_list_id: null,
+              assignment_id: st.assignment_ref ?? null,
             };
           }
-          return {
-            order_index: ord,
-            step_kind: 'assignment' as const,
-            activity_list_id: null,
-            assignment_id: st.assignment_ref ?? null,
-          };
-        });
+        );
         const { error: rf } = await replaceModuleFlowSteps(secDb, steps);
         if (rf)
           return {
             data: null,
-            error: mergeFail(rf, {
-              phase: 'module_flow',
-              indexInPkg: si,
-              entity: 'flow_step',
-              entityId: secDb,
-              humanLabel: sectionHumanLabel(sec, si),
-            }, atomic),
+            error: mergeFail(
+              rf,
+              {
+                phase: 'module_flow',
+                indexInPkg: si,
+                entity: 'flow_step',
+                entityId: secDb,
+                humanLabel: sectionHumanLabel(sec, si),
+              },
+              atomic
+            ),
           };
       }
     }
 
     return { data: { classroomId }, error: null };
   } catch (e) {
-    return { data: null, error: mergeFail(handleSupabaseError(e), { phase: 'module_flow' }, atomic) };
+    return {
+      data: null,
+      error: mergeFail(handleSupabaseError(e), { phase: 'module_flow' }, atomic),
+    };
   }
 }
 

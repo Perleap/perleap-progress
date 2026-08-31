@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import type { ReleaseMode } from '@/types/syllabus';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -8,14 +9,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { ReleaseMode } from '@/types/syllabus';
 
-const RELEASE_MODES: ReleaseMode[] = [
-  'all_at_once',
-  'sequential',
-  'date_based',
-  'manual',
-];
+const RELEASE_MODES: ReleaseMode[] = ['all_at_once', 'sequential', 'date_based', 'manual'];
 
 interface ReleaseModeSelectProps {
   value: ReleaseMode;
@@ -27,7 +22,7 @@ interface ReleaseModeSelectProps {
   isRTL?: boolean;
 }
 
-export function ReleaseModeSelect({
+export const ReleaseModeSelect = ({
   value,
   onChange,
   id,
@@ -35,23 +30,18 @@ export function ReleaseModeSelect({
   triggerClassName,
   label,
   isRTL,
-}: ReleaseModeSelectProps) {
+}: ReleaseModeSelectProps) => {
   const { t } = useTranslation();
   return (
     <div className={cn('space-y-1.5', className)}>
       {label ? (
-        <Label
-          htmlFor={id}
-          className={cn('text-sm font-medium', isRTL && 'block text-end')}
-        >
+        <Label htmlFor={id} className={cn('text-sm font-medium', isRTL && 'block text-end')}>
           {label}
         </Label>
       ) : null}
       <Select value={value} onValueChange={(v) => onChange(v as ReleaseMode)}>
         <SelectTrigger id={id} className={cn('rounded-lg', triggerClassName)}>
-          <SelectValue>
-            {t(`syllabus.releaseMode.${value}`, value)}
-          </SelectValue>
+          <SelectValue>{t(`syllabus.releaseMode.${value}`, value)}</SelectValue>
         </SelectTrigger>
         <SelectContent className="rounded-xl">
           {RELEASE_MODES.map((mode) => (
@@ -68,4 +58,4 @@ export function ReleaseModeSelect({
       </Select>
     </div>
   );
-}
+};

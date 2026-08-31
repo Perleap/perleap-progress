@@ -1,13 +1,13 @@
+import { Users, Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Calendar } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
-import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
-import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
 import type { EnrolledStudent } from '@/types/models';
+import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
+import { useStaggerAnimation } from '@/hooks/useGsapAnimations';
+import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
 
 export type TeacherClassroomStudentsSectionProps = {
   classroomId: string;
@@ -16,11 +16,11 @@ export type TeacherClassroomStudentsSectionProps = {
   isLoading?: boolean;
 };
 
-export function TeacherClassroomStudentsSection({
+export const TeacherClassroomStudentsSection = ({
   classroomId,
   isRTL,
   students,
-}: TeacherClassroomStudentsSectionProps) {
+}: TeacherClassroomStudentsSectionProps) => {
   const { t } = useTranslation();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedStudentName, setSelectedStudentName] = useState<string | undefined>(undefined);
@@ -56,17 +56,23 @@ export function TeacherClassroomStudentsSection({
                 <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
                   <Users className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground">{t('classroomDetail.studentsTab.noStudents')}</p>
+                <p className="text-muted-foreground">
+                  {t('classroomDetail.studentsTab.noStudents')}
+                </p>
               </div>
             ) : (
-              <div ref={studentsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                ref={studentsRef}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              >
                 {students.map((enrollment) => {
-                  const hasName = enrollment.student_profiles?.full_name;
-                  const displayName = hasName
-                    ? enrollment.student_profiles!.full_name
+                  const fullName = enrollment.student_profiles?.full_name;
+                  const hasName = Boolean(fullName);
+                  const displayName = fullName
+                    ? fullName
                     : t('classroomDetail.studentsTab.studentIncomplete');
-                  const initials = hasName
-                    ? enrollment.student_profiles!.full_name
+                  const initials = fullName
+                    ? fullName
                         .split(' ')
                         .map((n) => n[0])
                         .join('')
@@ -79,9 +85,9 @@ export function TeacherClassroomStudentsSection({
                       className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors bg-card/30 cursor-pointer"
                       onClick={() => {
                         setSelectedStudentId(
-                          enrollment.student_profiles?.user_id || enrollment.student_id,
+                          enrollment.student_profiles?.user_id || enrollment.student_id
                         );
-                        setSelectedStudentName(enrollment.student_profiles?.full_name || undefined);
+                        setSelectedStudentName(enrollment.student_profiles?.full_name ?? undefined);
                       }}
                     >
                       <Avatar className="h-12 w-12 border-2 border-card shadow-sm">
@@ -92,7 +98,9 @@ export function TeacherClassroomStudentsSection({
                             alt={displayName}
                           />
                         )}
-                        <AvatarFallback className="bg-primary/10 text-primary">{initials}</AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {initials}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <p
@@ -128,4 +136,4 @@ export function TeacherClassroomStudentsSection({
       />
     </>
   );
-}
+};

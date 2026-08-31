@@ -1,14 +1,14 @@
-import { useState } from 'react';
 import { ChevronDown, HelpCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { DbAssignmentType } from '@/types/models';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
 import { getAssignmentTypeTutorial } from '@/lib/assignmentTypeIntroCopy';
+import { clipboardZoneProps } from '@/lib/clipboardSourceResolution';
 import { cn } from '@/lib/utils';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
-import type { DbAssignmentType } from '@/types/models';
 
 type StudentFacingTaskSectionProps = {
   assignmentType: DbAssignmentType;
@@ -21,7 +21,7 @@ type StudentFacingTaskSectionProps = {
   clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 };
 
-function TaskHelpTooltip({
+const TaskHelpTooltip = ({
   tutorial,
   isRTL,
   ariaLabel,
@@ -31,7 +31,7 @@ function TaskHelpTooltip({
   isRTL: boolean;
   ariaLabel: string;
   heading: string;
-}) {
+}) => {
   return (
     <Tooltip>
       <TooltipTrigger
@@ -55,9 +55,9 @@ function TaskHelpTooltip({
       </TooltipContent>
     </Tooltip>
   );
-}
+};
 
-function TaskBody({
+const TaskBody = ({
   taskLoading,
   trimmedTask,
   isRTL,
@@ -69,7 +69,7 @@ function TaskBody({
   isRTL: boolean;
   t: (key: string) => string;
   clipboardTracking?: AssignmentClipboardTrackingCallbacks;
-}) {
+}) => {
   if (taskLoading) {
     return (
       <p className="flex items-center gap-2 text-muted-foreground" dir="auto">
@@ -84,7 +84,7 @@ function TaskBody({
       <p
         className={cn(
           'whitespace-pre-wrap leading-relaxed text-foreground',
-          isRTL ? 'text-end' : 'text-start',
+          isRTL ? 'text-end' : 'text-start'
         )}
         dir="auto"
         {...clipboardZoneProps({ sourceKind: 'student_facing_task' })}
@@ -109,9 +109,9 @@ function TaskBody({
       {t('assignmentDetail.studentTaskNotSetYet')}
     </p>
   );
-}
+};
 
-export function StudentFacingTaskSection({
+export const StudentFacingTaskSection = ({
   assignmentType,
   taskText,
   taskLoading = false,
@@ -119,7 +119,7 @@ export function StudentFacingTaskSection({
   variant = 'collapsible',
   showHelp = true,
   clipboardTracking,
-}: StudentFacingTaskSectionProps) {
+}: StudentFacingTaskSectionProps) => {
   const { t, i18n } = useTranslation();
   const { isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -136,7 +136,9 @@ export function StudentFacingTaskSection({
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <div className={cn('flex items-center gap-1.5', isRTL && 'flex-row-reverse justify-end')}>
-          <h3 className="text-sm font-medium text-foreground">{t('assignmentDetail.studentTaskTitle')}</h3>
+          <h3 className="text-sm font-medium text-foreground">
+            {t('assignmentDetail.studentTaskTitle')}
+          </h3>
           {showHelp ? (
             <TaskHelpTooltip
               tutorial={tutorial}
@@ -163,7 +165,7 @@ export function StudentFacingTaskSection({
       onOpenChange={setOpen}
       className={cn(
         'overflow-hidden rounded-lg border border-border/60 bg-muted/5 text-sm',
-        className,
+        className
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -171,7 +173,7 @@ export function StudentFacingTaskSection({
         <CollapsibleTrigger
           className={cn(
             'flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2.5 text-start outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring/50',
-            isRTL ? 'text-end' : 'text-start',
+            isRTL ? 'text-end' : 'text-start'
           )}
         >
           <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
@@ -180,7 +182,7 @@ export function StudentFacingTaskSection({
           <ChevronDown
             className={cn(
               'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
-              open && 'rotate-180',
+              open && 'rotate-180'
             )}
             aria-hidden
           />
@@ -207,4 +209,4 @@ export function StudentFacingTaskSection({
       </CollapsibleContent>
     </Collapsible>
   );
-}
+};

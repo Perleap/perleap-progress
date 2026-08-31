@@ -1,12 +1,12 @@
-import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import type { AnalyticsModuleFilter } from '@/lib/analyticsScope';
+import type { PilotCohortSummary, PilotParticipantRow } from '@/lib/pilotReport/types';
+import { supabase } from '@/integrations/supabase/client';
 import {
   computePilotReportDataHash,
   type PilotReportAnalyticsData,
 } from '@/lib/pilotReport/computePilotReportDataHash';
 import { generatePilotReport } from '@/lib/pilotReport/generatePilotReport';
-import type { PilotCohortSummary, PilotParticipantRow } from '@/lib/pilotReport/types';
 
 export type PilotReportSnapshotStatus = 'pending' | 'ready' | 'failed';
 
@@ -34,7 +34,7 @@ function scopeKey(
   classroomId: string,
   scopeModule: string,
   scopeAssignment: string,
-  language: string,
+  language: string
 ): string {
   return `${classroomId}:${scopeModule}:${scopeAssignment}:${language}`;
 }
@@ -101,7 +101,7 @@ function shouldDeferToPending(snapshot: PilotReportSnapshot, key: string): boole
 
 /** Report-page helper: wait briefly for cross-tab generation, then allow takeover. */
 export function shouldWaitForPendingSnapshot(
-  snapshot: PilotReportSnapshot | null | undefined,
+  snapshot: PilotReportSnapshot | null | undefined
 ): boolean {
   if (!snapshot || snapshot.status !== 'pending' || !snapshot.startedAt) return false;
   const age = Date.now() - new Date(snapshot.startedAt).getTime();
@@ -152,7 +152,7 @@ export async function upsertPilotReportPending(input: {
         started_at: now,
         generated_at: null,
       },
-      { onConflict: 'classroom_id,scope_module,scope_assignment,language' },
+      { onConflict: 'classroom_id,scope_module,scope_assignment,language' }
     )
     .select('*')
     .single();
@@ -186,7 +186,7 @@ export async function savePilotReportReady(input: {
         error_message: null,
         generated_at: now,
       },
-      { onConflict: 'classroom_id,scope_module,scope_assignment,language' },
+      { onConflict: 'classroom_id,scope_module,scope_assignment,language' }
     )
     .select('*')
     .single();
@@ -219,7 +219,7 @@ export async function savePilotReportFailed(input: {
         error_message: input.errorMessage,
         generated_at: new Date().toISOString(),
       },
-      { onConflict: 'classroom_id,scope_module,scope_assignment,language' },
+      { onConflict: 'classroom_id,scope_module,scope_assignment,language' }
     )
     .select('*')
     .single();
@@ -271,7 +271,9 @@ export type EnsurePilotReportSnapshotInput = {
   force?: boolean;
 };
 
-async function runEnsure(input: EnsurePilotReportSnapshotInput): Promise<PilotReportSnapshot | null> {
+async function runEnsure(
+  input: EnsurePilotReportSnapshotInput
+): Promise<PilotReportSnapshot | null> {
   const dataHash = computePilotReportDataHash({
     analyticsData: input.analyticsData,
     scopeModule: input.scopeModule,
@@ -341,14 +343,9 @@ async function runEnsure(input: EnsurePilotReportSnapshotInput): Promise<PilotRe
  * Warming only runs while the caller tab stays open (client orchestration).
  */
 export async function ensurePilotReportSnapshot(
-  input: EnsurePilotReportSnapshotInput,
+  input: EnsurePilotReportSnapshotInput
 ): Promise<PilotReportSnapshot | null> {
-  const key = scopeKey(
-    input.classroomId,
-    input.scopeModule,
-    input.scopeAssignment,
-    input.language,
-  );
+  const key = scopeKey(input.classroomId, input.scopeModule, input.scopeAssignment, input.language);
 
   const dataHash = computePilotReportDataHash({
     analyticsData: input.analyticsData,

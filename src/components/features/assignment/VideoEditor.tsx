@@ -1,9 +1,3 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Loader2,
   Scissors,
@@ -18,7 +12,11 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { CropOverlay, DEFAULT_CROP, type CropPercent, type CropPreset } from './CropOverlay';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CropOverlay, DEFAULT_CROP, type CropPercent, type CropPreset } from './CropOverlay';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
 export interface TextOverlayItem {
@@ -38,7 +38,16 @@ export interface TextOverlayItem {
   color: string;
 }
 
-const TEXT_COLORS = ['#ffffff', '#000000', '#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#f97316'];
+const TEXT_COLORS = [
+  '#ffffff',
+  '#000000',
+  '#ef4444',
+  '#22c55e',
+  '#3b82f6',
+  '#eab308',
+  '#a855f7',
+  '#f97316',
+];
 const SPEED_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 /** Minimum gap between trim in/out (seconds); ~1 frame at 30fps */
 const TRIM_MIN_GAP = 1 / 30;
@@ -70,8 +79,10 @@ function pickRecorderMimeTypeForStream(stream: MediaStream): string {
   if (typeof MediaRecorder === 'undefined') return 'video/webm';
   const hasAudio = stream.getAudioTracks().length > 0;
   if (hasAudio) {
-    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) return 'video/webm;codecs=vp9,opus';
-    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) return 'video/webm;codecs=vp8,opus';
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus'))
+      return 'video/webm;codecs=vp9,opus';
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus'))
+      return 'video/webm;codecs=vp8,opus';
   }
   return pickExportMimeType();
 }
@@ -220,7 +231,7 @@ interface VideoEditorProps {
   onDiscard: () => void;
 }
 
-export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
+export const VideoEditor = ({ videoUrl, onSave, onDiscard }: VideoEditorProps) => {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewLoopRef = useRef<number>(0);
@@ -571,12 +582,12 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
           setPlayhead(t);
         }
       } else if (mode === 'trimIn') {
-        setTrimRange(([start, end]) => {
+        setTrimRange(([_start, end]) => {
           const ns = Math.min(t, end - TRIM_MIN_GAP);
           return [Math.max(0, ns), end];
         });
       } else if (mode === 'trimOut') {
-        setTrimRange(([start, end]) => {
+        setTrimRange(([start, _end]) => {
           const ne = Math.max(t, start + TRIM_MIN_GAP);
           return [start, Math.min(duration, ne)];
         });
@@ -701,7 +712,10 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
         <video
           ref={videoRef}
           src={videoUrl}
-          className={cn('absolute inset-0 w-full h-full object-contain', activeTool === 'crop' && 'pointer-events-none')}
+          className={cn(
+            'absolute inset-0 w-full h-full object-contain',
+            activeTool === 'crop' && 'pointer-events-none'
+          )}
           playsInline
           onLoadedMetadata={onVideoMeta}
         />
@@ -744,10 +758,16 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
           className="gap-1.5"
           onClick={togglePlay}
           disabled={exporting || previewBusy}
-          aria-label={playing ? t('assignmentDetail.presentation.editor.pause') : t('assignmentDetail.presentation.editor.play')}
+          aria-label={
+            playing
+              ? t('assignmentDetail.presentation.editor.pause')
+              : t('assignmentDetail.presentation.editor.play')
+          }
         >
           {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          {playing ? t('assignmentDetail.presentation.editor.pause') : t('assignmentDetail.presentation.editor.play')}
+          {playing
+            ? t('assignmentDetail.presentation.editor.pause')
+            : t('assignmentDetail.presentation.editor.play')}
         </Button>
         <Button
           type="button"
@@ -768,7 +788,11 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
           onClick={() => void handlePreviewExport()}
           disabled={exporting || previewBusy}
         >
-          {previewBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+          {previewBusy ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Film className="h-4 w-4" />
+          )}
           {previewBusy
             ? `${Math.round(previewProgress * 100)}%`
             : t('assignmentDetail.presentation.editor.previewExport')}
@@ -787,7 +811,9 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
 
       <div className="space-y-2">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span className={cn(showTrimChrome && 'font-medium text-foreground')}>{fmt(trimRange[0])}</span>
+          <span className={cn(showTrimChrome && 'font-medium text-foreground')}>
+            {fmt(trimRange[0])}
+          </span>
           <span
             className={cn(
               'tabular-nums',
@@ -796,7 +822,9 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
           >
             {fmt(playhead)} / {fmt(duration)}
           </span>
-          <span className={cn(showTrimChrome && 'font-medium text-foreground')}>{fmt(trimRange[1])}</span>
+          <span className={cn(showTrimChrome && 'font-medium text-foreground')}>
+            {fmt(trimRange[1])}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
@@ -849,11 +877,17 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
                   <>
                     <div
                       className="pointer-events-none absolute inset-y-0 z-[1] w-px bg-foreground"
-                      style={{ left: `${(trimRange[0] / duration) * 100}%`, transform: 'translateX(-50%)' }}
+                      style={{
+                        left: `${(trimRange[0] / duration) * 100}%`,
+                        transform: 'translateX(-50%)',
+                      }}
                     />
                     <div
                       className="pointer-events-none absolute inset-y-0 z-[1] w-px bg-foreground"
-                      style={{ left: `${(trimRange[1] / duration) * 100}%`, transform: 'translateX(-50%)' }}
+                      style={{
+                        left: `${(trimRange[1] / duration) * 100}%`,
+                        transform: 'translateX(-50%)',
+                      }}
                     />
                   </>
                 )}
@@ -956,16 +990,22 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
           {textOverlays.map((o) => (
             <div key={o.id} className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">{t('assignmentDetail.presentation.editor.textLabel')}</Label>
+                <Label className="text-xs">
+                  {t('assignmentDetail.presentation.editor.textLabel')}
+                </Label>
                 <Input
                   value={o.text}
                   onChange={(e) =>
-                    setTextOverlays((prev) => prev.map((x) => (x.id === o.id ? { ...x, text: e.target.value } : x)))
+                    setTextOverlays((prev) =>
+                      prev.map((x) => (x.id === o.id ? { ...x, text: e.target.value } : x))
+                    )
                   }
                 />
               </div>
               <div className="w-full sm:w-36 space-y-1">
-                <Label className="text-xs">{t('assignmentDetail.presentation.editor.fontSize')}</Label>
+                <Label className="text-xs">
+                  {t('assignmentDetail.presentation.editor.fontSize')}
+                </Label>
                 <Slider
                   value={[o.fontSize]}
                   min={12}
@@ -984,15 +1024,25 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
                   <button
                     key={c}
                     type="button"
-                    className={cn('h-7 w-7 rounded-full border-2', o.color === c && 'ring-2 ring-primary')}
+                    className={cn(
+                      'h-7 w-7 rounded-full border-2',
+                      o.color === c && 'ring-2 ring-primary'
+                    )}
                     style={{ backgroundColor: c }}
                     onClick={() =>
-                      setTextOverlays((prev) => prev.map((x) => (x.id === o.id ? { ...x, color: c } : x)))
+                      setTextOverlays((prev) =>
+                        prev.map((x) => (x.id === o.id ? { ...x, color: c } : x))
+                      )
                     }
                   />
                 ))}
               </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setTextOverlays((p) => p.filter((x) => x.id !== o.id))}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setTextOverlays((p) => p.filter((x) => x.id !== o.id))}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1001,14 +1051,24 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
       )}
 
       <div className="flex flex-wrap gap-2 justify-end">
-        <Button type="button" variant="outline" onClick={onDiscard} disabled={exporting || previewBusy}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onDiscard}
+          disabled={exporting || previewBusy}
+        >
           {t('assignmentDetail.presentation.editor.discard')}
         </Button>
-        <Button type="button" onClick={() => void handleExport()} disabled={exporting || previewBusy}>
+        <Button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={exporting || previewBusy}
+        >
           {exporting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              {t('assignmentDetail.presentation.editor.exporting')} {Math.round(exportProgress * 100)}%
+              {t('assignmentDetail.presentation.editor.exporting')}{' '}
+              {Math.round(exportProgress * 100)}%
             </>
           ) : (
             <>
@@ -1023,7 +1083,9 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
         <DialogContent className="sm:max-w-2xl" dir="auto">
           <DialogHeader>
             <DialogTitle>{t('assignmentDetail.presentation.editor.previewExport')}</DialogTitle>
-            <DialogDescription>{t('assignmentDetail.presentation.editor.previewExportDescription')}</DialogDescription>
+            <DialogDescription>
+              {t('assignmentDetail.presentation.editor.previewExportDescription')}
+            </DialogDescription>
           </DialogHeader>
           {previewExportUrl ? (
             <div className="relative aspect-video w-full overflow-hidden rounded-md bg-black">
@@ -1039,4 +1101,4 @@ export function VideoEditor({ videoUrl, onSave, onDiscard }: VideoEditorProps) {
       </Dialog>
     </div>
   );
-}
+};

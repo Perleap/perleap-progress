@@ -30,7 +30,7 @@ function describeArc(
   cy: number,
   r: number,
   startAngle: number,
-  endAngle: number,
+  endAngle: number
 ): string {
   const start = polarToCartesian(cx, cy, r, endAngle);
   const end = polarToCartesian(cx, cy, r, startAngle);
@@ -40,13 +40,7 @@ function describeArc(
 
 /** Self-contained SVG pie/donut chart for offline HTML export. */
 export function buildPieChartSvg(options: BuildPieChartSvgOptions): string {
-  const {
-    segments,
-    width = 820,
-    height = 280,
-    ariaLabel = 'Pie chart',
-    centerLabel,
-  } = options;
+  const { segments, width = 820, height = 280, ariaLabel = 'Pie chart', centerLabel } = options;
 
   const nonZero = segments.filter((s) => s.value > 0);
   const total = nonZero.reduce((sum, s) => sum + s.value, 0);
@@ -62,10 +56,7 @@ export function buildPieChartSvg(options: BuildPieChartSvgOptions): string {
   const lineHeight = 22;
 
   const legendLabels = nonZero.map((seg) => `${seg.label}: ${seg.value}`);
-  const maxLegendTextWidth = Math.max(
-    ...legendLabels.map((label) => label.length * 6.2),
-    72,
-  );
+  const maxLegendTextWidth = Math.max(...legendLabels.map((label) => label.length * 6.2), 72);
   const legendRight = width - padding;
   const swatchX = legendRight - maxLegendTextWidth - swatchGap - swatchWidth;
   const legendStartY = padding + 12;

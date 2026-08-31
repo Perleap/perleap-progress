@@ -1,6 +1,6 @@
-import { exportHtmlBlocksToPdf } from '@/lib/exportHtmlBlocksToPdf';
 import { buildPilotReportHtml } from './buildPilotReportHtml';
 import type { PilotReportData } from './types';
+import { exportHtmlBlocksToPdf } from '@/lib/exportHtmlBlocksToPdf';
 
 export {
   A4_WIDTH_MM,
@@ -20,7 +20,7 @@ export {
 
 export async function exportPilotReportPdf(
   reportData: PilotReportData,
-  filename: string,
+  filename: string
 ): Promise<void> {
   const html = buildPilotReportHtml(reportData);
   await exportHtmlBlocksToPdf(html, filename);

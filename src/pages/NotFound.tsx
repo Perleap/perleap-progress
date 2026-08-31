@@ -1,7 +1,7 @@
+import { ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { useNavigateBack } from '@/hooks/useNavigateBack';
 
 const NotFound = () => {

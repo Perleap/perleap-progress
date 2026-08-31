@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { ClassroomAnalytics } from '@/components/ClassroomAnalytics';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ClassroomAnalytics } from '@/components/features/analytics/ClassroomAnalytics';
 import { analyticsKeys, pilotReportKeys, useClassroom } from '@/hooks/queries';
 import { invalidatePilotReportSnapshots } from '@/services/pilotReportCacheService';
 
@@ -12,11 +12,11 @@ export type TeacherClassroomAnalyticsSectionProps = {
   isRTL: boolean;
 };
 
-export function TeacherClassroomAnalyticsSection({
+export const TeacherClassroomAnalyticsSection = ({
   classroomId,
   classroomName,
   isRTL,
-}: TeacherClassroomAnalyticsSectionProps) {
+}: TeacherClassroomAnalyticsSectionProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { refetch: refetchClassroom } = useClassroom(classroomId);
@@ -54,4 +54,4 @@ export function TeacherClassroomAnalyticsSection({
       />
     </div>
   );
-}
+};

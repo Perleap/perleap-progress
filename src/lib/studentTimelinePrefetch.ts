@@ -1,20 +1,23 @@
-import type { QueryClient } from '@tanstack/react-query';
+import type { AssignmentRow } from '@/lib/moduleFlow';
 import type { Assignment } from '@/types';
 import type { ModuleFlowStep, SectionResource } from '@/types/syllabus';
+import type { QueryClient } from '@tanstack/react-query';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import {
   assignmentFlowCompleteKeys,
   moduleFlowKeys,
   studentFlowProgressKeys,
 } from '@/hooks/queries/useModuleFlowQueries';
-import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
 import { syllabusKeys } from '@/hooks/queries/useSyllabusQueries';
-import type { AssignmentRow } from '@/lib/moduleFlow';
-import { deriveStudentTimelineFlowPrefetchIndices } from '@/lib/studentTimelineFlowDerive';
-import { getAssignmentFlowProgressMaps, getStudentModuleFlowProgress } from '@/services/moduleFlowService';
 import {
   STUDENT_TIMELINE_CACHE_GC_MS,
   STUDENT_TIMELINE_CACHE_STALE_MS,
 } from '@/lib/studentTimelineCache';
+import { deriveStudentTimelineFlowPrefetchIndices } from '@/lib/studentTimelineFlowDerive';
+import {
+  getAssignmentFlowProgressMaps,
+  getStudentModuleFlowProgress,
+} from '@/services/moduleFlowService';
 
 /**
  * After syllabus + per-class assignments + bulk module-flow are in the React Query cache,
@@ -24,7 +27,7 @@ import {
 export async function prefetchStudentTimelineFlowProgressCaches(
   queryClient: QueryClient,
   classroomId: string,
-  studentId: string,
+  studentId: string
 ): Promise<void> {
   const syllabus = queryClient.getQueryData<{
     status?: string;
@@ -32,15 +35,12 @@ export async function prefetchStudentTimelineFlowProgressCaches(
     section_resources?: Record<string, SectionResource[]>;
   }>(syllabusKeys.byClassroom(classroomId));
 
-  if (
-    syllabus?.status !== 'published' ||
-    !syllabus.sections?.length
-  ) {
+  if (syllabus?.status !== 'published' || !syllabus.sections?.length) {
     return;
   }
 
   const assigns = queryClient.getQueryData<Assignment[]>(
-    assignmentKeys.listByClassroom(classroomId, studentId),
+    assignmentKeys.listByClassroom(classroomId, studentId)
   );
 
   const sectionIds = syllabus.sections.map((s) => s.id);
@@ -82,7 +82,7 @@ export async function prefetchStudentTimelineFlowProgressCaches(
           staleTime: STUDENT_TIMELINE_CACHE_STALE_MS,
           gcTime: STUDENT_TIMELINE_CACHE_GC_MS,
         })
-        .then(() => {}),
+        .then(() => {})
     );
   }
 
@@ -94,7 +94,7 @@ export async function prefetchStudentTimelineFlowProgressCaches(
           queryFn: async () => {
             const { data, error } = await getAssignmentFlowProgressMaps(
               sortedJoin.split(','),
-              studentId,
+              studentId
             );
             if (error) throw error;
             return data;
@@ -102,7 +102,7 @@ export async function prefetchStudentTimelineFlowProgressCaches(
           staleTime: STUDENT_TIMELINE_CACHE_STALE_MS,
           gcTime: STUDENT_TIMELINE_CACHE_GC_MS,
         })
-        .then(() => {}),
+        .then(() => {})
     );
   }
 

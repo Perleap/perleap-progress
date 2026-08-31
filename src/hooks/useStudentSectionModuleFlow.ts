@@ -3,10 +3,9 @@
  */
 
 import { useMemo } from 'react';
-import {
-  useSyllabus,
-  useClassroomAssignments,
-} from '@/hooks/queries';
+import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
+import type { ModuleFlowStep } from '@/types/syllabus';
+import { useSyllabus, useClassroomAssignments } from '@/hooks/queries';
 import {
   useAssignmentFlowProgressMaps,
   useModuleFlowSteps,
@@ -18,31 +17,29 @@ import {
   studentModuleFlowStepOptions,
   type ComputedFlowItem,
 } from '@/lib/moduleFlow';
-import type { StudentFlowProgressContext } from '@/lib/moduleFlowStudent';
-import type { ModuleFlowStep } from '@/types/syllabus';
 
 export function useStudentSectionModuleFlow(
   classroomId: string | undefined,
   sectionId: string | undefined,
-  studentId: string | undefined,
+  studentId: string | undefined
 ) {
   const { data: syllabus, isLoading: syllabusLoading } = useSyllabus(classroomId);
   const { data: assignments = [] } = useClassroomAssignments(classroomId);
   const { data: flowSteps = [], isLoading: flowLoading } = useModuleFlowSteps(sectionId);
 
   const sectionResources = useMemo(
-    () => (sectionId ? syllabus?.section_resources?.[sectionId] ?? [] : []),
-    [syllabus?.section_resources, sectionId],
+    () => (sectionId ? (syllabus?.section_resources?.[sectionId] ?? []) : []),
+    [syllabus?.section_resources, sectionId]
   );
 
   const studentFlowOpts = useMemo(
     () => studentModuleFlowStepOptions(assignments as Array<{ id: string; type?: string | null }>),
-    [assignments],
+    [assignments]
   );
 
   const orderedPersisted = useMemo(
     () => getOrderedActivityCenterFlowSteps(flowSteps, sectionResources, studentFlowOpts),
-    [flowSteps, sectionResources, studentFlowOpts],
+    [flowSteps, sectionResources, studentFlowOpts]
   );
 
   const computed = useMemo(
@@ -57,10 +54,10 @@ export function useStudentSectionModuleFlow(
               due_at?: string | null;
               type?: string | null;
             }[],
-            studentFlowOpts,
+            studentFlowOpts
           )
         : [],
-    [sectionId, sectionResources, assignments],
+    [sectionId, sectionResources, assignments, studentFlowOpts]
   );
 
   const usePersistedFlow = orderedPersisted.length > 0;
@@ -83,20 +80,21 @@ export function useStudentSectionModuleFlow(
   const { data: flowMaps, isLoading: assignmentDoneLoading } = useAssignmentFlowProgressMaps(
     assignmentIdsInSection,
     studentId,
-    !!studentId && !!sectionId,
+    !!studentId && !!sectionId
   );
-  const assignmentDoneMap = flowMaps?.completedMap ?? {};
-  const assignmentHasSubmissionRowMap = flowMaps?.hasAnyRowMap ?? {};
+  const assignmentDoneMap = useMemo(() => flowMaps?.completedMap ?? {}, [flowMaps?.completedMap]);
+  const assignmentHasSubmissionRowMap = useMemo(
+    () => flowMaps?.hasAnyRowMap ?? {},
+    [flowMaps?.hasAnyRowMap]
+  );
 
   const ctx: StudentFlowProgressContext = useMemo(
     () => ({ progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap }),
-    [progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap],
+    [progressByStep, assignmentDoneMap, assignmentHasSubmissionRowMap]
   );
 
   const loading =
-    !!classroomId &&
-    !!sectionId &&
-    (syllabusLoading || flowLoading || assignmentDoneLoading);
+    !!classroomId && !!sectionId && (syllabusLoading || flowLoading || assignmentDoneLoading);
 
   return {
     loading,

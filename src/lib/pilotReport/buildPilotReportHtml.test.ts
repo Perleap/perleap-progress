@@ -5,7 +5,7 @@ import { basePilotReport, assessedParticipant, failedParticipant } from './testF
 describe('escapeHtml', () => {
   it('escapes HTML special characters', () => {
     expect(escapeHtml('<script>alert("x") & more</script>')).toBe(
-      '&lt;script&gt;alert(&quot;x&quot;) &amp; more&lt;/script&gt;',
+      '&lt;script&gt;alert(&quot;x&quot;) &amp; more&lt;/script&gt;'
     );
   });
 });
@@ -48,7 +48,8 @@ describe('buildPilotReportHtml', () => {
 
   it('includes a readiness pie chart in the executive summary', () => {
     const html = buildPilotReportHtml(basePilotReport);
-    const execSection = html.split('Executive Summary')[1]?.split('Appendix — Participant Summaries')[0] ?? '';
+    const execSection =
+      html.split('Executive Summary')[1]?.split('Appendix — Participant Summaries')[0] ?? '';
     expect(execSection).toContain('<svg');
     expect(execSection).toContain('viewBox="0 0 820 280"');
     expect(html).not.toContain('Cohort Capability Snapshot');

@@ -4,10 +4,14 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import i18n from 'i18next';
 import { toast } from 'sonner';
+import { assignmentFlowCompleteKeys, assignmentSubmittedFlagsKeys } from './useModuleFlowQueries';
+import { notificationKeys } from './useNotificationQueries';
+import type { ChatRequest, FeedbackRequest } from '@/types';
 import { useAuth } from '@/contexts/useAuth';
 import { createNotification } from '@/lib/notificationService';
-import i18n from 'i18next';
+import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import {
   getStudentSubmissionContext,
   getSubmissionById,
@@ -26,16 +30,13 @@ import {
   createSubmissionTeacherPrivateNoteEntry,
   teacherResetStudentAssignmentProgress,
 } from '@/services/submissionService';
-import type { ChatRequest, FeedbackRequest } from '@/types';
-import { assignmentFlowCompleteKeys, assignmentSubmittedFlagsKeys } from './useModuleFlowQueries';
-import { notificationKeys } from './useNotificationQueries';
-import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 
 // Query Keys
 export const submissionKeys = {
   all: ['submissions'] as const,
   lists: () => [...submissionKeys.all, 'list'] as const,
-  listByClassroom: (classroomId: string) => [...submissionKeys.lists(), 'classroom', classroomId] as const,
+  listByClassroom: (classroomId: string) =>
+    [...submissionKeys.lists(), 'classroom', classroomId] as const,
   details: () => [...submissionKeys.all, 'detail'] as const,
   detail: (id: string) => [...submissionKeys.details(), id] as const,
   forAssignment: (assignmentId: string, studentId: string) =>
@@ -237,7 +238,7 @@ export const useTeacherConversationMessages = (
 /** Whether a student submission already has chat messages (intro / task-understanding gating). */
 export const useAssignmentConversationHasMessages = (
   submissionId: string | undefined,
-  enabled = true,
+  enabled = true
 ) => {
   return useQuery({
     queryKey: submissionKeys.conversationHasMessages(submissionId || ''),
@@ -255,10 +256,7 @@ export const useAssignmentConversationHasMessages = (
 /**
  * Student-reported assistant sentence flags for a submission (teacher/student RLS).
  */
-export const useTeacherChatSentenceFlags = (
-  submissionId: string | undefined,
-  enabled: boolean
-) => {
+export const useTeacherChatSentenceFlags = (submissionId: string | undefined, enabled: boolean) => {
   return useQuery({
     queryKey: submissionKeys.chatSentenceFlags(submissionId || ''),
     queryFn: async () => {
@@ -275,10 +273,7 @@ export const useTeacherChatSentenceFlags = (
 /**
  * Copy/paste events for a submission (teacher/student RLS).
  */
-export const useTeacherClipboardEvents = (
-  submissionId: string | undefined,
-  enabled: boolean,
-) => {
+export const useTeacherClipboardEvents = (submissionId: string | undefined, enabled: boolean) => {
   return useQuery({
     queryKey: submissionKeys.clipboardEvents(submissionId || ''),
     queryFn: async () => {
@@ -346,7 +341,7 @@ export const useTeacherResetStudentAssignmentProgress = () => {
   return useMutation({
     mutationFn: async (vars: TeacherResetStudentProgressInput) => {
       const { data: newSubmissionId, error } = await teacherResetStudentAssignmentProgress(
-        vars.submissionId,
+        vars.submissionId
       );
       if (error) throw error;
       if (!newSubmissionId) throw new Error('No submission returned');
@@ -364,7 +359,7 @@ export const useTeacherResetStudentAssignmentProgress = () => {
             classroom_id: vars.notify.classroomId,
             assignment_title: vars.notify.assignmentTitle,
           },
-          vars.notify.teacherId ?? undefined,
+          vars.notify.teacherId ?? undefined
         );
       } catch (notifErr) {
         console.error('Failed to notify student of new attempt', notifErr);
@@ -387,11 +382,3 @@ export const useTeacherResetStudentAssignmentProgress = () => {
     },
   });
 };
-
-
-
-
-
-
-
-

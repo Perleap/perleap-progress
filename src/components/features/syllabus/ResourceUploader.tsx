@@ -1,5 +1,3 @@
-import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   DragOverlay,
@@ -13,6 +11,7 @@ import {
   type DraggableAttributes,
   type Modifier,
 } from '@dnd-kit/core';
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   SortableContext,
   arrayMove,
@@ -21,17 +20,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS, type Transform } from '@dnd-kit/utilities';
-import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import {
   Upload,
   FileText,
@@ -46,26 +34,42 @@ import {
   ExternalLink,
   Eye,
 } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import {
-  useUploadResource,
-  useCreateLinkResource,
-  useDeleteResource,
-  useReorderSectionResources,
-} from '@/hooks/queries';
-import {
-  downloadSectionResourceFile,
-  resolveSectionResourceFileUrl,
-} from '@/services/syllabusResourceService';
-import type { SectionResource } from '@/types/syllabus';
-import { formatResourceFileSize, getMaxResourceFileSizeLabel, isResourceFileWithinSizeLimit } from '@/lib/resourceUploadValidation';
-import { Progress, ProgressValue } from '@/components/ui/progress';
 import {
   syllabusRowActionClass,
   syllabusRowDestructiveActionClass,
   syllabusRowDragHandleClass,
 } from './syllabusRowActionStyles';
 import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
+import type { SectionResource } from '@/types/syllabus';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Progress, ProgressValue } from '@/components/ui/progress';
+import {
+  useUploadResource,
+  useCreateLinkResource,
+  useDeleteResource,
+  useReorderSectionResources,
+} from '@/hooks/queries';
+import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
+import {
+  formatResourceFileSize,
+  getMaxResourceFileSizeLabel,
+  isResourceFileWithinSizeLimit,
+} from '@/lib/resourceUploadValidation';
+import { cn } from '@/lib/utils';
+import {
+  downloadSectionResourceFile,
+  resolveSectionResourceFileUrl,
+} from '@/services/syllabusResourceService';
 
 interface ResourceUploaderProps {
   sectionId: string;
@@ -114,7 +118,7 @@ function downloadFilenameForResource(resource: SectionResource): string {
 function restrictDragToBoundingRect(
   transform: Transform,
   rect: { top: number; bottom: number; left: number; right: number },
-  boundingRect: DOMRect,
+  boundingRect: DOMRect
 ): Transform {
   const value = { ...transform };
   const bHeight = boundingRect.bottom - boundingRect.top;
@@ -134,7 +138,7 @@ function restrictDragToBoundingRect(
 
 /** Keeps drag preview inside the Resources block (above Module flow). */
 function createRestrictToResourcesSectionModifier(
-  getBoundary: () => DOMRect | undefined,
+  getBoundary: () => DOMRect | undefined
 ): Modifier {
   return ({ transform, draggingNodeRect, overlayNodeRect }) => {
     const rect = overlayNodeRect ?? draggingNodeRect;
@@ -145,7 +149,7 @@ function createRestrictToResourcesSectionModifier(
   };
 }
 
-function SortableResourceRow({
+const SortableResourceRow = ({
   id,
   children,
 }: {
@@ -154,7 +158,7 @@ function SortableResourceRow({
     dragAttributes: DraggableAttributes;
     dragListeners: Record<string, unknown> | undefined;
   }) => ReactNode;
-}) {
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
@@ -168,7 +172,7 @@ function SortableResourceRow({
       {children({ dragAttributes: attributes, dragListeners: listeners })}
     </li>
   );
-}
+};
 
 const RESOURCE_TYPE_I18N_KEYS: Record<string, string> = {
   file: 'syllabus.resources.typeFile',
@@ -191,7 +195,10 @@ export const ResourceUploader = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ fileName: string; percent: number } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{
+    fileName: string;
+    percent: number;
+  } | null>(null);
   const [addMode, setAddMode] = useState<AddMode>('none');
   const [linkTitle, setLinkTitle] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -206,14 +213,14 @@ export const ResourceUploader = ({
 
   const resourcesSig = useMemo(
     () => resources.map((r) => `${r.id}:${r.order_index}`).join('|'),
-    [resources],
+    [resources]
   );
 
   const resourcesRef = useRef(resources);
   resourcesRef.current = resources;
 
   const [ordered, setOrdered] = useState<SectionResource[]>(() =>
-    [...resources].sort((a, b) => a.order_index - b.order_index),
+    [...resources].sort((a, b) => a.order_index - b.order_index)
   );
 
   useEffect(() => {
@@ -223,7 +230,7 @@ export const ResourceUploader = ({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const sortableIds = useMemo(() => ordered.map((r) => r.id), [ordered]);
@@ -232,9 +239,9 @@ export const ResourceUploader = ({
   const restrictToResourcesSectionModifier = useMemo(
     () =>
       createRestrictToResourcesSectionModifier(() =>
-        resourcesSectionElRef.current?.getBoundingClientRect(),
+        resourcesSectionElRef.current?.getBoundingClientRect()
       ),
-    [],
+    []
   );
 
   const clearLinkForm = () => {
@@ -247,7 +254,7 @@ export const ResourceUploader = ({
       const key = RESOURCE_TYPE_I18N_KEYS[type] ?? 'syllabus.resources.typeFile';
       return t(key);
     },
-    [t],
+    [t]
   );
 
   const handleFiles = useCallback(
@@ -260,10 +267,12 @@ export const ResourceUploader = ({
 
       for (const file of fileArray) {
         if (!isResourceFileWithinSizeLimit(file)) {
-          toast.error(t('syllabus.resources.fileTooLarge', {
-            name: file.name,
-            maxSize: getMaxResourceFileSizeLabel(),
-          }));
+          toast.error(
+            t('syllabus.resources.fileTooLarge', {
+              name: file.name,
+              maxSize: getMaxResourceFileSizeLabel(),
+            })
+          );
           continue;
         }
 
@@ -303,7 +312,7 @@ export const ResourceUploader = ({
       setUploadProgress(null);
       setUploading(false);
     },
-    [sectionId, classroomId, baseOrderIndex, uploadMutation, t],
+    [sectionId, classroomId, baseOrderIndex, uploadMutation, t]
   );
 
   const handleDrop = useCallback(
@@ -314,7 +323,7 @@ export const ResourceUploader = ({
         void handleFiles(e.dataTransfer.files);
       }
     },
-    [handleFiles],
+    [handleFiles]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -414,8 +423,7 @@ export const ResourceUploader = ({
     setActiveDragId(null);
   };
 
-  const activeResource =
-    activeDragId != null ? ordered.find((r) => r.id === activeDragId) : null;
+  const activeResource = activeDragId != null ? ordered.find((r) => r.id === activeDragId) : null;
 
   const openResourceInNewTab = useCallback(
     async (resource: SectionResource) => {
@@ -433,7 +441,7 @@ export const ResourceUploader = ({
 
       toast.error(t('syllabus.resources.downloadFailed'));
     },
-    [t],
+    [t]
   );
 
   const openOrDownloadResource = useCallback(
@@ -461,20 +469,13 @@ export const ResourceUploader = ({
       a.remove();
       URL.revokeObjectURL(objectUrl);
     },
-    [t],
+    [t]
   );
 
   return (
     <div ref={resourcesSectionElRef} className="space-y-3">
-      <div
-        className={cn('flex items-start gap-3 justify-between', isRTL && 'flex-row-reverse')}
-      >
-        <div
-          className={cn(
-            'min-w-0 flex-1 space-y-1',
-            isRTL ? 'text-right' : 'text-left',
-          )}
-        >
+      <div className={cn('flex items-start gap-3 justify-between', isRTL && 'flex-row-reverse')}>
+        <div className={cn('min-w-0 flex-1 space-y-1', isRTL ? 'text-right' : 'text-left')}>
           <div className="text-sm font-semibold text-foreground">
             {t('syllabus.resources.title')}
           </div>
@@ -534,7 +535,7 @@ export const ResourceUploader = ({
               isDragging
                 ? 'border-primary bg-primary/5 scale-[1.01]'
                 : 'border-border hover:border-primary/40 bg-muted/10',
-              uploading && 'pointer-events-none opacity-60',
+              uploading && 'pointer-events-none opacity-60'
             )}
             onClick={() => !uploading && fileInputRef.current?.click()}
             role="presentation"
@@ -556,12 +557,20 @@ export const ResourceUploader = ({
             ) : (
               <div className="flex flex-col items-center gap-1.5 py-1">
                 <Upload className="h-5 w-5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{t('syllabus.resources.dropzone')}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t('syllabus.resources.dropzone')}
+                </span>
               </div>
             )}
           </div>
           <div className="flex justify-end">
-            <Button type="button" variant="ghost" size="sm" onClick={cancelAdd} className="h-7 text-xs">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={cancelAdd}
+              className="h-7 text-xs"
+            >
               {t('common.cancel')}
             </Button>
           </div>
@@ -589,7 +598,13 @@ export const ResourceUploader = ({
             />
           </div>
           <div className="flex justify-end gap-1.5">
-            <Button type="button" variant="ghost" size="sm" onClick={cancelAdd} className="h-7 text-xs">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={cancelAdd}
+              className="h-7 text-xs"
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -635,14 +650,14 @@ export const ResourceUploader = ({
                       <div
                         className={cn(
                           'flex min-w-0 items-center gap-3',
-                          isRTL && 'flex-row-reverse',
+                          isRTL && 'flex-row-reverse'
                         )}
                       >
                         <div
                           className={cn(
                             'flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-card p-3',
                             isRTL && 'flex-row-reverse',
-                            activeDragId === resource.id && 'ring-2 ring-primary/25 shadow-md',
+                            activeDragId === resource.id && 'ring-2 ring-primary/25 shadow-md'
                           )}
                         >
                           <button
@@ -739,19 +754,17 @@ export const ResourceUploader = ({
               <div
                 className={cn(
                   'flex min-w-0 items-center gap-3 shadow-xl will-change-transform [backface-visibility:hidden]',
-                  isRTL && 'flex-row-reverse',
+                  isRTL && 'flex-row-reverse'
                 )}
               >
                 <div
                   className={cn(
                     'flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-card p-3 ring-2 ring-primary/25',
-                    isRTL && 'flex-row-reverse',
+                    isRTL && 'flex-row-reverse'
                   )}
                 >
                   <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-medium truncate">
-                    {activeResource.title}
-                  </span>
+                  <span className="text-sm font-medium truncate">{activeResource.title}</span>
                 </div>
               </div>
             ) : null}

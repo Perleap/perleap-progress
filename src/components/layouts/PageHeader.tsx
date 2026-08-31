@@ -3,9 +3,9 @@
  * Reusable page header with navigation
  */
 
-import { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 import { useNavigateBack } from '@/hooks/useNavigateBack';
 
 interface PageHeaderProps {

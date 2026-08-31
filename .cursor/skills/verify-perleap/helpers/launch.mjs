@@ -5,6 +5,7 @@ import {
   REPO_ROOT,
   RUN_STATE_FILE,
   loadVerifyEnv,
+  isRemoteVerifyTarget,
   ensureSkillDirs,
   waitForHttpOk,
   fail,
@@ -44,6 +45,11 @@ const baseURL = env.VERIFY_BASE_URL;
 
 async function launch() {
   ensureSkillDirs();
+  if (isRemoteVerifyTarget(baseURL)) {
+    console.log(`verify-perleap: remote target ${baseURL} — skipping local dev server`);
+    await waitForHttpOk(`${baseURL}/auth`, 30_000);
+    return;
+  }
   const existing = readRunState();
   if (existing?.pid && existing.port === port) {
     try {

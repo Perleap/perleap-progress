@@ -3,6 +3,9 @@
  * Filter selectors for classroom analytics
  */
 
+import { useTranslation } from 'react-i18next';
+import type { Assignment } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -10,9 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Assignment } from '@/types';
-import { useTranslation } from 'react-i18next';
 
 interface AnalyticsFiltersProps {
   students: Array<{ id: string; name: string }>;
@@ -44,11 +44,21 @@ export const AnalyticsFilters = ({
       <CardContent>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm font-medium mb-2 block text-muted-foreground">Filter by Student</label>
-            <Select value={selectedStudent} onValueChange={onStudentChange}>
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">
+              Filter by Student
+            </label>
+            <Select
+              value={selectedStudent}
+              onValueChange={(value: string | null) => {
+                if (value == null) return;
+                onStudentChange(value);
+              }}
+            >
               <SelectTrigger className="bg-muted/30 border-border text-foreground min-w-[180px]">
                 <SelectValue>
-                  {selectedStudent === 'all' ? t('analytics.allStudents') : students.find(s => s.id === selectedStudent)?.name}
+                  {selectedStudent === 'all'
+                    ? t('analytics.allStudents')
+                    : students.find((s) => s.id === selectedStudent)?.name}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
@@ -62,11 +72,21 @@ export const AnalyticsFilters = ({
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium mb-2 block text-muted-foreground">Filter by Assignment</label>
-            <Select value={selectedAssignment} onValueChange={onAssignmentChange}>
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">
+              Filter by Assignment
+            </label>
+            <Select
+              value={selectedAssignment}
+              onValueChange={(value: string | null) => {
+                if (value == null) return;
+                onAssignmentChange(value);
+              }}
+            >
               <SelectTrigger className="bg-muted/30 border-border text-foreground min-w-[180px]">
                 <SelectValue>
-                  {selectedAssignment === 'all' ? t('analytics.allAssignments') : assignments.find(a => a.id === selectedAssignment)?.title}
+                  {selectedAssignment === 'all'
+                    ? t('analytics.allAssignments')
+                    : assignments.find((a) => a.id === selectedAssignment)?.title}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-card border-border">

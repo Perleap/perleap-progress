@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { peekStorageBlobUrl, resolveStorageStoredValue } from '@/utils/storageUrls';
 
-function readCachedBlobUrl(
-  bucket: string,
-  storedValue: string | null | undefined,
-): string | null {
+function readCachedBlobUrl(bucket: string, storedValue: string | null | undefined): string | null {
   if (!storedValue?.trim()) return null;
   const trimmed = storedValue.trim();
   if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return trimmed;
@@ -15,10 +12,10 @@ function readCachedBlobUrl(
 export function useAuthenticatedBlobUrl(
   bucket: string,
   storedValue: string | null | undefined,
-  enabled = true,
+  enabled = true
 ) {
   const [blobUrl, setBlobUrl] = useState<string | null>(() =>
-    enabled ? readCachedBlobUrl(bucket, storedValue) : null,
+    enabled ? readCachedBlobUrl(bucket, storedValue) : null
   );
   const [isLoading, setIsLoading] = useState(() => {
     if (!enabled || !storedValue?.trim()) return false;

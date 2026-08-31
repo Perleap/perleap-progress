@@ -13,7 +13,7 @@ async function optimizeBlobForDisplay(bucket: string, blob: Blob): Promise<Blob>
     const scale = Math.min(
       AVATAR_DISPLAY_MAX_PX / bitmap.width,
       AVATAR_DISPLAY_MAX_PX / bitmap.height,
-      1,
+      1
     );
     if (scale >= 1) {
       bitmap.close();
@@ -35,7 +35,7 @@ async function optimizeBlobForDisplay(bucket: string, blob: Blob): Promise<Blob>
     bitmap.close();
 
     const optimized = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, 'image/jpeg', 0.85),
+      canvas.toBlob(resolve, 'image/jpeg', 0.85)
     );
     return optimized ?? blob;
   } catch {
@@ -50,7 +50,7 @@ export function peekCachedBlobUrl(cacheKey: string): string | null {
 export async function getOrCreateCachedBlobUrl(
   cacheKey: string,
   bucket: string,
-  download: () => Promise<Blob | null>,
+  download: () => Promise<Blob | null>
 ): Promise<string | null> {
   const cached = blobUrlCache.get(cacheKey);
   if (cached) {
@@ -79,7 +79,7 @@ export async function getOrCreateCachedBlobUrl(
 export function prefetchCachedBlobUrl(
   cacheKey: string,
   bucket: string,
-  download: () => Promise<Blob | null>,
+  download: () => Promise<Blob | null>
 ): void {
   void getOrCreateCachedBlobUrl(cacheKey, bucket, download);
 }

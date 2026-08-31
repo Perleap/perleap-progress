@@ -1,8 +1,3 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import {
   FileText,
   Video,
@@ -14,8 +9,11 @@ import {
   Play,
   X,
 } from 'lucide-react';
-import { inferLessonVideoSource, parseLessonContent, shouldShowLessonVideoBlock } from '@/lib/lessonContent';
-import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { SectionResource } from '@/types/syllabus';
+import type { VideoWatchTrackingBase } from '@/types/videoWatch';
 import {
   ContentImageBlock,
   ContentPlainTextBlock,
@@ -23,9 +21,15 @@ import {
   ContentVideoBlock,
   LessonTextSlidesBlock,
 } from '@/components/features/syllabus/content-blocks';
-import type { SectionResource } from '@/types/syllabus';
-import type { VideoWatchTrackingBase } from '@/types/videoWatch';
+import { Button } from '@/components/ui/button';
 import { useResolvedSectionResources } from '@/hooks/useResolvedSectionResources';
+import {
+  inferLessonVideoSource,
+  parseLessonContent,
+  shouldShowLessonVideoBlock,
+} from '@/lib/lessonContent';
+import { lessonTextBodyToHtml } from '@/lib/lessonRichText';
+import { cn } from '@/lib/utils';
 import { resolveSectionResourceFileUrl } from '@/services/syllabusResourceService';
 import { isSupabaseStorageUrl, SYLLABUS_RESOURCES_BUCKET } from '@/utils/storageUrls';
 
@@ -44,7 +48,7 @@ interface ResourceViewerProps {
 function buildVideoTracking(
   base: VideoWatchTrackingBase | undefined,
   resourceId: string,
-  lessonBlockId?: string | null,
+  lessonBlockId?: string | null
 ) {
   if (!base) return undefined;
   return {
@@ -141,7 +145,7 @@ function canOpenUrlInBrowser(url: string): boolean {
 export type LessonResourceBodyVariant = 'embedded' | 'reading';
 
 /** Ordered text + video blocks for `resource_type === 'lesson'` (v1 JSON or legacy body_text + url). */
-export function LessonResourceBody({
+export const LessonResourceBody = ({
   resource,
   className,
   variant = 'embedded',
@@ -154,7 +158,7 @@ export function LessonResourceBody({
   variant?: LessonResourceBodyVariant;
   isRTL?: boolean;
   videoTracking?: VideoWatchTrackingBase;
-}) {
+}) => {
   const { t } = useTranslation();
   const reading = variant === 'reading';
   const textPresentation = reading ? 'reading' : 'embedded';
@@ -182,7 +186,7 @@ export function LessonResourceBody({
         }
         const source =
           Array.isArray(slideList) && slideList.length === 1
-            ? slideList[0]!
+            ? (slideList[0] ?? block.body)
             : block.body;
         if (!source || !String(source).trim()) return null;
         return (
@@ -214,11 +218,15 @@ export function LessonResourceBody({
     const hasVisible = nodes.some((n) => n != null);
     if (!hasVisible) {
       return (
-        <p className={cn('text-sm text-muted-foreground', className)}>{t('activityPage.lessonEmpty')}</p>
+        <p className={cn('text-sm text-muted-foreground', className)}>
+          {t('activityPage.lessonEmpty')}
+        </p>
       );
     }
     return (
-      <div className={cn(reading ? 'flex flex-col gap-5 sm:gap-6' : 'space-y-3', className)}>{nodes}</div>
+      <div className={cn(reading ? 'flex flex-col gap-5 sm:gap-6' : 'space-y-3', className)}>
+        {nodes}
+      </div>
     );
   }
 
@@ -231,7 +239,9 @@ export function LessonResourceBody({
   const hasLegacyText = !!resource.body_text?.trim();
   if (!hasLegacyText && !showLessonVideo) {
     return (
-      <p className={cn('text-sm text-muted-foreground', className)}>{t('activityPage.lessonEmpty')}</p>
+      <p className={cn('text-sm text-muted-foreground', className)}>
+        {t('activityPage.lessonEmpty')}
+      </p>
     );
   }
   const legacyInner = (
@@ -255,15 +265,15 @@ export function LessonResourceBody({
     return <div className={cn('flex flex-col gap-5 sm:gap-6', className)}>{legacyInner}</div>;
   }
   return <div className={cn('space-y-3', className)}>{legacyInner}</div>;
-}
+};
 
-function ResourcePreview({
+const ResourcePreview = ({
   resource,
   videoTracking,
 }: {
   resource: SectionResource;
   videoTracking?: VideoWatchTrackingBase;
-}) {
+}) => {
   const url = resource.url || '';
   const mime = resource.mime_type || '';
 
@@ -304,19 +314,15 @@ function ResourcePreview({
   if (mime === 'application/pdf') {
     return (
       <div className="rounded-lg overflow-hidden border border-border mb-2">
-        <iframe
-          src={`${url}#toolbar=0`}
-          title={resource.title}
-          className="w-full h-72 bg-white"
-        />
+        <iframe src={`${url}#toolbar=0`} title={resource.title} className="w-full h-72 bg-white" />
       </div>
     );
   }
 
   return null;
-}
+};
 
-function ResourceCard({
+const ResourceCard = ({
   resource,
   isRTL,
   compact,
@@ -328,7 +334,7 @@ function ResourceCard({
   compact: boolean;
   compactVariant?: 'card' | 'list';
   videoTracking?: VideoWatchTrackingBase;
-}) {
+}) => {
   const { t } = useTranslation();
   const [videoRevealed, setVideoRevealed] = useState(false);
   const config = resourceTypeConfig[resource.resource_type] || resourceTypeConfig.file;
@@ -387,7 +393,9 @@ function ResourceCard({
             {resource.title}
           </span>
           <span className="text-[10px] text-muted-foreground">
-            {resource.resource_type === 'link' ? t('syllabus.resources.externalLink') : formatFileSize(resource.file_size)}
+            {resource.resource_type === 'link'
+              ? t('syllabus.resources.externalLink')
+              : formatFileSize(resource.file_size)}
           </span>
         </div>
         {isLink ? (
@@ -403,7 +411,7 @@ function ResourceCard({
     <div
       className={cn(
         'rounded-xl border border-border bg-card/50 overflow-hidden',
-        isVideo && videoRevealed && 'w-max max-w-full mx-auto',
+        isVideo && videoRevealed && 'w-max max-w-full mx-auto'
       )}
     >
       {showPreview && (
@@ -425,11 +433,7 @@ function ResourceCard({
       )}
       <div className={cn('flex items-center gap-3 px-4 py-3', isRTL && 'flex-row-reverse')}>
         <div className={cn('p-2 rounded-lg bg-muted/50', config.color)}>
-          {isVideo && !videoRevealed ? (
-            <Play className="h-4 w-4" />
-          ) : (
-            <Icon className="h-4 w-4" />
-          )}
+          {isVideo && !videoRevealed ? <Play className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
         </div>
         <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
           <h4 className="text-sm font-medium text-foreground truncate">{resource.title}</h4>
@@ -460,7 +464,7 @@ function ResourceCard({
       </div>
     </div>
   );
-}
+};
 
 export const ResourceViewer = ({
   resources,
@@ -484,10 +488,11 @@ export const ResourceViewer = ({
         <h4
           className={cn(
             'text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1',
-            isRTL && 'flex-row-reverse text-right',
+            isRTL && 'flex-row-reverse text-right'
           )}
         >
-          <FileText className="h-3 w-3" /> {t('syllabus.resources.title')} ({displayResources.length})
+          <FileText className="h-3 w-3" /> {t('syllabus.resources.title')} (
+          {displayResources.length})
         </h4>
       ) : null}
       <div
@@ -495,7 +500,7 @@ export const ResourceViewer = ({
           listMode &&
             'divide-y divide-border overflow-hidden rounded-md border border-border/60 bg-muted/5',
           !listMode && compact && 'space-y-1',
-          !listMode && !compact && 'space-y-3',
+          !listMode && !compact && 'space-y-3'
         )}
       >
         {displayResources.map((resource) => (
@@ -513,7 +518,7 @@ export const ResourceViewer = ({
   );
 };
 
-export function ResolvedLessonResourceBody({
+export const ResolvedLessonResourceBody = ({
   resource,
   className,
   variant = 'embedded',
@@ -525,7 +530,7 @@ export function ResolvedLessonResourceBody({
   variant?: LessonResourceBodyVariant;
   isRTL?: boolean;
   videoTracking?: VideoWatchTrackingBase;
-}) {
+}) => {
   const { resources } = useResolvedSectionResources([resource]);
   const resolved = resources[0] ?? resource;
   return (
@@ -537,4 +542,4 @@ export function ResolvedLessonResourceBody({
       videoTracking={videoTracking}
     />
   );
-}
+};

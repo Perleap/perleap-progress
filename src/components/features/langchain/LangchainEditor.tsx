@@ -19,6 +19,7 @@ import {
   type ReactFlowInstance,
   ReactFlowProvider,
 } from '@xyflow/react';
+import { PanelRightOpen } from 'lucide-react';
 import {
   forwardRef,
   useCallback,
@@ -30,9 +31,7 @@ import {
   type Ref,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PanelRightOpen } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
-import { Button } from '@/components/ui/button';
 import { DeletableEdge } from './DeletableEdge';
 import { LangchainEditorProvider } from './LangchainEditorContext';
 import { LangchainFlowCoordsBridge, type FlowCoordsBridge } from './LangchainFlowCoordsBridge';
@@ -44,8 +43,9 @@ import {
 } from './langchainNodeData';
 import { NodePalette } from './NodePalette';
 import { InputNode, OutputNode, LLMNode, TriggerNode, EmailNode } from './nodes';
-import { cn } from '@/lib/utils';
 import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const nodeTypes: NodeTypes = {
   inputNode: InputNode,
@@ -140,7 +140,7 @@ const LangchainEditorInner = ({
         c.type === 'add' ||
         c.type === 'remove' ||
         c.type === 'replace' ||
-        (c.type === 'position' && c.dragging === false),
+        (c.type === 'position' && c.dragging === false)
     );
 
   const isMeaningfulEdgeChange = (changes: EdgeChange[]) =>
@@ -151,7 +151,7 @@ const LangchainEditorInner = ({
       setEdges((eds) => addEdge({ ...params, type: 'deletable', animated: true }, eds));
       notifyUserActivity();
     },
-    [setEdges, notifyUserActivity],
+    [setEdges, notifyUserActivity]
   );
 
   const handleNodesChange = useCallback(
@@ -165,16 +165,14 @@ const LangchainEditorInner = ({
         notifyUserActivity();
       }
 
-      const removedIds = new Set(
-        nextChanges.filter((c) => c.type === 'remove').map((c) => c.id)
-      );
+      const removedIds = new Set(nextChanges.filter((c) => c.type === 'remove').map((c) => c.id));
       if (removedIds.size > 0 && selectedNodeId && removedIds.has(selectedNodeId)) {
         setSelectedNodeId(null);
       }
 
       setNodes((nds) => applyNodeChanges(nextChanges, nds));
     },
-    [readOnly, selectedNodeId, setNodes, notifyUserActivity],
+    [readOnly, selectedNodeId, setNodes, notifyUserActivity]
   );
 
   const handleEdgesChange = useCallback(
@@ -185,22 +183,23 @@ const LangchainEditorInner = ({
         notifyUserActivity();
       }
 
-      const removedIds = new Set(
-        changes.filter((c) => c.type === 'remove').map((c) => c.id)
-      );
+      const removedIds = new Set(changes.filter((c) => c.type === 'remove').map((c) => c.id));
       if (removedIds.size > 0 && selectedEdgeId && removedIds.has(selectedEdgeId)) {
         setSelectedEdgeId(null);
       }
 
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
-    [selectedEdgeId, setEdges, readOnly, notifyUserActivity],
+    [selectedEdgeId, setEdges, readOnly, notifyUserActivity]
   );
 
-  const onSelectionChange = useCallback(({ nodes: selNodes, edges: selEdges }: OnSelectionChangeParams) => {
-    setSelectedNodeId(selNodes.length === 1 ? selNodes[0].id : null);
-    setSelectedEdgeId(selEdges.length === 1 ? selEdges[0].id : null);
-  }, []);
+  const onSelectionChange = useCallback(
+    ({ nodes: selNodes, edges: selEdges }: OnSelectionChangeParams) => {
+      setSelectedNodeId(selNodes.length === 1 ? selNodes[0].id : null);
+      setSelectedEdgeId(selEdges.length === 1 ? selEdges[0].id : null);
+    },
+    []
+  );
 
   const deleteNode = useCallback(
     (nodeId: string) => {
@@ -236,7 +235,7 @@ const LangchainEditorInner = ({
       );
       notifyUserActivity();
     },
-    [readOnly, setNodes, notifyUserActivity],
+    [readOnly, setNodes, notifyUserActivity]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {

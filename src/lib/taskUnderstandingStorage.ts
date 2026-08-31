@@ -25,7 +25,7 @@ function readMap(userId: string): Record<string, TaskUnderstandingChoice> {
 
 export function getTaskUnderstandingChoice(
   userId: string,
-  submissionId: string,
+  submissionId: string
 ): TaskUnderstandingChoice | null {
   if (!userId || !submissionId) return null;
   return readMap(userId)[submissionId] ?? null;
@@ -34,7 +34,7 @@ export function getTaskUnderstandingChoice(
 export function markTaskUnderstanding(
   userId: string,
   submissionId: string,
-  choice: TaskUnderstandingChoice,
+  choice: TaskUnderstandingChoice
 ): void {
   if (!userId || !submissionId || typeof window === 'undefined') return;
   try {

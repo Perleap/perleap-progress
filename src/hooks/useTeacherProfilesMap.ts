@@ -1,11 +1,9 @@
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import type { TeacherProfileDisplay } from '@/types/models';
 import { supabase } from '@/integrations/supabase/client';
 
-export type TeacherProfileSummary = {
-  full_name: string;
-  avatar_url?: string;
-};
+export type TeacherProfileSummary = TeacherProfileDisplay;
 
 export type TeacherProfilesMap = Record<string, TeacherProfileSummary>;
 
@@ -26,7 +24,7 @@ async function fetchTeacherProfilesMap(idsKey: string): Promise<TeacherProfilesM
   for (const row of data ?? []) {
     map[row.user_id] = {
       full_name: row.full_name || '',
-      avatar_url: row.avatar_url || undefined,
+      avatar_url: row.avatar_url ?? null,
     };
   }
   return map;
@@ -36,7 +34,7 @@ async function fetchTeacherProfilesMap(idsKey: string): Promise<TeacherProfilesM
 export function useTeacherProfilesMap(teacherIds: string[]) {
   const idsKey = useMemo(
     () => [...new Set(teacherIds.filter(Boolean))].sort().join('|'),
-    [teacherIds],
+    [teacherIds]
   );
 
   const query = useQuery({

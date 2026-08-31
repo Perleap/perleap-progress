@@ -16,7 +16,7 @@ describe('unknownPostgrestColumnName', () => {
     expect(
       unknownPostgrestColumnName({
         message: 'Could not find the "body_text" column of "activity_list" in the schema cache',
-      }),
+      })
     ).toBe('body_text');
   });
 

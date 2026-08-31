@@ -1,6 +1,8 @@
 import { format } from 'date-fns/format';
 import { Clock, Edit, ExternalLink, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { PlannerCalendarEvent } from './plannerTypes';
+import type { PlannerClassroom } from '@/services/plannerService';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +25,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import type { PlannerClassroom } from '@/services/plannerService';
-import type { PlannerCalendarEvent } from './plannerTypes';
 
 export type PlannerAssignmentDetailSheetProps = {
   open: boolean;
@@ -39,7 +39,7 @@ export type PlannerAssignmentDetailSheetProps = {
   onConfirmDelete: () => void | Promise<void>;
 };
 
-export function PlannerAssignmentDetailSheet({
+export const PlannerAssignmentDetailSheet = ({
   open,
   deleteConfirmOpen,
   selectedEvent,
@@ -50,7 +50,7 @@ export function PlannerAssignmentDetailSheet({
   onEdit,
   onViewInClassroom,
   onConfirmDelete,
-}: PlannerAssignmentDetailSheetProps) {
+}: PlannerAssignmentDetailSheetProps) => {
   const { t } = useTranslation();
 
   return (
@@ -59,7 +59,7 @@ export function PlannerAssignmentDetailSheet({
         <SheetContent
           className={cn(
             'gap-0 p-0 sm:max-w-md md:max-w-lg',
-            'h-full max-h-[100dvh] overflow-hidden',
+            'h-full max-h-[100dvh] overflow-hidden'
           )}
         >
           {selectedEvent && (
@@ -184,4 +184,4 @@ export function PlannerAssignmentDetailSheet({
       </AlertDialog>
     </>
   );
-}
+};

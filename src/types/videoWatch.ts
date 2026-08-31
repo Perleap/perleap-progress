@@ -6,4 +6,7 @@ export interface VideoWatchTrackingContext {
 }
 
 /** Passed from pages; resource and block ids are added at render sites. */
-export type VideoWatchTrackingBase = Pick<VideoWatchTrackingContext, 'classroomId' | 'studentUserId'>;
+export type VideoWatchTrackingBase = Pick<
+  VideoWatchTrackingContext,
+  'classroomId' | 'studentUserId'
+>;

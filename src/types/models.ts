@@ -37,6 +37,8 @@ export interface TeacherProfile {
   last_name?: string;
 }
 
+export type TeacherProfileDisplay = Pick<TeacherProfile, 'full_name' | 'avatar_url'>;
+
 /** Aligns with `student_profiles` Row; optional split names for UI helpers only. */
 export interface StudentProfile {
   id: string;

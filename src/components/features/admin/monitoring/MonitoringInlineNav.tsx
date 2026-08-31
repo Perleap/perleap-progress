@@ -1,13 +1,13 @@
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   MONITORING_BASE,
   monitoringItemHref,
   monitoringSubItems,
   isMonitoringSubActive,
 } from './monitoringNav';
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 
 const subRowClass =
   'min-h-[48px] cursor-pointer transition-all duration-200 group-data-[collapsible=icon]:!h-9 group-data-[collapsible=icon]:!w-9 group-data-[collapsible=icon]:!p-1.5 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!mx-auto group-data-[collapsible=icon]:!rounded-lg pl-2 group-data-[collapsible=icon]:pl-2';
@@ -18,7 +18,7 @@ const parentRowClass =
 /**
  * MENU order: after Dashboard and Planner. Parent "Monitoring" row; MONITORING + four sub-links only on /admin/monitoring/*.
  */
-export function MonitoringInlineNav() {
+export const MonitoringInlineNav = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,7 +35,9 @@ export function MonitoringInlineNav() {
           className={`${parentRowClass} ${onMonitoring ? 'bg-primary/10 text-primary hover:bg-primary/15' : ''}`}
         >
           <Activity className="size-5 group-data-[collapsible=icon]:size-5" />
-          <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{t('nav.monitoring')}</span>
+          <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+            {t('nav.monitoring')}
+          </span>
         </SidebarMenuButton>
       </SidebarMenuItem>
       {onMonitoring ? (
@@ -58,7 +60,9 @@ export function MonitoringInlineNav() {
                   className={subRowClass}
                 >
                   <item.icon className="size-5 group-data-[collapsible=icon]:size-5" />
-                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">{label}</span>
+                  <span className="font-medium text-base group-data-[collapsible=icon]:hidden">
+                    {label}
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
@@ -67,4 +71,4 @@ export function MonitoringInlineNav() {
       ) : null}
     </>
   );
-}
+};

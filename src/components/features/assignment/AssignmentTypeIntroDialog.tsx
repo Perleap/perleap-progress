@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { DbAssignmentType } from '@/types/models';
+import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,17 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { cn } from '@/lib/utils';
-import type { DbAssignmentType } from '@/types/models';
-import { StudentFacingTaskSection } from '@/components/features/assignment/StudentFacingTaskSection';
 import {
   getAssignmentTypeIntroBody,
   getAssignmentTypeIntroTitle,
   getAssignmentTypeTutorial,
 } from '@/lib/assignmentTypeIntroCopy';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import { cn } from '@/lib/utils';
 
 type WizardStep = 'type' | 'task';
 
@@ -36,7 +36,7 @@ type AssignmentTypeIntroDialogProps = {
   clipboardTracking?: AssignmentClipboardTrackingCallbacks;
 };
 
-export function AssignmentTypeIntroDialog({
+export const AssignmentTypeIntroDialog = ({
   open,
   onOpenChange,
   assignmentType,
@@ -47,7 +47,7 @@ export function AssignmentTypeIntroDialog({
   onTypeStepComplete,
   onTaskConfirm,
   clipboardTracking,
-}: AssignmentTypeIntroDialogProps) {
+}: AssignmentTypeIntroDialogProps) => {
   const { t, i18n } = useTranslation();
   const { isRTL } = useLanguage();
   const [step, setStep] = useState<WizardStep>(skipTypeStep ? 'task' : 'type');
@@ -93,31 +93,28 @@ export function AssignmentTypeIntroDialog({
             <DialogHeader className={cn(isRTL && 'text-end')}>
               <DialogTitle>{title}</DialogTitle>
               {assignmentTitle?.trim() ? (
-                <p className="text-muted-foreground text-sm font-normal">{assignmentTitle.trim()}</p>
+                <p className="text-muted-foreground text-sm font-normal">
+                  {assignmentTitle.trim()}
+                </p>
               ) : null}
               <DialogDescription
                 className={cn(
                   'leading-relaxed whitespace-pre-wrap',
-                  isRTL ? 'text-end' : 'text-start',
+                  isRTL ? 'text-end' : 'text-start'
                 )}
               >
                 {body}
               </DialogDescription>
             </DialogHeader>
 
-            <div
-              className={cn(
-                'space-y-2 border-t border-border/60 pt-4',
-                isRTL && 'text-end',
-              )}
-            >
+            <div className={cn('space-y-2 border-t border-border/60 pt-4', isRTL && 'text-end')}>
               <h3 className="text-sm font-medium text-foreground">
                 {t('assignmentTypeIntro.howToUseHeading')}
               </h3>
               <DialogDescription
                 className={cn(
                   'text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground',
-                  isRTL ? 'text-end' : 'text-start',
+                  isRTL ? 'text-end' : 'text-start'
                 )}
               >
                 {tutorial}
@@ -135,7 +132,9 @@ export function AssignmentTypeIntroDialog({
             <DialogHeader className={cn(isRTL && 'text-end')}>
               <DialogTitle>{t('taskUnderstanding.taskStepTitle')}</DialogTitle>
               {assignmentTitle?.trim() ? (
-                <p className="text-muted-foreground text-sm font-normal">{assignmentTitle.trim()}</p>
+                <p className="text-muted-foreground text-sm font-normal">
+                  {assignmentTitle.trim()}
+                </p>
               ) : null}
             </DialogHeader>
 
@@ -148,14 +147,13 @@ export function AssignmentTypeIntroDialog({
                 showHelp={false}
                 clipboardTracking={clipboardTracking}
               />
-              <p className="text-sm font-medium text-foreground">{t('taskUnderstanding.question')}</p>
+              <p className="text-sm font-medium text-foreground">
+                {t('taskUnderstanding.question')}
+              </p>
             </div>
 
             <DialogFooter
-              className={cn(
-                'gap-2 sm:gap-2',
-                isRTL ? 'sm:flex-row-reverse' : 'sm:flex-row',
-              )}
+              className={cn('gap-2 sm:gap-2', isRTL ? 'sm:flex-row-reverse' : 'sm:flex-row')}
             >
               <Button
                 type="button"
@@ -184,4 +182,4 @@ export function AssignmentTypeIntroDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

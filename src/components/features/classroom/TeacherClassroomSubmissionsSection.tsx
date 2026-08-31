@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { SubmissionsTab } from '@/components/SubmissionsTab';
+import { SubmissionsTab } from '@/components/features/submission/SubmissionsTab';
 
 export type TeacherClassroomSubmissionsSectionProps = {
   classroomId: string;
@@ -7,11 +7,11 @@ export type TeacherClassroomSubmissionsSectionProps = {
   initialAssignmentFilterId?: string;
 };
 
-export function TeacherClassroomSubmissionsSection({
+export const TeacherClassroomSubmissionsSection = ({
   classroomId,
   isRTL,
   initialAssignmentFilterId,
-}: TeacherClassroomSubmissionsSectionProps) {
+}: TeacherClassroomSubmissionsSectionProps) => {
   const { t } = useTranslation();
 
   return (
@@ -32,4 +32,4 @@ export function TeacherClassroomSubmissionsSection({
       />
     </div>
   );
-}
+};

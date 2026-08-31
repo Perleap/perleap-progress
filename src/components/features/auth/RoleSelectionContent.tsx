@@ -1,26 +1,26 @@
+import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { PerleapLogo } from '@/components/PerleapLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
-import { PerleapLogo } from '@/components/PerleapLogo';
 import { updateUserRole, clearPendingRole, resetRecoveryAttempts } from '@/utils/roleRecovery';
 
 /**
  * Role Selection Recovery Page
- * 
+ *
  * This page is shown when a user has an auth account but no role metadata.
  * This can happen if registration was interrupted or failed to complete.
- * 
+ *
  * The user selects their role, we update their metadata, and redirect to onboarding.
  */
-export function RoleSelectionContent() {
+export const RoleSelectionContent = () => {
   const { t } = useTranslation();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -35,8 +35,6 @@ export function RoleSelectionContent() {
 
     setLoading(true);
     try {
-      console.log('🎭 RoleSelection: User selected role:', selectedRole);
-
       // Update user's role metadata
       const success = await updateUserRole(selectedRole);
 
@@ -54,9 +52,7 @@ export function RoleSelectionContent() {
       toast.success(t('roleSelection.success.roleSet'));
 
       // Redirect to onboarding for the selected role
-      console.log(`🚀 RoleSelection: Redirecting to /onboarding/${selectedRole}`);
       navigate(`/onboarding/${selectedRole}`, { replace: true });
-
     } catch (error) {
       console.error('❌ RoleSelection: Error setting role:', error);
       toast.error(t('roleSelection.errors.unexpected'));
@@ -80,7 +76,10 @@ export function RoleSelectionContent() {
             <CardTitle className="text-3xl font-bold mb-3" dir={isRTL ? 'rtl' : 'ltr'}>
               {t('roleSelection.title')}
             </CardTitle>
-            <CardDescription className="text-base text-muted-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
+            <CardDescription
+              className="text-base text-muted-foreground"
+              dir={isRTL ? 'rtl' : 'ltr'}
+            >
               {t('roleSelection.description')}
             </CardDescription>
           </CardHeader>
@@ -137,5 +136,4 @@ export function RoleSelectionContent() {
       </div>
     </BreathingBackground>
   );
-}
-
+};

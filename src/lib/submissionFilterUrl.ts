@@ -1,10 +1,4 @@
-export type SubmissionViewModeUrl =
-  | 'list'
-  | 'grid'
-  | 'compact'
-  | 'detailed'
-  | 'table'
-  | 'timeline';
+export type SubmissionViewModeUrl = 'list' | 'grid' | 'compact' | 'detailed' | 'table' | 'timeline';
 
 export const SUB_URL = {
   MODULE: 'subModule',
@@ -73,16 +67,19 @@ export function readSubmissionFiltersFromSearchParams(
   return {
     module: m === 'all' || (m && ctx.moduleIds.has(m)) ? (m ?? defaults.module) : defaults.module,
     assignment:
-      a === 'all' || (a && ctx.assignmentIds.has(a)) ? (a ?? defaults.assignment) : defaults.assignment,
+      a === 'all' || (a && ctx.assignmentIds.has(a))
+        ? (a ?? defaults.assignment)
+        : defaults.assignment,
     student:
       s === 'all' || (s && ctx.studentIds.has(s)) ? (s ?? defaults.student) : defaults.student,
     status: st && STATUS_VALUES.has(st) ? st : defaults.status,
     from: from ?? defaults.from,
     to: to ?? defaults.to,
     q: q ?? defaults.q,
-    view: view && VIEW_MODES.includes(view as SubmissionViewModeUrl)
-      ? (view as SubmissionViewModeUrl)
-      : defaults.view,
+    view:
+      view && VIEW_MODES.includes(view as SubmissionViewModeUrl)
+        ? (view as SubmissionViewModeUrl)
+        : defaults.view,
   };
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
+import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 
 /**
  * A hook that persists state to localStorage/sessionStorage
@@ -62,7 +62,7 @@ export function usePersistedState<T>(
  * clearFormData(); // Clear the saved data
  * ```
  */
-export const usePersistedFormState = <T extends Record<string, any>>(
+export const usePersistedFormState = <T extends Record<string, unknown>>(
   formKey: string,
   initialValues: T
 ) => {

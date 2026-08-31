@@ -4,8 +4,8 @@
  */
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { Button } from '@/components/ui/button';
+import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 
 interface ProfileAvatarProps {
   avatarUrl: string | null;

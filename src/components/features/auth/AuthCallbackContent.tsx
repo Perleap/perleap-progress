@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { USER_ROLES } from '@/config/constants';
 import { supabase } from '@/integrations/supabase/client';
 import {
   attemptRoleRecovery,
@@ -10,9 +11,8 @@ import {
   clearPendingRole,
 } from '@/utils/roleRecovery';
 import { isSignupInProgress } from '@/utils/sessionState';
-import { USER_ROLES } from '@/config/constants';
 
-export function AuthCallbackContent() {
+export const AuthCallbackContent = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,8 +24,6 @@ export function AuthCallbackContent() {
 
     const handleCallback = async () => {
       try {
-        console.log('🔄 AuthCallback: Starting authentication callback');
-
         // Do NOT call exchangeCodeForSession here: createClient already has detectSessionInUrl + PKCE,
         // so the code verifier is consumed on first URL handling. A second exchange causes:
         // "both auth code and code verifier should be non-empty".
@@ -34,7 +32,6 @@ export function AuthCallbackContent() {
         } = await supabase.auth.getSession();
 
         if (!session?.user) {
-          console.log('❌ AuthCallback: No session, redirecting to /auth');
           clearTimeout(timeout);
           navigate('/auth', { replace: true });
           return;
@@ -42,14 +39,7 @@ export function AuthCallbackContent() {
 
         const user = session.user;
 
-        console.log('👤 AuthCallback: User data:', {
-          userId: user.id,
-          email: user.email,
-          role: user.user_metadata?.role,
-        });
-
         // ALWAYS check for existing profiles first to prevent duplicate registrations
-        console.log('🔍 AuthCallback: Checking for existing profiles...');
 
         // Check by user_id - THIS IS THE SOURCE OF TRUTH
         const { data: teacherProfile, error: tError } = await supabase
@@ -92,15 +82,6 @@ export function AuthCallbackContent() {
           return;
         }
 
-        console.log('👨‍🏫 AuthCallback: Profile check results:', {
-          hasTeacherProfile,
-          hasStudentProfile,
-          teacherProfileUserId: teacherProfile?.user_id,
-          studentProfileUserId: studentProfile?.user_id,
-          currentUserId: user.id,
-          userEmail,
-        });
-
         // Clean up orphaned profiles for this email (authenticated RPC; no anon PII leak)
         try {
           if (userEmail) {
@@ -109,7 +90,7 @@ export function AuthCallbackContent() {
         } catch (cleanupError) {
           console.error(
             '⚠️ AuthCallback: Non-blocking error during orphaned data cleanup:',
-            cleanupError,
+            cleanupError
           );
         }
 
@@ -118,13 +99,9 @@ export function AuthCallbackContent() {
         // If user already has a profile (matching current user_id), use that role
         if (hasTeacherProfile || hasStudentProfile) {
           const existingRole = hasTeacherProfile ? 'teacher' : 'student';
-          console.log(`✅ AuthCallback: User has existing ${existingRole} profile`);
 
           // Update user metadata if it doesn't match
           if (userRole !== existingRole) {
-            console.log(
-              `🔄 AuthCallback: Updating user metadata to match existing profile: ${existingRole}`
-            );
             await supabase.auth.updateUser({
               data: { role: existingRole },
             });
@@ -135,14 +112,12 @@ export function AuthCallbackContent() {
           localStorage.removeItem('pending_role');
 
           // Redirect to the existing role's dashboard
-          console.log(`🚀 AuthCallback: Redirecting to existing ${existingRole} dashboard`);
           clearTimeout(timeout);
           navigate(`/${existingRole}/dashboard`, { replace: true });
           return;
         }
 
         // No existing profiles found - process new registration
-        console.log('🆕 AuthCallback: No existing profiles, processing new registration');
 
         // Check if this is an active signup or a recovery situation
         const activelySigningUp = isSignupInProgress();
@@ -153,17 +128,13 @@ export function AuthCallbackContent() {
         ) {
           // CRITICAL: Different behavior for active signup vs recovery
           if (activelySigningUp) {
-            console.log('🔄 AuthCallback: Active signup - attempting quick recovery');
-
             // Try to recover from localStorage (backup from Auth.tsx)
             const pendingRole = getPendingRole();
 
             if (pendingRole && (pendingRole === 'teacher' || pendingRole === 'student')) {
-              console.log(`🔄 AuthCallback: Found pending role: ${pendingRole}`);
               const updated = await updateUserRole(pendingRole as 'teacher' | 'student');
 
               if (updated) {
-                console.log('✅ AuthCallback: Role set from pending');
                 clearPendingRole();
                 userRole = pendingRole;
               }
@@ -172,16 +143,13 @@ export function AuthCallbackContent() {
             // NOT actively signing up - this is a recovery situation
             console.warn('⚠️ AuthCallback: User has no valid role (not during active signup)');
 
-            const { recovered, role, source } = await attemptRoleRecovery();
+            const { recovered, role, source: _source } = await attemptRoleRecovery();
 
             if (recovered && role) {
-              console.log(`✅ AuthCallback: Role recovered from ${source}: ${role}`);
               userRole = role;
             }
           }
         }
-
-        console.log('🎭 AuthCallback: Final role for new user:', userRole);
 
         // If still no role, redirect to role selection page
         if (
@@ -211,8 +179,6 @@ export function AuthCallbackContent() {
         }
 
         if (userRole === 'teacher' || userRole === 'student') {
-          console.log(`✅ AuthCallback: Role determined as ${userRole}, checking profile...`);
-
           // Check for profile existence using explicit table names for TypeScript
           let profile = null;
           let profileError = null;
@@ -241,14 +207,10 @@ export function AuthCallbackContent() {
 
           const destination = profile ? `/${userRole}/dashboard` : `/onboarding/${userRole}`;
 
-          console.log(
-            `🚀 AuthCallback: ${profile ? 'Profile exists' : 'No profile found'}, redirecting to ${destination}`
-          );
           clearTimeout(timeout);
           navigate(destination, { replace: true });
         } else {
           // New user with no role - redirect to auth to select role
-          console.log('⚠️ AuthCallback: No role determined, redirecting to /auth to select role');
           // Store a flag to indicate the user needs to complete registration
           sessionStorage.setItem('needsRoleSelection', 'true');
           clearTimeout(timeout);
@@ -277,4 +239,4 @@ export function AuthCallbackContent() {
       </div>
     </div>
   );
-}
+};

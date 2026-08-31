@@ -1,19 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { LiveSessionAudioPlaybackHandle } from '@/components/features/liveSession/LiveSessionAudioPlayback';
+import type { LiveSession } from '@/types/liveSession';
+import { LiveSessionEvaluationSection } from '@/components/features/liveSession/LiveSessionEvaluationSection';
+import { LiveSessionReadyPanel } from '@/components/features/liveSession/LiveSessionReadyPanel';
+import {
+  isLiveSessionProcessing,
+  LiveSessionStatusBanner,
+} from '@/components/features/liveSession/LiveSessionStatusBanner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEnrolledStudents } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
-import {
-  isLiveSessionProcessing,
-  LiveSessionStatusBanner,
-} from '@/components/features/liveSession/LiveSessionStatusBanner';
-import { LiveSessionReadyPanel } from '@/components/features/liveSession/LiveSessionReadyPanel';
-import { LiveSessionEvaluationSection } from '@/components/features/liveSession/LiveSessionEvaluationSection';
 import {
   ensureStudentEvaluationSubmission,
   getLiveSessionByAssignment,
@@ -21,15 +23,13 @@ import {
   startLiveSessionTranscription,
   type StudentEvaluationState,
 } from '@/services/liveSessionService';
-import type { LiveSessionAudioPlaybackHandle } from '@/components/features/liveSession/LiveSessionAudioPlayback';
-import type { LiveSession } from '@/types/liveSession';
 
 export type LiveSessionContentProps = {
   classroomId: string;
   assignmentId: string;
 };
 
-export function LiveSessionContent({ classroomId, assignmentId }: LiveSessionContentProps) {
+export const LiveSessionContent = ({ classroomId, assignmentId }: LiveSessionContentProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { isRTL, language } = useLanguage();
@@ -99,8 +99,7 @@ export function LiveSessionContent({ classroomId, assignmentId }: LiveSessionCon
   const studentNameById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const enrollment of students) {
-      map[enrollment.student_id] =
-        enrollment.student_profiles?.full_name ?? t('common.student');
+      map[enrollment.student_id] = enrollment.student_profiles?.full_name ?? t('common.student');
     }
     return map;
   }, [students, t]);
@@ -153,12 +152,12 @@ export function LiveSessionContent({ classroomId, assignmentId }: LiveSessionCon
     }
     const chunkCount = Math.max(
       1,
-      session.audio_chunk_paths?.length ?? (session.audio_path ? 1 : 0),
+      session.audio_chunk_paths?.length ?? (session.audio_path ? 1 : 0)
     );
     const { error } = await startLiveSessionTranscription(
       session.id,
       language === 'he' ? 'he' : 'en',
-      chunkCount,
+      chunkCount
     );
     if (error) {
       toast.error(error.message);
@@ -241,4 +240,4 @@ export function LiveSessionContent({ classroomId, assignmentId }: LiveSessionCon
       </div>
     </div>
   );
-}
+};

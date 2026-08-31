@@ -1,15 +1,15 @@
 import { useEffect, useRef, useCallback } from 'react';
 import {
+  resolveClipboardCopyFromSelection,
+  type ResolvedClipboardCopy,
+} from '@/lib/clipboardSourceResolution';
+import {
   queueClipboardEvent,
   flushClipboardEvents,
   flushClipboardEventsBeacon,
   linkChatPasteToMessage,
   type ClipboardSourceKind,
 } from '@/services/clipboardEventService';
-import {
-  resolveClipboardCopyFromSelection,
-  type ResolvedClipboardCopy,
-} from '@/lib/clipboardSourceResolution';
 
 export interface TrackCopyParams {
   copiedText: string;
@@ -67,7 +67,7 @@ export function useAssignmentClipboardTracking({
 
   const emitCopy = useCallback(
     (params: TrackCopyParams) => {
-      if (!canTrack) return;
+      if (!canTrack || !submissionId || !assignmentId) return;
       const text = params.copiedText.trim();
       if (!text) return;
 
@@ -77,8 +77,8 @@ export function useAssignmentClipboardTracking({
       lastCopyRef.current = { text, at: now };
 
       queueClipboardEvent({
-        submission_id: submissionId!,
-        assignment_id: assignmentId!,
+        submission_id: submissionId,
+        assignment_id: assignmentId,
         event_type: 'copy',
         source_kind: params.sourceKind,
         copied_text: text,
@@ -88,32 +88,32 @@ export function useAssignmentClipboardTracking({
         context_key: params.contextKey,
       });
     },
-    [canTrack, submissionId, assignmentId],
+    [canTrack, submissionId, assignmentId]
   );
 
   const trackCopy = useCallback(
     (params: TrackCopyParams) => {
       emitCopy(params);
     },
-    [emitCopy],
+    [emitCopy]
   );
 
   const trackPaste = useCallback(
     (params: TrackPasteParams) => {
-      if (!canTrack) return;
+      if (!canTrack || !submissionId || !assignmentId) return;
       const text = params.pastedText.trim();
       if (!text) return;
 
       queueClipboardEvent({
-        submission_id: submissionId!,
-        assignment_id: assignmentId!,
+        submission_id: submissionId,
+        assignment_id: assignmentId,
         event_type: 'paste',
         source_kind: params.sourceKind,
         pasted_text: text,
         context_key: params.contextKey,
       });
     },
-    [canTrack, submissionId, assignmentId],
+    [canTrack, submissionId, assignmentId]
   );
 
   const linkRecentChatPastes = useCallback(
@@ -121,7 +121,7 @@ export function useAssignmentClipboardTracking({
       if (!canTrack || !submissionId) return;
       void linkChatPasteToMessage(submissionId, messageIndex);
     },
-    [canTrack, submissionId],
+    [canTrack, submissionId]
   );
 
   const handleWorkspaceCopy = useCallback(
@@ -130,7 +130,7 @@ export function useAssignmentClipboardTracking({
       if (!resolved) return;
       emitCopy(resolved);
     },
-    [emitCopy],
+    [emitCopy]
   );
 
   return {

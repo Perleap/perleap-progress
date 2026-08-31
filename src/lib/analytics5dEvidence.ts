@@ -1,6 +1,6 @@
 import type { Json } from '@/integrations/supabase/types';
-import type { FiveDScores } from '@/types/models';
 import type { AnalyticsAssignmentRef } from '@/lib/analyticsScope';
+import type { FiveDScores } from '@/types/models';
 import { INCLUDE_TEACHER_5D_EVIDENCE } from '@/config/constants';
 
 /**
@@ -39,7 +39,7 @@ export type Analytics5dNarrativeRow = {
 };
 
 export function parseScoreExplanations(
-  j: Json | null | undefined,
+  j: Json | null | undefined
 ): Partial<Record<keyof FiveDScores, string>> | null {
   if (!j || typeof j !== 'object' || Array.isArray(j)) return null;
   const o = j as Record<string, unknown>;
@@ -56,7 +56,7 @@ export function parseScoreExplanations(
 export function trimToMax(s: string, max: number): string {
   const t = s.trim();
   if (t.length <= max) return t;
-  return t.slice(0, Math.max(0, max - 1)) + '…';
+  return `${t.slice(0, Math.max(0, max - 1))}…`;
 }
 
 /** Small stable hash for React Query / cache keys (not cryptographic). */
@@ -87,12 +87,10 @@ function rowHasText(r: Analytics5dNarrativeRow, includeTeacherNotes: boolean): b
   if (fb.length > 0) return true;
   const se = r.scoreExplanations;
   if (!se) return false;
-  return DIMS.some((d) => (se[d] && se[d]!.trim().length > 0) ?? false);
+  return DIMS.some((d) => (se[d]?.trim().length ?? 0) > 0);
 }
 
-function formatScoreExplanations(
-  se: Partial<Record<keyof FiveDScores, string>> | null,
-): string {
+function formatScoreExplanations(se: Partial<Record<keyof FiveDScores, string>> | null): string {
   if (!se) return '';
   const parts: string[] = [];
   for (const d of DIMS) {
@@ -110,12 +108,14 @@ function assignmentInstructionLines(
     syllabusSectionId: string | null;
   }>,
   allowed: Set<string>,
-  sectionLabel: (id: string | null) => string,
+  sectionLabel: (id: string | null) => string
 ): string[] {
   const lines: string[] = [];
   for (const a of assignRefs) {
     if (!allowed.has(a.id)) continue;
-    const ins = a.instructions?.trim() ? trimToMax(a.instructions.trim(), MAX_INSTRUCTIONS_CHARS) : '—';
+    const ins = a.instructions?.trim()
+      ? trimToMax(a.instructions.trim(), MAX_INSTRUCTIONS_CHARS)
+      : '—';
     const sec = sectionLabel(a.syllabusSectionId);
     lines.push(`- ${a.title} | ${sec} | instructions: ${ins}`);
   }
@@ -148,9 +148,11 @@ export type Build5dNarrativeEvidenceInput = {
  * Build capped, structured evidence for explain-analytics-5d.
  * Class / compare views sample students and stratify by assignment; single-student uses all in-scope rows.
  */
-function build5dNarrativeEvidenceImpl(
-  input: Build5dNarrativeEvidenceInput,
-): { evidenceText: string; sourceCount: number; evidenceKey: string } {
+function build5dNarrativeEvidenceImpl(input: Build5dNarrativeEvidenceInput): {
+  evidenceText: string;
+  sourceCount: number;
+  evidenceKey: string;
+} {
   const allow = new Set(input.allowedAssignmentIds);
   if (allow.size === 0) {
     return { evidenceText: '', sourceCount: 0, evidenceKey: hashEvidenceKey('') };
@@ -181,7 +183,8 @@ function build5dNarrativeEvidenceImpl(
     const byStudent = new Map<string, Analytics5dNarrativeRow[]>();
     for (const r of pool) {
       if (!byStudent.has(r.studentId)) byStudent.set(r.studentId, []);
-      byStudent.get(r.studentId)!.push(r);
+      const studentRows = byStudent.get(r.studentId);
+      if (studentRows) studentRows.push(r);
     }
     const ids = [...byStudent.keys()].sort();
     const picked = ids.slice(0, MAX_CLASS_STUDENT_SAMPLE);
@@ -193,7 +196,8 @@ function build5dNarrativeEvidenceImpl(
   for (const r of pool) {
     if (!rowHasText(r, includeTeacherNotes)) continue;
     if (!byAssign.has(r.assignmentId)) byAssign.set(r.assignmentId, []);
-    byAssign.get(r.assignmentId)!.push(r);
+    const assignRows = byAssign.get(r.assignmentId);
+    if (assignRows) assignRows.push(r);
   }
   const assignKeys = [...byAssign.keys()].sort();
   const stratified: Analytics5dNarrativeRow[] = [];
@@ -203,26 +207,31 @@ function build5dNarrativeEvidenceImpl(
   while (added < MAX_EXCERPT_BLOCKS && round < maxRounds) {
     let any = false;
     for (const aid of assignKeys) {
-      const list = byAssign.get(aid)!;
-      if (round < list.length) {
-        stratified.push(list[round]!);
-        added++;
-        any = true;
-        if (added >= MAX_EXCERPT_BLOCKS) break;
-      }
+      const list = byAssign.get(aid);
+      if (!list || round >= list.length) continue;
+      const row = list[round];
+      if (!row) continue;
+      stratified.push(row);
+      added++;
+      any = true;
+      if (added >= MAX_EXCERPT_BLOCKS) break;
     }
     if (!any) break;
     round++;
   }
   if (stratified.length === 0) {
     for (const r of pool) {
-      if (rowHasText(r, includeTeacherNotes) && stratified.length < MAX_EXCERPT_BLOCKS) stratified.push(r);
+      if (rowHasText(r, includeTeacherNotes) && stratified.length < MAX_EXCERPT_BLOCKS)
+        stratified.push(r);
     }
   }
 
   for (const r of pool) {
     if (stratified.length >= MAX_EXCERPT_BLOCKS) break;
-    if (rowHasText(r, includeTeacherNotes) && !stratified.some((s) => s.submissionId === r.submissionId)) {
+    if (
+      rowHasText(r, includeTeacherNotes) &&
+      !stratified.some((s) => s.submissionId === r.submissionId)
+    ) {
       stratified.push(r);
     }
   }
@@ -235,7 +244,7 @@ function build5dNarrativeEvidenceImpl(
       syllabusSectionId: a.syllabusSectionId,
     })),
     allow,
-    sectionLabel,
+    sectionLabel
   );
 
   const header = [
@@ -243,7 +252,9 @@ function build5dNarrativeEvidenceImpl(
     ...assignLines.slice(0, 50),
   ].join('\n');
 
-  const excerptLines: string[] = ['## Evaluation excerpts (ground truth snippets; do not invent other quotes)'];
+  const excerptLines: string[] = [
+    '## Evaluation excerpts (ground truth snippets; do not invent other quotes)',
+  ];
   for (const r of stratified) {
     const fb = r.studentFeedback?.trim()
       ? trimToMax(r.studentFeedback.trim(), MAX_STUDENT_FEEDBACK_CHARS)
@@ -258,13 +269,13 @@ function build5dNarrativeEvidenceImpl(
       `### ${r.studentName} | ${r.assignmentTitle} | ${r.sectionTitle}`,
       fb ? `Student-facing feedback: ${fb}` : '',
       tn ? `Teacher note: ${tn}` : '',
-      ex ? `Snapshot dimension notes: ${ex}` : '',
+      ex ? `Snapshot dimension notes: ${ex}` : ''
     );
   }
 
   let body = [header, excerptLines.join('\n')].join('\n\n');
   if (body.length > EVIDENCE_MAX_TOTAL_CHARS) {
-    body = body.slice(0, EVIDENCE_MAX_TOTAL_CHARS - 1) + '…';
+    body = `${body.slice(0, EVIDENCE_MAX_TOTAL_CHARS - 1)}…`;
   }
 
   const sourceCount = stratified.filter((r) => rowHasText(r, includeTeacherNotes)).length;
@@ -275,9 +286,11 @@ function build5dNarrativeEvidenceImpl(
   };
 }
 
-export function build5dNarrativeEvidence(
-  input: Build5dNarrativeEvidenceInput,
-): { evidenceText: string; sourceCount: number; evidenceKey: string } {
+export function build5dNarrativeEvidence(input: Build5dNarrativeEvidenceInput): {
+  evidenceText: string;
+  sourceCount: number;
+  evidenceKey: string;
+} {
   return build5dNarrativeEvidenceImpl(input);
 }
 

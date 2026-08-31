@@ -1,26 +1,24 @@
-import type { StudentDashboardAssignment } from '@/types/api.types';
 import type { TeacherProfilesMap } from '@/hooks/useTeacherProfilesMap';
+import type { StudentDashboardAssignment } from '@/types/api.types';
 
 type RawSubmission = {
   status?: string;
   assignment_feedback?: unknown[];
 };
 
-export function isAssignmentCompleted(
-  submissions: RawSubmission[] | null | undefined,
-): boolean {
+export function isAssignmentCompleted(submissions: RawSubmission[] | null | undefined): boolean {
   return (
     submissions?.some(
       (s) =>
         s.status === 'completed' ||
-        (Array.isArray(s.assignment_feedback) && s.assignment_feedback.length > 0),
+        (Array.isArray(s.assignment_feedback) && s.assignment_feedback.length > 0)
     ) ?? false
   );
 }
 
 export function mapStudentDashboardAssignments(
   raw: unknown[],
-  teacherProfiles: TeacherProfilesMap,
+  teacherProfiles: TeacherProfilesMap
 ): StudentDashboardAssignment[] {
   return raw.map((item) => {
     const a = item as Record<string, unknown>;
@@ -32,9 +30,7 @@ export function mapStudentDashboardAssignments(
         ...classrooms,
         teacher_profiles: (teacherId && teacherProfiles[teacherId]) || null,
       },
-      is_completed: isAssignmentCompleted(
-        a.submissions as RawSubmission[] | undefined,
-      ),
+      is_completed: isAssignmentCompleted(a.submissions as RawSubmission[] | undefined),
     };
   });
 }
@@ -43,7 +39,7 @@ export type AssignmentSortKey = 'recent' | 'oldest' | 'due-date';
 
 export function sortStudentDashboardAssignments(
   assignments: StudentDashboardAssignment[],
-  sortBy: AssignmentSortKey,
+  sortBy: AssignmentSortKey
 ): StudentDashboardAssignment[] {
   const sorted = [...assignments];
   switch (sortBy) {
@@ -53,7 +49,7 @@ export function sortStudentDashboardAssignments(
       return sorted;
     case 'due-date':
       return sorted.sort(
-        (a, b) => new Date(a.due_at ?? 0).getTime() - new Date(b.due_at ?? 0).getTime(),
+        (a, b) => new Date(a.due_at ?? 0).getTime() - new Date(b.due_at ?? 0).getTime()
       );
     default:
       return sorted;

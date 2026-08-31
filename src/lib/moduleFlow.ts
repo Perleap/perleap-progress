@@ -1,3 +1,4 @@
+import type { FlowStepInput } from '@/services/moduleFlowService';
 import type {
   ModuleFlowStep,
   ResourceType,
@@ -5,7 +6,6 @@ import type {
   SyllabusSection,
   ModuleFlowStepKind,
 } from '@/types/syllabus';
-import type { FlowStepInput } from '@/services/moduleFlowService';
 
 /**
  * Activities center + module flow only include these: combined lessons and legacy text/video activities.
@@ -42,7 +42,7 @@ export type OutlineMaterialFilterOptions = {
 
 export function filterOutlineMaterialResources(
   resources: SectionResource[] | undefined | null,
-  options?: OutlineMaterialFilterOptions,
+  options?: OutlineMaterialFilterOptions
 ): SectionResource[] {
   let out = (resources ?? []).filter((r) => isOutlineMaterialResource(r));
   if (options?.excludeDrafts) {
@@ -57,14 +57,14 @@ export function filterOutlineMaterialResources(
 
 /** Published assignments only — mirrors student RLS on teacher read-only curriculum views. */
 export function filterStudentVisibleAssignments<T extends { status?: string | null }>(
-  assignments: T[],
+  assignments: T[]
 ): T[] {
   return assignments.filter((a) => a.status === 'published');
 }
 
 /** Published activity_list rows only — mirrors student RLS on teacher read-only curriculum views. */
 export function filterStudentVisibleSectionResources(
-  sectionResources: Record<string, SectionResource[]>,
+  sectionResources: Record<string, SectionResource[]>
 ): Record<string, SectionResource[]> {
   const out: Record<string, SectionResource[]> = {};
   for (const [sectionId, resources] of Object.entries(sectionResources)) {
@@ -76,7 +76,7 @@ export function filterStudentVisibleSectionResources(
 /** Assignment steps plus resource steps whose linked material is lesson/text/video (not outline-only files/links). */
 export function filterActivityCenterModuleFlowSteps(
   steps: ModuleFlowStep[],
-  sectionResources: SectionResource[],
+  sectionResources: SectionResource[]
 ): ModuleFlowStep[] {
   return steps.filter((step) => {
     if (step.step_kind === 'assignment') return true;
@@ -99,7 +99,7 @@ export type OrderedActivityCenterFlowStepsOptions = {
 };
 
 export function studentModuleFlowStepOptions(
-  assignments: Array<{ id: string; type?: string | null }>,
+  assignments: Array<{ id: string; type?: string | null }>
 ): OrderedActivityCenterFlowStepsOptions {
   const assignmentsById: Record<string, { type?: string | null }> = {};
   for (const a of assignments) {
@@ -112,19 +112,21 @@ export function studentModuleFlowStepOptions(
 export function getOrderedActivityCenterFlowSteps(
   steps: ModuleFlowStep[],
   sectionResources: SectionResource[],
-  options?: OrderedActivityCenterFlowStepsOptions,
+  options?: OrderedActivityCenterFlowStepsOptions
 ): ModuleFlowStep[] {
   let filtered = filterActivityCenterModuleFlowSteps(steps, sectionResources);
   if (options?.assignmentsById) {
+    const assignmentsById = options.assignmentsById;
     filtered = filtered.filter((step) => {
       if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
-      return step.assignment_id in options.assignmentsById!;
+      return step.assignment_id in assignmentsById;
     });
   }
   if (options?.hideLiveSessions && options.assignmentsById) {
+    const assignmentsById = options.assignmentsById;
     filtered = filtered.filter((step) => {
       if (step.step_kind !== 'assignment' || !step.assignment_id) return true;
-      const type = options.assignmentsById![step.assignment_id]?.type;
+      const type = assignmentsById[step.assignment_id]?.type;
       return !isLiveSessionAssignmentType(type);
     });
   }
@@ -134,7 +136,7 @@ export function getOrderedActivityCenterFlowSteps(
 /** Next step in teacher-defined order, or undefined if last or not found. */
 export function getNextActivityCenterStep(
   orderedSteps: ModuleFlowStep[],
-  currentStepId: string,
+  currentStepId: string
 ): ModuleFlowStep | undefined {
   const i = orderedSteps.findIndex((s) => s.id === currentStepId);
   if (i < 0 || i >= orderedSteps.length - 1) return undefined;
@@ -171,10 +173,12 @@ export type ModuleFlowLocalStep =
 /** Append section-linked assignments missing from `base` (sorted like default flow). */
 export function appendMissingSectionLinkedAssignments(
   base: ModuleFlowLocalStep[],
-  sectionAssignments: AssignmentRow[],
+  sectionAssignments: AssignmentRow[]
 ): ModuleFlowLocalStep[] {
   const present = new Set(
-    base.filter((s): s is { kind: 'assignment'; assignmentId: string } => s.kind === 'assignment').map((s) => s.assignmentId),
+    base
+      .filter((s): s is { kind: 'assignment'; assignmentId: string } => s.kind === 'assignment')
+      .map((s) => s.assignmentId)
   );
   const missing = sortAssignmentsForSection(sectionAssignments).filter((a) => !present.has(a.id));
   if (missing.length === 0) return base;
@@ -185,12 +189,12 @@ export function appendMissingSectionLinkedAssignments(
 export function appendMissingActivityCenterResources(
   base: ModuleFlowLocalStep[],
   sectionId: string,
-  resources: SectionResource[],
+  resources: SectionResource[]
 ): ModuleFlowLocalStep[] {
   const present = new Set(
     base
       .filter((s): s is { kind: 'resource'; resourceId: string } => s.kind === 'resource')
-      .map((s) => s.resourceId),
+      .map((s) => s.resourceId)
   );
   const missing = resources
     .filter((r) => r.section_id === sectionId && isActivityCenterResource(r) && !present.has(r.id))
@@ -205,7 +209,7 @@ export function computedFlowItemsToLocalSteps(items: ComputedFlowItem[]): Module
   return items.map((c) =>
     c.kind === 'resource'
       ? { kind: 'resource', resourceId: c.activity_list_id }
-      : { kind: 'assignment', assignmentId: c.assignment_id },
+      : { kind: 'assignment', assignmentId: c.assignment_id }
   );
 }
 
@@ -218,7 +222,7 @@ export function resolveDisplayedModuleFlowBase(
   resources: SectionResource[],
   assignments: AssignmentRow[],
   persistedSteps: ModuleFlowStep[],
-  options?: OrderedActivityCenterFlowStepsOptions,
+  options?: OrderedActivityCenterFlowStepsOptions
 ): ModuleFlowLocalStep[] {
   const computedDefault = computeDefaultModuleFlow(sectionId, resources, assignments, options);
 
@@ -229,7 +233,7 @@ export function resolveDisplayedModuleFlowBase(
       base = ordered.map((s) =>
         s.step_kind === 'resource' && s.activity_list_id
           ? { kind: 'resource', resourceId: s.activity_list_id }
-          : { kind: 'assignment', assignmentId: s.assignment_id! },
+          : { kind: 'assignment', assignmentId: s.assignment_id ?? '' }
       );
     } else {
       base = computedFlowItemsToLocalSteps(computedDefault);
@@ -250,7 +254,7 @@ export function resolveDisplayedModuleFlowBase(
 export function filterOrphanModuleFlowLocalSteps(
   steps: ModuleFlowLocalStep[],
   resources: SectionResource[],
-  allAssignments: AssignmentRow[],
+  allAssignments: AssignmentRow[]
 ): ModuleFlowLocalStep[] {
   const assignmentIds = new Set(allAssignments.map((a) => a.id));
   return steps.filter((s) => {
@@ -267,7 +271,7 @@ export function resolveTeacherCurriculumModuleFlow(
   sectionId: string,
   resources: SectionResource[],
   assignments: AssignmentRow[],
-  persistedSteps: ModuleFlowStep[],
+  persistedSteps: ModuleFlowStep[]
 ): ModuleFlowLocalStep[] {
   const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps);
   return filterOrphanModuleFlowLocalSteps(base, resources, assignments);
@@ -278,9 +282,15 @@ export function resolveDisplayedModuleFlow(
   resources: SectionResource[],
   assignments: AssignmentRow[],
   persistedSteps: ModuleFlowStep[],
-  options?: OrderedActivityCenterFlowStepsOptions,
+  options?: OrderedActivityCenterFlowStepsOptions
 ): ModuleFlowLocalStep[] {
-  const base = resolveDisplayedModuleFlowBase(sectionId, resources, assignments, persistedSteps, options);
+  const base = resolveDisplayedModuleFlowBase(
+    sectionId,
+    resources,
+    assignments,
+    persistedSteps,
+    options
+  );
   let sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
   if (options?.hideLiveSessions) {
     sectionAssignments = sectionAssignments.filter((a) => !isLiveSessionAssignmentType(a.type));
@@ -296,7 +306,10 @@ export function resolveDisplayedModuleFlow(
   return filterOrphanModuleFlowLocalSteps(merged, resources, assignments);
 }
 
-export function moduleFlowLocalStepsEqual(a: ModuleFlowLocalStep[], b: ModuleFlowLocalStep[]): boolean {
+export function moduleFlowLocalStepsEqual(
+  a: ModuleFlowLocalStep[],
+  b: ModuleFlowLocalStep[]
+): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     const x = a[i];
@@ -319,7 +332,7 @@ export function computeDefaultModuleFlow(
   sectionId: string,
   resources: SectionResource[],
   assignments: AssignmentRow[],
-  options?: OrderedActivityCenterFlowStepsOptions,
+  options?: OrderedActivityCenterFlowStepsOptions
 ): ComputedFlowItem[] {
   const res = resources
     .filter((r) => r.section_id === sectionId && isActivityCenterResource(r))
@@ -327,9 +340,7 @@ export function computeDefaultModuleFlow(
     .sort((a, b) => a.order_index - b.order_index);
   let sectionAssignments = assignments.filter((a) => a.syllabus_section_id === sectionId);
   if (options?.hideLiveSessions) {
-    sectionAssignments = sectionAssignments.filter(
-      (a) => !isLiveSessionAssignmentType(a.type),
-    );
+    sectionAssignments = sectionAssignments.filter((a) => !isLiveSessionAssignmentType(a.type));
   }
   const assigns = sortAssignmentsForSection(sectionAssignments);
 
@@ -349,7 +360,11 @@ export function computeDefaultModuleFlow(
  */
 export function flowItemMatchesStep(
   item: ComputedFlowItem,
-  step: { step_kind: ModuleFlowStepKind; activity_list_id: string | null; assignment_id: string | null },
+  step: {
+    step_kind: ModuleFlowStepKind;
+    activity_list_id: string | null;
+    assignment_id: string | null;
+  }
 ): boolean {
   if (item.kind === 'resource' && step.step_kind === 'resource') {
     return step.activity_list_id === item.activity_list_id;
@@ -366,7 +381,9 @@ export function orderedSections(sections: SyllabusSection[]): SyllabusSection[] 
 }
 
 /** Persist local module-flow steps to the API shape (order_index + step_kind + ids). */
-export function moduleFlowLocalStepsToFlowInput(localSteps: ModuleFlowLocalStep[]): FlowStepInput[] {
+export function moduleFlowLocalStepsToFlowInput(
+  localSteps: ModuleFlowLocalStep[]
+): FlowStepInput[] {
   return localSteps.map((s, order_index) =>
     s.kind === 'resource'
       ? {
@@ -380,7 +397,7 @@ export function moduleFlowLocalStepsToFlowInput(localSteps: ModuleFlowLocalStep[
           step_kind: 'assignment',
           activity_list_id: null,
           assignment_id: s.assignmentId,
-        },
+        }
   );
 }
 
@@ -393,12 +410,10 @@ export function moduleFlowLocalStepsToFlowInput(localSteps: ModuleFlowLocalStep[
 export function linkedAssignmentsVisibleInModuleFlow<T extends { id: string; type?: string }>(
   sectionLinked: T[],
   persistedFlowSteps: ModuleFlowStep[] | undefined | null,
-  options?: Pick<OrderedActivityCenterFlowStepsOptions, 'hideLiveSessions'>,
+  options?: Pick<OrderedActivityCenterFlowStepsOptions, 'hideLiveSessions'>
 ): T[] {
   const withoutLiveSessions = (list: T[]) =>
-    options?.hideLiveSessions
-      ? list.filter((a) => !isLiveSessionAssignmentType(a.type))
-      : list;
+    options?.hideLiveSessions ? list.filter((a) => !isLiveSessionAssignmentType(a.type)) : list;
 
   if (!persistedFlowSteps || persistedFlowSteps.length === 0) {
     return withoutLiveSessions(sectionLinked);
@@ -416,7 +431,7 @@ export function linkedAssignmentsVisibleInModuleFlow<T extends { id: string; typ
   if (orderedIds.length === 0) return [];
   const byId = new Map(sectionLinked.map((a) => [a.id, a]));
   return withoutLiveSessions(
-    orderedIds.map((id) => byId.get(id)).filter((a): a is T => a !== undefined),
+    orderedIds.map((id) => byId.get(id)).filter((a): a is T => a !== undefined)
   );
 }
 
@@ -425,9 +440,9 @@ export function buildResolvedModuleFlowStepInputs(
   sectionId: string,
   resources: SectionResource[],
   assignments: AssignmentRow[],
-  persistedSteps: ModuleFlowStep[],
+  persistedSteps: ModuleFlowStep[]
 ): FlowStepInput[] {
   return moduleFlowLocalStepsToFlowInput(
-    resolveDisplayedModuleFlow(sectionId, resources, assignments, persistedSteps),
+    resolveDisplayedModuleFlow(sectionId, resources, assignments, persistedSteps)
   );
 }

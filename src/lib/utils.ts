@@ -13,7 +13,7 @@ export function detectTextDirection(text: string): 'rtl' | 'ltr' {
   // Find the first letter character (skip spaces, numbers, symbols)
   const letterMatch = text.match(/[\p{L}]/u);
   if (!letterMatch) return 'ltr';
-  
+
   const firstLetter = letterMatch[0];
   const hebrewRegex = /[\u0590-\u05FF]/;
   return hebrewRegex.test(firstLetter) ? 'rtl' : 'ltr';
@@ -40,7 +40,7 @@ export async function copyToClipboard(text: string): Promise<void> {
     try {
       document.execCommand('copy');
       textArea.remove();
-    } catch (error) {
+    } catch {
       textArea.remove();
       throw new Error('Failed to copy');
     }

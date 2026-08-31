@@ -5,7 +5,7 @@
  */
 export function mergeStreamingTextChunk(prev: string, chunk: string): string {
   if (!prev || !chunk) return prev + chunk;
-  if (/[<>\[\]]/.test(chunk)) return prev + chunk;
+  if (/[<>[\]]/.test(chunk)) return prev + chunk;
   const window = prev.slice(-24) + chunk.slice(0, 24);
   if (/<<<|PROGRESS/i.test(window)) return prev + chunk;
   return prev + chunk;

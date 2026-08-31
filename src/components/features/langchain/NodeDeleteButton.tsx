@@ -1,13 +1,7 @@
 import { X } from 'lucide-react';
 import { useLangchainEditorContext } from './LangchainEditorContext';
 
-export function NodeDeleteButton({
-  nodeId,
-  selected,
-}: {
-  nodeId: string;
-  selected?: boolean;
-}) {
+export const NodeDeleteButton = ({ nodeId, selected }: { nodeId: string; selected?: boolean }) => {
   const { readOnly, onDeleteNode } = useLangchainEditorContext();
 
   if (!selected || readOnly) return null;
@@ -25,4 +19,4 @@ export function NodeDeleteButton({
       <X className="h-3.5 w-3.5" strokeWidth={2.5} />
     </button>
   );
-}
+};

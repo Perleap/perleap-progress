@@ -41,7 +41,9 @@ export const AnalyticsSummary = ({
       </Card>
       <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs md:text-sm text-muted-foreground">Total Submissions</CardTitle>
+          <CardTitle className="text-xs md:text-sm text-muted-foreground">
+            Total Submissions
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-xl md:text-2xl font-bold text-foreground">{totalSubmissions}</div>
@@ -49,7 +51,9 @@ export const AnalyticsSummary = ({
       </Card>
       <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs md:text-sm text-muted-foreground">Completion Rate</CardTitle>
+          <CardTitle className="text-xs md:text-sm text-muted-foreground">
+            Completion Rate
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-xl md:text-2xl font-bold text-foreground">{completionRate}%</div>

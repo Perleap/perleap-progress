@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
 import { StudentClassroomDetailContent } from '@/components/features/classroom';
 import { useClassroom } from '@/hooks/queries';
 import { normalizeStudentClassroomDetail } from '@/lib/classroomDetail';
@@ -10,8 +10,11 @@ const StudentClassroomDetail = () => {
   const { id } = useParams();
   const { data: rawClassroom, isLoading: classroomLoading } = useClassroom(id);
   const classroom = useMemo(
-    () => normalizeStudentClassroomDetail(rawClassroom as Record<string, unknown> | null | undefined),
-    [rawClassroom],
+    () =>
+      normalizeStudentClassroomDetail(
+        rawClassroom as unknown as Record<string, unknown> | null | undefined
+      ),
+    [rawClassroom]
   );
 
   if (classroomLoading) {

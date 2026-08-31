@@ -4,15 +4,15 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { TeacherProfile, StudentProfile } from '@/types';
 import { useAuth } from '@/contexts/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   getTeacherProfile,
   getStudentProfile,
   updateTeacherProfile,
   updateStudentProfile,
 } from '@/services/profileService';
-import { supabase } from '@/integrations/supabase/client';
-import type { TeacherProfile, StudentProfile } from '@/types';
 
 // Query Keys
 export const profileKeys = {
@@ -36,7 +36,7 @@ export const useTeacherProfile = (userId?: string) => {
       if (error) throw error;
       return data;
     },
-    enabled: !!targetUserId && (!!userId || !userId && !!user?.id),
+    enabled: !!targetUserId && (!!userId || (!userId && !!user?.id)),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -127,11 +127,3 @@ export const useUpdateStudentProfile = () => {
     },
   });
 };
-
-
-
-
-
-
-
-

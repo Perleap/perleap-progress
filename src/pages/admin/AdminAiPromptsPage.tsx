@@ -1,5 +1,7 @@
 import { AdminAiPromptsContent } from '@/components/features/admin';
 
-export default function AdminAiPromptsPage() {
+const AdminAiPromptsPage = () => {
   return <AdminAiPromptsContent />;
-}
+};
+
+export default AdminAiPromptsPage;

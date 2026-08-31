@@ -1,15 +1,4 @@
 import {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useImperativeHandle,
-  forwardRef,
-  useRef,
-} from 'react';
-import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
   DndContext,
   DragOverlay,
   closestCenter,
@@ -21,6 +10,7 @@ import {
   type DragStartEvent,
   type DraggableAttributes,
 } from '@dnd-kit/core';
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -29,8 +19,31 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { Button } from '@/components/ui/button';
+import { useQueryClient } from '@tanstack/react-query';
+import { GripVertical, Trash2, Plus, Pencil, Eye, PlayCircle, Radio } from 'lucide-react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+  useRef,
+  type ReactNode,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import {
+  syllabusRowActionClass,
+  syllabusRowDestructiveActionClass,
+  syllabusRowDragHandleClass,
+} from './syllabusRowActionStyles';
+import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
+import type { ActivityLinkState } from '@/types/navigation';
+import type { SectionResource } from '@/types/syllabus';
+import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
+import { CreateLiveSessionDialog } from '@/components/features/liveSession/CreateLiveSessionDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,24 +54,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Link, useNavigate } from 'react-router-dom';
-import { GripVertical, Trash2, Plus, Pencil, Eye, PlayCircle, Radio } from 'lucide-react';
-import type { ActivityLinkState } from '@/types/navigation';
-import { toast } from 'sonner';
-import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
-import { cn } from '@/lib/utils';
+import { buildRoute } from '@/config/routes';
 import {
-  syllabusRowActionClass,
-  syllabusRowDestructiveActionClass,
-  syllabusRowDragHandleClass,
-} from './syllabusRowActionStyles';
-import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
+  useModuleFlowSteps,
+  useReplaceModuleFlow,
+  useDeleteAssignment,
+  useDeleteResource,
+} from '@/hooks/queries';
+import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
+import { boundedPointerAutoScroll } from '@/lib/dndAutoScroll';
 import {
   isActivityCenterResource,
   moduleFlowLocalStepsEqual,
@@ -66,18 +77,7 @@ import {
   resolveTeacherCurriculumModuleFlow,
   type ModuleFlowLocalStep,
 } from '@/lib/moduleFlow';
-import {
-  useModuleFlowSteps,
-  useReplaceModuleFlow,
-  useDeleteAssignment,
-  useDeleteResource,
-} from '@/hooks/queries';
-import { useQueryClient } from '@tanstack/react-query';
-import { assignmentKeys } from '@/hooks/queries/useAssignmentQueries';
-import type { SectionResource } from '@/types/syllabus';
-import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
-import { CreateLiveSessionDialog } from '@/components/features/liveSession/CreateLiveSessionDialog';
-import { buildRoute } from '@/config/routes';
+import { cn } from '@/lib/utils';
 
 type LocalStep = ModuleFlowLocalStep;
 
@@ -122,7 +122,7 @@ function isSameStepMultiset(a: LocalStep[], b: LocalStep[]): boolean {
 function computeHydratedSteps(
   prev: LocalStep[],
   merged: LocalStep[],
-  replacePending: boolean,
+  replacePending: boolean
 ): LocalStep[] {
   if (prev.length === 0) return merged;
   const prevKeys = new Set(prev.map(stepSortId));
@@ -153,7 +153,7 @@ interface ModuleFlowEditorProps {
 }
 
 /** Step index label in a circle; no connector lines (visual parity with student curriculum rail). */
-function ModuleFlowTimelineRail({ stepNumber }: { stepNumber: number }) {
+const ModuleFlowTimelineRail = ({ stepNumber }: { stepNumber: number }) => {
   return (
     <div
       className="pointer-events-none flex w-9 shrink-0 flex-col items-center justify-center self-center"
@@ -164,9 +164,9 @@ function ModuleFlowTimelineRail({ stepNumber }: { stepNumber: number }) {
       </div>
     </div>
   );
-}
+};
 
-function SortableFlowRow({
+const SortableFlowRow = ({
   id,
   children,
 }: {
@@ -175,7 +175,7 @@ function SortableFlowRow({
     dragAttributes: DraggableAttributes;
     dragListeners: Record<string, unknown> | undefined;
   }) => ReactNode;
-}) {
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
@@ -189,10 +189,10 @@ function SortableFlowRow({
       {children({ dragAttributes: attributes, dragListeners: listeners })}
     </li>
   );
-}
+};
 
 export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEditorProps>(
-  function ModuleFlowEditor(
+  (
     {
       flowHeading,
       sectionId,
@@ -205,8 +205,8 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       onEditAssignment,
       onEditResource,
     },
-    ref,
-  ) {
+    ref
+  ) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -225,18 +225,18 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
 
     const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-      useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+      useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
     const sectionAssignments = useMemo(
       () => assignments.filter((a) => a.syllabus_section_id === sectionId),
-      [assignments, sectionId],
+      [assignments, sectionId]
     );
 
     /** Stable ref — inline object would retrigger CreateAssignmentDialog effects every render. */
     const createAssignmentInitialData = useMemo(
       () => ({ syllabus_section_id: sectionId }),
-      [sectionId],
+      [sectionId]
     );
     const noopAssignmentSuccess = useCallback(() => {}, []);
 
@@ -258,13 +258,18 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
           return false;
         }
       },
-      [classroomId, replaceMutation, sectionId, t],
+      [classroomId, replaceMutation, sectionId, t]
     );
 
     useEffect(() => {
       const persistedForResolve = isLoading ? [] : persisted;
       /** Same orphan filtering as teacher Curriculum; no student `appendMissing*` merge. */
-      const merged = resolveTeacherCurriculumModuleFlow(sectionId, resources, assignments, persistedForResolve);
+      const merged = resolveTeacherCurriculumModuleFlow(
+        sectionId,
+        resources,
+        assignments,
+        persistedForResolve
+      );
       const prevSnap = localStepsRef.current;
       const next = computeHydratedSteps(prevSnap, merged, replaceMutation.isPending);
       const prevKeys = new Set(prevSnap.map(stepSortId));
@@ -274,8 +279,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
 
       /** Avoid re-persisting "additions" while server snapshot is stale (e.g. right after delete). */
       const blockAdditionsAutoPersist =
-        replaceMutation.isPending ||
-        (isFetching && prevSnap.length > 0 && additions.length > 0);
+        replaceMutation.isPending || (isFetching && prevSnap.length > 0 && additions.length > 0);
 
       if (!isLoading && !blockAdditionsAutoPersist) {
         if (additions.length > 0) {
@@ -338,8 +342,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
         }
         if (ok && removed.kind === 'resource') {
           try {
-            const filePath =
-              resources.find((r) => r.id === removed.resourceId)?.file_path ?? null;
+            const filePath = resources.find((r) => r.id === removed.resourceId)?.file_path ?? null;
             await deleteResourceMutation.mutateAsync({
               resourceId: removed.resourceId,
               filePath,
@@ -359,7 +362,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
         resources,
         sectionId,
         t,
-      ],
+      ]
     );
 
     const resourceById = useMemo(() => {
@@ -378,8 +381,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
       return m;
     }, [sectionAssignments]);
 
-    const pendingDeleteStep =
-      deleteConfirmIndex != null ? localSteps[deleteConfirmIndex] : null;
+    const pendingDeleteStep = deleteConfirmIndex != null ? localSteps[deleteConfirmIndex] : null;
 
     const deleteConfirmCopy = useMemo(() => {
       if (!pendingDeleteStep) return null;
@@ -435,7 +437,9 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
         }
         const next: LocalStep[] = [
           ...prev,
-          kind === 'resource' ? { kind: 'resource', resourceId: id } : { kind: 'assignment', assignmentId: id },
+          kind === 'resource'
+            ? { kind: 'resource', resourceId: id }
+            : { kind: 'assignment', assignmentId: id },
         ];
         const ok = await persistFlow(next);
         if (ok) {
@@ -446,34 +450,24 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
           });
         }
       },
-      [persistFlow, resourceById, t, queryClient, classroomId],
+      [persistFlow, resourceById, t, queryClient, classroomId]
     );
 
     useImperativeHandle(ref, () => ({ appendStep }), [appendStep]);
 
     const activeStep =
-      activeDragId != null
-        ? localSteps.find((s) => stepSortId(s) === activeDragId)
-        : null;
+      activeDragId != null ? localSteps.find((s) => stepSortId(s) === activeDragId) : null;
     const activeDragIndex =
       activeDragId != null ? localSteps.findIndex((s) => stepSortId(s) === activeDragId) : -1;
 
     return (
       <div className="space-y-3">
-        <div
-          className={cn(
-            'flex items-start gap-3 justify-between',
-            isRTL && 'flex-row-reverse',
-          )}
-        >
-          <div
-            className={cn(
-              'min-w-0 flex-1 space-y-1',
-              isRTL ? 'text-right' : 'text-left',
-            )}
-          >
+        <div className={cn('flex items-start gap-3 justify-between', isRTL && 'flex-row-reverse')}>
+          <div className={cn('min-w-0 flex-1 space-y-1', isRTL ? 'text-right' : 'text-left')}>
             <div className="text-sm font-semibold text-foreground">{flowHeading}</div>
-            <p className="text-sm text-muted-foreground">{t('classroomDetail.activitiesFlow.hint')}</p>
+            <p className="text-sm text-muted-foreground">
+              {t('classroomDetail.activitiesFlow.hint')}
+            </p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -539,7 +533,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                       <div
                         className={cn(
                           'flex min-w-0 items-center gap-3',
-                          isRTL && 'flex-row-reverse',
+                          isRTL && 'flex-row-reverse'
                         )}
                       >
                         <ModuleFlowTimelineRail stepNumber={index + 1} />
@@ -547,7 +541,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                           className={cn(
                             'flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-card p-3',
                             isRTL && 'flex-row-reverse',
-                            activeDragId === sid && 'ring-2 ring-primary/25 shadow-md',
+                            activeDragId === sid && 'ring-2 ring-primary/25 shadow-md'
                           )}
                         >
                           <button
@@ -581,13 +575,13 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                             {step.kind === 'resource' ? (
                               <>
                                 <SyllabusRowActionTooltip
-                                label={t('common.view')}
-                                render={
-                                  <Link
-                                    to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
-                                    state={activityLinkState}
-                                    className={syllabusRowActionClass}
-                                    aria-label={t('common.view')}
+                                  label={t('common.view')}
+                                  render={
+                                    <Link
+                                      to={`/teacher/classroom/${classroomId}/activity/${step.resourceId}`}
+                                      state={activityLinkState}
+                                      className={syllabusRowActionClass}
+                                      aria-label={t('common.view')}
                                     >
                                       <Eye className="h-4 w-4" />
                                     </Link>
@@ -709,16 +703,13 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
               })}
             </ul>
           </SortableContext>
-          <div
-            aria-hidden
-            className="pointer-events-none mt-2 min-h-[3.5rem] w-full shrink-0"
-          />
+          <div aria-hidden className="pointer-events-none mt-2 min-h-[3.5rem] w-full shrink-0" />
           <DragOverlay dropAnimation={null}>
             {activeStep ? (
               <div
                 className={cn(
                   'flex min-w-0 items-center gap-3 shadow-xl will-change-transform [backface-visibility:hidden]',
-                  isRTL && 'flex-row-reverse',
+                  isRTL && 'flex-row-reverse'
                 )}
               >
                 <ModuleFlowTimelineRail
@@ -727,7 +718,7 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
                 <div
                   className={cn(
                     'flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-card p-3',
-                    isRTL && 'flex-row-reverse',
+                    isRTL && 'flex-row-reverse'
                   )}
                 >
                   <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -749,7 +740,9 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
         </DndContext>
 
         {localSteps.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('classroomDetail.activitiesFlow.empty')}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('classroomDetail.activitiesFlow.empty')}
+          </p>
         ) : null}
 
         <CreateAssignmentDialog
@@ -806,5 +799,5 @@ export const ModuleFlowEditor = forwardRef<ModuleFlowEditorHandle, ModuleFlowEdi
         </AlertDialog>
       </div>
     );
-  },
+  }
 );

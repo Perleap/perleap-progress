@@ -1,3 +1,4 @@
+import { X, Send, Trash2, Loader2, Sparkles, Bot } from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -7,22 +8,22 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
+import SafeMathMarkdown from '../SafeMathMarkdown';
+import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Send, Trash2, Loader2, Sparkles, Bot } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
-import { useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { getTeacherProfile } from '@/services/profileService';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import { formatInlineListsForChatMarkdown } from '@/lib/chatDisplay';
-import SafeMathMarkdown from '../SafeMathMarkdown';
+import { cn } from '@/lib/utils';
+import { getTeacherProfile } from '@/services/profileService';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -47,7 +48,7 @@ function useTeacherAssistantContext() {
   return useContext(TeacherAssistantContext);
 }
 
-export function TeacherAssistantProvider({ children }: { children: ReactNode }) {
+export const TeacherAssistantProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [teacherFullName, setTeacherFullName] = useState<string | null>(null);
   const { t } = useTranslation();
@@ -174,7 +175,7 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
       clearChat,
       scrollEndRef,
     }),
-    [isOpen, toggle, messages, input, isLoading, handleSend, clearChat],
+    [isOpen, toggle, messages, input, isLoading, handleSend, clearChat]
   );
 
   if (!isTeacher) {
@@ -187,9 +188,9 @@ export function TeacherAssistantProvider({ children }: { children: ReactNode }) 
       <TeacherAssistantPanel isRTL={isRTL} />
     </TeacherAssistantContext.Provider>
   );
-}
+};
 
-function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
+const TeacherAssistantPanel = ({ isRTL }: { isRTL: boolean }) => {
   const ctx = useTeacherAssistantContext();
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -228,7 +229,7 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
     <Card
       className={cn(
         'fixed top-[6.5rem] z-[9999] w-[90vw] md:w-96 h-[min(550px,80vh)] max-h-[80vh] shadow-2xl flex flex-col animate-in fade-in slide-in-from-top-2 zoom-in-95 duration-300 border-border/50 overflow-hidden rounded-2xl',
-        isRTL ? 'left-4' : 'right-4',
+        isRTL ? 'left-4' : 'right-4'
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -255,12 +256,17 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground bg-card rounded-xl my-8 mx-2 border border-dashed">
                 <Bot className="h-10 w-10 mb-3 text-muted-foreground/50" />
-                <p className="text-sm font-medium text-foreground/80">{t('teacherAssistant.howCanIHelp')}</p>
+                <p className="text-sm font-medium text-foreground/80">
+                  {t('teacherAssistant.howCanIHelp')}
+                </p>
                 <p className="text-xs mt-2 opacity-70">{t('teacherAssistant.suggestions')}</p>
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                key={i}
+                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
                     m.role === 'user'
@@ -269,7 +275,11 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
                   }`}
                 >
                   <SafeMathMarkdown
-                    content={m.role === 'assistant' ? formatInlineListsForChatMarkdown(m.content) : m.content}
+                    content={
+                      m.role === 'assistant'
+                        ? formatInlineListsForChatMarkdown(m.content)
+                        : m.content
+                    }
                   />
                 </div>
               </div>
@@ -278,11 +288,13 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
               <div className="flex justify-start w-full">
                 <div className="bg-card border border-border rounded-2xl rounded-bl-none px-4 py-3 shadow-sm flex items-center gap-2">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground" />
-                  <span className="text-xs text-muted-foreground animate-pulse">{t('teacherAssistant.generating')}</span>
+                  <span className="text-xs text-muted-foreground animate-pulse">
+                    {t('teacherAssistant.generating')}
+                  </span>
                 </div>
               </div>
             )}
-            <div ref={scrollEndRef} />
+            <div ref={scrollEndRef as Ref<HTMLDivElement>} />
           </div>
         </ScrollArea>
       </CardContent>
@@ -302,7 +314,12 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
             disabled={isLoading}
             className="flex-1 rounded-xl bg-muted/50 border-border focus-visible:ring-ring min-h-[44px]"
           />
-          <Button type="submit" size="icon" disabled={isLoading || !input.trim()} className="h-11 w-11 rounded-xl shrink-0">
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isLoading || !input.trim()}
+            className="h-11 w-11 rounded-xl shrink-0"
+          >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
@@ -313,10 +330,10 @@ function TeacherAssistantPanel({ isRTL }: { isRTL: boolean }) {
       </CardFooter>
     </Card>
   );
-}
+};
 
 /** Header control: place next to notifications (teachers only). */
-export function TeacherAssistantTrigger({ className }: { className?: string }) {
+export const TeacherAssistantTrigger = ({ className }: { className?: string }) => {
   const ctx = useTeacherAssistantContext();
   if (!ctx) return null;
 
@@ -329,22 +346,20 @@ export function TeacherAssistantTrigger({ className }: { className?: string }) {
       size="icon"
       className={cn(
         'relative h-8 w-8 shrink-0 rounded-full border transition-colors',
-        isOpen ? 'bg-muted text-muted-foreground border-border' : 'border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90',
-        className,
+        isOpen
+          ? 'bg-muted text-muted-foreground border-border'
+          : 'border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90',
+        className
       )}
       onClick={toggle}
       aria-label="Toggle AI Assistant"
     >
-      {isOpen ? (
-        <X className="h-4 w-4" />
-      ) : (
-        <Sparkles className="h-4 w-4" />
-      )}
+      {isOpen ? <X className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
     </Button>
   );
-}
+};
 
 /** @deprecated Use `TeacherAssistantProvider` + `TeacherAssistantTrigger` in the app shell. */
-export function TeacherAssistant() {
+export const TeacherAssistant = () => {
   return null;
-}
+};

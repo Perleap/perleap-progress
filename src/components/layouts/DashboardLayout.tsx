@@ -1,19 +1,18 @@
+import { useTranslation } from 'react-i18next';
+import { AppSidebar } from './AppSidebar';
+import { FloatingShellActions } from './FloatingShellActions';
 import type { ReactNode } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
-import { usePageTransition } from '@/hooks/useGsapAnimations';
-import { useLanguage } from '@/contexts/LanguageContext';
-
-import { useAuth } from '@/contexts/useAuth';
-import { useTranslation } from 'react-i18next';
 import { USER_ROLES } from '@/config/constants';
-import { FloatingShellActions } from './FloatingShellActions';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
+import { usePageTransition } from '@/hooks/useGsapAnimations';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const contentRef = usePageTransition();
   const { isRTL } = useLanguage();
   const { t } = useTranslation();
@@ -23,7 +22,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     user?.user_metadata?.role === 'teacher' || user?.user_metadata?.role === 'admin';
 
   return (
-    <SidebarProvider defaultOpen={true} className={isRTL ? 'rtl-sidebar' : ''}>
+    <SidebarProvider defaultOpen className={isRTL ? 'rtl-sidebar' : ''}>
       <AppSidebar />
       <SidebarInset className="relative z-0">
         <FloatingShellActions userId={user?.id} showTeacherAssistant={isTeacher} />
@@ -44,4 +43,4 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </SidebarInset>
     </SidebarProvider>
   );
-}
+};

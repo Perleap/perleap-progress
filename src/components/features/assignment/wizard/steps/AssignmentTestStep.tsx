@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { TestQuestionBuilder, type TestQuestionDraft } from '@/components/features/assignment/TestQuestionBuilder';
+import {
+  TestQuestionBuilder,
+  type TestQuestionDraft,
+} from '@/components/features/assignment/TestQuestionBuilder';
 import { cn } from '@/lib/utils';
 
 interface AssignmentTestStepProps {
@@ -10,18 +13,21 @@ interface AssignmentTestStepProps {
   readOnlyMessage?: string;
 }
 
-export function AssignmentTestStep({
+export const AssignmentTestStep = ({
   questions,
   onQuestionsChange,
   isRTL,
   readOnly = false,
   readOnlyMessage,
-}: AssignmentTestStepProps) {
+}: AssignmentTestStepProps) => {
   const { t } = useTranslation();
 
   if (readOnly) {
     return (
-      <div className="space-y-3 p-6 rounded-xl border border-border shadow-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div
+        className="space-y-3 p-6 rounded-xl border border-border shadow-sm"
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
         <p className={cn('text-sm text-muted-foreground', isRTL ? 'text-right' : 'text-left')}>
           {readOnlyMessage ?? t('createAssignment.wizard.testQuestionsLocked')}
         </p>
@@ -37,4 +43,4 @@ export function AssignmentTestStep({
       <TestQuestionBuilder questions={questions} onQuestionsChange={onQuestionsChange} />
     </div>
   );
-}
+};

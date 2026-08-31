@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import type { Notification, NotificationWithProfile } from '@/types/notifications';
+import { toast } from 'sonner';
+import type { NotificationWithProfile } from '@/types/notifications';
 import { getUnreadNotifications, markAsRead, markAllAsRead } from '@/lib/notificationService';
 
 /**

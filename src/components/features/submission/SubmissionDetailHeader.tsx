@@ -1,10 +1,10 @@
-import { useTranslation } from 'react-i18next';
 import { Sparkles, Calendar, BookOpen } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { SubmissionResetProgressDialog } from '@/components/features/submission/SubmissionResetProgressDialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';
 import { STUDENT_AVATARS_BUCKET } from '@/utils/storageUrls';
-import { SubmissionResetProgressDialog } from '@/components/features/submission/SubmissionResetProgressDialog';
 
 export type SubmissionDetailHeaderProps = {
   studentName: string;
@@ -21,7 +21,7 @@ export type SubmissionDetailHeaderProps = {
   onGenerateFollowup: () => void | Promise<void>;
 };
 
-export function SubmissionDetailHeader({
+export const SubmissionDetailHeader = ({
   studentName,
   studentAvatar,
   classroomName,
@@ -34,14 +34,18 @@ export function SubmissionDetailHeader({
   hasFeedback,
   generatingAssignment,
   onGenerateFollowup,
-}: SubmissionDetailHeaderProps) {
+}: SubmissionDetailHeaderProps) => {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-6 rounded-xl border border-white/20 shadow-sm">
       <div className="flex items-center gap-4 flex-1 min-w-0 w-full md:w-auto">
         <Avatar className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-md shrink-0">
-          <SecureAvatarImage src={studentAvatar} bucket={STUDENT_AVATARS_BUCKET} alt={studentName} />
+          <SecureAvatarImage
+            src={studentAvatar}
+            bucket={STUDENT_AVATARS_BUCKET}
+            alt={studentName}
+          />
           <AvatarFallback className="bg-primary/10 text-primary text-xl">
             {studentName.charAt(0)}
           </AvatarFallback>
@@ -96,4 +100,4 @@ export function SubmissionDetailHeader({
       </div>
     </div>
   );
-}
+};

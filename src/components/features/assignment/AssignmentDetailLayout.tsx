@@ -1,14 +1,18 @@
-import { useCallback, useMemo, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { ArrowLeft } from 'lucide-react';
-import { ClassroomLayout } from '@/components/layouts';
-import { getStudentClassroomNavSections, getTeacherClassroomNavSections } from '@/lib/classroomNavSections';
-import type { ClassroomNavSection } from '@/lib/classroomNavSections';
-import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
+import { useCallback, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import type { AssignmentLinkState } from '@/types/navigation';
+import { ClassroomLayout } from '@/components/layouts';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { canGoBackInHistory, navigateBackOrTo } from '@/hooks/useNavigateBack';
+import {
+  getStudentClassroomNavSections,
+  getTeacherClassroomNavSections,
+  type ClassroomNavSection,
+} from '@/lib/classroomNavSections';
 import { cn } from '@/lib/utils';
 
 export type UseAssignmentDetailNavOptions = {
@@ -31,12 +35,15 @@ export function useAssignmentDetailNav({
 
   const studentNavSections = useMemo(
     () => getStudentClassroomNavSections(t, syllabusPublished),
-    [syllabusPublished, t],
+    [syllabusPublished, t]
   );
 
   const teacherNavSections = useMemo(() => getTeacherClassroomNavSections(t), [t]);
 
-  const allowedNavIds = useMemo(() => new Set(studentNavSections.map((s) => s.id)), [studentNavSections]);
+  const allowedNavIds = useMemo(
+    () => new Set(studentNavSections.map((s) => s.id)),
+    [studentNavSections]
+  );
 
   const activeClassroomNavSection = useMemo(() => {
     const preferred = 'curriculum';
@@ -49,7 +56,7 @@ export function useAssignmentDetailNav({
       if (!classroomId) return;
       navigate(`/student/classroom/${classroomId}`, { state: { activeSection: section } });
     },
-    [classroomId, navigate],
+    [classroomId, navigate]
   );
 
   const handleTeacherClassroomNav = useCallback(
@@ -60,7 +67,7 @@ export function useAssignmentDetailNav({
         state: { activeSection: section },
       });
     },
-    [teacherRouteClassroomId, navigate],
+    [teacherRouteClassroomId, navigate]
   );
 
   const handleBackFromAssignment = useCallback(() => {
@@ -111,7 +118,7 @@ export type AssignmentDetailLayoutProps = {
   children: ReactNode;
 };
 
-export function AssignmentDetailLayout({
+export const AssignmentDetailLayout = ({
   isTeacherTry,
   classroomName,
   classroomSubject,
@@ -121,11 +128,11 @@ export function AssignmentDetailLayout({
   onClassroomNav,
   onTeacherClassroomNav,
   children,
-}: AssignmentDetailLayoutProps) {
+}: AssignmentDetailLayoutProps) => {
   return (
     <ClassroomLayout
-      classroomName={classroomName}
-      classroomSubject={classroomSubject}
+      classroomName={classroomName ?? undefined}
+      classroomSubject={classroomSubject ?? undefined}
       activeSection={isTeacherTry ? 'outline' : activeClassroomNavSection}
       onSectionChange={isTeacherTry ? onTeacherClassroomNav : onClassroomNav}
       customSections={isTeacherTry ? teacherNavSections : studentNavSections}
@@ -134,7 +141,7 @@ export function AssignmentDetailLayout({
       {children}
     </ClassroomLayout>
   );
-}
+};
 
 export type AssignmentDetailBackBarProps = {
   isTeacherTry: boolean;
@@ -142,7 +149,11 @@ export type AssignmentDetailBackBarProps = {
   onBack: () => void;
 };
 
-export function AssignmentDetailBackBar({ isTeacherTry, isRTL, onBack }: AssignmentDetailBackBarProps) {
+export const AssignmentDetailBackBar = ({
+  isTeacherTry,
+  isRTL,
+  onBack,
+}: AssignmentDetailBackBarProps) => {
   const { t } = useTranslation();
 
   return (
@@ -161,4 +172,4 @@ export function AssignmentDetailBackBar({ isTeacherTry, isRTL, onBack }: Assignm
       ) : null}
     </div>
   );
-}
+};

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- co-located helpers/variants */
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ interface CropOverlayProps {
   className?: string;
 }
 
-export function CropOverlay({
+export const CropOverlay = ({
   crop,
   onCropChange,
   preset,
@@ -42,7 +43,7 @@ export function CropOverlay({
   overlayMode,
   showPresetButtons = true,
   className,
-}: CropOverlayProps) {
+}: CropOverlayProps) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const captureTargetRef = useRef<HTMLElement | null>(null);
@@ -178,7 +179,9 @@ export function CropOverlay({
         ref={containerRef}
         className={cn(
           'relative overflow-hidden rounded-md bg-black/50 select-none',
-          overlayMode ? 'absolute inset-0 h-full w-full touch-none' : 'aspect-video touch-manipulation',
+          overlayMode
+            ? 'absolute inset-0 h-full w-full touch-none'
+            : 'aspect-video touch-manipulation'
         )}
       >
         <div className="absolute inset-0 bg-black/30 pointer-events-none z-[1]" />
@@ -220,4 +223,4 @@ export function CropOverlay({
       </div>
     </div>
   );
-}
+};

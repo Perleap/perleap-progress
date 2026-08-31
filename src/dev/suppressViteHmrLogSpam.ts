@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- overrides console methods to suppress Vite HMR spam */
 /**
  * Vite logs every HMR apply via console.debug (shows as "Verbose" in Chrome).
  * In folders synced by OneDrive / aggressive watchers, that can mean thousands

@@ -1,16 +1,14 @@
-import { supabase } from '@/integrations/supabase/client';
 import type { FiveDScores } from '@/types/models';
-import type {
-  PilotConfidence,
-  PilotDimensionScores,
-  PilotReadiness,
-  PilotRoleFit,
-} from '@/lib/pilotReport/types';
+import { supabase } from '@/integrations/supabase/client';
 import {
   PILOT_CONFIDENCE_VALUES,
   PILOT_DIMENSION_KEYS,
   PILOT_READINESS_VALUES,
   PILOT_ROLE_FIT_VALUES,
+  type PilotConfidence,
+  type PilotDimensionScores,
+  type PilotReadiness,
+  type PilotRoleFit,
 } from '@/lib/pilotReport/types';
 
 export interface PilotParticipantAssessmentInput {
@@ -82,7 +80,7 @@ function parseWhyBullets(raw: unknown): string[] {
 }
 
 export async function invokePilotReadiness(
-  input: PilotParticipantAssessmentInput,
+  input: PilotParticipantAssessmentInput
 ): Promise<PilotParticipantAssessmentResult> {
   const { data, error } = await supabase.functions.invoke<Record<string, unknown>>(
     'pilot-readiness',
@@ -99,7 +97,7 @@ export async function invokePilotReadiness(
           ? { evidenceText: input.evidenceText }
           : {}),
       },
-    },
+    }
   );
 
   if (error) throw error;
@@ -127,7 +125,7 @@ export async function invokePilotReadiness(
 }
 
 export async function invokePilotCohortSummary(
-  input: PilotCohortSummaryInput,
+  input: PilotCohortSummaryInput
 ): Promise<PilotCohortSummaryResult> {
   const { data, error } = await supabase.functions.invoke<Record<string, unknown>>(
     'pilot-readiness',
@@ -141,7 +139,7 @@ export async function invokePilotCohortSummary(
         roleFitCounts: input.roleFitCounts,
         meanDimensions: input.meanDimensions,
       },
-    },
+    }
   );
 
   if (error) throw error;

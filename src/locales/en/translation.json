@@ -335,7 +335,8 @@
       "emailNotConfirmed": "Please confirm your email address before signing in. Check your inbox for the verification link.",
       "tooManyRequests": "Too many attempts from this network. Wait a few minutes and try again.",
       "emailSignupRateLimited": "Supabase is temporarily limiting signup emails from this network (anti-abuse). Wait a few minutes and try again, use another network for testing, or ask a project owner to check Auth rate limits and SMTP settings in the Supabase dashboard.",
-      "weakPassword": "This password is too easy to guess. Choose a longer, more unique password (avoid common words and patterns)."
+      "weakPassword": "This password is too easy to guess. Choose a longer, more unique password (avoid common words and patterns).",
+      "notAuthenticated": "Please sign in again"
     },
     "errors2": {
       "creatingAccount": "Error creating account",

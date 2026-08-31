@@ -3,6 +3,8 @@ import { Loader2, Send, Save } from 'lucide-react';
 import { useState, useLayoutEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
+import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
 import type { AssignmentCompletionTone } from '@/types/submission';
 import type { Edge, Node } from '@xyflow/react';
 import type { TFunction } from 'i18next';
@@ -18,14 +20,12 @@ import {
 } from '@/components/features/langchain/langchainNodeData';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import { assignmentKeys } from '@/hooks/queries';
 import { supabase } from '@/integrations/supabase/client';
 import { completeSubmission, submitWithBackgroundAiFeedback } from '@/services/submissionService';
 import { getAssignmentLanguage } from '@/utils/languageDetection';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/useAuth';
-import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
-import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 
 function toastValidationIssues(t: TFunction, issues: LangchainPipelineValidationIssue[]) {
   const order: LangchainPipelineValidationIssue[] = [
@@ -192,11 +192,7 @@ export const LangchainBuilderPage = ({
               disabled={saving || !canPersist}
               className="h-9 gap-1.5 rounded-full shadow-xs"
             >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {t('assignmentDetail.langchain.save')}
             </Button>
             <Button

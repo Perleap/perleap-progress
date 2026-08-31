@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-import { enUS, he } from 'date-fns/locale';
 import {
   ChevronDown,
   Users,
@@ -16,13 +14,9 @@ import {
   Presentation,
   ClipboardCheck,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
-import { HardSkillsAssessmentTable } from './HardSkillsAssessmentTable';
-import type { Json } from '@/integrations/supabase/types';
 import type { HardSkillAssessmentWithStudent } from '@/types/hard-skills';
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
 import {
@@ -33,6 +27,7 @@ import { AnalyticsCompare5dCard } from '@/components/analytics/AnalyticsCompare5
 import { AnalyticsFilterControls } from '@/components/features/analytics/AnalyticsFilterControls';
 import { NuanceInsightsTable } from '@/components/features/analytics/NuanceInsightsTable';
 import { VideoEngagementPanel } from '@/components/features/analytics/VideoEngagementPanel';
+import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
 import { RegenerateScoresButton } from '@/components/RegenerateScoresButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,11 +36,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { DEFAULT_SCORE } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useClassroomAnalytics } from '@/hooks/queries';
-import {
-  build5dNarrativeEvidence,
-  trimToMax,
-  type Analytics5dNarrativeRow,
-} from '@/lib/analytics5dEvidence';
+import { build5dNarrativeEvidence, type Analytics5dNarrativeRow } from '@/lib/analytics5dEvidence';
 import { buildClassroomAnalyticsCsv } from '@/lib/analyticsExport';
 import {
   filterReportableAssignments,
@@ -77,7 +68,7 @@ interface ClassroomAnalyticsProps {
 
 export const ClassroomAnalytics = ({
   classroomId,
-  classroomName,
+  classroomName: _classroomName,
   onRegenerateComplete,
 }: ClassroomAnalyticsProps) => {
   const { t } = useTranslation();
@@ -92,17 +83,16 @@ export const ClassroomAnalytics = ({
   const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
 
-  const queryClient = useQueryClient();
   const { data, isLoading: loading } = useClassroomAnalytics(classroomId);
 
-  const students = data?.students || [];
-  const allStudents = data?.allStudents || [];
-  const assignments = data?.assignments || [];
+  const students = useMemo(() => data?.students ?? [], [data?.students]);
+  const allStudents = useMemo(() => data?.allStudents ?? [], [data?.allStudents]);
+  const assignments = useMemo(() => data?.assignments ?? [], [data?.assignments]);
   const reportableAssignments = useMemo(
     () => filterReportableAssignments(assignments),
-    [assignments],
+    [assignments]
   );
-  const modules = data?.modules || [];
+  const modules = useMemo(() => data?.modules ?? [], [data?.modules]);
   const structureType = data?.structureType;
   const studentCount = data?.studentCount || 0;
 
@@ -205,15 +195,17 @@ export const ClassroomAnalytics = ({
     writeUrl(selectedModule, selectedAssignment, s);
   };
 
-  const snapshotRowsForAvg = data?.students as {
-    id: string;
-    snapshots: {
-      user_id: string;
-      submission_id: string;
-      scores: import('@/integrations/supabase/types').Json;
-      qed_measures?: import('@/integrations/supabase/types').Json | null;
-    }[];
-  }[] | undefined;
+  const snapshotRowsForAvg = data?.students as
+    | {
+        id: string;
+        snapshots: {
+          user_id: string;
+          submission_id: string;
+          scores: import('@/integrations/supabase/types').Json;
+          qed_measures?: import('@/integrations/supabase/types').Json | null;
+        }[];
+      }[]
+    | undefined;
 
   const classAverage = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return null;
@@ -226,7 +218,15 @@ export const ClassroomAnalytics = ({
       selectedStudent,
       data.rawSnapshots
     );
-  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
+  }, [
+    data,
+    selectedModule,
+    selectedAssignment,
+    selectedStudent,
+    effectiveAssignmentIds,
+    snapshotRowsForAvg,
+    reportableAssignments,
+  ]);
 
   const classAverageQed = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return null;
@@ -239,7 +239,15 @@ export const ClassroomAnalytics = ({
       selectedStudent,
       data.rawSnapshots
     );
-  }, [data, selectedModule, selectedAssignment, selectedStudent, effectiveAssignmentIds, snapshotRowsForAvg]);
+  }, [
+    data,
+    selectedModule,
+    selectedAssignment,
+    selectedStudent,
+    effectiveAssignmentIds,
+    snapshotRowsForAvg,
+    reportableAssignments,
+  ]);
 
   const kpiDisplay = useMemo(
     () =>
@@ -250,7 +258,7 @@ export const ClassroomAnalytics = ({
         rawFeedback: data?.rawFeedback || [],
         enrolledStudentCount: studentCount,
       }),
-    [isNarrowingView, assignments, effectiveAssignmentIds, data?.rawFeedback, studentCount],
+    [isNarrowingView, assignments, effectiveAssignmentIds, data?.rawFeedback, studentCount]
   );
 
   const displayAssignmentCount = kpiDisplay.assignmentCount;
@@ -363,7 +371,7 @@ export const ClassroomAnalytics = ({
       );
     }
     return m;
-  }, [data, assignments, selectedModule, sectionTitleResolver]);
+  }, [data, reportableAssignments, selectedModule, sectionTitleResolver]);
 
   const perStudentForExport = useMemo(() => {
     if (!data || effectiveAssignmentIds.length === 0) return [];
@@ -378,7 +386,6 @@ export const ClassroomAnalytics = ({
     }
     return rows;
   }, [data, effectiveAssignmentIds]);
-
 
   const handleExportCsv = useCallback(() => {
     if (!data) return;
@@ -520,7 +527,7 @@ export const ClassroomAnalytics = ({
         hardSkills: hardFiltered,
       };
     });
-  }, [students, data, selectedModule, assignments]);
+  }, [students, data, selectedModule, reportableAssignments]);
 
   if (loading && !data) {
     return (

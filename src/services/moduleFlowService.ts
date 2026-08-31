@@ -2,9 +2,6 @@
  * Module flow: ordered activities (section_resources) + assignments per section.
  */
 
-import { supabase, handleSupabaseError } from '@/api/client';
-import { SUBMISSION_STATUS } from '@/config/constants';
-import { isUuidLike } from '@/lib/utils';
 import type { Json } from '@/integrations/supabase/types';
 import type { ApiError } from '@/types';
 import type {
@@ -12,9 +9,12 @@ import type {
   StudentModuleFlowProgress,
   StudentModuleFlowProgressStatus,
 } from '@/types/syllabus';
+import { supabase, handleSupabaseError } from '@/api/client';
+import { SUBMISSION_STATUS } from '@/config/constants';
+import { isUuidLike } from '@/lib/utils';
 
 export const getModuleFlowStepsBySections = async (
-  sectionIds: string[],
+  sectionIds: string[]
 ): Promise<{ data: ModuleFlowStep[] | null; error: ApiError | null }> => {
   try {
     const persistedIds = sectionIds.filter(isUuidLike);
@@ -37,7 +37,7 @@ export const getModuleFlowStepsBySections = async (
 };
 
 export const getModuleFlowSteps = async (
-  sectionId: string,
+  sectionId: string
 ): Promise<{ data: ModuleFlowStep[] | null; error: ApiError | null }> => {
   try {
     if (!isUuidLike(sectionId)) return { data: [], error: null };
@@ -48,7 +48,7 @@ export const getModuleFlowSteps = async (
       .order('order_index', { ascending: true });
 
     if (error) return { data: null, error: handleSupabaseError(error) };
-    return { data: ((data ?? []) as any[]) as ModuleFlowStep[], error: null };
+    return { data: (data ?? []) as ModuleFlowStep[], error: null };
   } catch (error) {
     return { data: null, error: handleSupabaseError(error) };
   }
@@ -70,7 +70,7 @@ const __replaceModuleFlowTailBySection = new Map<string, Promise<unknown>>();
 
 async function replaceModuleFlowStepsImpl(
   sectionId: string,
-  steps: FlowStepInput[],
+  steps: FlowStepInput[]
 ): Promise<{ error: ApiError | null }> {
   try {
     const mapped = steps.map((s) => ({
@@ -82,9 +82,7 @@ async function replaceModuleFlowStepsImpl(
 
     const payload = mapped
       .filter((p) =>
-        p.step_kind === 'resource'
-          ? isUuidLike(p.activity_list_id)
-          : isUuidLike(p.assignment_id),
+        p.step_kind === 'resource' ? isUuidLike(p.activity_list_id) : isUuidLike(p.assignment_id)
       )
       .map((p, order_index) => ({
         order_index,
@@ -107,11 +105,14 @@ async function replaceModuleFlowStepsImpl(
 
 export const replaceModuleFlowSteps = (
   sectionId: string,
-  steps: FlowStepInput[],
+  steps: FlowStepInput[]
 ): Promise<{ error: ApiError | null }> => {
   const prev = __replaceModuleFlowTailBySection.get(sectionId) ?? Promise.resolve();
   const job = prev.then(() => replaceModuleFlowStepsImpl(sectionId, steps));
-  __replaceModuleFlowTailBySection.set(sectionId, job.catch(() => {}));
+  __replaceModuleFlowTailBySection.set(
+    sectionId,
+    job.catch(() => {})
+  );
   return job;
 };
 
@@ -129,7 +130,7 @@ function moduleFlowStepsToReplaceInput(steps: ModuleFlowStep[]): FlowStepInput[]
  * so student_module_flow_progress is remapped). Call after soft-deleting an assignment.
  */
 export const removeAssignmentFromModuleFlows = async (
-  assignmentId: string,
+  assignmentId: string
 ): Promise<{ error: ApiError | null }> => {
   try {
     const { data: refs, error: refErr } = await supabase
@@ -139,9 +140,7 @@ export const removeAssignmentFromModuleFlows = async (
 
     if (refErr) return { error: handleSupabaseError(refErr) };
 
-    const sectionIds = [
-      ...new Set((refs ?? []).map((r) => r.section_id)),
-    ];
+    const sectionIds = [...new Set((refs ?? []).map((r) => r.section_id))];
     if (sectionIds.length === 0) return { error: null };
 
     for (const sectionId of sectionIds) {
@@ -149,9 +148,12 @@ export const removeAssignmentFromModuleFlows = async (
       if (loadErr) return { error: loadErr };
       const rows = current ?? [];
       const kept = rows.filter(
-        (s) => !(s.step_kind === 'assignment' && s.assignment_id === assignmentId),
+        (s) => !(s.step_kind === 'assignment' && s.assignment_id === assignmentId)
       );
-      const { error: repErr } = await replaceModuleFlowSteps(sectionId, moduleFlowStepsToReplaceInput(kept));
+      const { error: repErr } = await replaceModuleFlowSteps(
+        sectionId,
+        moduleFlowStepsToReplaceInput(kept)
+      );
       if (repErr) return { error: repErr };
     }
 
@@ -163,7 +165,7 @@ export const removeAssignmentFromModuleFlows = async (
 
 export const getStudentModuleFlowProgress = async (
   studentId: string,
-  stepIds: string[],
+  stepIds: string[]
 ): Promise<{ data: StudentModuleFlowProgress[] | null; error: ApiError | null }> => {
   try {
     if (stepIds.length === 0) return { data: [], error: null };
@@ -184,7 +186,7 @@ export const getStudentModuleFlowProgress = async (
 export const upsertStudentModuleFlowProgress = async (
   studentId: string,
   moduleFlowStepId: string,
-  status: StudentModuleFlowProgressStatus,
+  status: StudentModuleFlowProgressStatus
 ): Promise<{ data: StudentModuleFlowProgress | null; error: ApiError | null }> => {
   try {
     const now = new Date().toISOString();
@@ -234,7 +236,7 @@ const ASSIGNMENT_COMPLETED_MAP_CHUNK = 150;
 /** True if student has a completed submission for this assignment. */
 export const hasCompletedAssignmentSubmission = async (
   assignmentId: string,
-  studentId: string,
+  studentId: string
 ): Promise<{ completed: boolean; error: ApiError | null }> => {
   try {
     const { data, error } = await supabase
@@ -263,7 +265,7 @@ export type AssignmentFlowProgressMaps = {
  */
 export const getAssignmentFlowProgressMaps = async (
   assignmentIds: string[],
-  studentId: string,
+  studentId: string
 ): Promise<{ data: AssignmentFlowProgressMaps; error: ApiError | null }> => {
   try {
     const unique = [...new Set(assignmentIds.filter(Boolean))];
@@ -289,8 +291,8 @@ export const getAssignmentFlowProgressMaps = async (
           .from('submissions')
           .select('assignment_id, status')
           .in('assignment_id', chunk)
-          .eq('student_id', studentId),
-      ),
+          .eq('student_id', studentId)
+      )
     );
 
     for (const { data, error } of chunkResults) {

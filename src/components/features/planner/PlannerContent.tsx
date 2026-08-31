@@ -7,6 +7,10 @@ import { Views, type View } from 'react-big-calendar';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { PlannerAssignmentDetailSheet } from './PlannerAssignmentDetailSheet';
+import { PlannerCalendarPanel } from './PlannerCalendarPanel';
+import { PlannerClassroomFilterSection } from './PlannerClassroomFilterSection';
+import type { PlannerCalendarEvent } from './plannerTypes';
 import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
 import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
 import { DashboardLayout } from '@/components/layouts';
@@ -26,21 +30,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAuth } from '@/contexts/useAuth';
 import { USER_ROLES } from '@/config/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/useAuth';
 import { deleteAssignment } from '@/services/assignmentService';
 import {
   fetchPlannerAssignments,
   fetchPlannerClassrooms,
   type PlannerClassroom,
 } from '@/services/plannerService';
-import { PlannerAssignmentDetailSheet } from './PlannerAssignmentDetailSheet';
-import { PlannerCalendarPanel } from './PlannerCalendarPanel';
-import { PlannerClassroomFilterSection } from './PlannerClassroomFilterSection';
-import type { PlannerCalendarEvent } from './plannerTypes';
 
-export function PlannerContent() {
+export const PlannerContent = () => {
   const { user } = useAuth();
   const isAppAdmin = user?.user_metadata?.role === USER_ROLES.ADMIN;
   const { t } = useTranslation();
@@ -90,7 +90,7 @@ export function PlannerContent() {
       week: t('planner.toolbar.week'),
       day: t('planner.toolbar.day'),
     }),
-    [t],
+    [t]
   );
 
   const loadClassrooms = useCallback(async () => {
@@ -274,7 +274,13 @@ export function PlannerContent() {
           </DialogHeader>
           <div className="py-4">
             <Label>{t('planner.classroomLabel')}</Label>
-            <Select value={selectedClassForCreate} onValueChange={setSelectedClassForCreate}>
+            <Select
+              value={selectedClassForCreate}
+              onValueChange={(v: string | null) => {
+                if (v == null) return;
+                setSelectedClassForCreate(v);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue>
                   {selectedClassForCreate
@@ -348,4 +354,4 @@ export function PlannerContent() {
       />
     </DashboardLayout>
   );
-}
+};

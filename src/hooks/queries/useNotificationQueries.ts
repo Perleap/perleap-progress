@@ -4,7 +4,12 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUnreadNotifications, markAsRead, markAllAsRead, getUnreadCount } from '@/lib/notificationService';
+import {
+  getUnreadNotifications,
+  markAsRead,
+  markAllAsRead,
+  getUnreadCount,
+} from '@/lib/notificationService';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
@@ -54,7 +59,7 @@ export const useMarkAsRead = () => {
     mutationFn: async (notificationId: string) => {
       return await markAsRead(notificationId);
     },
-    onSuccess: (_, notificationId) => {
+    onSuccess: (_, _notificationId) => {
       // Invalidate both count and list
       queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     },

@@ -1,4 +1,5 @@
 import type { Json } from '@/integrations/supabase/types';
+import type { FiveDScores } from '@/types/models';
 import {
   build5dNarrativeEvidence,
   hashEvidenceKey,
@@ -10,9 +11,8 @@ import {
   type AnalyticsAssignmentRef,
   type AnalyticsModuleFilter,
 } from '@/lib/analyticsScope';
-import { countCompletedAssignmentsInScope } from '@/lib/pilotReport/buildPilotReportData';
 import { stableFiveDScoresKey } from '@/lib/fiveDScores';
-import type { FiveDScores } from '@/types/models';
+import { countCompletedAssignmentsInScope } from '@/lib/pilotReport/buildPilotReportData';
 
 function stableScoreKey(scores: FiveDScores | null): string {
   return stableFiveDScoresKey(scores);
@@ -43,7 +43,7 @@ export function computePilotReportDataHash(input: {
   const effectiveAssignmentIds = getAllowedAssignmentIds(
     analyticsData.assignments,
     scopeModule,
-    scopeAssignment,
+    scopeAssignment
   );
   const sortedAssignmentIds = [...effectiveAssignmentIds].sort();
   const sortedStudents = [...analyticsData.students].sort((a, b) => a.id.localeCompare(b.id));
@@ -54,21 +54,18 @@ export function computePilotReportDataHash(input: {
     narrativeRows: s.narrativeRows ?? [],
   }));
 
-  const parts: string[] = [
-    `lang:${language}`,
-    `assignments:${sortedAssignmentIds.join(',')}`,
-  ];
+  const parts: string[] = [`lang:${language}`, `assignments:${sortedAssignmentIds.join(',')}`];
 
   for (const st of sortedStudents) {
     const completedInScope = countCompletedAssignmentsInScope(
       st.id,
       st.submissions ?? [],
-      effectiveAssignmentIds,
+      effectiveAssignmentIds
     );
     const scores = scopedStudentLatestScores(
       st.snapshots,
       analyticsData.rawSubmissions,
-      effectiveAssignmentIds,
+      effectiveAssignmentIds
     );
     const evidence = build5dNarrativeEvidence({
       context: 'student_avg',
@@ -79,7 +76,7 @@ export function computePilotReportDataHash(input: {
       sectionTitleResolver,
     });
     parts.push(
-      `${st.id}|done:${completedInScope}|scores:${stableScoreKey(scores)}|ev:${evidence.evidenceKey}`,
+      `${st.id}|done:${completedInScope}|scores:${stableScoreKey(scores)}|ev:${evidence.evidenceKey}`
     );
   }
 

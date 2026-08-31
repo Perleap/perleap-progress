@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadarChart } from './RadarChart';
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface FiveDChartProps {
   scores: FiveDScores;
