@@ -17,17 +17,17 @@ import { TestResultsView } from './TestResultsView';
 import type { Message } from '@/types';
 import type { StudentAlert } from '@/types/alerts';
 import { AiContentFlagButton, readOpikTraceId } from '@/components/common/AiContentFlagButton';
+import { HardSkillsAssessmentTable } from '@/components/features/analytics/HardSkillsAssessmentTable';
+import { StudentAnalyticsPanel } from '@/components/features/analytics/StudentAnalyticsPanel';
+import { WellbeingAlertCard } from '@/components/features/submission/WellbeingAlertCard';
 import { LessonReadingDetailsCollapsible } from '@/components/features/syllabus/content-blocks/LessonReadingDetailsCollapsible';
-import { HardSkillsAssessmentTable } from '@/components/HardSkillsAssessmentTable';
-import SafeMathMarkdown from '@/components/SafeMathMarkdown';
-import { StudentAnalytics } from '@/components/StudentAnalytics';
+import SafeMathMarkdown from '@/components/shared/SafeMathMarkdown';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { WellbeingAlertCard } from '@/components/WellbeingAlertCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
 import {
@@ -392,7 +392,7 @@ export const SubmissionTabs = ({
       <TabsContent value="evaluation" className="mt-6 space-y-8">
         {activeTab === 'evaluation' ? (
           <>
-            <StudentAnalytics
+            <StudentAnalyticsPanel
               studentId={submission.student_id}
               classroomId={submission.assignments.classroom_id}
               currentSubmissionId={submission.id}

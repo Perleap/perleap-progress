@@ -8,10 +8,10 @@ export * from './MonitoringInlineNav';
 export * from './monitoringNav';
 
 // Page content
-export * from './MonitoringOverviewPage';
-export * from './MonitoringHealthPage';
-export * from './MonitoringLogsPage';
-export * from './MonitoringTrafficPage';
+export * from './MonitoringOverviewContent';
+export * from './MonitoringHealthContent';
+export * from './MonitoringLogsContent';
+export * from './MonitoringTrafficContent';
 
 // Shared
 export * from './PlatformHealthProbeSection';

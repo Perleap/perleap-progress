@@ -80,14 +80,15 @@ async function main() {
     : `${baseURL}/auth`;
   const authRes = await waitForHttpOk(authCheckUrl, remote ? 30_000 : 5_000, fetchHeaders);
   const authBody = await authRes.text().catch(() => '');
+  const redirectedToVercelLogin =
+    authRes.url.includes('vercel.com/login') || authBody.includes('Authentication Required');
   const blockedByVercel =
-    !env.VERCEL_SHARE_TOKEN?.trim() &&
-    (authRes.url.includes('vercel.com/login') ||
-      authBody.includes('Authentication Required') ||
-      authBody.includes('Vercel Authentication'));
+    redirectedToVercelLogin &&
+    !getVercelProtectionHeaders(env)['x-vercel-protection-bypass'] &&
+    !getVercelProtectionHeaders(env)['x-vercel-trusted-oidc-idp-token'];
   if (blockedByVercel) {
     fail(
-      'Staging is behind Vercel Deployment Protection. Set VERCEL_AUTOMATION_BYPASS_SECRET, VERCEL_OIDC_TOKEN, or VERCEL_SHARE_TOKEN in .env.verify.staging.',
+      'Staging is behind Vercel Deployment Protection (SSO). Set VERCEL_AUTOMATION_BYPASS_SECRET or VERCEL_OIDC_TOKEN in .env.verify.staging, or temporarily disable Vercel Authentication for QA.',
     );
   }
   console.log(`verify-perleap doctor: ${baseURL}/auth OK`);

@@ -4,7 +4,7 @@
  */
 
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
-import { FiveDChart } from '@/components/FiveDChart';
+import { FiveDChart } from '@/components/features/analytics/FiveDChart';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ClassAverageChartProps {

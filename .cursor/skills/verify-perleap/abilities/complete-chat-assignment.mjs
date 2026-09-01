@@ -1,4 +1,4 @@
-import { fail } from '../helpers/shared.mjs';
+import { buildVerifyUrl, fail, navigationWaitUntil } from '../helpers/shared.mjs';
 import { adminRest } from '../helpers/supabase-admin.mjs';
 import { abilities as fetchAbilities } from './fetch-data.mjs';
 
@@ -20,14 +20,30 @@ export async function dismissAssignmentIntro(page) {
 async function ensureFreshChatAttempt(page) {
   const startAnother = page.getByRole('button', { name: 'Start another attempt' });
   if (await startAnother.isVisible({ timeout: 5_000 }).catch(() => false)) {
-    await startAnother.click();
-    await page.waitForTimeout(2_000);
+    if (await startAnother.isEnabled().catch(() => false)) {
+      await startAnother.click();
+      await page.waitForTimeout(2_000);
+    }
   }
 }
 
 async function waitForChatInput(page) {
   const chatInput = page.getByPlaceholder('Type your message here...');
-  await chatInput.waitFor({ timeout: 30_000 });
+  const startAnother = page.getByRole('button', { name: 'Start another attempt' });
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (await chatInput.isVisible().catch(() => false)) {
+      return chatInput;
+    }
+    if (await startAnother.isVisible().catch(() => false)) {
+      if (await startAnother.isEnabled().catch(() => false)) {
+        await startAnother.click();
+        await page.waitForTimeout(2_000);
+      }
+    }
+    await page.waitForTimeout(500);
+  }
+  await chatInput.waitFor({ timeout: 5_000 });
   return chatInput;
 }
 
@@ -66,10 +82,10 @@ async function waitForSubmissionCompleted(ctx, assignmentId, timeoutMs = 90_000)
   return last;
 }
 
-export async function resetInProgressSubmission(fixture, env) {
+export async function resetSandboxChatSubmissions(fixture, env) {
   if (!fixture?.chatAssignmentId || !fixture?.studentUserId) return;
   const subs = await adminRest(
-    `/submissions?assignment_id=eq.${fixture.chatAssignmentId}&student_id=eq.${fixture.studentUserId}&status=eq.in_progress&select=id`,
+    `/submissions?assignment_id=eq.${fixture.chatAssignmentId}&student_id=eq.${fixture.studentUserId}&select=id`,
     { method: 'GET' },
     env,
   );
@@ -82,15 +98,20 @@ export async function resetInProgressSubmission(fixture, env) {
   }
 }
 
+/** @deprecated use resetSandboxChatSubmissions */
+export async function resetInProgressSubmission(fixture, env) {
+  await resetSandboxChatSubmissions(fixture, env);
+}
+
 export const abilities = {
   openChatAssignment: {
     role: 'student',
     async run(ctx) {
       const assignmentId = ctx.abilityArgs.assignmentId ?? ctx.fixture?.chatAssignmentId;
       if (!assignmentId) fail('openChatAssignment needs assignmentId or sandbox fixture');
-      const baseURL = ctx.env.VERIFY_BASE_URL;
-      await ctx.page.goto(`${baseURL}/student/assignment/${assignmentId}`, {
-        waitUntil: 'networkidle',
+      await ctx.page.goto(buildVerifyUrl(`/student/assignment/${assignmentId}`, ctx.env), {
+        waitUntil: navigationWaitUntil(ctx.env),
+        timeout: 60_000,
       });
       await dismissAssignmentIntro(ctx.page);
       await ensureFreshChatAttempt(ctx.page);
@@ -106,7 +127,7 @@ export const abilities = {
   completeChatAssignment: {
     role: 'student',
     async run(ctx) {
-      await resetInProgressSubmission(ctx.fixture, ctx.env);
+      await resetSandboxChatSubmissions(ctx.fixture, ctx.env);
       await abilities.openChatAssignment.run(ctx);
 
       const chatInput = await waitForChatInput(ctx.page);

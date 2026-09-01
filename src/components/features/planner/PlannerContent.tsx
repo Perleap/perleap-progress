@@ -11,8 +11,10 @@ import { PlannerAssignmentDetailSheet } from './PlannerAssignmentDetailSheet';
 import { PlannerCalendarPanel } from './PlannerCalendarPanel';
 import { PlannerClassroomFilterSection } from './PlannerClassroomFilterSection';
 import type { PlannerCalendarEvent } from './plannerTypes';
-import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
-import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
+import {
+  CreateAssignmentDialog,
+  EditAssignmentDialog,
+} from '@/components/features/assignment/dialogs';
 import { DashboardLayout } from '@/components/layouts';
 import { Button } from '@/components/ui/button';
 import {

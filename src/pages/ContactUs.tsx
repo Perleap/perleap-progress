@@ -1,10 +1,9 @@
 import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Footer } from '@/components/layouts/Footer';
-import { Navbar } from '@/components/layouts/Navbar';
-import { BreathingBackground } from '@/components/ui/BreathingBackground';
+import { MarketingPageLayout } from '@/components/marketing';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,7 +24,6 @@ const ContactUs = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
     setTimeout(() => {
       toast.success(t('contact.success'));
       setFormData({ firstName: '', lastName: '', email: '', message: '' });
@@ -41,21 +39,22 @@ const ContactUs = () => {
   };
 
   return (
-    <BreathingBackground>
-      <Navbar />
+    <MarketingPageLayout mainClassName="pt-20 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-purple-100/50 rounded-full blur-[120px] opacity-50" />
+      </div>
 
-      <div className="container mx-auto px-4 pt-32 pb-16 max-w-6xl">
-        {/* Page Header */}
+      <div className="container mx-auto px-4 pt-20 pb-16 max-w-6xl relative z-10">
         <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">Get in Touch</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            {t('contact.heroTitle')}
+          </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Have a question or feedback? We'd love to hear from you. Send us a message and we'll
-            respond as soon as possible.
+            {t('contact.heroSubtitle')}
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mb-12 animate-fade-in delay-100">
-          {/* Contact Info Cards */}
           <Card className="bg-white/50 backdrop-blur-sm border-black/5 hover:shadow-lg transition-all hover:-translate-y-1">
             <CardContent className="pt-6 text-center">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 mb-4 text-purple-600">
@@ -90,25 +89,22 @@ const ContactUs = () => {
           </Card>
         </div>
 
-        {/* Contact Form */}
         <div className="max-w-2xl mx-auto animate-fade-in delay-200">
           <Card className="bg-white/60 backdrop-blur-md border-white/20 shadow-xl">
             <CardHeader>
-              <CardTitle className="text-2xl">Send us a Message</CardTitle>
-              <CardDescription>
-                Fill out the form below and our team will get back to you within 24 hours.
-              </CardDescription>
+              <CardTitle className="text-2xl">{t('contact.formTitle')}</CardTitle>
+              <CardDescription>{t('contact.formDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
+                    <Label htmlFor="firstName">{t('contact.firstName')} *</Label>
                     <Input
                       id="firstName"
                       name="firstName"
                       type="text"
-                      placeholder="John"
+                      placeholder={t('contact.firstNamePlaceholder')}
                       value={formData.firstName}
                       onChange={handleChange}
                       required
@@ -117,12 +113,12 @@ const ContactUs = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Label htmlFor="lastName">{t('contact.lastName')} *</Label>
                     <Input
                       id="lastName"
                       name="lastName"
                       type="text"
-                      placeholder="Doe"
+                      placeholder={t('contact.lastNamePlaceholder')}
                       value={formData.lastName}
                       onChange={handleChange}
                       required
@@ -133,12 +129,12 @@ const ContactUs = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{t('contact.emailField')} *</Label>
                   <Input
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="john.doe@example.com"
+                    placeholder={t('contact.emailPlaceholder')}
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -147,11 +143,11 @@ const ContactUs = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
+                  <Label htmlFor="message">{t('contact.message')} *</Label>
                   <Textarea
                     id="message"
                     name="message"
-                    placeholder="Tell us how we can help you..."
+                    placeholder={t('contact.messagePlaceholder')}
                     value={formData.message}
                     onChange={handleChange}
                     required
@@ -169,12 +165,12 @@ const ContactUs = () => {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      {t('contact.sending')}
                     </>
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Send Message
+                      {t('contact.sendMessage')}
                     </>
                   )}
                 </Button>
@@ -182,23 +178,21 @@ const ContactUs = () => {
             </CardContent>
           </Card>
 
-          {/* Additional Info */}
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
-              You can also reach us through our{' '}
-              <a href="#" className="text-primary hover:underline font-medium">
-                Help Center
-              </a>{' '}
+              {t('contact.alsoReachPrefix')}{' '}
+              <Link to="/contact" className="text-primary hover:underline font-medium">
+                {t('contact.helpCenter')}
+              </Link>{' '}
               or{' '}
-              <a href="#" className="text-primary hover:underline font-medium">
-                Community Forum
-              </a>
+              <Link to="/about" className="text-primary hover:underline font-medium">
+                {t('contact.aboutPage')}
+              </Link>
             </p>
           </div>
         </div>
       </div>
-      <Footer />
-    </BreathingBackground>
+    </MarketingPageLayout>
   );
 };
 

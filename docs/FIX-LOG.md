@@ -81,3 +81,111 @@ Made ESLint, Prettier, and TypeScript blocking in `.github/workflows/ci.yml` (re
 ## S5-10 — Feature docs parity (2026-08-30)
 
 Added 17 missing verify-perleap feature `.md` files (auth, student view modes, assignment types, teacher tabs/settings/planner, admin pages). Updated `features/README.md` with admin/anonymous sections and refactor-regression suite index. See `docs/qa/step-s5-10-feature-docs.md`.
+
+## P3-1 — AssignmentChatInterface migration (2026-09-01)
+
+Moved chat UI to `features/assignment/chat/`; extracted Supabase calls into `assignmentChatService.ts`. Verify seed now pins sandbox accounts to English for stable E2E selectors.
+
+## P3-2 / P3-3 — Assignment dialog migration (2026-09-01)
+
+Moved `CreateAssignmentDialog` and `EditAssignmentDialog` to `features/assignment/dialogs/` with barrel exports; updated planner, submission, syllabus, and classroom importers.
+
+## P3-4 — RegenerateScoresButton migration (2026-09-01)
+
+Moved button to `features/analytics/`; evaluation refresh batch/job queries and undo invoke now live in `analyticsService.ts`.
+
+## P3-7 — notificationService consolidation (2026-09-01)
+
+Moved `notificationService` to `src/services/`; assignment UI now uses notification query hooks instead of direct service calls in components.
+
+## P3-5 — EditClassroomDialog section split (2026-09-01)
+
+Split `EditClassroomDialog` (~768→~119 lines) into four section components under `dialogs/sections/`. Form helpers in `editClassroomFormTypes.ts`; rephrase/upload moved to `classroomService.ts`; submit uses `updateClassroom` instead of direct Supabase.
+
+## P3-6 — ClassroomAnalytics section split (2026-09-01)
+
+Split `ClassroomAnalytics.tsx` (~1179→~69 lines) into five section components under `features/analytics/sections/`. View-model hook `useClassroomAnalyticsViewModel.ts` holds filters, URL sync, KPIs, exports, and narrative evidence; orchestrator keeps `useClassroomAnalytics` as data source.
+
+## P3-8 — Storage path backfill apply (2026-09-01)
+
+Added `--apply --staging` to `storage-path-backfill.mjs` and `npm run storage:backfill:apply:staging`. Applied 24 legacy signed/public URL normalizations on staging (22 submission fields, 2 classroom materials); post-apply dry-run reports 0 candidates.
+
+## P3-9 — Shared classroom form sections (2026-09-01)
+
+Extracted `ClassroomBasicInfoSection`, `ClassroomSubjectAreasSection`, `ClassroomOutcomesSection`, and `ClassroomMaterialsSection` under `features/classroom/forms/sections/`; create wizard and edit dialog now share the same form UI and `ClassroomFormData` types.
+
+## P3-10 — Marketing pages light pass (2026-09-01)
+
+Added shared `MarketingPageLayout` and `PricingPlanCard`; refactored Pricing and four other marketing pages to use the layout. Removed unused `Index.tsx` scaffold.
+
+## P3-11 — Admin monitoring Content renames (2026-09-01)
+
+Renamed four admin monitoring feature files from `*Page.tsx` to `*Content.tsx` to align filenames with exported components; route shells under `pages/admin/monitoring/` unchanged.
+
+## P3-12 — CI E2E smoke workflow (2026-09-01)
+
+Added opt-in `workflow_dispatch` workflow `.github/workflows/e2e-smoke.yml` and `ci-smoke` verify suite (6 features) with `npm run verify:ci-smoke`; staging gate 6/6 PASS locally.
+
+## P3-capstone — Phase 3 full regression (2026-09-01)
+
+Hardened verify-perleap for seed-enrolled students and repeat chat runs (`student-join-class`, assignment open features, `student-complete-chat`). Full staging gate: unit 256/256, i18n 0 missing, E2E 30/30 (`p3-capstone-v3`).
+
+## P4-1 — Common branding + dead root cleanup (2026-09-01)
+
+Moved `PerleapLogo`, `ThemeToggle`, `LanguageSwitcher` to `src/components/common/`; deleted unused root `NavLink`, `StudentProfileModal`, and duplicate `DashboardHeader`. Gate: `auth-page-load` / `p4-t1-gate` PASS.
+
+## P4-2 — Shared markdown, settings delete, wellbeing card (2026-09-01)
+
+Moved `SafeMathMarkdown` to `shared/`, `DeleteAccountDialog` to `features/settings/`, `WellbeingAlertCard` to `features/submission/`. Gates: `student-settings-profile`, `teacher-submission-detail` PASS.
+
+## P4-3 — Assignment wizard + classroom profile cluster (2026-09-01)
+
+Moved `AssignmentCourseOutlineLinkCard`, `StudentProfilePanel`, and `TeacherStudentDetailDialog` into assignment/classroom feature modules. Gates: `teacher-classroom-students-tab`, `teacher-planner-load` PASS.
+
+## P4-4 — Dashboard calendars (2026-09-01)
+
+Moved `StudentCalendar` and `TeacherCalendar` to `features/dashboard/`. Gate: `student-auth-dashboard` PASS.
+
+## P4-5 — Analytics charts + StudentAnalyticsPanel (2026-09-01)
+
+Moved `RadarChart`/`FiveDChart` to `features/analytics/`; renamed `StudentAnalytics` → `StudentAnalyticsPanel`. Gates: `teacher-classroom-analytics-tab`, `teacher-submission-detail` PASS.
+
+## P4-6 — Hard skills table + SubmissionCard (2026-09-01)
+
+Moved `HardSkillsAssessmentTable` to analytics and `SubmissionCard` to submission features. Gates: `teacher-classroom-submissions-tab`, `teacher-submission-detail` PASS.
+
+## P4-7 — ProtectedRoute to features/auth (2026-09-01)
+
+Moved `ProtectedRoute` to `features/auth/`; updated `App.tsx` import. Gates: `auth-page-load`, `student-auth-dashboard` PASS.
+
+## P4-8 — Marketing verify infrastructure (2026-09-01)
+
+Registered four anonymous marketing verify features and `verify:marketing-smoke` suite. Gate: 4/4 PASS (`p4-t8-gate`).
+
+## P4-9 — ContactUs shell + Footer links (2026-09-01)
+
+Unified ContactUs on `MarketingPageLayout`; replaced Footer `#` placeholders with real routes. Gate: `marketing-contact-load` PASS.
+
+## P4-10 — Landing sections merge (2026-09-01)
+
+Moved landing components to `marketing/sections/`; added `LandingPageContent`; thinned `Landing.tsx`. Gate: `marketing-landing-load` PASS.
+
+## P4-11 — Marketing page content extraction (2026-09-01)
+
+Extracted `ProductPageContent`, `SolutionsPageContent`, `AboutUsPageContent`; thinned page shells. Gate: `marketing-nav-links` PASS.
+
+## P4-12 — Landing auth hook + marketing i18n (2026-09-01)
+
+Added `useLandingAuthRedirect`; i18n for product/solutions/pricing/contact pages. Gates: marketing landing/pricing/contact PASS; i18n 0 missing.
+
+## P4-13 — MarketingHero/MarketingCta primitives (2026-09-01)
+
+Shared hero/CTA components; refactored landing, product, and solutions sections. Gate: `marketing-nav-links` PASS.
+
+## P4-14 — CI smoke marketing (2026-09-01)
+
+Expanded `ci-smoke` to 8 features (added marketing landing + pricing). Gate: 8/8 PASS locally.
+
+## P4-capstone — Phase 4 full regression (2026-09-01)
+
+Local capstone: unit 256/256, i18n 0 missing, refactor-regression 30/30, marketing-smoke 4/4 (`p4-capstone`).

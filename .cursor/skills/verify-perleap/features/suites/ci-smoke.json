@@ -1,0 +1,10 @@
+[
+  "auth-page-load",
+  "marketing-landing-load",
+  "marketing-pricing-load",
+  "student-auth-dashboard",
+  "student-assignment-detail",
+  "teacher-auth-dashboard",
+  "teacher-classroom-overview",
+  "teacher-submission-detail"
+]

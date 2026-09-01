@@ -10,8 +10,8 @@ import { assignmentFlowCompleteKeys, assignmentSubmittedFlagsKeys } from './useM
 import { notificationKeys } from './useNotificationQueries';
 import type { ChatRequest, FeedbackRequest } from '@/types';
 import { useAuth } from '@/contexts/useAuth';
-import { createNotification } from '@/lib/notificationService';
 import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
+import { createNotification } from '@/services/notificationService';
 import {
   getStudentSubmissionContext,
   getSubmissionById,

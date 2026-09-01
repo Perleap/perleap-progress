@@ -1,0 +1,69 @@
+name: E2E Smoke
+
+# Opt-in Playwright smoke against staging (6 verify-perleap features).
+# Required repo secrets: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SUPABASE_SECRET_KEY,
+# VERIFY_STUDENT_EMAIL, VERIFY_TEACHER_EMAIL, and either VERCEL_SHARE_TOKEN or
+# VERCEL_AUTOMATION_BYPASS_SECRET for Deployment Protection.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Optional evidence run id suffix
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Write verify env from secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_SECRET_KEY: ${{ secrets.VITE_SUPABASE_SECRET_KEY }}
+          VERIFY_BASE_URL: https://staging.perleap.ai
+          VERIFY_STUDENT_EMAIL: ${{ secrets.VERIFY_STUDENT_EMAIL }}
+          VERIFY_STUDENT_PASSWORD: ${{ secrets.VERIFY_STUDENT_PASSWORD }}
+          VERIFY_TEACHER_EMAIL: ${{ secrets.VERIFY_TEACHER_EMAIL }}
+          VERIFY_TEACHER_PASSWORD: ${{ secrets.VERIFY_TEACHER_PASSWORD }}
+          VERIFY_ADMIN_EMAIL: ${{ secrets.VERIFY_ADMIN_EMAIL }}
+          VERIFY_ADMIN_PASSWORD: ${{ secrets.VERIFY_ADMIN_PASSWORD }}
+          VERCEL_SHARE_TOKEN: ${{ secrets.VERCEL_SHARE_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/write-verify-ci-env.mjs
+
+      - name: Run CI smoke suite (6 features)
+        env:
+          VERIFY_PROFILE: staging
+        run: npm run verify:ci-smoke -- --run "ci-smoke-${{ github.run_id }}${{ inputs.run_id && format('-{0}', inputs.run_id) || '' }}"
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-ci-smoke-${{ github.run_id }}
+          path: .cursor/skills/verify-perleap/evidence/ci-smoke-*/
+          if-no-files-found: ignore

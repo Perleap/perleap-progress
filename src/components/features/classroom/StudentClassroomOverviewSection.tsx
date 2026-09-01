@@ -2,7 +2,7 @@ import { CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { StudentClassroomDetailView } from '@/lib/classroomDetail';
 import { CourseResumeProgressCard } from '@/components/features/syllabus/CourseResumeProgressCard';
-import SafeMathMarkdown from '@/components/SafeMathMarkdown';
+import SafeMathMarkdown from '@/components/shared/SafeMathMarkdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';

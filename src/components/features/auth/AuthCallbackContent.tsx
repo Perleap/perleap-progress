@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/common';
 import { USER_ROLES } from '@/config/constants';
 import { supabase } from '@/integrations/supabase/client';
 import {

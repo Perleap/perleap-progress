@@ -42,7 +42,7 @@ import {
 import { SyllabusRowActionTooltip } from './SyllabusRowActionTooltip';
 import type { ActivityLinkState } from '@/types/navigation';
 import type { SectionResource } from '@/types/syllabus';
-import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
+import { CreateAssignmentDialog } from '@/components/features/assignment/dialogs';
 import { CreateLiveSessionDialog } from '@/components/features/liveSession/CreateLiveSessionDialog';
 import {
   AlertDialog,

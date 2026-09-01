@@ -10,6 +10,7 @@ export * from './ClassPerformanceSummary';
 export * from './StudentProfilesList';
 export * from './VideoEngagementPanel';
 export * from './ClassroomAnalytics';
+export * from './RegenerateScoresButton';
 
 // Lesson brief report
 export * from './LessonBriefContent';

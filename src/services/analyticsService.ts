@@ -318,3 +318,42 @@ export const regenerateClassroomScores = async (
     return { success: false, error: handleSupabaseError(error) };
   }
 };
+
+export type UndoEvaluationRefreshResult = {
+  restored: number;
+  failed: number;
+  canUndo?: boolean;
+  error?: string;
+};
+
+export async function hasEvaluationRefreshBatch(classroomId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('evaluation_refresh_batches')
+    .select('id')
+    .eq('classroom_id', classroomId)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data?.id;
+}
+
+export async function hasRunningEvaluationRefreshJob(classroomId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('evaluation_refresh_jobs')
+    .select('id')
+    .eq('classroom_id', classroomId)
+    .eq('status', 'running')
+    .maybeSingle();
+  if (error) throw error;
+  return !!data?.id;
+}
+
+export async function undoEvaluationRefresh(
+  classroomId: string
+): Promise<UndoEvaluationRefreshResult> {
+  const { data, error } = await supabase.functions.invoke<UndoEvaluationRefreshResult>(
+    'undo-evaluation-refresh',
+    { body: { classroomId } }
+  );
+  if (error) throw error;
+  return data ?? { restored: 0, failed: 0 };
+}

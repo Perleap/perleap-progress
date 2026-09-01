@@ -1,4 +1,5 @@
 import {
+  buildVerifyUrl,
   fail,
   navigationWaitUntil,
 } from '../helpers/shared.mjs';
@@ -13,7 +14,7 @@ export function requireSandboxFixture(fixture) {
 
 export async function openStudentSandboxClassroom(page, env, fixture) {
   const f = requireSandboxFixture(fixture);
-  await page.goto(`${env.VERIFY_BASE_URL}/student/classroom/${f.classroomId}`, {
+  await page.goto(buildVerifyUrl(`/student/classroom/${f.classroomId}`, env), {
     waitUntil: navigationWaitUntil(env),
   });
   if (!page.url().includes('/student/classroom/')) {
@@ -23,7 +24,7 @@ export async function openStudentSandboxClassroom(page, env, fixture) {
 
 export async function openTeacherSandboxClassroom(page, env, fixture) {
   const f = requireSandboxFixture(fixture);
-  await page.goto(`${env.VERIFY_BASE_URL}/teacher/classroom/${f.classroomId}`, {
+  await page.goto(buildVerifyUrl(`/teacher/classroom/${f.classroomId}`, env), {
     waitUntil: navigationWaitUntil(env),
   });
   if (!page.url().includes('/teacher/classroom/')) {
@@ -41,13 +42,17 @@ export async function clickClassroomSection(page, sectionLabel) {
 export async function ensureFreshAttemptIfNeeded(page) {
   const startAnother = page.getByRole('button', { name: 'Start another attempt' });
   if (await startAnother.isVisible({ timeout: 5_000 }).catch(() => false)) {
-    await startAnother.click();
-    await page.waitForTimeout(2_000);
+    if (await startAnother.isEnabled().catch(() => false)) {
+      await startAnother.click();
+      await page.waitForTimeout(2_000);
+    }
   }
 }
 
 export async function openStudentActivity(page, env, classroomId, activityResourceId) {
-  await page.goto(`${env.VERIFY_BASE_URL}/student/classroom/${classroomId}/activity/${activityResourceId}`, {
+  await page.goto(
+    buildVerifyUrl(`/student/classroom/${classroomId}/activity/${activityResourceId}`, env),
+    {
     waitUntil: navigationWaitUntil(env),
   });
   if (!page.url().includes('/activity/')) {
@@ -56,7 +61,7 @@ export async function openStudentActivity(page, env, classroomId, activityResour
 }
 
 export async function openStudentAssignment(page, env, assignmentId, { freshAttempt = false } = {}) {
-  await page.goto(`${env.VERIFY_BASE_URL}/student/assignment/${assignmentId}`, {
+  await page.goto(buildVerifyUrl(`/student/assignment/${assignmentId}`, env), {
     waitUntil: navigationWaitUntil(env),
   });
   await dismissAssignmentIntro(page);

@@ -1,53 +1,29 @@
-import {
-  Upload,
-  X,
-  Link as LinkIcon,
-  Plus,
-  Trash2,
-  BookOpen,
-  Target,
-  FileText,
-  Loader2,
-  Eye,
-} from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { Json } from '@/integrations/supabase/types';
-import type { StorageUploadOptions } from '@/lib/storageUpload';
-import type { Domain, CourseMaterial } from '@/types/models';
+import {
+  buildClassroomUpdatePayload,
+  buildEditClassroomFormData,
+  type EditClassroomFormData,
+  type EditClassroomRecord,
+} from '@/components/features/classroom/forms/classroomFormTypes';
+import {
+  ClassroomBasicInfoSection,
+  ClassroomMaterialsSection,
+  ClassroomOutcomesSection,
+  ClassroomSubjectAreasSection,
+} from '@/components/features/classroom/forms/sections';
 import { Button } from '@/components/ui/button';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ExpandableTextarea } from '@/components/ui/expandable-textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
-import { openOrDownloadMaterial } from '@/services/materialService';
-import { COURSE_MATERIALS_BUCKET } from '@/utils/storageUrls';
-
-interface Classroom {
-  id: string;
-  name: string;
-  subject: string;
-  course_title: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  resources: string | null;
-  learning_outcomes: string[] | null;
-  key_challenges: string[] | null;
-  domains: Domain[] | null;
-  materials: CourseMaterial[] | null;
-}
+import { updateClassroom } from '@/services/classroomService';
 
 interface EditClassroomDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  classroom: Classroom;
+  classroom: EditClassroomRecord;
   onSuccess: () => void;
 }
 
@@ -61,67 +37,18 @@ export const EditClassroomDialog = ({
   const { isRTL } = useLanguage();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploadingMaterial, setUploadingMaterial] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [linkInput, setLinkInput] = useState('');
-  const [selectedFileName, setSelectedFileName] = useState('');
-  const [rephrasingCourseDescription, setRephrasingCourseDescription] = useState(false);
-  const [formData, setFormData] = useState({
-    courseTitle: '',
-    startDate: '',
-    endDate: '',
-    courseDescription: '',
-    learningOutcomes: ['', '', ''],
-    keyChallenges: ['', ''],
-    domains: [] as Domain[],
-    materials: [] as CourseMaterial[],
-  });
+  const [formData, setFormData] = useState<EditClassroomFormData>(() =>
+    buildEditClassroomFormData(classroom)
+  );
 
   useEffect(() => {
     if (open && classroom) {
-      setFormData({
-        courseTitle: classroom.course_title || classroom.name || '',
-        startDate: classroom.start_date || '',
-        endDate: classroom.end_date || '',
-        courseDescription: classroom.resources || '',
-        learningOutcomes:
-          classroom.learning_outcomes && classroom.learning_outcomes.length > 0
-            ? classroom.learning_outcomes
-            : ['', '', ''],
-        keyChallenges:
-          classroom.key_challenges && classroom.key_challenges.length > 0
-            ? classroom.key_challenges
-            : ['', ''],
-        domains: (classroom.domains || []) as Domain[],
-        materials: (classroom.materials || []) as CourseMaterial[],
-      });
+      setFormData(buildEditClassroomFormData(classroom));
     }
   }, [open, classroom]);
 
-  const handleRephraseCourseDescription = async () => {
-    if (!formData.courseDescription.trim()) {
-      toast.error(t('createClassroom.rephraseError'));
-      return;
-    }
-    setRephrasingCourseDescription(true);
-    try {
-      const { data: result, error } = await supabase.functions.invoke('rephrase-text', {
-        body: {
-          text: formData.courseDescription,
-          language: isRTL ? 'he' : 'en',
-        },
-      });
-      if (error) throw error;
-      if (result?.rephrasedText) {
-        setFormData((prev) => ({ ...prev, courseDescription: result.rephrasedText }));
-        toast.success(t('createClassroom.rephraseSuccess'));
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error(t('createClassroom.rephraseError'));
-    } finally {
-      setRephrasingCourseDescription(false);
-    }
+  const onFormChange = (partial: Partial<EditClassroomFormData>) => {
+    setFormData((prev) => ({ ...prev, ...partial }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,31 +57,7 @@ export const EditClassroomDialog = ({
 
     setLoading(true);
     try {
-      // Filter out empty domains and components
-      const filteredDomains = formData.domains
-        .filter((d) => d.name.trim())
-        .map((d) => ({
-          name: d.name,
-          components: d.components.filter((c) => c.trim()),
-        }))
-        .filter((d) => d.components.length > 0);
-
-      // Update classroom
-      const { error } = await supabase
-        .from('classrooms')
-        .update({
-          name: formData.courseTitle || 'New Classroom',
-          subject: formData.courseTitle || 'General',
-          course_title: formData.courseTitle,
-          start_date: formData.startDate || null,
-          end_date: formData.endDate || null,
-          resources: formData.courseDescription || '',
-          learning_outcomes: formData.learningOutcomes.filter((o) => o.trim()) as unknown as Json,
-          key_challenges: formData.keyChallenges.filter((c) => c.trim()) as unknown as Json,
-          domains: filteredDomains as unknown as Json,
-          materials: formData.materials as unknown as Json,
-        })
-        .eq('id', classroom.id);
+      const { error } = await updateClassroom(classroom.id, buildClassroomUpdatePayload(formData));
 
       if (error) throw error;
 
@@ -166,166 +69,6 @@ export const EditClassroomDialog = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOutcomeChange = (index: number, value: string) => {
-    const newOutcomes = [...formData.learningOutcomes];
-    newOutcomes[index] = value;
-    setFormData({ ...formData, learningOutcomes: newOutcomes });
-  };
-
-  const addOutcome = () => {
-    setFormData({ ...formData, learningOutcomes: [...formData.learningOutcomes, ''] });
-  };
-
-  const handleChallengeChange = (index: number, value: string) => {
-    const newChallenges = [...formData.keyChallenges];
-    newChallenges[index] = value;
-    setFormData({ ...formData, keyChallenges: newChallenges });
-  };
-
-  const addChallenge = () => {
-    setFormData({ ...formData, keyChallenges: [...formData.keyChallenges, ''] });
-  };
-
-  // Domain management functions
-  const addDomain = () => {
-    setFormData({
-      ...formData,
-      domains: [...formData.domains, { name: '', components: [''] }],
-    });
-  };
-
-  const removeDomain = (index: number) => {
-    const newDomains = formData.domains.filter((_, i) => i !== index);
-    setFormData({ ...formData, domains: newDomains });
-  };
-
-  const updateDomainName = (index: number, name: string) => {
-    const newDomains = [...formData.domains];
-    newDomains[index] = { ...newDomains[index], name };
-    setFormData({ ...formData, domains: newDomains });
-  };
-
-  const addComponent = (domainIndex: number) => {
-    const newDomains = [...formData.domains];
-    newDomains[domainIndex].components.push('');
-    setFormData({ ...formData, domains: newDomains });
-  };
-
-  const removeComponent = (domainIndex: number, componentIndex: number) => {
-    const newDomains = [...formData.domains];
-    newDomains[domainIndex].components = newDomains[domainIndex].components.filter(
-      (_, i) => i !== componentIndex
-    );
-    setFormData({ ...formData, domains: newDomains });
-  };
-
-  const updateComponent = (domainIndex: number, componentIndex: number, value: string) => {
-    const newDomains = [...formData.domains];
-    newDomains[domainIndex].components[componentIndex] = value;
-    setFormData({ ...formData, domains: newDomains });
-  };
-
-  // Material management functions
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    if (file.type !== 'application/pdf') {
-      toast.error(t('createClassroom.errors.uploadPdf'));
-      return;
-    }
-
-    /* Removing hardcoded file size limit to defer to Supabase storage settings */
-    /*
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error(t('createClassroom.errors.fileSize'));
-      return;
-    }
-    */
-
-    setUploadingMaterial(true);
-    setUploadProgress(0);
-
-    try {
-      const fileExt = 'pdf';
-      if (!user?.id) throw new Error('User required');
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
-      const uploadOptions: StorageUploadOptions = {
-        cacheControl: '3600',
-        upsert: true,
-        onUploadProgress: (progress) => {
-          if (progress.total <= 0) return;
-          const percentage = Math.round((progress.loaded / progress.total) * 100);
-          setUploadProgress(percentage);
-        },
-      };
-
-      const { error: uploadError } = await supabase.storage
-        .from('course-materials')
-        .upload(fileName, file, uploadOptions);
-
-      if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
-        throw uploadError;
-      }
-
-      setFormData({
-        ...formData,
-        materials: [...formData.materials, { type: 'pdf', file_path: fileName, name: file.name }],
-      });
-
-      toast.success(t('createClassroom.success.pdfUploaded'));
-      setSelectedFileName(''); // Clear the selected file name on success
-      e.target.value = ''; // Reset file input
-    } catch (error: unknown) {
-      console.error('Detailed upload error:', error);
-      toast.error(
-        `${t('createClassroom.errors.creating')}: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
-      setUploadingMaterial(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleAddLink = () => {
-    if (!linkInput.trim()) {
-      toast.error(t('createClassroom.errors.enterUrl'));
-      return;
-    }
-
-    try {
-      const url = new URL(linkInput.trim()); // Validate URL
-      const linkName =
-        url.hostname.replace('www.', '') +
-        (url.pathname !== '/' ? url.pathname.substring(0, 30) : '');
-
-      setFormData({
-        ...formData,
-        materials: [
-          ...formData.materials,
-          {
-            type: 'link',
-            url: linkInput.trim(),
-            name: linkName || linkInput.trim(),
-          },
-        ],
-      });
-      setLinkInput('');
-      toast.success(t('createClassroom.success.linkAdded'));
-    } catch {
-      toast.error(t('createClassroom.errors.validUrl'));
-    }
-  };
-
-  const removeMaterial = (index: number) => {
-    setFormData({
-      ...formData,
-      materials: formData.materials.filter((_, i) => i !== index),
-    });
   };
 
   return (
@@ -347,400 +90,18 @@ export const EditClassroomDialog = ({
 
         <ScrollArea className="max-h-[calc(90vh-160px)] px-8 pb-8">
           <form onSubmit={handleSubmit} className="space-y-8 pt-4">
-            {/* Basic Info Section */}
-            <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-              <div
-                className={`flex items-center gap-2 text-primary mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}
-              >
-                <BookOpen className="h-5 w-5" />
-                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('createClassroom.courseBasics')}
-                </h3>
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="courseTitle"
-                  className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
-                >
-                  {t('createClassroom.courseTitle')} <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="courseTitle"
-                  value={formData.courseTitle}
-                  onChange={(e) => setFormData({ ...formData, courseTitle: e.target.value })}
-                  required
-                  className="rounded-xl h-11 focus-visible:ring-primary"
-                  placeholder={t('createClassroom.courseTitlePlaceholder')}
-                  autoDirection
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="startDate"
-                    className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
-                  >
-                    {t('createClassroom.startDate')}
-                  </Label>
-                  <DatePicker
-                    value={formData.startDate}
-                    onChange={(v) => setFormData({ ...formData, startDate: v })}
-                    placeholder={t('createClassroom.startDate')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="endDate"
-                    className={`text-body font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
-                  >
-                    {t('createClassroom.endDate')}
-                  </Label>
-                  <DatePicker
-                    value={formData.endDate}
-                    onChange={(v) => setFormData({ ...formData, endDate: v })}
-                    placeholder={t('createClassroom.endDate')}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="courseDescription"
-                  className={cn('text-body font-medium block', isRTL ? 'text-right' : 'text-left')}
-                >
-                  {t('createClassroom.courseDescription')}
-                </Label>
-                <ExpandableTextarea
-                  key={open ? classroom.id : 'closed'}
-                  id="courseDescription"
-                  placeholder={t('createClassroom.courseDescriptionPlaceholder')}
-                  value={formData.courseDescription}
-                  onChange={(v) => setFormData((prev) => ({ ...prev, courseDescription: v }))}
-                  className="min-h-[120px] resize-y focus-visible:ring-primary bg-muted/30"
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                  autoDirection
-                  onRewrite={() => void handleRephraseCourseDescription()}
-                  isRewriting={rephrasingCourseDescription}
-                />
-              </div>
-            </div>
-
-            {/* Subject Areas Section */}
-            <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-              <div
-                className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
-              >
-                <div
-                  className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}
-                >
-                  <Target className="h-5 w-5" />
-                  <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createClassroom.subjectAreas')}
-                  </h3>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addDomain}
-                  className="rounded-full border-border text-foreground hover:bg-muted"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 me-1" />
-                  {t('createClassroom.addArea')}
-                </Button>
-              </div>
-
-              <p className={`text-sm text-subtle mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {t('editClassroom.subjectAreasHelper')}
-              </p>
-
-              {formData.domains.length === 0 && (
-                <div className="p-8 border-2 border-dashed border-border rounded-xl bg-muted/10">
-                  <p className={`text-subtle text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
-                    {t('createClassroom.addAreaPrompt')}
-                  </p>
-                </div>
-              )}
-
-              <div className="grid gap-4">
-                {formData.domains.map((domain, domainIndex) => (
-                  <div
-                    key={domainIndex}
-                    className="space-y-4 p-5 border border-border rounded-xl bg-muted/5 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        {domainIndex + 1}
-                      </div>
-                      <Input
-                        placeholder={t('createClassroom.subjectAreaPlaceholder')}
-                        value={domain.name}
-                        onChange={(e) => updateDomainName(domainIndex, e.target.value)}
-                        className="flex-1 rounded-xl h-10"
-                        autoDirection
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeDomain(domainIndex)}
-                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-full"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="ps-11 space-y-3">
-                      <Label
-                        className={`text-xs font-bold text-primary uppercase tracking-wider block ${isRTL ? 'text-right' : 'text-left'}`}
-                      >
-                        {t('createClassroom.skills')}
-                      </Label>
-                      <div className="grid gap-2">
-                        {domain.components.map((component, componentIndex) => (
-                          <div key={componentIndex} className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-primary/30" />
-                            <Input
-                              placeholder={t('createClassroom.skillPlaceholder', {
-                                number: componentIndex + 1,
-                              })}
-                              value={component}
-                              onChange={(e) =>
-                                updateComponent(domainIndex, componentIndex, e.target.value)
-                              }
-                              className="flex-1 rounded-lg h-9 text-sm"
-                              autoDirection
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeComponent(domainIndex, componentIndex)}
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addComponent(domainIndex)}
-                        className="text-primary hover:text-primary/80 hover:bg-primary/5 text-xs font-semibold"
-                      >
-                        <Plus className="h-3 w-3 me-1" />
-                        {t('createClassroom.addSkill')}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Materials Section */}
-            <div className="space-y-6 p-6 rounded-xl border border-border shadow-sm">
-              <div
-                className={`flex items-center gap-2 text-primary ${isRTL ? 'flex-row-reverse' : ''}`}
-              >
-                <FileText className="h-5 w-5" />
-                <h3 className={`font-bold text-heading ${isRTL ? 'text-right' : 'text-left'}`}>
-                  {t('createClassroom.courseMaterials')}
-                </h3>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label
-                    className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
-                  >
-                    {t('createClassroom.uploadPdf')}
-                  </Label>
-                  <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <input
-                      id="pdf-upload"
-                      type="file"
-                      accept="application/pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        setSelectedFileName(file?.name || '');
-                        handlePdfUpload(e);
-                      }}
-                      disabled={uploadingMaterial}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('pdf-upload')?.click()}
-                      disabled={uploadingMaterial}
-                      className="rounded-full border-border hover:bg-muted font-bold"
-                    >
-                      {uploadingMaterial ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin me-2" />
-                          {uploadProgress > 0 ? `${uploadProgress}%` : t('common.loading')}
-                        </>
-                      ) : (
-                        t('createClassroom.chooseFile')
-                      )}
-                    </Button>
-                    <span
-                      className={`text-sm text-subtle truncate max-w-[150px] ${isRTL ? 'text-right' : 'text-left'}`}
-                    >
-                      {selectedFileName || t('createClassroom.noFileChosen')}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label
-                    className={`text-sm font-medium block ${isRTL ? 'text-right' : 'text-left'}`}
-                  >
-                    {t('createClassroom.addLink')}
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={t('createClassroom.linkPlaceholder')}
-                      value={linkInput}
-                      onChange={(e) => setLinkInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddLink();
-                        }
-                      }}
-                      className="rounded-xl"
-                      autoDirection
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleAddLink}
-                      className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {formData.materials.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  {formData.materials.map((material, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 bg-muted/10 rounded-xl border border-border shadow-sm group"
-                    >
-                      <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary">
-                        {material.type === 'pdf' ? (
-                          <Upload className="h-4 w-4" />
-                        ) : (
-                          <LinkIcon className="h-4 w-4" />
-                        )}
-                      </div>
-                      <span className="flex-1 text-sm truncate font-bold text-foreground">
-                        {material.name}
-                      </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            void openOrDownloadMaterial(material, COURSE_MATERIALS_BUCKET)
-                          }
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          title={t('common.view')}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeMaterial(index)}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Outcomes & Challenges */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
-                <div
-                  className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
-                >
-                  <Label
-                    className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}
-                  >
-                    {t('createClassroom.learningOutcomes')}
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={addOutcome}
-                    className="text-primary hover:bg-primary/5 h-8 text-xs font-bold"
-                  >
-                    <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add')}
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {formData.learningOutcomes.map((outcome, index) => (
-                    <Input
-                      key={index}
-                      placeholder={t('createClassroom.outcomePlaceholder', { number: index + 1 })}
-                      value={outcome}
-                      onChange={(e) => handleOutcomeChange(index, e.target.value)}
-                      className="rounded-xl border-border bg-background focus-visible:ring-primary"
-                      autoDirection
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4 p-6 rounded-xl border border-border shadow-sm">
-                <div
-                  className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}
-                >
-                  <Label
-                    className={`text-foreground font-bold text-heading block ${isRTL ? 'text-right' : 'text-left'}`}
-                  >
-                    {t('createClassroom.keyChallenges')}
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={addChallenge}
-                    className="text-primary hover:bg-primary/5 h-8 text-xs font-bold"
-                  >
-                    <Plus className="h-3 w-3 me-1" /> {t('createClassroom.add')}
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {formData.keyChallenges.map((challenge, index) => (
-                    <Input
-                      key={index}
-                      placeholder={t('createClassroom.challengePlaceholder', { number: index + 1 })}
-                      value={challenge}
-                      onChange={(e) => handleChallengeChange(index, e.target.value)}
-                      className="rounded-xl border-border bg-background focus-visible:ring-primary"
-                      autoDirection
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+            <ClassroomBasicInfoSection
+              formData={formData}
+              onFormChange={onFormChange}
+              descriptionFieldKey={open ? classroom.id : 'closed'}
+            />
+            <ClassroomSubjectAreasSection
+              formData={formData}
+              onFormChange={onFormChange}
+              helperTextKey="editClassroom.subjectAreasHelper"
+            />
+            <ClassroomMaterialsSection formData={formData} onFormChange={onFormChange} />
+            <ClassroomOutcomesSection formData={formData} onFormChange={onFormChange} />
 
             <div className="flex justify-end gap-3 pt-6 border-t">
               <Button

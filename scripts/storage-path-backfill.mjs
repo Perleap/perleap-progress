@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Dry-run storage path normalization report.
- * Does NOT write to the database — lists rows where legacy signed/public URLs
- * could be normalized to object paths (runtime compat already handles display).
+ * Storage path normalization — dry-run report or staging-only apply.
+ * Legacy signed/public URLs can be normalized to object paths (runtime compat handles display).
  *
  * Usage:
  *   node scripts/storage-path-backfill.mjs --dry-run --all
  *   node scripts/storage-path-backfill.mjs --dry-run --scope avatars,submissions
+ *   node scripts/storage-path-backfill.mjs --apply --all --staging   # staging DB only
  */
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +15,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
 const REPORTS_DIR = path.join(REPO_ROOT, 'scripts', 'reports');
+/** perleap-staging Supabase project — apply mode refuses any other project */
+const STAGING_PROJECT_REF = 'otjfoeyqiuerrgrdtgqx';
 
 const BUCKETS = {
   submissions: 'submission-files',
@@ -118,10 +120,14 @@ async function adminRest(env, restPath, options = {}) {
 }
 
 function parseArgs(argv) {
-  const out = { dryRun: true, scopes: [], all: false };
+  const out = { dryRun: true, apply: false, staging: false, scopes: [], all: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') out.dryRun = true;
+    else if (a === '--apply') {
+      out.apply = true;
+      out.dryRun = false;
+    } else if (a === '--staging') out.staging = true;
     else if (a === '--all') out.all = true;
     else if (a === '--scope' && argv[i + 1]) out.scopes.push(...argv[++i].split(','));
   }
@@ -129,6 +135,149 @@ function parseArgs(argv) {
     out.scopes = ['avatars', 'submissions', 'materials', 'syllabus'];
   }
   return out;
+}
+
+function assertStagingOnly(env, args) {
+  if (!args.apply) return;
+  if (!args.staging) {
+    console.error('--apply requires --staging (writes are limited to the staging Supabase project)');
+    process.exit(1);
+  }
+  const url = env.VITE_SUPABASE_URL ?? '';
+  if (!url.includes(STAGING_PROJECT_REF)) {
+    console.error(
+      `--apply refused: VITE_SUPABASE_URL must reference staging project ${STAGING_PROJECT_REF}`,
+    );
+    console.error(`Current URL: ${url || '(missing)'}`);
+    process.exit(1);
+  }
+}
+
+function parseMaterialsField(field) {
+  const match = /^materials\[(\d+)\]\.file_path$/.exec(field);
+  return match ? Number(match[1]) : null;
+}
+
+function parseFileUrlsField(field) {
+  const match = /^file_urls\[(\d+)\]$/.exec(field);
+  return match ? Number(match[1]) : null;
+}
+
+async function applyScalar(env, row) {
+  const { table, id, field, after } = row;
+  if (field === 'avatar_url') {
+    await adminRest(env, `/${table}?user_id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ avatar_url: after }),
+    });
+    return;
+  }
+  if (field === 'file_url') {
+    await adminRest(env, `/submissions?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ file_url: after }),
+    });
+    return;
+  }
+  if (field === 'url→file_path') {
+    await adminRest(env, `/activity_list?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ file_path: after }),
+    });
+    return;
+  }
+  throw new Error(`Unsupported scalar field: ${table}.${field}`);
+}
+
+async function applySubmissionFileUrls(env, submissionId, updates) {
+  const rows = await adminRest(env, `/submissions?id=eq.${submissionId}&select=id,file_urls`, {
+    method: 'GET',
+  });
+  const current = rows?.[0];
+  if (!current || !Array.isArray(current.file_urls)) {
+    throw new Error(`submissions ${submissionId}: missing file_urls array`);
+  }
+  const next = [...current.file_urls];
+  for (const { index, after } of updates) {
+    if (index < 0 || index >= next.length) {
+      throw new Error(`submissions ${submissionId}: file_urls[${index}] out of range`);
+    }
+    next[index] = after;
+  }
+  await adminRest(env, `/submissions?id=eq.${submissionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ file_urls: next }),
+  });
+}
+
+async function applyMaterials(env, table, rowId, updates) {
+  const rows = await adminRest(env, `/${table}?id=eq.${rowId}&select=id,materials`, {
+    method: 'GET',
+  });
+  const current = rows?.[0];
+  if (!current || !Array.isArray(current.materials)) {
+    throw new Error(`${table} ${rowId}: missing materials array`);
+  }
+  const next = current.materials.map((mat) => ({ ...mat }));
+  for (const { index, after } of updates) {
+    if (index < 0 || index >= next.length) {
+      throw new Error(`${table} ${rowId}: materials[${index}] out of range`);
+    }
+    const mat = next[index];
+    if (!mat || mat.type === 'link') continue;
+    mat.file_path = after;
+    if (typeof mat.url === 'string' && mat.url.startsWith('http')) {
+      delete mat.url;
+    }
+  }
+  await adminRest(env, `/${table}?id=eq.${rowId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ materials: next }),
+  });
+}
+
+async function applyCandidates(env, candidates) {
+  const submissionFileUrlGroups = new Map();
+  const materialsGroups = new Map();
+  let applied = 0;
+
+  for (const row of candidates) {
+    const fileUrlsIndex = parseFileUrlsField(row.field);
+    if (row.table === 'submissions' && fileUrlsIndex !== null) {
+      const key = row.id;
+      if (!submissionFileUrlGroups.has(key)) submissionFileUrlGroups.set(key, []);
+      submissionFileUrlGroups.get(key).push({ index: fileUrlsIndex, after: row.after });
+      continue;
+    }
+
+    const materialsIndex = parseMaterialsField(row.field);
+    if ((row.table === 'classrooms' || row.table === 'assignments') && materialsIndex !== null) {
+      const key = `${row.table}:${row.id}`;
+      if (!materialsGroups.has(key)) {
+        materialsGroups.set(key, { table: row.table, id: row.id, updates: [] });
+      }
+      materialsGroups.get(key).updates.push({ index: materialsIndex, after: row.after });
+      continue;
+    }
+
+    await applyScalar(env, row);
+    applied += 1;
+    console.log(`  applied ${row.table} ${row.id} ${row.field}`);
+  }
+
+  for (const [submissionId, updates] of submissionFileUrlGroups) {
+    await applySubmissionFileUrls(env, submissionId, updates);
+    applied += updates.length;
+    console.log(`  applied submissions ${submissionId} file_urls (${updates.length} slot(s))`);
+  }
+
+  for (const { table, id, updates } of materialsGroups.values()) {
+    await applyMaterials(env, table, id, updates);
+    applied += updates.length;
+    console.log(`  applied ${table} ${id} materials (${updates.length} slot(s))`);
+  }
+
+  return applied;
 }
 
 async function scanAvatars(env) {
@@ -261,6 +410,30 @@ const SCANNERS = {
   syllabus: scanSyllabus,
 };
 
+async function collectCandidates(env, scopes) {
+  const byScope = {};
+  const all = [];
+  for (const scope of scopes) {
+    const scanner = SCANNERS[scope];
+    if (!scanner) {
+      console.warn(`Unknown scope: ${scope}`);
+      continue;
+    }
+    const found = await scanner(env);
+    byScope[scope] = found;
+    all.push(...found);
+    console.log(`${scope}: ${found.length} candidate(s)`);
+  }
+  return { byScope, all };
+}
+
+function writeReport(report, stamp) {
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  const outPath = path.join(REPORTS_DIR, `storage-path-backfill-${stamp}.json`);
+  fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
+  return outPath;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const env = loadEnv();
@@ -268,37 +441,42 @@ async function main() {
     console.error('VITE_SUPABASE_URL missing');
     process.exit(1);
   }
+  assertStagingOnly(env, args);
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const { byScope, all } = await collectCandidates(env, args.scopes);
 
   const report = {
-    mode: 'dry-run',
+    mode: args.apply ? 'apply' : 'dry-run',
     generatedAt: new Date().toISOString(),
     scopes: args.scopes,
-    summary: {},
-    samples: {},
-    totalCandidates: 0,
+    summary: Object.fromEntries(Object.entries(byScope).map(([k, v]) => [k, v.length])),
+    samples: Object.fromEntries(Object.entries(byScope).map(([k, v]) => [k, v.slice(0, 5)])),
+    totalCandidates: all.length,
   };
 
-  for (const scope of args.scopes) {
-    const scanner = SCANNERS[scope];
-    if (!scanner) {
-      console.warn(`Unknown scope: ${scope}`);
-      continue;
+  if (args.apply) {
+    if (all.length === 0) {
+      console.log('\nApply skipped — no candidates to update.');
+    } else {
+      console.log(`\nApplying ${all.length} update(s) on staging…`);
+      report.applied = await applyCandidates(env, all);
+      console.log(`Applied ${report.applied} field update(s).`);
     }
-    const found = await scanner(env);
-    report.summary[scope] = found.length;
-    report.samples[scope] = found.slice(0, 5);
-    report.totalCandidates += found.length;
-    console.log(`${scope}: ${found.length} candidate(s)`);
   }
 
-  fs.mkdirSync(REPORTS_DIR, { recursive: true });
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const outPath = path.join(REPORTS_DIR, `storage-path-backfill-${stamp}.json`);
-  fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
+  const outPath = writeReport(report, stamp);
 
-  console.log(`\nDry-run complete — ${report.totalCandidates} total candidate(s)`);
-  console.log(`Report: ${outPath}`);
-  console.log('No database writes were made.');
+  if (args.apply) {
+    console.log(`\nApply complete — report: ${outPath}`);
+    if (all.length > 0) {
+      console.log('Re-run with --dry-run to confirm zero remaining candidates.');
+    }
+  } else {
+    console.log(`\nDry-run complete — ${report.totalCandidates} total candidate(s)`);
+    console.log(`Report: ${outPath}`);
+    console.log('No database writes were made.');
+  }
 }
 
 main().catch((err) => {

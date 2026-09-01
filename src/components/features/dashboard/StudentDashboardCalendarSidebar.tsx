@@ -1,4 +1,4 @@
-import { StudentCalendar } from '@/components/StudentCalendar';
+import { StudentCalendar } from '@/components/features/dashboard/StudentCalendar';
 import { useAuth } from '@/contexts/useAuth';
 
 export const StudentDashboardCalendarSidebar = () => {

@@ -13,3 +13,4 @@ export * from './onboardingService';
 export * from './plannerService';
 export * from './profileService';
 export * from './submissionService';
+export * from './notificationService';

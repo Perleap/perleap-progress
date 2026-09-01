@@ -10,10 +10,10 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/useAuth';
 import { Loader2, ArrowLeft, ArrowRight, Upload } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/common';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/components/common';
 
 const TeacherOnboarding = () => {
   const { t } = useTranslation();

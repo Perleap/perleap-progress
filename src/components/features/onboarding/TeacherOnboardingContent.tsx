@@ -8,7 +8,7 @@ import {
   TeacherOnboardingStep2Section,
 } from './TeacherOnboardingStepSections';
 import type { TeacherOnboardingFormData } from './teacherOnboardingTypes';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';

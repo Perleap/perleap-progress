@@ -12,7 +12,7 @@ import {
   StudentOnboardingStep6Section,
 } from './StudentOnboardingStepSections';
 import type { StudentOnboardingFormData } from './studentOnboardingTypes';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';

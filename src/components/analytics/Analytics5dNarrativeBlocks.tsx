@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Compare5dNarrativeContext } from '@/lib/analyticsCompare5d/types';
 import type { FiveDScores, FiveDQedMeasures } from '@/types/models';
 import type { ReactNode } from 'react';
-import { FiveDChart } from '@/components/FiveDChart';
+import { FiveDChart } from '@/components/features/analytics/FiveDChart';
 import {
   useAnalytics5dNarrative,
   type Analytics5dNarrativeContext,

@@ -17,3 +17,4 @@ export * from './TeacherSettingsProfileSection';
 export * from './TeacherSettingsTeachingPreferencesSection';
 export * from './TeacherSettingsNotificationsSection';
 export * from './TeacherSettingsContent';
+export * from './DeleteAccountDialog';
