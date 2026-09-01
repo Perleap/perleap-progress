@@ -1,7 +1,7 @@
-import { navigationWaitUntil, fail } from '../helpers/shared.mjs';
+import { buildVerifyUrl, navigationWaitUntil, fail } from '../helpers/shared.mjs';
 
 export async function completeStudentOnboarding(page, cfg) {
-  await page.goto(`${cfg.VERIFY_BASE_URL}/onboarding/student`, {
+  await page.goto(buildVerifyUrl('/onboarding/student', cfg), {
     waitUntil: navigationWaitUntil(cfg),
   });
   await page.getByText('Student Profile Setup').waitFor({ timeout: 30_000 });
@@ -31,7 +31,7 @@ export async function completeStudentOnboarding(page, cfg) {
 }
 
 export async function completeTeacherOnboarding(page, cfg) {
-  await page.goto(`${cfg.VERIFY_BASE_URL}/onboarding/teacher`, {
+  await page.goto(buildVerifyUrl('/onboarding/teacher', cfg), {
     waitUntil: navigationWaitUntil(cfg),
   });
   await page.getByText('Teacher Profile Setup').waitFor({ timeout: 30_000 });

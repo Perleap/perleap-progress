@@ -4,7 +4,7 @@
  */
 
 import type { StudentAnalytics } from '@/types';
-import { FiveDChart } from '@/components/FiveDChart';
+import { FiveDChart } from '@/components/features/analytics/FiveDChart';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 

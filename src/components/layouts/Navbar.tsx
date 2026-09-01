@@ -2,9 +2,7 @@ import { Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { PerleapLogo } from '@/components/PerleapLogo';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher, PerleapLogo, ThemeToggle } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 

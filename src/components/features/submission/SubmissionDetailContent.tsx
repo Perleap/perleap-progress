@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { AssignmentWizardCreateInitialData } from '@/components/features/assignment/wizard/assignmentWizardTypes';
 import type { SubmissionDetailLocationState } from '@/types/navigation';
-import { CreateAssignmentDialog } from '@/components/CreateAssignmentDialog';
+import { CreateAssignmentDialog } from '@/components/features/assignment/dialogs';
 import { SubmissionDetailHeader } from '@/components/features/submission/SubmissionDetailHeader';
 import { SubmissionTabs } from '@/components/features/submission/SubmissionTabs';
 import { ClassroomLayout } from '@/components/layouts';

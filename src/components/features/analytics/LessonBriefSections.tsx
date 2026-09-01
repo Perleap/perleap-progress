@@ -7,7 +7,7 @@ import {
   type ClassPriorityInsight,
   type StudentReportRow,
 } from './lessonBriefReportUtils';
-import { FiveDChart } from '@/components/FiveDChart';
+import { FiveDChart } from '@/components/features/analytics/FiveDChart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 

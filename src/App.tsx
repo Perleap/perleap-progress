@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TeacherAssistantProvider } from './components/ai/TeacherAssistant';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { RouteLoadingFallback } from './components/common/RouteLoadingFallback';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from '@/components/features/auth/ProtectedRoute';
 import { EvaluationRefreshProcessingProvider } from './contexts/EvaluationRefreshProcessingContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { LiveSessionProcessingProvider } from './contexts/LiveSessionProcessingContext';

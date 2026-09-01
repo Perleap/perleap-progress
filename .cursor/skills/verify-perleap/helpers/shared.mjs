@@ -143,6 +143,19 @@ export function getVercelShareUrl(baseURL, token) {
   return url.toString();
 }
 
+/** App path or absolute URL with Vercel share token when driving remote staging. */
+export function buildVerifyUrl(pathOrUrl, env = loadVerifyEnv()) {
+  const base = (env.VERIFY_BASE_URL ?? '').replace(/\/$/, '');
+  const url = pathOrUrl.startsWith('http')
+    ? new URL(pathOrUrl)
+    : new URL(pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`, `${base}/`);
+  const token = env.VERCEL_SHARE_TOKEN?.trim();
+  if (token && isRemoteVerifyTarget(base)) {
+    url.searchParams.set('_vercel_share', token);
+  }
+  return url.toString();
+}
+
 export function getVercelProtectionHeaders(env = loadVerifyEnv()) {
   /** @type {Record<string, string>} */
   const headers = {};

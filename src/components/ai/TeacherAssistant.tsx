@@ -13,7 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import SafeMathMarkdown from '../SafeMathMarkdown';
+import SafeMathMarkdown from '@/components/shared/SafeMathMarkdown';
 import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';

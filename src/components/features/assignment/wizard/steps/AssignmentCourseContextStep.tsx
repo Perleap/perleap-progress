@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { SyllabusWithSections } from '@/types/syllabus';
-import { AssignmentCourseOutlineLinkCard } from '@/components/AssignmentCourseOutlineLinkCard';
+import { AssignmentCourseOutlineLinkCard } from '@/components/features/assignment/wizard/AssignmentCourseOutlineLinkCard';
 import { ModuleActivityLinksField } from '@/components/features/syllabus/ModuleActivityLinksField';
 import { cn } from '@/lib/utils';
 

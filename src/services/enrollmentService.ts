@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { createNotification } from '@/lib/notificationService';
+import { createNotification } from '@/services/notificationService';
 
 /**
  * Enrollment Service

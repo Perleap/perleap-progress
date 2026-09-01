@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { AssignmentClipboardTrackingCallbacks } from '@/hooks/useAssignmentClipboardTracking';
 import type { NuanceTrackingCallbacks } from '@/hooks/useNuanceTracking';
 import type { DbAssignmentType } from '@/types/models';
-import { AssignmentChatInterface } from '@/components/AssignmentChatInterface';
+import { AssignmentChatInterface } from '@/components/features/assignment/chat';
 
 type ChatAssignment = {
   id: string;

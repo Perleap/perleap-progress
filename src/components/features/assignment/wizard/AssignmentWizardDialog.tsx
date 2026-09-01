@@ -46,6 +46,7 @@ import {
   syncModuleFlowToResolvedDisplayForSection,
 } from '@/hooks/queries';
 import { moduleFlowKeys } from '@/hooks/queries/useModuleFlowQueries';
+import { useCreateBulkNotifications } from '@/hooks/queries/useNotificationQueries';
 import { testKeys } from '@/hooks/queries/useTestQueries';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -56,7 +57,6 @@ import {
 } from '@/lib/hardSkillsFormat';
 import { buildModuleContextTextFromSyllabusResources } from '@/lib/moduleContextTextFromSyllabus';
 import { filterOutlineMaterialResources } from '@/lib/moduleFlow';
-import { createBulkNotifications } from '@/lib/notificationService';
 import { deriveAllowMultipleSelections, legacySingleOptionId, parseOptionIds } from '@/lib/testMcq';
 import {
   setAssignmentLinkedActivities,
@@ -145,6 +145,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
   const { isRTL, language: uiLanguage } = useLanguage();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const createBulkNotificationsMutation = useCreateBulkNotifications();
 
   const isCreate = props.mode === 'create';
   const classroomId = isCreate ? props.classroomId : props.assignment.classroom_id;
@@ -1212,7 +1213,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
         if (assignmentRow && formData.status === 'published') {
           try {
             if (assignedStudentId) {
-              await createBulkNotifications([
+              await createBulkNotificationsMutation.mutateAsync([
                 {
                   userId: assignedStudentId,
                   type: 'assignment_created' as const,
@@ -1246,7 +1247,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
                     assignment_title: formData.title,
                   },
                 }));
-                await createBulkNotifications(notifications);
+                await createBulkNotificationsMutation.mutateAsync(notifications);
               }
             }
           } catch (e) {
@@ -1421,7 +1422,7 @@ export const AssignmentWizardDialog = (props: AssignmentWizardDialogProps) => {
                     due_at: formData.due_at || null,
                   },
                 }));
-                await createBulkNotifications(notifications);
+                await createBulkNotificationsMutation.mutateAsync(notifications);
               }
             }
           } catch {

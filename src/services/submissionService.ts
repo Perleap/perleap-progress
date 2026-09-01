@@ -20,9 +20,9 @@ import { SUBMISSION_STATUS, EVALUATION_STATUS, type EvaluationStatus } from '@/c
 import { canRetryAfterCompleting, canStartFirstAttempt } from '@/lib/assignmentAttemptPolicy';
 import { createChatStreamEmission, hasConversationCompleteMarker } from '@/lib/chatDisplay';
 import { rehydrateMessages } from '@/lib/conversationMessages';
-import { createNotification } from '@/lib/notificationService';
 import { resolveUserDisplayProfiles } from '@/lib/resolveUserDisplayProfiles';
 import { parseEdgeFunctionErrorMessage } from '@/services/assignmentService';
+import { createNotification } from '@/services/notificationService';
 import { enrichConversationMessagesWithAttachmentPaths } from '@/services/submissionFileService';
 
 export const studentAssignmentDetailLink = (

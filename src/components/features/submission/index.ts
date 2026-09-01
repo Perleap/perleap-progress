@@ -16,3 +16,4 @@ export * from './PresentationSubmissionView';
 export * from './ProjectSubmissionView';
 export * from './TestResultsView';
 export * from './SubmissionsTab';
+export * from './WellbeingAlertCard';

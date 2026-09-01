@@ -1,7 +1,7 @@
 import type { NotificationType } from '@/types/notifications';
 import type { TFunction } from 'i18next';
 import { supabase } from '@/integrations/supabase/client';
-import { createNotification } from '@/lib/notificationService';
+import { createNotification } from '@/services/notificationService';
 import { createChangelogEntry } from '@/services/syllabusResourceService';
 
 export type SyllabusPublishSideEffectsParams = {

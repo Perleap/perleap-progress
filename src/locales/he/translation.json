@@ -3192,10 +3192,110 @@
     "time": "שעה",
     "apply": "החלה"
   },
+  "product": {
+    "badge": "Powered by Advanced AI",
+    "heroTitle1": "Intelligent Agents for",
+    "heroTitle2": "Modern Education",
+    "heroSubtitle": "Perleap's suite of AI agents automates the mundane, personalizes the learning journey, and provides deep insights into student growth.",
+    "startTrial": "Start Free Trial",
+    "features": {
+      "cognitive": {
+        "title": "Cognitive Analysis",
+        "description": "Understand how students think, not just what they know. Our AI analyzes problem-solving patterns to identify strengths."
+      },
+      "grading": {
+        "title": "Instant Grading",
+        "description": "Save hours every week with automated grading that provides detailed, constructive feedback instantly."
+      },
+      "analytics": {
+        "title": "Growth Analytics",
+        "description": "Track progress over time with intuitive dashboards that visualize learning trends and gaps."
+      },
+      "secure": {
+        "title": "Secure & Private",
+        "description": "Enterprise-grade security ensures student data is protected and compliant with educational standards."
+      },
+      "adaptive": {
+        "title": "Adaptive Learning",
+        "description": "Content that adjusts in real-time to the student's pace and understanding level."
+      },
+      "softSkills": {
+        "title": "Soft Skills Tracking",
+        "description": "Measure the unmeasurable: creativity, collaboration, and critical thinking."
+      }
+    },
+    "ctaTitle": "Ready to transform your classroom?",
+    "ctaSubtitle": "Join thousands of educators who are already using Perleap to enhance their teaching.",
+    "ctaButton": "Get Started Now"
+  },
+  "solutions": {
+    "heroTitle1": "Solutions for",
+    "heroTitle2": "Every Role",
+    "heroSubtitle": "Whether you're teaching a class of 30 or managing a district of 30,000, Perleap scales to meet your needs.",
+    "teachers": {
+      "title": "For Teachers",
+      "headline": "Reclaim your time and focus on what matters.",
+      "description": "Automate administrative tasks like grading and attendance. Get real-time insights into student performance so you can intervene when it counts.",
+      "features": {
+        "grading": "Automated Grading",
+        "planning": "Lesson Planning AI",
+        "tracking": "Student Progress Tracking"
+      }
+    },
+    "students": {
+      "title": "For Students",
+      "headline": "Personalized learning that adapts to you.",
+      "description": "Get instant feedback on assignments, personalized study guides, and a learning path that evolves as you grow.",
+      "features": {
+        "feedback": "Instant Feedback",
+        "practice": "Adaptive Practice",
+        "mastery": "Skill Mastery Visualization"
+      }
+    },
+    "institutions": {
+      "title": "For Institutions",
+      "headline": "Data-driven decisions at scale.",
+      "description": "Gain visibility into curriculum effectiveness, teacher performance, and student outcomes across the entire institution.",
+      "features": {
+        "analytics": "District-wide Analytics",
+        "alignment": "Curriculum Alignment",
+        "resources": "Resource Allocation Insights"
+      }
+    },
+    "learnMore": "Learn more",
+    "illustration": "Illustration",
+    "ctaTitle": "Find the right solution for you",
+    "getStarted": "Get Started",
+    "contactSales": "Contact Sales"
+  },
+  "pricing": {
+    "heroTitle1": "Choose Your",
+    "heroTitle2": "Plan",
+    "heroSubtitle": "Select the perfect plan for your needs. All plans include access to our core features.",
+    "salesCtaPrefix": "Need help choosing a plan?",
+    "salesCtaLink": "Contact our sales team"
+  },
   "contact": {
     "email": "דוא״ל",
     "phone": "טלפון",
     "office": "משרד",
-    "success": "ההודעה נשלחה! נחזור אליכם בהקדם."
+    "success": "ההודעה נשלחה! נחזור אליכם בהקדם.",
+    "heroTitle": "צרו קשר",
+    "heroSubtitle": "יש לכם שאלה או משוב? נשמח לשמוע מכם. שלחו לנו הודעה ונחזור אליכם בהקדם.",
+    "formTitle": "Send us a Message",
+    "formDescription": "Fill out the form below and our team will get back to you within 24 hours.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "emailField": "Email",
+    "message": "Message",
+    "firstNamePlaceholder": "John",
+    "lastNamePlaceholder": "Doe",
+    "emailPlaceholder": "john.doe@example.com",
+    "messagePlaceholder": "Tell us how we can help you...",
+    "sending": "Sending...",
+    "sendMessage": "Send Message",
+    "helpCenter": "Help Center",
+    "aboutPage": "About page",
+    "alsoReachPrefix": "You can also reach us through our"
   }
 }

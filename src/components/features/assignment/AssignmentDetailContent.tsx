@@ -32,7 +32,11 @@ import {
   useSyllabus,
   useModuleFlowSteps,
 } from '@/hooks/queries';
-import { notificationKeys } from '@/hooks/queries/useNotificationQueries';
+import {
+  notificationKeys,
+  useMarkAsRead,
+  fetchUnreadNotifications,
+} from '@/hooks/queries/useNotificationQueries';
 import { useAssignmentClipboardTracking } from '@/hooks/useAssignmentClipboardTracking';
 import { useNuanceTracking } from '@/hooks/useNuanceTracking';
 import { useStudentSectionModuleFlow } from '@/hooks/useStudentSectionModuleFlow';
@@ -50,7 +54,6 @@ import {
   type FlowStepTarget,
 } from '@/lib/moduleFlowNavigation';
 import { canAccessComputedStep, canAccessPersistedStep } from '@/lib/moduleFlowStudent';
-import { getUnreadNotifications, markAsRead } from '@/lib/notificationService';
 import { invalidateStudentTimelineCurriculaQueries } from '@/lib/studentTimelineCurriculaKeys';
 import { ensureStudentFacingTask } from '@/services/assignmentService';
 import {
@@ -78,6 +81,7 @@ export const AssignmentDetailContent = ({
   const { user } = useAuth();
   const linkState = (location.state as AssignmentLinkState | null) ?? null;
   const queryClient = useQueryClient();
+  const markAsReadMutation = useMarkAsRead();
   const [retryLoading, setRetryLoading] = useState(false);
   const companionChatAnchorRef = useRef<HTMLDivElement>(null);
   const assignmentClipboardRootRef = useRef<HTMLDivElement>(null);
@@ -88,7 +92,7 @@ export const AssignmentDetailContent = ({
     void (async () => {
       const list = await queryClient.fetchQuery({
         queryKey: notificationKeys.unread(user.id),
-        queryFn: () => getUnreadNotifications(user.id),
+        queryFn: () => fetchUnreadNotifications(user.id),
         staleTime: 0,
       });
       const ids = list
@@ -97,7 +101,7 @@ export const AssignmentDetailContent = ({
         )
         .map((n) => n.id);
       for (const id of ids) {
-        await markAsRead(id);
+        await markAsReadMutation.mutateAsync(id);
       }
       if (!cancelled && ids.length > 0) {
         void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
@@ -106,7 +110,7 @@ export const AssignmentDetailContent = ({
     return () => {
       cancelled = true;
     };
-  }, [isTeacherTry, assignmentId, user?.id, queryClient]);
+  }, [isTeacherTry, assignmentId, user?.id, queryClient, markAsReadMutation]);
 
   const {
     data: assignmentData,

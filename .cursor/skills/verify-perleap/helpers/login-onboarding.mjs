@@ -5,6 +5,7 @@ import {
   ensureSkillDirs,
   fail,
   parseArgs,
+  buildVerifyUrl,
   getBrowserLaunchOptions,
   getVercelProtectionHeaders,
   getVercelShareUrl,
@@ -121,7 +122,7 @@ async function resolveAuthMethod() {
 }
 
 async function loginWithPassword(page) {
-  await page.goto(`${baseURL}/auth`, { waitUntil: navigationWaitUntil(env) });
+  await page.goto(buildVerifyUrl('/auth', env), { waitUntil: navigationWaitUntil(env) });
   await page.getByRole('heading', { name: 'Sign in with email' }).waitFor({ timeout: 30_000 });
   await fillAuthInput(page, '#signin-email', email);
   await fillAuthInput(page, '#signin-password', password);
@@ -130,14 +131,14 @@ async function loginWithPassword(page) {
 
 async function loginWithMagicLink(page) {
   const session = await createSessionViaMagicLink(email);
-  await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
+  await page.goto(buildVerifyUrl('/', env), { waitUntil: 'domcontentloaded' });
   await page.evaluate(
     ({ key, value }) => {
       localStorage.setItem(key, JSON.stringify(value));
     },
     { key: AUTH_STORAGE_KEY, value: session },
   );
-  await page.goto(`${baseURL}${onboardingPath}`, { waitUntil: navigationWaitUntil(env) });
+  await page.goto(buildVerifyUrl(onboardingPath, env), { waitUntil: navigationWaitUntil(env) });
 }
 
 async function main() {
@@ -187,6 +188,10 @@ async function main() {
     await browser.close();
   } else {
     console.log('verify-perleap: VERIFY_KEEP_OPEN=1 — browser left open after onboarding login');
+    console.log(`verify-perleap: saved ${authRole} auth state → ${outPath}`);
+    console.log(`verify-perleap: landed on ${pathname}`);
+    setImmediate(() => process.exit(0));
+    return;
   }
 
   console.log(`verify-perleap: saved ${authRole} auth state → ${outPath}`);

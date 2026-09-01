@@ -1,6 +1,6 @@
 import { BookOpen, FileText } from 'lucide-react';
 import type { Classroom } from '@/types/models';
-import SafeMathMarkdown from '@/components/SafeMathMarkdown';
+import SafeMathMarkdown from '@/components/shared/SafeMathMarkdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCourseDuration } from '@/lib/dateUtils';
 

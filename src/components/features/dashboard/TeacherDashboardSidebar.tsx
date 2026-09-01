@@ -1,5 +1,5 @@
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { TeacherCalendar } from '@/components/TeacherCalendar';
+import { TeacherCalendar } from '@/components/features/dashboard/TeacherCalendar';
 import { USER_ROLES } from '@/config/constants';
 import { useAuth } from '@/contexts/useAuth';
 

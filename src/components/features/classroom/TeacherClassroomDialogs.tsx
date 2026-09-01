@@ -1,5 +1,5 @@
 import type { Classroom, Assignment } from '@/types/models';
-import { EditAssignmentDialog } from '@/components/EditAssignmentDialog';
+import { EditAssignmentDialog } from '@/components/features/assignment/dialogs';
 import { ClassroomDeleteDialog } from '@/components/features/classroom/ClassroomDeleteDialog';
 import { ClassroomResetDialogs } from '@/components/features/classroom/ClassroomResetDialogs';
 import { EditClassroomDialog } from '@/components/features/classroom/dialogs';

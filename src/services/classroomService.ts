@@ -4,6 +4,7 @@
  */
 
 import type { Database, Json } from '@/integrations/supabase/types';
+import type { StorageUploadOptions } from '@/lib/storageUpload';
 import type { Classroom, Enrollment, EnrolledStudent, ApiError } from '@/types';
 import type {
   ClassroomResetResult,
@@ -448,3 +449,41 @@ export const resetClassroom = async (
     return { data: null, error: handleSupabaseError(error) };
   }
 };
+
+export async function rephraseCourseDescription(
+  text: string,
+  language: 'he' | 'en'
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke<{ rephrasedText?: string }>(
+    'rephrase-text',
+    { body: { text, language } }
+  );
+  if (error) throw error;
+  if (!data?.rephrasedText) throw new Error('No rephrased text returned');
+  return data.rephrasedText;
+}
+
+export async function uploadCourseMaterialPdf(
+  userId: string,
+  file: File,
+  onUploadProgress?: (percentage: number) => void
+): Promise<{ filePath: string; displayName: string }> {
+  const fileName = `${userId}/${Date.now()}.pdf`;
+  const uploadOptions: StorageUploadOptions = {
+    cacheControl: '3600',
+    upsert: true,
+    ...(onUploadProgress
+      ? {
+          onUploadProgress: (progress) => {
+            if (progress.total <= 0) return;
+            onUploadProgress(Math.round((progress.loaded / progress.total) * 100));
+          },
+        }
+      : {}),
+  };
+  const { error } = await supabase.storage
+    .from('course-materials')
+    .upload(fileName, file, uploadOptions);
+  if (error) throw error;
+  return { filePath: fileName, displayName: file.name };
+}

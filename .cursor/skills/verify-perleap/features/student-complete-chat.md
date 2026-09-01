@@ -36,6 +36,6 @@ Steps:
 
 - AI latency: up to 120s wait for "Conversation complete!" banner
 - Feedback generation: up to 90s after Complete Activity
-- Re-runs delete `in_progress` submissions for the sandbox assignment before starting
+- Re-runs delete **all** sandbox chat submissions for the verify student before starting (not only `in_progress`)
 - Requires `VITE_SUPABASE_SECRET_KEY` for seed and fetch abilities
 - Do not use personal dev server on 8080 — use verify launch port

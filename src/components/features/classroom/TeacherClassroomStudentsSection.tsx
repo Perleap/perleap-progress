@@ -2,7 +2,7 @@ import { Users, Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EnrolledStudent } from '@/types/models';
-import { TeacherStudentDetailDialog } from '@/components/TeacherStudentDetailDialog';
+import { TeacherStudentDetailDialog } from '@/components/features/classroom/dialogs/TeacherStudentDetailDialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SecureAvatarImage } from '@/components/ui/SecureAvatarImage';

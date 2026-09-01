@@ -19,7 +19,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminAiPromptsSidebarLink, MonitoringInlineNav } from '@/components/features/admin';
-import { PerleapLogo } from '@/components/PerleapLogo';
+import { PerleapLogo } from '@/components/common';
 import {
   AlertDialog,
   AlertDialogAction,

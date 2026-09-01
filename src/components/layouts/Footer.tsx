@@ -23,22 +23,22 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-6">Product</h4>
             <ul className="space-y-4">
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/product" className="text-white/60 hover:text-white text-sm transition-colors">
                   Features
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/solutions" className="text-white/60 hover:text-white text-sm transition-colors">
                   Solutions
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/pricing" className="text-white/60 hover:text-white text-sm transition-colors">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/product" className="text-white/60 hover:text-white text-sm transition-colors">
                   Changelog
                 </Link>
               </li>
@@ -49,22 +49,22 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-6">Company</h4>
             <ul className="space-y-4">
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors">
                   About
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors">
                   Careers
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors">
                   Blog
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
                   Contact
                 </Link>
               </li>
@@ -75,17 +75,17 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-6">Legal</h4>
             <ul className="space-y-4">
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
                   Privacy
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
                   Terms
                 </Link>
               </li>
               <li>
-                <Link to="#" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
                   Security
                 </Link>
               </li>
@@ -96,13 +96,28 @@ export const Footer = () => {
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-white/40 text-sm">© 2024 Perleap Inc. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-white/40 hover:text-white transition-colors">
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/40 hover:text-white transition-colors"
+            >
               <Twitter className="w-5 h-5" />
             </a>
-            <a href="#" className="text-white/40 hover:text-white transition-colors">
+            <a
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/40 hover:text-white transition-colors"
+            >
               <Linkedin className="w-5 h-5" />
             </a>
-            <a href="#" className="text-white/40 hover:text-white transition-colors">
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/40 hover:text-white transition-colors"
+            >
               <Github className="w-5 h-5" />
             </a>
           </div>

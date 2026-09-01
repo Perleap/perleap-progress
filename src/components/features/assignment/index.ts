@@ -10,6 +10,8 @@ export * from './AssignmentDetailIntroBlock';
 export * from './AssignmentDetailMaterialsPanel';
 export * from './AssignmentDetailSubmissionRouter';
 export * from './AssignmentDetailChatPanel';
+export * from './chat';
+export * from './dialogs';
 export * from './StudentFacingTaskSection';
 export * from './AssignmentTypeIntroDialog';
 export * from './wizard';

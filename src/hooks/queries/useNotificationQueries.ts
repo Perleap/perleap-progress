@@ -5,17 +5,22 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  createBulkNotifications,
   getUnreadNotifications,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
-} from '@/lib/notificationService';
+} from '@/services/notificationService';
 
 export const notificationKeys = {
   all: ['notifications'] as const,
   unread: (userId: string) => [...notificationKeys.all, 'unread', userId] as const,
   count: (userId: string) => [...notificationKeys.all, 'count', userId] as const,
 };
+
+export async function fetchUnreadNotifications(userId: string) {
+  return getUnreadNotifications(userId);
+}
 
 /**
  * Hook to fetch unread notifications for a user
@@ -81,3 +86,9 @@ export const useMarkAllAsRead = () => {
     },
   });
 };
+
+/** Bulk-create notifications (e.g. assignment publish). */
+export const useCreateBulkNotifications = () =>
+  useMutation({
+    mutationFn: createBulkNotifications,
+  });

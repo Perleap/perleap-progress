@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/common';
 import { BreathingBackground } from '@/components/ui/BreathingBackground';
 import { Button } from '@/components/ui/button';
 import { useNavigateBack } from '@/hooks/useNavigateBack';

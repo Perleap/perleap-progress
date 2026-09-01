@@ -319,10 +319,27 @@ async function ensureTestQuestion(assignmentId, question) {
   console.log(`verify-perleap seed: added test question for assignment ${assignmentId}`);
 }
 
+async function ensurePreferredLanguageEn(userId, env) {
+  for (const table of ['student_profiles', 'teacher_profiles']) {
+    await adminRest(
+      `/${table}?user_id=eq.${userId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ preferred_language: 'en' }),
+        prefer: 'return=minimal',
+      },
+      env,
+    );
+  }
+}
+
 async function main() {
   const env = loadVerifyEnv();
   const teacher = await listUsersByEmail(env.VERIFY_TEACHER_EMAIL, env);
   const student = await listUsersByEmail(env.VERIFY_STUDENT_EMAIL, env);
+
+  await ensurePreferredLanguageEn(student.id, env);
+  await ensurePreferredLanguageEn(teacher.id, env);
 
   let classroom = await findClassroom(teacher.id, env);
   if (!classroom) {

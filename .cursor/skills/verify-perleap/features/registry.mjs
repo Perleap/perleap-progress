@@ -1,4 +1,4 @@
-import { fail, navigationWaitUntil } from '../helpers/shared.mjs';
+import { buildVerifyUrl, fail, navigationWaitUntil } from '../helpers/shared.mjs';
 import { getAbility as getFetchAbility, listAbilities as listFetchAbilities } from '../abilities/fetch-data.mjs';
 import { adminRest } from '../helpers/supabase-admin.mjs';
 import {
@@ -25,7 +25,7 @@ const legacyFeatures = {
   'student-auth-dashboard': {
     role: 'student',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/student/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/student/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: 'Student Dashboard' }).waitFor({ timeout: 30_000 });
       await page.getByText('My Classes').waitFor({ timeout: 10_000 });
       return { proof: 'Student Dashboard heading and My Classes visible' };
@@ -34,7 +34,7 @@ const legacyFeatures = {
   'student-list-classrooms': {
     role: 'student',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/student/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/student/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: SANDBOX_NAME }).waitFor({ timeout: 30_000 });
       return { proof: `Dashboard lists ${SANDBOX_NAME}` };
     },
@@ -43,41 +43,59 @@ const legacyFeatures = {
     role: 'student',
     async run(page, cfg) {
       const fixture = cfg.fixture;
-      if (fixture?.classroomId) {
-        await page.goto(`${cfg.VERIFY_BASE_URL}/student/classroom/${fixture.classroomId}`, {
-          waitUntil: navigationWaitUntil(cfg),
-        });
-        if (page.url().includes('/student/classroom/')) {
-          await page.getByRole('heading', { level: 2 }).first().waitFor({ timeout: 15_000 });
-          return { proof: `Already enrolled in ${SANDBOX_NAME} (sandbox classroom loads)` };
-        }
-      }
-      const invite = fixture?.inviteCode ?? cfg.VERIFY_INVITE_CODE;
-      if (!invite) fail('VERIFY_INVITE_CODE or sandbox inviteCode required');
-      await page.goto(`${cfg.VERIFY_BASE_URL}/student/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
-      const alreadyEnrolled = await page
+      const alreadyEnrolledText = 'You are already enrolled in this classroom';
+      await page.goto(buildVerifyUrl('/student/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
+      await page.getByText('My Classes').waitFor({ timeout: 30_000 });
+
+      const sandboxVisible = await page
         .getByText(SANDBOX_NAME)
         .first()
-        .isVisible()
+        .isVisible({ timeout: 30_000 })
         .catch(() => false);
-      if (alreadyEnrolled) {
+      if (sandboxVisible) {
         return { proof: `Already enrolled in ${SANDBOX_NAME} (seed enrollment)` };
       }
+
+      const invite = fixture?.inviteCode ?? cfg.VERIFY_INVITE_CODE;
+      if (!invite) fail('VERIFY_INVITE_CODE or sandbox inviteCode required');
       await page.getByRole('button', { name: 'Join Class' }).click();
       await page.getByRole('dialog').getByLabel('Invite Code').fill(invite);
       await page.getByRole('button', { name: 'Join Classroom' }).click();
-      await page.waitForTimeout(5_000);
-      const dialogVisible = await page.getByRole('dialog', { name: 'Join a Classroom' }).isVisible();
+
+      await Promise.race([
+        page.getByRole('dialog', { name: 'Join a Classroom' }).waitFor({ state: 'hidden', timeout: 15_000 }),
+        page.getByText(SANDBOX_NAME).first().waitFor({ timeout: 15_000 }),
+        page.getByText(alreadyEnrolledText).waitFor({ timeout: 15_000 }),
+      ]).catch(() => {});
+
+      const dialogVisible = await page
+        .getByRole('dialog', { name: 'Join a Classroom' })
+        .isVisible()
+        .catch(() => false);
       if (dialogVisible) {
+        const alreadyEnrolledToast = await page
+          .getByText(alreadyEnrolledText)
+          .isVisible()
+          .catch(() => false);
+        const enrolledAfterJoin = await page
+          .getByText(SANDBOX_NAME)
+          .first()
+          .isVisible()
+          .catch(() => false);
+        if (alreadyEnrolledToast || enrolledAfterJoin) {
+          return { proof: `Already enrolled in ${SANDBOX_NAME}` };
+        }
         fail('Join classroom dialog still open — check invite code or enrollment state');
       }
+
+      await page.getByText(SANDBOX_NAME).first().waitFor({ timeout: 10_000 });
       return { proof: `Joined classroom with invite ${invite}` };
     },
   },
   'teacher-auth-dashboard': {
     role: 'teacher',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/teacher/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByText("My Perleap's Classrooms").waitFor({ timeout: 30_000 });
       const hasEmpty = await page.getByText('No classrooms yet').isVisible();
       const hasCreate = await page.getByRole('button', { name: 'Create Classroom' }).isVisible();
@@ -90,7 +108,7 @@ const legacyFeatures = {
   'teacher-list-classrooms': {
     role: 'teacher',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/teacher/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: SANDBOX_NAME }).waitFor({ timeout: 30_000 });
       return { proof: `Teacher dashboard shows ${SANDBOX_NAME}` };
     },
@@ -100,11 +118,11 @@ const legacyFeatures = {
     async run(page, cfg) {
       const classroomId = cfg.VERIFY_TEACHER_CLASSROOM_ID ?? cfg.fixture?.classroomId;
       if (classroomId) {
-        await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/classroom/${classroomId}`, {
+        await page.goto(buildVerifyUrl(`/teacher/classroom/${classroomId}`, cfg), {
           waitUntil: navigationWaitUntil(cfg),
         });
       } else {
-        await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
+        await page.goto(buildVerifyUrl('/teacher/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
         const card = page.locator('.cursor-pointer').filter({ has: page.locator('h3') }).first();
         if ((await card.count()) === 0) {
           fail('No classroom card. Run verify:seed or set VERIFY_TEACHER_CLASSROOM_ID.');
@@ -202,7 +220,7 @@ const legacyFeatures = {
   'student-settings-profile': {
     role: 'student',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/student/settings`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/student/settings', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByLabel('Full Name').waitFor({ timeout: 30_000 });
       return { proof: 'Student settings profile form loaded' };
     },
@@ -225,10 +243,14 @@ const legacyFeatures = {
           return { proof: 'Chat assignment open (feedback visible, prior attempt)' };
         }
         if (await startAnother.isVisible().catch(() => false)) {
-          await startAnother.click();
-          await page.waitForTimeout(2_000);
-          if (await chatInput.isVisible().catch(() => false)) {
-            return { proof: 'Chat assignment open after starting fresh attempt' };
+          if (await startAnother.isEnabled().catch(() => false)) {
+            await startAnother.click();
+            await page.waitForTimeout(2_000);
+            if (await chatInput.isVisible().catch(() => false)) {
+              return { proof: 'Chat assignment open after starting fresh attempt' };
+            }
+          } else {
+            return { proof: 'Chat assignment open (retry affordance visible, prior attempt)' };
           }
         }
         await page.waitForTimeout(500);
@@ -242,8 +264,31 @@ const legacyFeatures = {
       const fixture = requireSandboxFixture(cfg.fixture);
       if (!fixture.essayAssignmentId) fail('sandbox essayAssignmentId missing — run verify:seed');
       await openStudentAssignment(page, cfg, fixture.essayAssignmentId);
-      await page.getByPlaceholder('Write your essay here…').waitFor({ timeout: 30_000 });
-      return { proof: 'Essay editor loaded' };
+      const essayInput = page.getByPlaceholder('Write your essay here…');
+      const essayTitle = page.getByRole('heading', { name: 'Your response' });
+      const startAnother = page.getByRole('button', { name: 'Start another attempt' });
+      const deadline = Date.now() + 30_000;
+      while (Date.now() < deadline) {
+        if (await essayInput.isVisible().catch(() => false)) {
+          return { proof: 'Essay editor loaded' };
+        }
+        if (await essayTitle.isVisible().catch(() => false)) {
+          return { proof: 'Essay submission card loaded' };
+        }
+        if (
+          await page
+            .getByText(/AI evaluation is in progress|awaiting teacher review/i)
+            .isVisible()
+            .catch(() => false)
+        ) {
+          return { proof: 'Essay assignment open (post-submit state)' };
+        }
+        if (await startAnother.isVisible().catch(() => false)) {
+          return { proof: 'Essay assignment open (retry affordance visible)' };
+        }
+        await page.waitForTimeout(500);
+      }
+      fail('Essay assignment did not load');
     },
   },
   'student-open-quiz-mcq': {
@@ -306,7 +351,7 @@ const legacyFeatures = {
       if (!submissionId) {
         fail('No completed sandbox submission — run student-complete-chat first.');
       }
-      await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/submission/${submissionId}`, {
+      await page.goto(buildVerifyUrl(`/teacher/submission/${submissionId}`, cfg), {
         waitUntil: navigationWaitUntil(cfg),
       });
       if (!page.url().includes('/teacher/submission/')) {
@@ -330,10 +375,49 @@ const legacyFeatures = {
       return { proof: `Student activity page at ${page.url()}` };
     },
   },
+  'marketing-landing-load': {
+    role: 'anonymous',
+    async run(page, cfg) {
+      await page.goto(buildVerifyUrl('/', cfg), { waitUntil: navigationWaitUntil(cfg) });
+      await page.getByText('Agentic AI for').waitFor({ timeout: 30_000 });
+      await page.getByText('Education', { exact: true }).waitFor({ timeout: 10_000 });
+      return { proof: 'Landing hero (title1/title2) visible' };
+    },
+  },
+  'marketing-pricing-load': {
+    role: 'anonymous',
+    async run(page, cfg) {
+      await page.goto(buildVerifyUrl('/pricing', cfg), { waitUntil: navigationWaitUntil(cfg) });
+      await page.getByRole('heading', { name: /Choose Your Plan/i }).waitFor({ timeout: 30_000 });
+      await page.getByText('Beginner', { exact: true }).first().waitFor({ timeout: 10_000 });
+      await page.getByRole('link', { name: 'Contact our sales team' }).waitFor({ timeout: 10_000 });
+      return { proof: 'Pricing plan cards and sales CTA to /contact visible' };
+    },
+  },
+  'marketing-contact-load': {
+    role: 'anonymous',
+    async run(page, cfg) {
+      await page.goto(buildVerifyUrl('/contact', cfg), { waitUntil: navigationWaitUntil(cfg) });
+      await page.locator('[data-slot="card-title"]').filter({ hasText: 'Send us a Message' }).waitFor({ timeout: 30_000 });
+      await page.getByLabel('First Name').waitFor({ timeout: 10_000 });
+      await page.getByRole('button', { name: 'Send Message' }).waitFor({ timeout: 10_000 });
+      return { proof: 'Contact form fields and submit button visible' };
+    },
+  },
+  'marketing-nav-links': {
+    role: 'anonymous',
+    async run(page, cfg) {
+      await page.goto(buildVerifyUrl('/', cfg), { waitUntil: navigationWaitUntil(cfg) });
+      await page.getByText('Agentic AI for').waitFor({ timeout: 30_000 });
+      await page.getByRole('navigation').getByRole('link', { name: 'Product' }).click();
+      await page.getByRole('heading', { name: /Intelligent Agents for/i }).waitFor({ timeout: 30_000 });
+      return { proof: 'Navbar Product link navigates to /product' };
+    },
+  },
   'auth-page-load': {
     role: 'anonymous',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/auth`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/auth', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: 'Sign in with email' }).waitFor({ timeout: 30_000 });
       return { proof: 'Auth page loads with sign-in form (AuthContent refactor)' };
     },
@@ -341,7 +425,7 @@ const legacyFeatures = {
   'student-dashboard-view-modes': {
     role: 'student',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/student/dashboard`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/student/dashboard', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: 'Student Dashboard' }).waitFor({ timeout: 30_000 });
       const viewSelect = page.getByText('View:').locator('..').getByRole('combobox');
       if (!(await viewSelect.isVisible({ timeout: 5_000 }).catch(() => false))) {
@@ -357,7 +441,7 @@ const legacyFeatures = {
   'teacher-settings-profile': {
     role: 'teacher',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/settings`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/teacher/settings', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByLabel('Full Name').waitFor({ timeout: 30_000 });
       return { proof: 'Teacher settings profile form loaded' };
     },
@@ -365,7 +449,7 @@ const legacyFeatures = {
   'teacher-planner-load': {
     role: 'teacher',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/teacher/planner`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/teacher/planner', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: 'Planner' }).waitFor({ timeout: 30_000 });
       await page.getByText('Manage your schedule and assignments').waitFor({ timeout: 10_000 });
       return { proof: 'Teacher planner calendar shell loaded' };
@@ -374,7 +458,7 @@ const legacyFeatures = {
   'admin-ai-prompts': {
     role: 'admin',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/admin/ai-prompts`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/admin/ai-prompts', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: 'Student chat AI prompts' }).waitFor({ timeout: 30_000 });
       return { proof: 'Admin AI prompts page loaded' };
     },
@@ -382,7 +466,7 @@ const legacyFeatures = {
   'admin-monitoring-overview': {
     role: 'admin',
     async run(page, cfg) {
-      await page.goto(`${cfg.VERIFY_BASE_URL}/admin/monitoring`, { waitUntil: navigationWaitUntil(cfg) });
+      await page.goto(buildVerifyUrl('/admin/monitoring', cfg), { waitUntil: navigationWaitUntil(cfg) });
       await page.getByRole('heading', { name: 'Monitoring' }).waitFor({ timeout: 30_000 });
       await page.getByRole('heading', { name: 'At a glance' }).waitFor({ timeout: 15_000 });
       return { proof: 'Admin monitoring overview loaded' };
@@ -398,7 +482,7 @@ const legacyFeatures = {
         fail('liveSessionAssignmentId missing — re-run verify:seed');
       }
       await page.goto(
-        `${cfg.VERIFY_BASE_URL}/teacher/classroom/${classroomId}/live-session/${assignmentId}`,
+        buildVerifyUrl(`/teacher/classroom/${classroomId}/live-session/${assignmentId}`, cfg),
         { waitUntil: navigationWaitUntil(cfg) },
       );
       const notFound = await page

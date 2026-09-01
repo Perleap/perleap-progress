@@ -36,9 +36,13 @@ export async function openBrowserContext({ role, env }) {
   return { browser, context, page };
 }
 
-export async function closeBrowserContext({ browser, env }) {
+export async function closeBrowserContext({ browser, env, allowProcessExit = true }) {
   if (shouldKeepBrowserOpen(env)) {
     console.log('verify-perleap: VERIFY_KEEP_OPEN=1 — browser left open for inspection');
+    if (allowProcessExit) {
+      // Playwright keeps the event loop alive while connected; exit so suite runners continue.
+      setImmediate(() => process.exit(0));
+    }
     return;
   }
   try {

@@ -1,6 +1,8 @@
 # Remaining Work
 
-Page refactor tracks **A–M are complete** (Master Refactor Loop Roadmap, Aug 2026). This document lists what is **still open** after that work—not the old monolithic-page plan.
+Page refactor tracks **A–M are complete** (Master Refactor Loop Roadmap, Aug 2026). **Phase 3 (P3-1…P3-12 + capstone) is complete** as of 2026-09-01 — see `docs/qa/step-p3-capstone.md`. **Phase 4 (P4-1…P4-14 + capstone) is complete** as of 2026-09-01 — see `docs/qa/step-p4-capstone.md` and `.cursor/plans/phase_4_loop_roadmap_5c3a3297.plan.md`.
+
+This document lists what is **still open** after that work—not the old monolithic-page plan.
 
 ## Completed page refactors (tracks A–M)
 
@@ -24,28 +26,27 @@ Page refactor tracks **A–M are complete** (Master Refactor Loop Roadmap, Aug 2
 
 ### 1. Root-level dialogs and legacy components
 
-These still live outside `components/features/` and may use older patterns:
+**Phase 4 complete (P4-1–P4-7):** All legacy `src/components/*.tsx` root files migrated to `common/`, `shared/`, or `features/*`. Root is clear of page-level components.
 
-- `CreateAssignmentDialog.tsx`, `EditAssignmentDialog.tsx`
-- `ClassroomAnalytics.tsx` (legacy; newer analytics widgets exist under `features/analytics/`)
-- `AssignmentChatInterface.tsx`
-- `RegenerateScoresButton.tsx`
+**Previously moved (R8 / P3):** `CreateClassroomDialog`, `EditClassroomDialog` → `features/classroom/dialogs/` · `SubmissionsTab` → `features/submission/`
 
-**Moved to features (R8):** `CreateClassroomDialog`, `EditClassroomDialog` → `features/classroom/dialogs/` · `SubmissionsTab` → `features/submission/`
+**P3-5 (done):** `EditClassroomDialog` decomposed into section components under `dialogs/sections/`; submit/rephrase/upload via `classroomService`.
+
+**P3-6 (done):** `ClassroomAnalytics` decomposed into section components under `features/analytics/sections/`; view model in `useClassroomAnalyticsViewModel.ts`.
 
 **Goal:** Move or refactor to feature modules; prefer services/hooks over direct Supabase in UI.
 
 ### 2. Notification service location
 
-`notificationService` is still under `src/lib/`. Consider consolidating under `src/services/` with a `useNotifications` hook if not already unified.
+Done in P3-7: `notificationService` lives under `src/services/`; components use `useNotificationQueries` hooks.
 
-### 3. Marketing / low-churn pages
+### 3. Marketing pages
 
-`Landing`, `Pricing`, etc. were out of scope for the page refactor roadmap.
+**Phase 4 complete (P4-8–P4-14):** Marketing pages use `MarketingPageLayout`, section content components under `components/marketing/sections/`, shared `MarketingHero`/`MarketingCta`, i18n keys, and verify-perleap `marketing-smoke` + expanded `ci-smoke` (8 features).
 
 ### 4. Optional renames
 
-- Admin monitoring files named `MonitoringOverviewPage.tsx` export `MonitoringOverviewContent` (cosmetic rename only).
+- ~~Admin monitoring `*Page.tsx` → `*Content.tsx` in features module~~ **Done (P3-11)**
 
 ## Verify-perleap regression smoke
 

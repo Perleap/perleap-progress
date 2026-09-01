@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { DeleteAccountDialog } from '@/components/features/settings/DeleteAccountDialog';
 import {
   StudentSettingsLearningPreferencesSection,
   type StudentSettingsQuestionsState,
