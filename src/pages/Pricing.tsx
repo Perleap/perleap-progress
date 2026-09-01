@@ -29,7 +29,9 @@ const Pricing = () => {
             {t('pricing.heroTitle1')}{' '}
             <span className="text-gradient-primary">{t('pricing.heroTitle2')}</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t('pricing.heroSubtitle')}</p>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            {t('pricing.heroSubtitle')}
+          </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

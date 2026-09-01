@@ -1,8 +1,8 @@
 import { ListOrdered, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StudentActivitiesSection } from '@/components/features/syllabus';
 import { StudentProfilePanel } from '@/components/features/classroom/StudentProfilePanel';
+import { StudentActivitiesSection } from '@/components/features/syllabus';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 

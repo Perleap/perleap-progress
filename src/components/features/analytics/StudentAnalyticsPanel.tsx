@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import type { FiveDScores, FiveDSnapshot, FiveDQedMeasures } from '@/types/models';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { FiveDChart } from '@/components/features/analytics/FiveDChart';
-import type { FiveDScores, FiveDSnapshot, FiveDQedMeasures } from '@/types/models';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';

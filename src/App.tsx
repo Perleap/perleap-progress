@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TeacherAssistantProvider } from './components/ai/TeacherAssistant';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { RouteLoadingFallback } from './components/common/RouteLoadingFallback';
-import ProtectedRoute from '@/components/features/auth/ProtectedRoute';
 import { EvaluationRefreshProcessingProvider } from './contexts/EvaluationRefreshProcessingContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { LiveSessionProcessingProvider } from './contexts/LiveSessionProcessingContext';
@@ -42,6 +41,7 @@ import {
   TeacherOnboarding,
   TeacherSettings,
 } from './routes/lazyPages';
+import ProtectedRoute from '@/components/features/auth/ProtectedRoute';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';

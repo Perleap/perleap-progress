@@ -1,7 +1,7 @@
 import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MarketingPageLayout } from '@/components/marketing';
 import { Button } from '@/components/ui/button';
@@ -46,8 +46,12 @@ const ContactUs = () => {
 
       <div className="container mx-auto px-4 pt-20 pb-16 max-w-6xl relative z-10">
         <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">{t('contact.heroTitle')}</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t('contact.heroSubtitle')}</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            {t('contact.heroTitle')}
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            {t('contact.heroSubtitle')}
+          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mb-12 animate-fade-in delay-100">

@@ -8,12 +8,36 @@ export const ProductPageContent = () => {
   const { t } = useTranslation();
 
   const features = [
-    { icon: Brain, titleKey: 'product.features.cognitive.title', descriptionKey: 'product.features.cognitive.description' },
-    { icon: Zap, titleKey: 'product.features.grading.title', descriptionKey: 'product.features.grading.description' },
-    { icon: BarChart3, titleKey: 'product.features.analytics.title', descriptionKey: 'product.features.analytics.description' },
-    { icon: Shield, titleKey: 'product.features.secure.title', descriptionKey: 'product.features.secure.description' },
-    { icon: Cpu, titleKey: 'product.features.adaptive.title', descriptionKey: 'product.features.adaptive.description' },
-    { icon: Sparkles, titleKey: 'product.features.softSkills.title', descriptionKey: 'product.features.softSkills.description' },
+    {
+      icon: Brain,
+      titleKey: 'product.features.cognitive.title',
+      descriptionKey: 'product.features.cognitive.description',
+    },
+    {
+      icon: Zap,
+      titleKey: 'product.features.grading.title',
+      descriptionKey: 'product.features.grading.description',
+    },
+    {
+      icon: BarChart3,
+      titleKey: 'product.features.analytics.title',
+      descriptionKey: 'product.features.analytics.description',
+    },
+    {
+      icon: Shield,
+      titleKey: 'product.features.secure.title',
+      descriptionKey: 'product.features.secure.description',
+    },
+    {
+      icon: Cpu,
+      titleKey: 'product.features.adaptive.title',
+      descriptionKey: 'product.features.adaptive.description',
+    },
+    {
+      icon: Sparkles,
+      titleKey: 'product.features.softSkills.title',
+      descriptionKey: 'product.features.softSkills.description',
+    },
   ] as const;
 
   return (

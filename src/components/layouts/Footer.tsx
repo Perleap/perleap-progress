@@ -23,22 +23,34 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-6">Product</h4>
             <ul className="space-y-4">
               <li>
-                <Link to="/product" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/product"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Features
                 </Link>
               </li>
               <li>
-                <Link to="/solutions" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/solutions"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Solutions
                 </Link>
               </li>
               <li>
-                <Link to="/pricing" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/pricing"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link to="/product" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/product"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Changelog
                 </Link>
               </li>
@@ -49,22 +61,34 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-6">Company</h4>
             <ul className="space-y-4">
               <li>
-                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/about"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   About
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/about"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Careers
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/about"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Blog
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/contact"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Contact
                 </Link>
               </li>
@@ -75,17 +99,26 @@ export const Footer = () => {
             <h4 className="text-white font-semibold mb-6">Legal</h4>
             <ul className="space-y-4">
               <li>
-                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/contact"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Privacy
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/contact"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Terms
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-white/60 hover:text-white text-sm transition-colors">
+                <Link
+                  to="/contact"
+                  className="text-white/60 hover:text-white text-sm transition-colors"
+                >
                   Security
                 </Link>
               </li>

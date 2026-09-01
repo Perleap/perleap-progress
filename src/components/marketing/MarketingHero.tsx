@@ -69,7 +69,12 @@ type MarketingCtaProps = {
   variant?: 'card' | 'plain';
 };
 
-export const MarketingCta = ({ title, subtitle, children, variant = 'plain' }: MarketingCtaProps) => {
+export const MarketingCta = ({
+  title,
+  subtitle,
+  children,
+  variant = 'plain',
+}: MarketingCtaProps) => {
   if (variant === 'card') {
     return (
       <section className="py-20">
@@ -90,7 +95,9 @@ export const MarketingCta = ({ title, subtitle, children, variant = 'plain' }: M
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">{title}</h2>
           {subtitle && <p className="text-lg text-muted-foreground mb-8">{subtitle}</p>}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">{children}</div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {children}
+          </div>
         </div>
       </div>
     </section>
